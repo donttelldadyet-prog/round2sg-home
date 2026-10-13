@@ -6,6 +6,7 @@ The Round2 game-screen homepage, embedded on www.round2.sg through Wix "Embed HT
 - Book now page: `...?start=book`
 - Contact us page: `...?start=find`
 - Also available: `?start=rooms`, `?start=loadout`, `?start=how`
+- Help popup tabs: `?start=faq`, `?start=rules`, `?start=about`, `?start=privacy`
 - A specific room: `?room=vale` (kaeden, scarlett, bella, kai, atlas, maximillion)
 
 Media (videos, images) is served from Wix Media; this repo only holds the page itself.
