@@ -81,6 +81,7 @@ body{background:radial-gradient(70% 38% at 50% 0%,color-mix(in srgb,var(--room) 
 @keyframes blink{50%{opacity:.4}}
 @media (prefers-reduced-motion:reduce){.badge.unset b{animation:none}}
 .intro{padding-block:14px 0}
+.noroom{margin:4px 0 12px;padding:10px 12px;border-left:4px solid var(--accent);background:var(--panel2);font-size:14px;color:var(--soft)}
 .intro .divider{margin:10px 0 6px}
 
 .tabs-shell{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:rgba(6,5,10,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
@@ -130,11 +131,6 @@ h2{margin:0;font-size:24px;font-weight:700;letter-spacing:.08em;text-transform:u
 .sheet .tagline{font-family:var(--f-pix);font-size:9px;letter-spacing:.16em;color:var(--room);text-transform:uppercase}
 .x{width:40px;height:40px;flex:none;border:1px solid var(--line2);color:var(--soft);font-size:15px}
 .lead{color:var(--soft);margin:0 0 16px}
-.rooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
-.room-pick{padding:14px 10px 16px;background:var(--panel2);border-top:4px solid var(--c);text-align:left;clip-path:var(--notch)}
-.room-pick b{display:block;font-size:17px;letter-spacing:.06em;text-transform:uppercase;color:var(--c)}
-.room-pick span{font-family:var(--f-pix);font-size:7px;letter-spacing:.12em;color:var(--mute);text-transform:uppercase}
-.room-pick.on{background:var(--c);clip-path:var(--notch)}.room-pick.on b,.room-pick.on span{color:var(--ci)}
 .opts{display:flex;flex-direction:column;gap:6px}
 .opt{display:flex;align-items:center;gap:14px;min-height:58px;padding:0 28px 0 16px;text-align:left;background:var(--panel2);clip-path:var(--bar);font-weight:700;font-size:17px;letter-spacing:.08em;text-transform:uppercase}
 .opt .nm{flex:1}
@@ -171,9 +167,10 @@ textarea{display:block;width:100%;margin-top:8px;min-height:64px;resize:vertical
 
 <header class="wrap hud">
   <span class="wordmark">ROUND2</span>
-  <button class="badge" id="roomTag" type="button" aria-label="Change room"></button>
+  <span class="badge" id="roomTag"></span>
 </header>
 <div class="wrap intro"><div class="eyebrow"><span>Food &amp; drinks</span><span class="count">by Madd Pizza</span></div><div class="divider" aria-hidden="true"><span></span><i></i><span></span></div></div>
+<div class="wrap" id="noRoom" hidden><p class="noroom">To order, scan the QR code in your room. You can still look through the menu.</p></div>
 <div class="tabs-shell"><nav class="wrap tabs" id="tabs" aria-label="Menu sections"></nav></div>
 <main class="wrap" id="menu"><p class="loading pix">Loading menu…</p></main>
 <div class="bar" id="bar" hidden><div class="wrap"><button class="hlbar" id="barBtn" type="button"><svg width="14" height="16" viewBox="0 0 14 16" aria-hidden="true"><path d="M1 1l12 7-12 7z" fill="currentColor"/></svg><span class="lbl">View order</span><span class="count" id="barCount">0</span><span class="amt" id="barAmt">$0.00</span></button></div></div>
@@ -252,13 +249,13 @@ const roomByName = n => CONFIG.ROOMS.find(r => r.name.toLowerCase() === String(n
 let room = roomByName(new URLSearchParams(location.search).get("room"));
 if (room) store.set("r2room", { room: room.name, t: Date.now() });
 else { const s = store.get("r2room"); if (s && Date.now() - s.t < CONFIG.ROOM_MEMORY_HOURS * 3600e3) room = roomByName(s.room) || null; }
-function setRoom(n){ room = roomByName(n); store.set("r2room", { room: room.name, t: Date.now() }); paintRoom(); }
 function paintRoom(){
   const t = $("#roomTag"), r = document.documentElement.style;
   t.className = "badge" + (room ? "" : " unset");
   r.setProperty("--room", room ? room.color : "#F2C21B");
   r.setProperty("--room-ink", room ? room.ink : "#0b0914");
-  t.innerHTML = `P1 <b>${room ? esc(room.name.toUpperCase()) : "SELECT ROOM"}</b>`;
+  t.innerHTML = `P1 <b>${room ? esc(room.name.toUpperCase()) : "NO ROOM"}</b>`;
+  $("#noRoom").hidden = !!room;
 }
 
 // ===== Cart =====
@@ -324,14 +321,10 @@ function refresh(){
 }
 
 // ===== Sheets =====
-let open = null, afterRoom = false;
+let open = null;
 function show(kind){ open = kind; $("#scrim").hidden = false; }
-function hide(){ open = null; afterRoom = false; $("#scrim").hidden = true; }
+function hide(){ open = null; $("#scrim").hidden = true; }
 const head = (t, tag) => `<div class="sheet-head"><div><div class="tagline">${tag || ""}</div><h3>${t}</h3></div><button class="x" data-close type="button" aria-label="Close">✕</button></div><div class="divider" aria-hidden="true"><span></span><i></i><span></span></div>`;
-function renderRooms(){
-  $("#sheet").innerHTML = head("Select room", "Player 1") + `<p class="lead">So we know whose order it is. You collect your food from the shoe rack outside the entrance.</p>
-    <div class="rooms">${CONFIG.ROOMS.map(r => `<button class="room-pick${room && r.name === room.name ? " on" : ""}" style="--c:${r.color};--ci:${r.ink}" data-room="${r.name}" type="button"><b>${r.name}</b><span>${r.tier}</span></button>`).join("")}</div>`;
-}
 function renderOptions(id){
   const it = ITEMS[id];
   $("#sheet").innerHTML = head(esc(it.name), "Choose one") + (it.desc ? `<p class="lead">${esc(it.desc)}</p>` : "") +
@@ -350,15 +343,15 @@ function renderCart(state){
      <label class="note pix" for="note">Allergies or requests</label>
      <textarea id="note" maxlength="300" placeholder="e.g. no chilli on the wings">${esc(note)}</textarea>
      <dl class="sum"><dt>Subtotal</dt><dd>${money(t.sub)}</dd><dt>GST 9%</dt><dd>${money(t.gst)}</dd><dt class="tot">Total</dt><dd class="tot">${money(t.total)}</dd></dl>
-     <div class="for-room">${room ? `<span>Order for <b>${esc(room.name)}</b> · collect at the entrance</span>` : `<span>No room selected</span>`}<button data-pickroom type="button">${room ? "Change" : "Select room"}</button></div>
-     <button class="hlbar pay" id="pay" type="button" ${belowMin || state === "busy" ? "disabled" : ""}><svg width="14" height="16" viewBox="0 0 14 16" aria-hidden="true"><path d="M1 1l12 7-12 7z" fill="currentColor"/></svg><span class="lbl">${belowMin ? `Minimum order ${money(cents(S.minOrder))}` : state === "busy" ? "Opening payment…" : "Pay"}</span><span>${belowMin || state === "busy" ? "" : money(t.total)}</span></button>
+     <div class="for-room">${room ? `<span>Order for <b>${esc(room.name)}</b> · collect at the entrance</span>` : `<span>Scan the QR code in your room to order.</span>`}</div>
+     <button class="hlbar pay" id="pay" type="button" ${belowMin || !room || state === "busy" ? "disabled" : ""}><svg width="14" height="16" viewBox="0 0 14 16" aria-hidden="true"><path d="M1 1l12 7-12 7z" fill="currentColor"/></svg><span class="lbl">${!room ? "Scan your room's QR code" : belowMin ? `Minimum order ${money(cents(S.minOrder))}` : state === "busy" ? "Opening payment…" : "Pay"}</span><span>${belowMin || !room || state === "busy" ? "" : money(t.total)}</span></button>
      <div class="go"><span>Secure payment</span><span class="gbar"></span><span>HitPay</span></div>
      <div id="payMsg"></div>`;
 }
 
 // ===== Checkout =====
 async function checkout(){
-  if (!room) { afterRoom = true; open = "rooms"; renderRooms(); return; }
+  if (!room) return;
   const note = ($("#note")?.value || "").trim(), t = totals(cart);
   const order = {
     room: room.name,
@@ -398,11 +391,8 @@ document.addEventListener("click", e => {
   else if (b.dataset.dec) change(b.dataset.dec, i, -1);
   else if (b.dataset.choose) { renderOptions(b.dataset.choose); show("opt:" + b.dataset.choose); }
   else if (b.dataset.addopt) change(b.dataset.addopt, i, 1);
-  else if (b.dataset.room) { setRoom(b.dataset.room); if (afterRoom) { afterRoom = false; open = "cart"; renderCart(); } else hide(); }
-  else if (b.dataset.pickroom !== undefined) { afterRoom = true; open = "rooms"; renderRooms(); }
   else if (b.dataset.close !== undefined) hide();
   else if (b.dataset.tab) { const s = document.getElementById("s-" + b.dataset.tab); scrollTo({ top: s.getBoundingClientRect().top + scrollY - 60, behavior: "smooth" }); }
-  else if (b.id === "roomTag") { renderRooms(); show("rooms"); }
   else if (b.id === "barBtn") { renderCart(); show("cart"); }
   else if (b.id === "pay") checkout();
 });
