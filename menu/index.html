@@ -170,6 +170,7 @@ textarea{display:block;width:100%;margin-top:8px;min-height:64px;resize:vertical
   <span class="badge" id="roomTag"></span>
 </header>
 <div class="wrap intro"><div class="eyebrow"><span>Food &amp; drinks</span><span class="count">by Madd Pizza</span></div><div class="divider" aria-hidden="true"><span></span><i></i><span></span></div></div>
+<div class="wrap" id="simBar" hidden><p class="noroom" style="border-color:var(--accent);color:var(--accent)">TEST MODE · orders are simulated, nothing is charged and nothing is made.</p></div>
 <div class="wrap" id="noRoom" hidden><p class="noroom">To order, scan the QR code in your room. You can still look through the menu.</p></div>
 <div class="tabs-shell"><nav class="wrap tabs" id="tabs" aria-label="Menu sections"></nav></div>
 <main class="wrap" id="menu"><p class="loading pix">Loading menu…</p></main>
@@ -208,6 +209,7 @@ const CONFIG = {
   // Leave empty for preview mode (no payment).
   CHECKOUT_URL: "https://hook.eu1.make.com/3gdpop9ed64rk2slmzfq9ry73oajd9sk",
   PAID_URL: "https://hook.eu1.make.com/55nh6wniq1wftco8af9486noj4xugasl",
+  SIM_URL: "https://hook.eu1.make.com/v8v3kyfg3ai41r0l21duy346vrucxequ",   // TEST ONLY: ?sim=<code> sends a fake order (no payment) to test Telegram and the TV alert
   WHATSAPP: "+65 9162 5767",
   MENU_URL: "menu.json",
   IMG_BASE: "https://static.wixstatic.com/media/",
@@ -244,6 +246,11 @@ function totals(lines){
   return { sub, gst, total: sub + gst, madd: base + gst, round2: sub - base };
 }
 
+// ===== Test mode (remove when testing is done) =====
+const SIM = (() => { let c = new URLSearchParams(location.search).get("sim") || "";
+  try { if (c) sessionStorage.setItem("r2sim", c); else c = sessionStorage.getItem("r2sim") || ""; } catch {}
+  return CONFIG.SIM_URL ? c : ""; })();
+
 // ===== Room =====
 const roomByName = n => CONFIG.ROOMS.find(r => r.name.toLowerCase() === String(n||"").trim().toLowerCase() || (r.alias||[]).includes(String(n||"").trim().toLowerCase()));
 let room = roomByName(new URLSearchParams(location.search).get("room"));
@@ -256,6 +263,7 @@ function paintRoom(){
   r.setProperty("--room-ink", room ? room.ink : "#0b0914");
   t.innerHTML = `P1 <b>${room ? esc(room.name.toUpperCase()) : "NO ROOM"}</b>`;
   $("#noRoom").hidden = !!room;
+  $("#simBar").hidden = !SIM;
 }
 
 // ===== Cart =====
@@ -344,8 +352,8 @@ function renderCart(state){
      <textarea id="note" maxlength="300" placeholder="e.g. no chilli on the wings">${esc(note)}</textarea>
      <dl class="sum"><dt>Subtotal</dt><dd>${money(t.sub)}</dd><dt>GST 9%</dt><dd>${money(t.gst)}</dd><dt class="tot">Total</dt><dd class="tot">${money(t.total)}</dd></dl>
      <div class="for-room">${room ? `<span>Order for <b>${esc(room.name)}</b> · collect at the entrance</span>` : `<span>Scan the QR code in your room to order.</span>`}</div>
-     <button class="hlbar pay" id="pay" type="button" ${belowMin || !room || state === "busy" ? "disabled" : ""}><svg width="14" height="16" viewBox="0 0 14 16" aria-hidden="true"><path d="M1 1l12 7-12 7z" fill="currentColor"/></svg><span class="lbl">${!room ? "Scan your room's QR code" : belowMin ? `Minimum order ${money(cents(S.minOrder))}` : state === "busy" ? "Opening payment…" : "Pay"}</span><span>${belowMin || !room || state === "busy" ? "" : money(t.total)}</span></button>
-     <div class="go"><span>Secure payment</span><span class="gbar"></span><span>HitPay</span></div>
+     <button class="hlbar pay" id="pay" type="button" ${belowMin || !room || state === "busy" ? "disabled" : ""}><svg width="14" height="16" viewBox="0 0 14 16" aria-hidden="true"><path d="M1 1l12 7-12 7z" fill="currentColor"/></svg><span class="lbl">${!room ? "Scan your room's QR code" : belowMin ? `Minimum order ${money(cents(S.minOrder))}` : state === "busy" ? (SIM ? "Sending test order…" : "Opening payment…") : SIM ? "Simulate order" : "Pay"}</span><span>${belowMin || !room || state === "busy" ? "" : money(t.total)}</span></button>
+     <div class="go">${SIM ? `<span>Test mode</span><span class="gbar"></span><span>No payment</span>` : `<span>Secure payment</span><span class="gbar"></span><span>HitPay</span>`}</div>
      <div id="payMsg"></div>`;
 }
 
@@ -360,6 +368,7 @@ async function checkout(){
     shown_total: (t.total / 100).toFixed(2),
     prev: (store.get("r2pending") || {}).request_id || ""
   };
+  if (SIM) return simulate(note, t);
   if (!CONFIG.CHECKOUT_URL) {
     $("#payMsg").innerHTML = `<div class="preview"><b>Preview mode.</b> Payment isn't connected yet. Make.com will receive this order, re-check the prices and create the HitPay payment.
       <pre>${esc(JSON.stringify(order, null, 2))}</pre><pre>Madd Pizza ${money(t.madd)} (incl. GST ${money(t.gst)}) · Round2 ${money(t.round2)}</pre></div>`;
@@ -379,6 +388,24 @@ async function checkout(){
   } catch (e) {
     renderCart();
     $("#payMsg").innerHTML = `<p class="msg err">${esc(e.name === "AbortError" ? "Payment took too long to open." : e.message)} Tap Pay to try again, or WhatsApp us on ${CONFIG.WHATSAPP}.</p>`;
+  }
+}
+
+// TEST ONLY: a fake paid order. Make.com checks the code, posts a labelled test slip with the pickup
+// button to Telegram and sends the "order locked in" alert to the room's TV. Nothing is charged.
+async function simulate(note, t){
+  renderCart("busy");
+  const lines = cart.map(l => { const it = ITEMS[l.id]; return l.qty + " x " + (it ? it.name : l.id) + (it && it.options ? " (" + (it.options[l.opt]?.name || "") + ")" : ""); }).join("\n");
+  try {
+    const res = await fetch(CONFIG.SIM_URL, { method: "POST", body: new URLSearchParams({ room: room.name, code: SIM, lines }) });
+    const data = await res.json().catch(() => ({}));
+    if (!data.ok) throw new Error("The test order was refused. Check the sim code in the link.");
+    const p = { no: data.no, lines: cart, note, sub: t.sub, gst: t.gst, total: t.total };
+    cart = []; store.set("r2cart", []); store.set("r2note", ""); refresh();
+    doneScreen(p, true);
+  } catch (e) {
+    renderCart();
+    $("#payMsg").innerHTML = `<p class="msg err">${esc(e.message)}</p>`;
   }
 }
 
@@ -421,6 +448,19 @@ function boot(data){
   cart = (store.get("r2cart") || []).filter(l => ITEMS[l.id] && !ITEMS[l.id].soldOut && (!ITEMS[l.id].options || ITEMS[l.id].options[l.opt]));
   renderMenu(); refresh(); returnScreen();
 }
+function doneScreen(p, sim){
+const rows = p.lines.map(l => { const it = ITEMS[l.id]; if (!it) return "";
+    return `<div class="line"><div><div class="n">${esc(it.name)}</div>${it.options ? `<div class="o">${esc(it.options[l.opt]?.name || "")}</div>` : ""}</div><b>×${l.qty}</b><div class="lp">${money(unitCents(l.id,l.opt) * l.qty)}</div></div>`; }).join("");
+  $("#sheet").innerHTML = head(sim ? "Test order sent" : "Payment received", "Order #" + esc(p.no || "")) +
+    `${sim ? `<p class="lead" style="color:var(--accent)">TEST MODE · nothing was charged. Tap the button in Telegram to send the "ready" alert to the TV.</p>` : ""}
+    <p class="lead">Thanks! Your order has gone to the Madd Pizza kitchen. It will be left on the shoe rack outside the entrance for you to collect.</p>
+     <div class="lines">${rows}</div>
+     ${p.note ? `<p class="lead" style="margin-top:12px">Note: ${esc(p.note)}</p>` : ""}
+     <dl class="sum"><dt>Subtotal</dt><dd>${money(p.sub)}</dd><dt>GST 9%</dt><dd>${money(p.gst)}</dd><dt class="tot">${sim ? "Not charged" : "Paid"}</dt><dd class="tot">${money(p.total)}</dd></dl>
+     <button class="hlbar pay" data-close type="button"><span class="lbl">Add more items</span></button>
+     <p class="msg" style="color:var(--mute)">Need to change something? WhatsApp us on ${CONFIG.WHATSAPP}.</p>`;
+  show("done");
+}
 // ===== Back from HitPay =====
 function returnScreen(){
   const q = new URLSearchParams(location.search), status = q.get("status");
@@ -431,16 +471,7 @@ function returnScreen(){
     // Backup to HitPay's own notification: Make.com checks the payment with HitPay before sending anything to the kitchen.
     if (CONFIG.PAID_URL) try { navigator.sendBeacon(CONFIG.PAID_URL, new URLSearchParams({ reference_number: p.order || "", payment_request_id: q.get("reference") || "", status, source: "return" })); } catch {}
     cart = []; store.set("r2cart", []); store.set("r2note", ""); store.set("r2pending", null); refresh();
-    const rows = p.lines.map(l => { const it = ITEMS[l.id]; if (!it) return "";
-      return `<div class="line"><div><div class="n">${esc(it.name)}</div>${it.options ? `<div class="o">${esc(it.options[l.opt]?.name || "")}</div>` : ""}</div><b>×${l.qty}</b><div class="lp">${money(unitCents(l.id,l.opt) * l.qty)}</div></div>`; }).join("");
-    $("#sheet").innerHTML = head("Payment received", "Order #" + esc(p.no || "")) +
-      `<p class="lead">Thanks! Your order has gone to the Madd Pizza kitchen. It will be left on the shoe rack outside the entrance for you to collect.</p>
-       <div class="lines">${rows}</div>
-       ${p.note ? `<p class="lead" style="margin-top:12px">Note: ${esc(p.note)}</p>` : ""}
-       <dl class="sum"><dt>Subtotal</dt><dd>${money(p.sub)}</dd><dt>GST 9%</dt><dd>${money(p.gst)}</dd><dt class="tot">Paid</dt><dd class="tot">${money(p.total)}</dd></dl>
-       <button class="hlbar pay" data-close type="button"><span class="lbl">Add more items</span></button>
-       <p class="msg" style="color:var(--mute)">Need to change something? WhatsApp us on ${CONFIG.WHATSAPP}.</p>`;
-    show("done");
+    doneScreen(p, false);
   } else if (status !== "completed") {
     renderCart(); show("cart");
     $("#payMsg").innerHTML = `<p class="msg err">Payment wasn't completed. Your order is still here. Tap Pay to try again.</p>`;
