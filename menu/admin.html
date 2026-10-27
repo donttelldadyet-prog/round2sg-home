@@ -149,6 +149,31 @@ pre.code{margin:8px 0 0;max-height:160px;overflow:auto;font-size:11px;color:var(
 <main class="wrap" id="main"><p class="empty">Loading menu…</p></main>
 
 <script>
+// Shared price table. The customer menu, the menu editor and Make.com all use the same numbers:
+// pc = what the customer pays per unit before GST (cents), pm = Madd Pizza's share per unit (cents), pn = name for the slip.
+// Madd Pizza's price + markup; GST is charged on pm only. Test items: charged as typed, nothing to Madd Pizza.
+// Hidden (draft) and sold-out items are left out, so Make.com refuses them.
+function r2Key(id, optName){
+  return optName == null ? id : id + "--" + String(optName).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+function r2PriceTable(menu){
+  const s = Object.assign({ markup: 0.1, gst: 0.09 }, menu.settings || {}), pc = {}, pm = {}, pn = {};
+  (menu.sections || []).forEach(sec => (sec.items || []).forEach(it => {
+    if (it.hidden || it.soldOut) return;
+    const add = (k, price, label) => {
+      const b = Math.round(Number(price) * 100);
+      if (!(b > 0)) return;
+      pc[k] = it.test ? b : Math.round(b * (1 + s.markup));
+      pm[k] = it.test ? 0 : b;
+      pn[k] = label;
+    };
+    if (it.options) it.options.forEach(o => add(r2Key(it.id, o.name), o.price, it.name + " (" + o.name + ")"));
+    else add(r2Key(it.id), it.price, it.name);
+  }));
+  return { pc, pm, pn };
+}
+if (typeof module !== "undefined") module.exports = { r2Key, r2PriceTable };
+
 const CONFIG = {
   MODE: "live",                // "live" on your site, "preview" inside Claude
   MENU_URL: "menu.json",
@@ -168,7 +193,9 @@ const store = {
   del(k){ try { localStorage.removeItem(k); } catch {} }
 };
 const clone = o => JSON.parse(JSON.stringify(o));
-const fmt = d => JSON.stringify(d, null, 1);
+// Compare menus without the generated price table; publish always regenerates it.
+const fmt = d => JSON.stringify(Object.assign({}, d, { prices: undefined }), null, 1);
+const fmtOut = d => JSON.stringify(Object.assign({}, d, { prices: r2PriceTable(d) }), null, 1);
 
 let data = null, published = "", view = "menu", openId = null, confirmDel = null, flash = null;
 let gh = Object.assign({}, CONFIG.GH_DEFAULT, store.get("r2gh") || {});
@@ -329,7 +356,7 @@ async function publish(){
   const btn = $("#publish"); btn.disabled = true; btn.textContent = "Publishing…";
   try {
     const { sha } = await ghGet();
-    const body = { message: "Menu update " + new Date().toISOString().slice(0,16).replace("T"," "), branch: gh.branch, content: btoa(unescape(encodeURIComponent(fmt(data) + "\n"))) };
+    const body = { message: "Menu update " + new Date().toISOString().slice(0,16).replace("T"," "), branch: gh.branch, content: btoa(unescape(encodeURIComponent(fmtOut(data) + "\n"))) };
     if (sha) body.sha = sha;
     const r = await fetch(ghUrl(), { method: "PUT", headers: ghHead({ "Content-Type": "application/json" }), body: JSON.stringify(body) });
     if (!r.ok) throw new Error(r.status === 409 ? "Someone else published at the same time. Reload and try again." : `GitHub said ${r.status}.`);
