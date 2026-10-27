@@ -81,6 +81,9 @@ body{background:radial-gradient(70% 38% at 50% 0%,color-mix(in srgb,var(--room) 
 @keyframes blink{50%{opacity:.4}}
 @media (prefers-reduced-motion:reduce){.badge.unset b{animation:none}}
 .intro{padding-block:14px 0}
+.simrooms{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 12px}
+.simrooms button{padding:7px 10px;border:1px solid var(--line2);background:var(--panel2);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.simrooms button[aria-pressed="true"]{border-color:var(--rc);background:var(--rc);color:var(--ri)}
 .noroom{margin:4px 0 12px;padding:10px 12px;border-left:4px solid var(--accent);background:var(--panel2);font-size:14px;color:var(--soft)}
 .intro .divider{margin:10px 0 6px}
 
@@ -170,7 +173,7 @@ textarea{display:block;width:100%;margin-top:8px;min-height:64px;resize:vertical
   <span class="badge" id="roomTag"></span>
 </header>
 <div class="wrap intro"><div class="eyebrow"><span>Food &amp; drinks</span><span class="count">by Madd Pizza</span></div><div class="divider" aria-hidden="true"><span></span><i></i><span></span></div></div>
-<div class="wrap" id="simBar" hidden><p class="noroom" style="border-color:var(--accent);color:var(--accent)">TEST MODE · orders are simulated, nothing is charged and nothing is made.</p></div>
+<div class="wrap" id="simBar" hidden><p class="noroom" style="border-color:var(--accent);color:var(--accent)">TEST MODE · orders are simulated, nothing is charged and nothing is made.</p><div class="simrooms" id="simRooms"></div></div>
 <div class="wrap" id="noRoom" hidden><p class="noroom">To order, scan the QR code in your room. You can still look through the menu.</p></div>
 <div class="tabs-shell"><nav class="wrap tabs" id="tabs" aria-label="Menu sections"></nav></div>
 <main class="wrap" id="menu"><p class="loading pix">Loading menu…</p></main>
@@ -264,6 +267,8 @@ function paintRoom(){
   t.innerHTML = `P1 <b>${room ? esc(room.name.toUpperCase()) : "NO ROOM"}</b>`;
   $("#noRoom").hidden = !!room;
   $("#simBar").hidden = !SIM;
+  // test mode only: switch rooms here instead of changing the link (guests' menus stay locked to their QR code)
+  if (SIM) $("#simRooms").innerHTML = CONFIG.ROOMS.map(r => `<button type="button" data-simroom="${esc(r.name)}" style="--rc:${r.color};--ri:${r.ink}" aria-pressed="${room && room.name === r.name}">${esc(r.name)}</button>`).join("");
 }
 
 // ===== Cart =====
@@ -422,6 +427,11 @@ document.addEventListener("click", e => {
   else if (b.dataset.tab) { const s = document.getElementById("s-" + b.dataset.tab); scrollTo({ top: s.getBoundingClientRect().top + scrollY - 60, behavior: "smooth" }); }
   else if (b.id === "barBtn") { renderCart(); show("cart"); }
   else if (b.id === "pay") checkout();
+  else if (b.dataset.simroom && SIM) {
+    room = roomByName(b.dataset.simroom); store.set("r2room", { room: room.name, t: Date.now() });
+    history.replaceState(null, "", location.pathname + "?room=" + room.name.toLowerCase() + "&sim=" + encodeURIComponent(SIM));
+    paintRoom(); refresh();
+  }
 });
 document.addEventListener("input", e => { if (e.target.id === "note") store.set("r2note", e.target.value); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && open) hide(); });
