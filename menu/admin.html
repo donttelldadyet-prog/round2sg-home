@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Round2 Menu Editor</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap">
+<style>
+/* Round2 house style, taken from round2-tv-launcher (TV menu + Theme manager):
+   void background, Chakra Petch + Press Start 2P, the room's colour as the highlight with its own ink colour,
+   wordmark framed by side bars, pixel eyebrows with a diamond divider, slanted highlight bars, notched cards, scanlines.
+   Single dark theme by design. */
+:root{
+  --bg:#06050A;
+  --panel:#110E1A;
+  --panel2:#191527;
+  --line:rgba(244,241,251,.12);
+  --line2:rgba(244,241,251,.22);
+  --rule:rgba(244,241,251,.45);
+  --ink:#F4F1FB;
+  --soft:#d6d0e3;
+  --mute:#9C94B3;
+  --accent:#F2C21B;
+  --ok:#4DB848;
+  --bad:#E8436A;
+  --focus:#8EC5FF;
+  --room:#F2C21B;
+  --room-ink:#0b0914;
+  --f:'Chakra Petch','Segoe UI',system-ui,sans-serif;
+  --f-pix:'Press Start 2P',ui-monospace,'Courier New',monospace;
+  --bar:polygon(0 0,100% 0,calc(100% - 18px) 100%,0 100%);
+  --notch:polygon(0 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 var(--f);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:60;background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wordmark{display:inline-block;font-weight:400;font-size:22px;letter-spacing:.14em;line-height:1;padding:2px 10px;border-left:2px solid var(--ink);border-right:2px solid var(--ink);white-space:nowrap}
+.pix{font-family:var(--f-pix);font-weight:400;font-size:9px;letter-spacing:.14em;line-height:1.6;text-transform:uppercase}
+.eyebrow{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-family:var(--f-pix);font-size:10px;letter-spacing:.2em;color:var(--soft);text-transform:uppercase}
+.eyebrow .count{font-size:8px;letter-spacing:.14em;color:var(--mute)}
+.divider{display:flex;align-items:center;gap:10px;margin:12px 0 16px}
+.divider span{width:70px;height:1px;background:var(--rule)}
+.divider i{width:9px;height:9px;border:2px solid var(--ink);transform:rotate(45deg)}
+.badge{display:inline-flex;align-items:center;gap:8px;font-family:var(--f-pix);font-size:9px;letter-spacing:.14em;color:var(--mute)}
+.badge b{font-weight:400;padding:7px 8px;background:var(--room);color:var(--room-ink)}
+.notch{clip-path:var(--notch)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:10px 16px;border:1px solid var(--line2);background:var(--panel2);
+  font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.primary{background:var(--accent);color:#0b0914;border-color:var(--accent)}
+.btn.danger{color:var(--bad)}
+.btn.ghost{background:none}
+.hlbar{display:flex;align-items:center;gap:14px;min-height:56px;padding:0 30px 0 18px;background:var(--room);color:var(--room-ink);clip-path:var(--bar);
+  font-weight:700;font-size:17px;letter-spacing:.1em;text-transform:uppercase;text-align:left}
+.hlbar:disabled{background:var(--panel2);color:var(--mute);cursor:default}
+.chip{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border:1px solid var(--line2);white-space:nowrap;vertical-align:2px}
+.chip.hot{border-color:var(--accent);color:var(--accent)}
+.chip.out{border-color:var(--bad);color:var(--bad)}
+.chip.draft{color:var(--mute)}
+.chip.live{border-color:var(--ok);color:var(--ok)}
+@media (prefers-reduced-motion:no-preference){.rise{animation:rise .2s cubic-bezier(.2,.8,.2,1)}@keyframes rise{from{transform:translateY(16px);opacity:.4}to{transform:none;opacity:1}}}
+
+/* Layout: same back-office look as the TV Theme manager. Sticky header (wordmark + MENU EDITOR, state chip, Publish),
+   bordered tabs, sections as eyebrow + divider + rows, tap a row to edit it in a panel card. */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:rgba(6,5,10,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:12px}
+.brandline{display:flex;align-items:center;gap:10px;min-width:0}
+.brandline small{font-size:12px;font-weight:500;letter-spacing:.14em;color:var(--mute);text-transform:uppercase;white-space:nowrap}
+.state{display:flex;align-items:center;gap:10px}
+.views{display:flex;gap:4px;padding-block:0 10px}
+.view{padding:8px 14px;border:1px solid transparent;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.view.on{color:var(--ink);border-color:var(--line2);background:var(--panel)}
+.view .n{font-family:var(--f-pix);font-size:8px;color:var(--accent);margin-left:6px}
+main{padding-block:6px 80px}
+.banner{margin-top:16px;padding:12px 16px;border:1px solid var(--line2);background:var(--panel2);font-size:15px}
+.banner.ok{border-color:rgba(77,184,72,.6)}.banner.err{border-color:rgba(232,67,106,.7)}
+.banner ul{margin:6px 0 0;padding-left:18px}
+section.sec{padding-top:26px}
+.sec-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+h2{margin:6px 0 0;font-size:22px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;min-width:0}
+.sec-sub{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin-top:2px}
+.mini{display:flex;gap:4px;flex:none}
+.mini button{min-width:36px;height:34px;padding:0 10px;border:1px solid var(--line2);background:var(--panel2);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--soft)}
+.mini button:disabled{opacity:.3}
+.sec .divider{margin:10px 0 2px}
+.row{width:100%;display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;text-align:left;border-bottom:1px solid var(--line)}
+.row.open{border-bottom-color:transparent}
+.thumb{width:48px;height:48px;background:#1a1626;position:relative;overflow:hidden;display:grid;place-items:center;clip-path:var(--notch);font-family:var(--f-pix);font-size:10px;color:var(--mute)}
+.thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.row .nm{font-weight:700;line-height:1.25;letter-spacing:.03em}
+.row .nm .chip{margin-left:6px;font-size:10px;padding:1px 5px}
+.row .sub{font-size:13px;color:var(--mute)}
+.row .pr{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.row .pr small{display:block;font-weight:500;font-size:12px;color:var(--mute)}
+.add-row{width:100%;padding:12px 0;text-align:left;color:var(--accent);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:13px}
+.form{padding:16px;margin-bottom:12px;background:var(--panel);border:1px solid var(--line2);display:flex;flex-direction:column;gap:16px}
+.f label,.f .lbl{display:block;font-family:var(--f-pix);font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin-bottom:8px}
+.f input,.f textarea,.f select{width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--line2);border-radius:0;color:var(--ink)}
+.f textarea{min-height:60px;resize:vertical}
+.f .hint{font-size:13px;color:var(--mute);margin-top:6px}
+.money{position:relative}.money::before{content:"$";position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--mute)}.money input{padding-left:24px}
+.seg{display:flex;border:1px solid var(--line2)}
+.seg button{flex:1;padding:10px 8px;font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.seg button.on{background:var(--accent);color:#0b0914}
+.calc{font-size:14px;color:var(--soft);font-variant-numeric:tabular-nums;padding:8px 10px;margin-top:8px;background:var(--panel2);border-left:3px solid var(--accent)}
+.calc b{color:var(--accent)}
+.optrow{display:grid;grid-template-columns:minmax(0,1fr) 110px 40px;gap:6px;margin-bottom:6px}
+.optrow button{border:1px solid var(--line2);color:var(--bad)}
+.link{color:var(--accent);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;padding:6px 0}
+.toggles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.tg{padding:10px 6px;border:1px solid var(--line2);background:var(--panel2);font-weight:600;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.tg[aria-pressed="true"]{color:var(--accent);border-color:var(--accent)}
+.tg.out[aria-pressed="true"]{color:var(--bad);border-color:var(--bad)}
+.tg.draft[aria-pressed="true"]{color:var(--ink);border-color:var(--ink)}
+.pv{display:flex;gap:10px;align-items:center}.pv .thumb{width:56px;height:56px;flex:none}
+.actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center}
+.actions .grp{display:flex;gap:8px;flex-wrap:wrap}
+.card{margin-top:18px;padding:18px;background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;gap:14px}
+.card h3{margin:0;font-size:15px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);font-weight:600}
+.card p{margin:0;color:var(--soft);font-size:15px}
+.card a{color:var(--focus)}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.check{display:flex;align-items:center;gap:10px;font-weight:600}
+.check input{width:20px;height:20px;accent-color:var(--accent)}
+pre.code{margin:8px 0 0;max-height:160px;overflow:auto;font-size:11px;color:var(--mute);background:var(--bg);padding:10px}
+.empty{padding:36px;text-align:center;color:var(--mute);border:1px dashed var(--line2);margin-top:20px}
+@media (max-width:440px){.two{grid-template-columns:minmax(0,1fr)}.optrow{grid-template-columns:minmax(0,1fr) 92px 40px}.brandline small{display:none}}
+</style>
+
+<div class="top">
+  <div class="wrap">
+    <div class="brandline"><span class="wordmark">ROUND2</span><small>Menu editor</small></div>
+    <div class="state"><span class="chip live" id="dot">Live</span><button class="btn primary" id="publish" type="button">Publish</button></div>
+  </div>
+  <nav class="wrap views" id="views" aria-label="Editor views"></nav>
+</div>
+<main class="wrap" id="main"><p class="empty">Loading menu…</p></main>
+
+<script>
+const CONFIG = {
+  MODE: "live",                // "live" on your site, "preview" inside Claude
+  MENU_URL: "menu.json",
+  ORDER_URL: "./",
+  IMG_BASE: "https://static.wixstatic.com/media/",
+  GH_DEFAULT: { owner: "donttelldadyet-prog", repo: "round2sg-home", branch: "main", path: "menu/menu.json" }
+};
+let SEED = /*MENU_JSON*/null;
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const cents = n => Math.round(Number(n) * 100);
+const money = c => "$" + (c / 100).toFixed(2);
+const store = {
+  get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  del(k){ try { localStorage.removeItem(k); } catch {} }
+};
+const clone = o => JSON.parse(JSON.stringify(o));
+const fmt = d => JSON.stringify(d, null, 1);
+
+let data = null, published = "", view = "menu", openId = null, confirmDel = null, flash = null;
+let gh = Object.assign({}, CONFIG.GH_DEFAULT, store.get("r2gh") || {});
+
+// ---------- model ----------
+const S = () => data.settings;
+const shown = b => Math.round(b * (1 + S().markup));
+function find(id){ for (const s of data.sections){ const i = s.items.findIndex(x => x.id === id); if (i > -1) return { s, i, it: s.items[i] }; } return null; }
+function slug(name){
+  let b = String(name).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"") || "item", id = b, n = 2;
+  while (find(id)) id = b + "-" + n++;
+  return id;
+}
+const isDirty = () => fmt(data) !== published;
+function touch(){ data.updated = new Date().toISOString().slice(0,10); store.set("r2editor-draft", data); paintState(); }
+function priceText(it){
+  if (it.options && it.options.length){
+    const ps = it.options.map(o => cents(o.price)); const lo = Math.min(...ps), hi = Math.max(...ps);
+    return { cust: lo === hi ? money(shown(lo)) : `${money(shown(lo))}–${money(shown(hi))}`, base: lo === hi ? money(lo) : `${money(lo)}–${money(hi)}` };
+  }
+  if (it.test) return { cust: money(cents(it.price || 0)), base: "test" };
+  return { cust: money(shown(cents(it.price || 0))), base: money(cents(it.price || 0)) };
+}
+function split(base){ const c = shown(base), g = Math.round(base * S().gst); return `Customer sees <b>${money(c)}</b> + GST ${money(g)} · you keep ${money(c - base)}`; }
+function validate(){
+  const errs = [], ids = new Set();
+  data.sections.forEach(s => {
+    if (!String(s.name).trim()) errs.push("A section has no name.");
+    s.items.forEach(it => {
+      const label = it.name || "(unnamed item)";
+      if (!String(it.name).trim()) errs.push(`An item in ${s.name} has no name.`);
+      if (ids.has(it.id)) errs.push(`${label} appears twice.`); ids.add(it.id);
+      if (it.options) {
+        if (!it.options.length) errs.push(`${label} has no options.`);
+        it.options.forEach(o => { if (!String(o.name).trim()) errs.push(`${label} has an option with no name.`); if (!(Number(o.price) > 0)) errs.push(`${label} – ${o.name || "option"} needs a price.`); });
+      } else if (!(Number(it.price) > 0) && !it.hidden) errs.push(`${label} needs a price (or mark it Draft).`);
+    });
+  });
+  return errs;
+}
+
+// ---------- render ----------
+function imgUrl(src){ if (!src) return ""; return /^https?:/.test(src) ? src : `${CONFIG.IMG_BASE}${src}/v1/fill/w_120,h_120,al_c,q_80,enc_auto/${src}`; }
+const thumb = it => `<div class="thumb">${esc((it.name || "?").replace(/[^A-Za-z]/g,"").charAt(0).toUpperCase())}${it.img ? `<img src="${esc(imgUrl(it.img))}" alt="" loading="lazy" onerror="this.remove()">` : ""}</div>`;
+function paintState(){
+  const d = isDirty(); $("#dot").textContent = d ? "Unpublished" : "Live"; $("#dot").className = "chip " + (d ? "hot" : "live");
+  $("#publish").disabled = !d;
+}
+function render(){
+  const drafts = data.sections.reduce((n,s) => n + s.items.filter(i => i.hidden).length, 0);
+  $("#views").innerHTML = [["menu","Menu"],["drafts","Drafts" + (drafts ? `<span class="n">${drafts}</span>` : "")],["settings","Settings"]]
+    .map(([k,l]) => `<button class="view${view === k ? " on" : ""}" data-view="${k}" type="button">${l}</button>`).join("");
+  const f = flash ? `<div class="banner ${flash.kind || ""}">${flash.html}</div>` : "";
+  $("#main").innerHTML = f + (view === "settings" ? renderSettings() : renderList(view === "drafts"));
+  paintState();
+}
+function renderList(drafts){
+  const out = data.sections.map((s, si) => {
+    const items = s.items.filter(it => !!it.hidden === drafts);
+    if (drafts && !items.length) return "";
+    return `<section class="sec">
+      <div class="eyebrow"><span>${String(si + 1).padStart(2,"0")}</span><span class="count">${items.length} ${drafts ? "drafts" : "items"}</span></div>
+      <div class="sec-head"><div><h2>${esc(s.name)}</h2>${s.sub ? `<div class="sec-sub">${esc(s.sub)}</div>` : ""}</div>
+        ${drafts ? "" : `<div class="mini"><button data-secup="${si}" type="button" aria-label="Move section up" ${si ? "" : "disabled"}>↑</button><button data-secdown="${si}" type="button" aria-label="Move section down" ${si < data.sections.length - 1 ? "" : "disabled"}>↓</button><button data-secedit="${si}" type="button">Edit</button></div>`}</div>
+      <div class="divider" aria-hidden="true"><span></span><i></i><span></span></div>
+      ${!drafts && openId === "sec:" + si ? sectionForm(s, si) : ""}
+      <div class="list">${items.map(it => itemRow(it)).join("")}</div>
+      ${drafts ? "" : `<button class="add-row" data-additem="${si}" type="button">+ Add item to ${esc(s.name)}</button>`}
+    </section>`;
+  }).join("");
+  if (drafts && !out) return `<p class="empty">No drafts. Mark an item as Draft to hide it from customers without deleting it.</p>`;
+  return out + (drafts ? "" : `<button class="btn ghost" data-addsec type="button" style="margin-top:28px">+ Add section</button>`);
+}
+function itemRow(it){
+  const p = priceText(it), open = openId === it.id;
+  const tags = (it.soldOut ? '<span class="chip out">Sold out</span>' : "") + (it.featured ? '<span class="chip hot">Hot</span>' : "") + (it.hidden ? '<span class="chip draft">Draft</span>' : "");
+  return `<button class="row${open ? " open" : ""}" data-open="${it.id}" type="button" aria-expanded="${open}">
+      ${thumb(it)}<div><div class="nm">${esc(it.name || "(no name)")}${tags}</div><div class="sub">${it.options ? it.options.length + " options" : ""}</div></div>
+      <div class="pr">${p.cust}<small>Madd ${p.base}</small></div></button>${open ? itemForm(it) : ""}`;
+}
+function itemForm(it){
+  const loc = find(it.id), multi = !!it.options;
+  return `<div class="form" data-form="${it.id}">
+    <div class="f"><label for="f-name">Name</label><input id="f-name" data-f="name" value="${esc(it.name)}" maxlength="60"></div>
+    <div class="f"><label for="f-desc">Description</label><textarea id="f-desc" data-f="desc" maxlength="160">${esc(it.desc)}</textarea></div>
+    <div class="f"><span class="lbl">Price</span><div class="seg"><button data-mode="single" class="${multi ? "" : "on"}" type="button">One price</button><button data-mode="multi" class="${multi ? "on" : ""}" type="button">Sizes / flavours</button></div></div>
+    ${multi ? `<div class="f"><span class="lbl">Options · Madd Pizza price before GST</span>
+        ${it.options.map((o,i) => `<div class="optrow"><input data-oname="${i}" value="${esc(o.name)}" placeholder="e.g. Slice" aria-label="Option name"><div class="money"><input data-oprice="${i}" inputmode="decimal" value="${o.price ?? ""}" aria-label="Option price"></div><button data-odel="${i}" type="button" aria-label="Remove option">✕</button></div>`).join("")}
+        <button class="link" data-oadd type="button">+ Add option</button>
+        <div class="calc" id="calc">${it.options.length ? split(cents(it.options[0].price || 0)).replace("Customer", it.options[0].name + ": customer") : ""}</div></div>`
+      : `<div class="f"><label for="f-price">Madd Pizza price (before GST)</label><div class="money"><input id="f-price" data-f="price" inputmode="decimal" value="${it.price ?? ""}"></div>
+        <div class="calc" id="calc">${split(cents(it.price || 0))}</div></div>`}
+    <div class="f"><label for="f-img">Photo</label><div class="pv">${thumb(it)}<input id="f-img" data-f="img" value="${esc(it.img || "")}" placeholder="Wix image ID or image link"></div>
+      <div class="hint">Paste an image link, or the Wix media ID (the part like 4c079c_…~mv2.jpg).</div></div>
+    <div class="toggles">
+      <button class="tg" data-tg="featured" aria-pressed="${!!it.featured}" type="button">Hot</button>
+      <button class="tg out" data-tg="soldOut" aria-pressed="${!!it.soldOut}" type="button">Sold out</button>
+      <button class="tg draft" data-tg="hidden" aria-pressed="${!!it.hidden}" type="button">Draft</button>
+    </div>
+    <div class="f"><label for="f-sec">Section</label><select id="f-sec" data-move>${data.sections.map((s,si) => `<option value="${si}" ${s === loc.s ? "selected" : ""}>${esc(s.name)}</option>`).join("")}</select></div>
+    <div class="actions">
+      <div class="grp mini"><button data-up type="button" aria-label="Move up" ${loc.i ? "" : "disabled"}>↑</button><button data-down type="button" aria-label="Move down" ${loc.i < loc.s.items.length - 1 ? "" : "disabled"}>↓</button></div>
+      <div class="grp">${confirmDel === it.id ? `<button class="btn danger" data-delyes type="button">Delete for good</button><button class="btn ghost" data-delno type="button">Keep</button>` : `<button class="btn danger" data-del type="button">Delete</button>`}<button class="btn primary" data-done type="button">Done</button></div>
+    </div></div>`;
+}
+function sectionForm(s, si){
+  return `<div class="form" data-secform="${si}">
+    <div class="f"><label for="s-name">Section name</label><input id="s-name" data-s="name" value="${esc(s.name)}" maxlength="40"></div>
+    <div class="f"><label for="s-sub">Small note under the name</label><input id="s-sub" data-s="sub" value="${esc(s.sub || "")}" placeholder="e.g. Slice approx 12 × 25 cm"></div>
+    <div class="actions"><div class="grp">${s.items.length ? `<span class="hint">Empty a section to delete it.</span>` : `<button class="btn danger" data-secdel="${si}" type="button">Delete section</button>`}</div><button class="btn primary" data-done type="button">Done</button></div></div>`;
+}
+function renderSettings(){
+  const st = S(), ghOn = !!gh.token;
+  return `<div class="card"><h3>Pricing</h3>
+      <div class="two f"><div><label for="st-markup">Round2 markup %</label><input id="st-markup" data-st="markup" inputmode="decimal" value="${+(st.markup*100).toFixed(2)}"></div>
+      <div><label for="st-gst">GST %</label><input id="st-gst" data-st="gst" inputmode="decimal" value="${+(st.gst*100).toFixed(2)}"></div></div>
+      <p>Prices you type are Madd Pizza's own prices. Customers see them plus the markup, and GST is added on Madd Pizza's price only.</p>
+      <label class="check"><input type="checkbox" id="st-minon" data-stc="minOrderEnabled" ${st.minOrderEnabled ? "checked" : ""}> Minimum order</label>
+      <div class="f"><label for="st-min">Minimum, before GST</label><div class="money"><input id="st-min" data-st="minOrder" inputmode="decimal" value="${st.minOrder}"></div></div>
+    </div>
+    <div class="card"><h3>Publishing</h3>
+      <p>Publishing saves the menu to your GitHub repo, and the customer menu updates within a few minutes. The access token is kept on this device only.</p>
+      <div class="two f">
+        <div><label for="gh-owner">GitHub account</label><input id="gh-owner" data-gh="owner" value="${esc(gh.owner)}"></div>
+        <div><label for="gh-repo">Repo</label><input id="gh-repo" data-gh="repo" value="${esc(gh.repo)}"></div>
+        <div><label for="gh-branch">Branch</label><input id="gh-branch" data-gh="branch" value="${esc(gh.branch)}"></div>
+        <div><label for="gh-path">File</label><input id="gh-path" data-gh="path" value="${esc(gh.path)}"></div>
+      </div>
+      <div class="f"><label for="gh-token">Access token</label><input id="gh-token" data-gh="token" type="password" autocomplete="off" value="${esc(gh.token || "")}" placeholder="github_pat_…">
+        <div class="hint">GitHub → Settings → Developer settings → Fine-grained tokens. Give it access to this one repo with Contents: Read and write.</div></div>
+      <div class="actions"><span class="hint">${ghOn ? "Connected on this device." : "Not connected on this device."}</span><button class="btn ghost" data-ghtest type="button">Test connection</button></div>
+    </div>
+    <div class="card"><h3>Backup</h3>
+      <p>Copy the whole menu as text to keep a backup, or paste a backup to restore it.</p>
+      <div class="actions"><button class="btn ghost" data-copy type="button">Copy menu data</button>${isDirty() ? `<button class="btn danger" data-discard type="button">Discard unpublished changes</button>` : ""}</div>
+      <div class="f"><label for="restore">Paste a backup</label><textarea id="restore" placeholder='{"settings": …, "sections": …}'></textarea></div>
+      <div class="actions"><span></span><button class="btn ghost" data-restore type="button">Load backup</button></div>
+    </div>
+    ${CONFIG.ORDER_URL ? `<div class="card"><h3>Customer menu</h3><p><a href="${CONFIG.ORDER_URL}?room=vale" target="_blank" rel="noopener">Open the customer menu as Vale</a></p></div>` : ""}`;
+}
+
+// ---------- GitHub ----------
+const ghUrl = () => `https://api.github.com/repos/${encodeURIComponent(gh.owner)}/${encodeURIComponent(gh.repo)}/contents/${gh.path.split("/").map(encodeURIComponent).join("/")}`;
+const ghHead = extra => Object.assign({ Authorization: "Bearer " + gh.token, "X-GitHub-Api-Version": "2022-11-28" }, extra || {});
+async function ghGet(){
+  const r = await fetch(ghUrl() + "?ref=" + encodeURIComponent(gh.branch) + "&t=" + Date.now(), { headers: ghHead({ Accept: "application/vnd.github+json" }) });
+  if (r.status === 404) return { sha: null, json: null };
+  if (!r.ok) throw new Error(r.status === 401 ? "GitHub rejected the token. Check it in Settings." : `GitHub said ${r.status}.`);
+  const j = await r.json();
+  const text = decodeURIComponent(escape(atob(j.content.replace(/\n/g,""))));
+  return { sha: j.sha, json: JSON.parse(text) };
+}
+async function publish(){
+  const errs = validate();
+  if (errs.length) { flash = { kind: "err", html: `<b>Fix these before publishing:</b><ul>${errs.slice(0,8).map(e => `<li>${esc(e)}</li>`).join("")}</ul>` }; render(); scrollTo({ top: 0 }); return; }
+  if (CONFIG.MODE === "preview") { flash = { kind: "", html: "<b>Preview only.</b> Publishing works once the editor is on your site. Your changes are kept in this browser." }; render(); return; }
+  if (!gh.token) { view = "settings"; flash = { kind: "err", html: "Connect GitHub in Settings first, then tap Publish." }; render(); return; }
+  const btn = $("#publish"); btn.disabled = true; btn.textContent = "Publishing…";
+  try {
+    const { sha } = await ghGet();
+    const body = { message: "Menu update " + new Date().toISOString().slice(0,16).replace("T"," "), branch: gh.branch, content: btoa(unescape(encodeURIComponent(fmt(data) + "\n"))) };
+    if (sha) body.sha = sha;
+    const r = await fetch(ghUrl(), { method: "PUT", headers: ghHead({ "Content-Type": "application/json" }), body: JSON.stringify(body) });
+    if (!r.ok) throw new Error(r.status === 409 ? "Someone else published at the same time. Reload and try again." : `GitHub said ${r.status}.`);
+    published = fmt(data); store.del("r2editor-draft");
+    flash = { kind: "ok", html: "<b>Published.</b> The customer menu updates within a few minutes." };
+  } catch (e) { flash = { kind: "err", html: esc(e.message || "Publishing failed.") }; }
+  btn.textContent = "Publish"; render();
+}
+
+// ---------- events ----------
+document.addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const d = b.dataset, cur = openId && !String(openId).startsWith("sec:") ? find(openId) : null;
+  if (d.view) { view = d.view; openId = null; flash = null; render(); return; }
+  if (d.open) { openId = openId === d.open ? null : d.open; confirmDel = null; render(); return; }
+  if (b.id === "publish") return publish();
+  if (d.done !== undefined) { openId = null; confirmDel = null; render(); return; }
+  if (d.additem !== undefined) { const s = data.sections[+d.additem], it = { id: slug("new item"), name: "", desc: "", price: "" }; s.items.push(it); openId = it.id; touch(); render(); setTimeout(() => $("#f-name")?.focus(), 0); return; }
+  if (d.addsec !== undefined) { data.sections.push({ id: slug("section-" + Date.now()), name: "New section", items: [] }); openId = "sec:" + (data.sections.length - 1); touch(); render(); return; }
+  if (d.secup !== undefined || d.secdown !== undefined) { const i = +(d.secup ?? d.secdown), j = d.secup !== undefined ? i - 1 : i + 1; [data.sections[i], data.sections[j]] = [data.sections[j], data.sections[i]]; touch(); render(); return; }
+  if (d.secedit !== undefined) { openId = openId === "sec:" + d.secedit ? null : "sec:" + d.secedit; render(); return; }
+  if (d.secdel !== undefined) { data.sections.splice(+d.secdel, 1); openId = null; touch(); render(); return; }
+  if (cur) {
+    const it = cur.it;
+    if (d.mode) { if (d.mode === "multi" && !it.options) { it.options = [{ name: "", price: it.price || "" }]; delete it.price; } else if (d.mode === "single" && it.options) { it.price = it.options[0]?.price ?? ""; delete it.options; } touch(); render(); return; }
+    if (d.oadd !== undefined) { it.options.push({ name: "", price: "" }); touch(); render(); return; }
+    if (d.odel !== undefined) { it.options.splice(+d.odel, 1); touch(); render(); return; }
+    if (d.tg) { it[d.tg] = !it[d.tg]; if (!it[d.tg]) delete it[d.tg]; if (d.tg === "hidden") openId = null; touch(); render(); return; }
+    if (d.up !== undefined || d.down !== undefined) { const j = d.up !== undefined ? cur.i - 1 : cur.i + 1; [cur.s.items[cur.i], cur.s.items[j]] = [cur.s.items[j], cur.s.items[cur.i]]; touch(); render(); return; }
+    if (d.del !== undefined) { confirmDel = it.id; render(); return; }
+    if (d.delno !== undefined) { confirmDel = null; render(); return; }
+    if (d.delyes !== undefined) { cur.s.items.splice(cur.i, 1); openId = null; confirmDel = null; touch(); render(); return; }
+  }
+  if (d.ghtest !== undefined) {
+    if (CONFIG.MODE === "preview") { flash = { kind: "", html: "GitHub can't be reached from this preview. Test it once the editor is on your site." }; render(); return; }
+    try { const r = await ghGet(); flash = { kind: "ok", html: r.sha ? "<b>Connected.</b> Found the menu file on GitHub." : "<b>Connected.</b> The menu file doesn't exist yet; Publish will create it." }; }
+    catch (err) { flash = { kind: "err", html: esc(err.message) }; }
+    render(); return;
+  }
+  if (d.copy !== undefined) {
+    try { await navigator.clipboard.writeText(fmt(data)); flash = { kind: "ok", html: "Menu data copied." }; }
+    catch { flash = { kind: "", html: `Copy didn't work here. Select the text below and copy it.<pre class="code">${esc(fmt(data))}</pre>` }; }
+    render(); return;
+  }
+  if (d.discard !== undefined) { data = JSON.parse(published); store.del("r2editor-draft"); flash = { kind: "ok", html: "Unpublished changes discarded." }; render(); return; }
+  if (d.restore !== undefined) {
+    try { const j = JSON.parse($("#restore").value); if (!Array.isArray(j.sections)) throw 0; j.settings = Object.assign({ markup: .1, gst: .09, minOrder: 10, minOrderEnabled: false }, j.settings || {}); data = j; touch(); flash = { kind: "ok", html: "Backup loaded. Check it, then Publish." }; view = "menu"; }
+    catch { flash = { kind: "err", html: "That isn't a valid menu backup." }; }
+    render(); return;
+  }
+});
+document.addEventListener("input", e => {
+  const t = e.target, d = t.dataset, cur = openId && !String(openId).startsWith("sec:") ? find(openId) : null;
+  if (d.gh) { gh[d.gh] = t.value.trim(); store.set("r2gh", gh); return; }
+  if (d.st) { const v = Number(t.value); if (!isNaN(v)) { S()[d.st] = d.st === "minOrder" ? v : v / 100; touch(); } return; }
+  if (d.stc) { S()[d.stc] = t.checked; touch(); return; }
+  if (d.s && openId?.startsWith("sec:")) { const s = data.sections[+openId.slice(4)]; s[d.s] = t.value; if (d.s === "sub" && !t.value) delete s.sub; touch(); return; }
+  if (!cur) return;
+  const it = cur.it;
+  if (d.f) { it[d.f] = d.f === "price" ? (t.value === "" ? "" : Number(t.value)) : t.value; if (d.f === "img" && !t.value) delete it.img; }
+  if (d.oname !== undefined) it.options[+d.oname].name = t.value;
+  if (d.oprice !== undefined) it.options[+d.oprice].price = t.value === "" ? "" : Number(t.value);
+  if (d.f === "price" && $("#calc")) $("#calc").innerHTML = split(cents(it.price || 0));
+  if (d.oprice !== undefined && +d.oprice === 0 && $("#calc")) $("#calc").innerHTML = split(cents(it.options[0].price || 0)).replace("Customer", (it.options[0].name || "First option") + ": customer");
+  touch();
+});
+document.addEventListener("change", e => {
+  const t = e.target, cur = openId && !String(openId).startsWith("sec:") ? find(openId) : null;
+  if (t.dataset.move !== undefined && cur) { const to = data.sections[+t.value]; cur.s.items.splice(cur.i, 1); to.items.push(cur.it); touch(); render(); return; }
+  if ((t.dataset.f === "name" || t.dataset.f === "img") && cur) { render(); }
+  if (t.dataset.s) render();
+});
+
+// ---------- start ----------
+async function load(){
+  let base = null;
+  try {
+    if (CONFIG.MODE !== "preview" && gh.token) base = (await ghGet()).json;
+    if (!base && CONFIG.MODE !== "preview") base = await (await fetch(CONFIG.MENU_URL + "?v=" + Date.now())).json();
+  } catch {}
+  if (!base) base = SEED;
+  if (!base) { $("#main").innerHTML = `<p class="empty">The menu couldn't be loaded. Check your connection, or load a backup in Settings.</p>`; return; }
+  base.settings = Object.assign({ markup: .1, gst: .09, minOrder: 10, minOrderEnabled: false }, base.settings || {});
+  published = fmt(base);
+  const draft = store.get("r2editor-draft");
+  data = draft && Array.isArray(draft.sections) ? draft : clone(base);
+  if (draft && fmt(draft) !== published) flash = { kind: "", html: "Your unpublished changes from last time are restored. Publish them, or discard them in Settings." };
+  render();
+}
+addEventListener("beforeunload", e => { if (data && isDirty() && CONFIG.MODE !== "preview") { e.preventDefault(); e.returnValue = ""; } });
+load();
+</script>
+
+</html>

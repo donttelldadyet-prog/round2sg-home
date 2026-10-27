@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Round2 Room Menu</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap">
+<style>
+/* Round2 house style, taken from round2-tv-launcher (TV menu + Theme manager):
+   void background, Chakra Petch + Press Start 2P, the room's colour as the highlight with its own ink colour,
+   wordmark framed by side bars, pixel eyebrows with a diamond divider, slanted highlight bars, notched cards, scanlines.
+   Single dark theme by design. */
+:root{
+  --bg:#06050A;
+  --panel:#110E1A;
+  --panel2:#191527;
+  --line:rgba(244,241,251,.12);
+  --line2:rgba(244,241,251,.22);
+  --rule:rgba(244,241,251,.45);
+  --ink:#F4F1FB;
+  --soft:#d6d0e3;
+  --mute:#9C94B3;
+  --accent:#F2C21B;
+  --ok:#4DB848;
+  --bad:#E8436A;
+  --focus:#8EC5FF;
+  --room:#F2C21B;
+  --room-ink:#0b0914;
+  --f:'Chakra Petch','Segoe UI',system-ui,sans-serif;
+  --f-pix:'Press Start 2P',ui-monospace,'Courier New',monospace;
+  --bar:polygon(0 0,100% 0,calc(100% - 18px) 100%,0 100%);
+  --notch:polygon(0 0,100% 0,100% calc(100% - 14px),calc(100% - 14px) 100%,0 100%);
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+html{background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.45 var(--f);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:60;background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;border:0;background:none;padding:0}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wordmark{display:inline-block;font-weight:400;font-size:22px;letter-spacing:.14em;line-height:1;padding:2px 10px;border-left:2px solid var(--ink);border-right:2px solid var(--ink);white-space:nowrap}
+.pix{font-family:var(--f-pix);font-weight:400;font-size:9px;letter-spacing:.14em;line-height:1.6;text-transform:uppercase}
+.eyebrow{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-family:var(--f-pix);font-size:10px;letter-spacing:.2em;color:var(--soft);text-transform:uppercase}
+.eyebrow .count{font-size:8px;letter-spacing:.14em;color:var(--mute)}
+.divider{display:flex;align-items:center;gap:10px;margin:12px 0 16px}
+.divider span{width:70px;height:1px;background:var(--rule)}
+.divider i{width:9px;height:9px;border:2px solid var(--ink);transform:rotate(45deg)}
+.badge{display:inline-flex;align-items:center;gap:8px;font-family:var(--f-pix);font-size:9px;letter-spacing:.14em;color:var(--mute)}
+.badge b{font-weight:400;padding:7px 8px;background:var(--room);color:var(--room-ink)}
+.notch{clip-path:var(--notch)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:10px 16px;border:1px solid var(--line2);background:var(--panel2);
+  font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.primary{background:var(--accent);color:#0b0914;border-color:var(--accent)}
+.btn.danger{color:var(--bad)}
+.btn.ghost{background:none}
+.hlbar{display:flex;align-items:center;gap:14px;min-height:56px;padding:0 30px 0 18px;background:var(--room);color:var(--room-ink);clip-path:var(--bar);
+  font-weight:700;font-size:17px;letter-spacing:.1em;text-transform:uppercase;text-align:left}
+.hlbar:disabled{background:var(--panel2);color:var(--mute);cursor:default}
+.chip{display:inline-block;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border:1px solid var(--line2);white-space:nowrap;vertical-align:2px}
+.chip.hot{border-color:var(--accent);color:var(--accent)}
+.chip.out{border-color:var(--bad);color:var(--bad)}
+.chip.draft{color:var(--mute)}
+.chip.live{border-color:var(--ok);color:var(--ok)}
+@media (prefers-reduced-motion:no-preference){.rise{animation:rise .2s cubic-bezier(.2,.8,.2,1)}@keyframes rise{from{transform:translateY(16px);opacity:.4}to{transform:none;opacity:1}}}
+
+/* Layout: the TV menu shrunk to a phone. HUD header (wordmark, player badge in the room's colour), pixel eyebrow + diamond divider,
+   category tabs where the current one gets the room-colour highlight bar, item rows, room-colour cart bar docked at the bottom. */
+html{scroll-padding-top:112px}
+body{background:radial-gradient(70% 38% at 50% 0%,color-mix(in srgb,var(--room) 16%,transparent),transparent 72%),linear-gradient(180deg,#0d0a16 0%,#06050a 50%) fixed}
+.hud{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:18px 4px}
+.room-btn-top{display:flex;align-items:center;gap:8px}
+.badge.unset b{background:var(--accent);color:#0b0914;animation:blink 1.2s steps(1) infinite}
+@keyframes blink{50%{opacity:.4}}
+@media (prefers-reduced-motion:reduce){.badge.unset b{animation:none}}
+.intro{padding-block:14px 0}
+.intro .divider{margin:10px 0 6px}
+
+.tabs-shell{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:rgba(6,5,10,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.tabs{position:relative;display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;padding-block:8px}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;height:38px;padding:0 22px 0 12px;font-weight:700;font-size:14px;letter-spacing:.1em;text-transform:uppercase;color:rgba(244,241,251,.62);white-space:nowrap}
+.tab.on{background:var(--room);color:var(--room-ink);clip-path:var(--bar)}
+
+main{padding-block:4px 150px}
+section{padding-top:28px}
+.sec-head{margin-bottom:2px}
+h2{margin:0;font-size:24px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-wrap:balance}
+.sec-sub{margin:4px 0 0;font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mute)}
+.sec-head .divider{margin:10px 0 4px}
+.list{display:flex;flex-direction:column}
+.item{display:grid;grid-template-columns:68px minmax(0,1fr) auto;gap:14px;align-items:center;padding-block:12px;border-bottom:1px solid var(--line)}
+.item.out{opacity:.45}
+.thumb{width:68px;height:68px;background:#1a1626;position:relative;overflow:hidden;display:grid;place-items:center;clip-path:var(--notch);
+  font-family:var(--f-pix);font-size:13px;color:var(--mute)}
+.thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.info{min-width:0}
+.name{font-weight:700;font-size:17px;line-height:1.2;letter-spacing:.03em}
+.name .chip{margin-left:6px}
+.desc{color:var(--soft);opacity:.8;font-size:14px;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.price{margin-top:5px;font-weight:600;font-size:16px;letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.price small{font-weight:500;font-size:13px;color:var(--mute)}
+.add{min-width:44px;height:44px;display:grid;place-items:center;border:1px solid var(--line2);background:var(--panel2);font-size:22px;font-weight:600;line-height:1}
+.add:active{background:var(--room);color:var(--room-ink);border-color:var(--room)}
+.add.choose{padding:0 12px;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.add:disabled{opacity:.6}
+.step{display:flex;align-items:center;background:var(--room);color:var(--room-ink)}
+.step button{width:36px;height:44px;font-size:19px;font-weight:700}
+.step b{min-width:18px;text-align:center;font-variant-numeric:tabular-nums}
+.incart{font-family:var(--f-pix);font-size:7px;letter-spacing:.1em;color:var(--room);margin-top:7px;text-align:center;text-transform:uppercase}
+
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:25;padding-top:18px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));background:linear-gradient(to top,var(--bg) 62%,transparent)}
+.bar .hlbar{width:100%}
+.bar .lbl{flex:1}
+.bar .count{font-family:var(--f-pix);font-size:10px;padding:6px 7px;background:rgba(6,5,10,.22)}
+.bar .amt{font-variant-numeric:tabular-nums}
+
+.scrim{position:fixed;inset:0;z-index:40;background:rgba(6,5,10,.76);display:flex;align-items:flex-end;justify-content:center}
+.sheet{width:100%;max-width:720px;max-height:88%;overflow:auto;overscroll-behavior:contain;background:var(--panel);border-top:1px solid var(--line2);
+  padding-block:20px calc(20px + env(safe-area-inset-bottom,0px));padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px))}
+.sheet-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.sheet h3{margin:6px 0 0;font-size:26px;font-weight:700;line-height:1.05;letter-spacing:.06em;text-transform:uppercase;text-wrap:balance}
+.sheet .tagline{font-family:var(--f-pix);font-size:9px;letter-spacing:.16em;color:var(--room);text-transform:uppercase}
+.x{width:40px;height:40px;flex:none;border:1px solid var(--line2);color:var(--soft);font-size:15px}
+.lead{color:var(--soft);margin:0 0 16px}
+.rooms{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+.room-pick{padding:14px 10px 16px;background:var(--panel2);border-top:4px solid var(--c);text-align:left;clip-path:var(--notch)}
+.room-pick b{display:block;font-size:17px;letter-spacing:.06em;text-transform:uppercase;color:var(--c)}
+.room-pick span{font-family:var(--f-pix);font-size:7px;letter-spacing:.12em;color:var(--mute);text-transform:uppercase}
+.room-pick.on{background:var(--c);clip-path:var(--notch)}.room-pick.on b,.room-pick.on span{color:var(--ci)}
+.opts{display:flex;flex-direction:column;gap:6px}
+.opt{display:flex;align-items:center;gap:14px;min-height:58px;padding:0 28px 0 16px;text-align:left;background:var(--panel2);clip-path:var(--bar);font-weight:700;font-size:17px;letter-spacing:.08em;text-transform:uppercase}
+.opt .nm{flex:1}
+.opt .p{font-variant-numeric:tabular-nums;color:var(--soft);letter-spacing:.04em}
+.opt .q{font-family:var(--f-pix);font-size:8px;color:var(--room);margin-left:8px}
+.opt:active{background:var(--room);color:var(--room-ink)}.opt:active .p{color:inherit}
+.lines{display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.line{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center;padding-block:10px;border-bottom:1px solid var(--line)}
+.line .n{font-weight:700;letter-spacing:.03em}.line .o{color:var(--mute);font-size:13px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.line .lp{font-variant-numeric:tabular-nums;min-width:64px;text-align:right;font-weight:600}
+label.note{display:block;margin-top:18px}
+textarea{display:block;width:100%;margin-top:8px;min-height:64px;resize:vertical;background:var(--bg);border:1px solid var(--line2);color:var(--ink);padding:10px 12px}
+.sum{margin:18px 0 0;display:grid;grid-template-columns:auto 1fr;gap:8px 0;align-items:stretch;font-variant-numeric:tabular-nums}
+.sum dt,.sum dd{display:flex;align-items:center}.sum dd{justify-content:flex-end}
+.sum dt{font-family:var(--f-pix);font-size:8px;letter-spacing:.14em;color:var(--mute);text-transform:uppercase}
+.sum dd{margin:0;text-align:right;font-weight:600;letter-spacing:.04em}
+.sum .tot{padding-top:10px;border-top:1px solid var(--line)}
+.sum dd.tot{font-size:24px;font-weight:700}
+.for-room{margin-top:16px;display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;background:var(--panel2);border-left:4px solid var(--room)}
+.for-room b{letter-spacing:.1em;text-transform:uppercase;color:var(--room)}
+.for-room button{font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:13px;color:var(--focus)}
+.pay{width:100%;margin-top:16px}
+.pay .lbl{flex:1}
+.go{display:flex;align-items:center;gap:12px;margin-top:16px;font-family:var(--f-pix);font-size:8px;letter-spacing:.14em;color:var(--accent);text-transform:uppercase}
+.go .gbar{flex:1;height:8px;opacity:.5;background:repeating-linear-gradient(90deg,var(--accent) 0 10px,transparent 10px 15px)}
+.msg{margin:10px 0 0;font-size:14px}
+.msg.err{color:var(--bad)}
+.preview{margin-top:14px;padding:14px;border:1px solid var(--accent);font-size:14px;color:var(--soft)}
+.preview b{color:var(--accent)}
+.preview pre{margin:10px 0 0;overflow-x:auto;font-size:12px;white-space:pre;color:var(--mute)}
+.empty{color:var(--mute);text-align:center;padding:28px 0}
+.loading{padding:60px 0;text-align:center;color:var(--mute)}
+</style>
+
+<header class="wrap hud">
+  <span class="wordmark">ROUND2</span>
+  <button class="badge" id="roomTag" type="button" aria-label="Change room"></button>
+</header>
+<div class="wrap intro"><div class="eyebrow"><span>Room service</span><span class="count">by Madd Pizza</span></div><div class="divider" aria-hidden="true"><span></span><i></i><span></span></div></div>
+<div class="tabs-shell"><nav class="wrap tabs" id="tabs" aria-label="Menu sections"></nav></div>
+<main class="wrap" id="menu"><p class="loading pix">Loading menu…</p></main>
+<div class="bar" id="bar" hidden><div class="wrap"><button class="hlbar" id="barBtn" type="button"><svg width="14" height="16" viewBox="0 0 14 16" aria-hidden="true"><path d="M1 1l12 7-12 7z" fill="currentColor"/></svg><span class="lbl">View order</span><span class="count" id="barCount">0</span><span class="amt" id="barAmt">$0.00</span></button></div></div>
+<div class="scrim" id="scrim" hidden><div class="sheet rise" id="sheet" role="dialog" aria-modal="true"></div></div>
+
+<script>
+// ===== Settings =====
+const CONFIG = {
+  // Make.com webhook that checks the order, creates the HitPay payment and replies {"url": "..."}.
+  // Leave empty for preview mode (no payment).
+  CHECKOUT_URL: "",
+  MENU_URL: "menu.json",
+  IMG_BASE: "https://static.wixstatic.com/media/",
+  ROOM_MEMORY_HOURS: 4,
+  ROOMS: [
+    { name: "Vale", color: "#E8436A", ink: "#0b0914", tier: "Netflix" }, { name: "Kaeden", color: "#4DB848", ink: "#0b0914", tier: "Netflix" },
+    { name: "Scarlett", color: "#F2C21B", ink: "#0b0914", tier: "Netflix" }, { name: "Bella", color: "#7A5BE0", ink: "#ffffff", tier: "Deluxe" },
+    { name: "Kai", color: "#24B49A", ink: "#0b0914", tier: "Deluxe" }, { name: "Atlas", color: "#E9E7EF", ink: "#0b0914", tier: "Deluxe" },
+    { name: "Max", color: "#E0402F", ink: "#ffffff", tier: "VIP", alias: ["maximillion"] }
+  ]
+};
+let MENU = /*MENU_JSON*/null;
+
+// ===== Helpers =====
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const cents = n => Math.round(Number(n) * 100);
+const money = c => "$" + (c / 100).toFixed(2);
+const store = {
+  get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+let S = { markup: .1, gst: .09, minOrder: 10, minOrderEnabled: false };
+let ITEMS = {};
+
+// Menu stores Madd Pizza's price. Customer sees +markup; GST is on Madd Pizza's price only.
+function baseCents(id, opt){ const it = ITEMS[id]; if (!it) return 0; return cents(it.options ? it.options[opt].price : it.price); }
+const shown = b => Math.round(b * (1 + S.markup));
+// Test items (test: true) are charged exactly as typed: no markup, no GST, nothing to Madd Pizza.
+const unitCents = (id, opt) => ITEMS[id]?.test ? baseCents(id, opt) : shown(baseCents(id, opt));
+function totals(lines){
+  const sub = lines.reduce((s,l) => s + unitCents(l.id,l.opt) * l.qty, 0);
+  const base = lines.reduce((s,l) => s + (ITEMS[l.id]?.test ? 0 : baseCents(l.id,l.opt) * l.qty), 0);
+  const gst = Math.round(base * S.gst);
+  return { sub, gst, total: sub + gst, madd: base + gst, round2: sub - base };
+}
+
+// ===== Room =====
+const roomByName = n => CONFIG.ROOMS.find(r => r.name.toLowerCase() === String(n||"").trim().toLowerCase() || (r.alias||[]).includes(String(n||"").trim().toLowerCase()));
+let room = roomByName(new URLSearchParams(location.search).get("room"));
+if (room) store.set("r2room", { room: room.name, t: Date.now() });
+else { const s = store.get("r2room"); if (s && Date.now() - s.t < CONFIG.ROOM_MEMORY_HOURS * 3600e3) room = roomByName(s.room) || null; }
+function setRoom(n){ room = roomByName(n); store.set("r2room", { room: room.name, t: Date.now() }); paintRoom(); }
+function paintRoom(){
+  const t = $("#roomTag"), r = document.documentElement.style;
+  t.className = "badge" + (room ? "" : " unset");
+  r.setProperty("--room", room ? room.color : "#F2C21B");
+  r.setProperty("--room-ink", room ? room.ink : "#0b0914");
+  t.innerHTML = `P1 <b>${room ? esc(room.name.toUpperCase()) : "SELECT ROOM"}</b>`;
+}
+
+// ===== Cart =====
+let cart = [];
+const keyOf = (id,opt) => id + "|" + (opt ?? "");
+const qtyOf = (id,opt) => (cart.find(l => keyOf(l.id,l.opt) === keyOf(id,opt)) || {}).qty || 0;
+const qtyOfItem = id => cart.filter(l => l.id === id).reduce((s,l) => s + l.qty, 0);
+function change(id, opt, d){
+  if (d > 0 && ITEMS[id]?.soldOut) return;
+  const k = keyOf(id,opt); let l = cart.find(l => keyOf(l.id,l.opt) === k);
+  if (!l && d > 0) { l = { id, opt: opt ?? null, qty: 0 }; cart.push(l); }
+  if (!l) return;
+  l.qty = Math.max(0, Math.min(20, l.qty + d));
+  cart = cart.filter(x => x.qty > 0);
+  store.set("r2cart", cart);
+  refresh();
+}
+
+// ===== Render =====
+function imgUrl(src, w){ if (!src) return ""; return /^https?:/.test(src) ? src : `${CONFIG.IMG_BASE}${src}/v1/fill/w_${w},h_${w},al_c,q_80,enc_auto/${src}`; }
+function thumb(it){
+  const letter = esc(it.name.replace(/[^A-Za-z]/g,"").charAt(0) || "R");
+  return `<div class="thumb"><span>${letter}</span>${it.img ? `<img src="${imgUrl(it.img,160)}" alt="" loading="lazy" onerror="this.remove()">` : ""}</div>`;
+}
+function priceLabel(it){
+  if (!it.options) return money(it.test ? cents(it.price) : shown(cents(it.price)));
+  const ps = it.options.map(o => shown(cents(o.price))), lo = Math.min(...ps), hi = Math.max(...ps);
+  return lo === hi ? money(lo) : `${money(lo)} <small>– ${money(hi)}</small>`;
+}
+function control(it){
+  if (it.soldOut) return `<button class="add choose" type="button" disabled>Sold out</button>`;
+  if (it.options) { const n = qtyOfItem(it.id); return `<div><button class="add choose" data-choose="${it.id}" type="button">Choose</button>${n ? `<div class="incart">${n} in cart</div>` : ""}</div>`; }
+  const n = qtyOf(it.id, null);
+  if (!n) return `<button class="add" data-add="${it.id}" type="button" aria-label="Add ${esc(it.name)}">+</button>`;
+  return `<div class="step"><button data-dec="${it.id}" type="button" aria-label="Remove one">−</button><b>${n}</b><button data-add="${it.id}" type="button" aria-label="Add one">+</button></div>`;
+}
+function renderMenu(){
+  const secs = MENU.sections;
+  $("#tabs").innerHTML = secs.map((s,i) => `<button class="tab${i ? "" : " on"}" data-tab="${s.id}" type="button">${esc(s.name)}</button>`).join("");
+  $("#menu").innerHTML = secs.map(s => `
+    <section id="s-${s.id}" data-sec="${s.id}">
+      <div class="sec-head"><div class="eyebrow"><span>${String(MENU.sections.indexOf(s) + 1).padStart(2,"0")}</span><span class="count">${s.items.length} items</span></div><h2>${esc(s.name)}</h2>${s.sub ? `<p class="sec-sub">${esc(s.sub)}</p>` : ""}<div class="divider" aria-hidden="true"><span></span><i></i><span></span></div></div>
+      <div class="list">${s.items.map(it => `
+        <div class="item${it.soldOut ? " out" : ""}" data-item="${it.id}">
+          ${thumb(it)}
+          <div class="info">
+            <div class="name">${esc(it.name)}${it.soldOut ? '<span class="chip out">Sold out</span>' : it.featured ? '<span class="chip hot">Hot</span>' : ""}</div>
+            ${it.desc ? `<div class="desc">${esc(it.desc)}</div>` : ""}
+            <div class="price">${priceLabel(it)}</div>
+          </div>
+          <div class="ctl">${control(it)}</div>
+        </div>`).join("")}</div>
+    </section>`).join("");
+}
+function refresh(){
+  document.querySelectorAll(".item").forEach(el => { el.querySelector(".ctl").innerHTML = control(ITEMS[el.dataset.item]); });
+  const n = cart.reduce((s,l) => s + l.qty, 0), t = totals(cart);
+  $("#bar").hidden = n === 0;
+  $("#barCount").textContent = n;
+  $("#barAmt").textContent = money(t.total);
+  if (open === "cart") renderCart();
+  else if (open && open.startsWith("opt:")) renderOptions(open.slice(4));
+}
+
+// ===== Sheets =====
+let open = null, afterRoom = false;
+function show(kind){ open = kind; $("#scrim").hidden = false; }
+function hide(){ open = null; afterRoom = false; $("#scrim").hidden = true; }
+const head = (t, tag) => `<div class="sheet-head"><div><div class="tagline">${tag || ""}</div><h3>${t}</h3></div><button class="x" data-close type="button" aria-label="Close">✕</button></div><div class="divider" aria-hidden="true"><span></span><i></i><span></span></div>`;
+function renderRooms(){
+  $("#sheet").innerHTML = head("Select room", "Player 1") + `<p class="lead">Your food is brought to this room.</p>
+    <div class="rooms">${CONFIG.ROOMS.map(r => `<button class="room-pick${room && r.name === room.name ? " on" : ""}" style="--c:${r.color};--ci:${r.ink}" data-room="${r.name}" type="button"><b>${r.name}</b><span>${r.tier}</span></button>`).join("")}</div>`;
+}
+function renderOptions(id){
+  const it = ITEMS[id];
+  $("#sheet").innerHTML = head(esc(it.name), "Choose one") + (it.desc ? `<p class="lead">${esc(it.desc)}</p>` : "") +
+    `<div class="opts">${it.options.map((o,i) => { const q = qtyOf(id,i);
+      return `<button class="opt" data-addopt="${id}" data-i="${i}" type="button"><svg width="14" height="16" viewBox="0 0 14 16" aria-hidden="true"><path d="M1 1l12 7-12 7z" fill="currentColor"/></svg><span class="nm">${esc(o.name)}${q ? `<span class="q">×${q}</span>` : ""}</span><span class="p">${money(shown(cents(o.price)))}</span></button>`; }).join("")}</div>`;
+}
+function renderCart(state){
+  if (!cart.length) { $("#sheet").innerHTML = head("Your order", "Cart") + `<p class="empty">Your cart is empty.</p>`; return; }
+  const t = totals(cart), belowMin = S.minOrderEnabled && t.sub < cents(S.minOrder);
+  const note = $("#note") ? $("#note").value : (store.get("r2note") || "");
+  $("#sheet").innerHTML = head("Your order", room ? "Room " + esc(room.name) : "Cart") +
+    `<div class="lines">${cart.map(l => { const it = ITEMS[l.id];
+      return `<div class="line"><div><div class="n">${esc(it.name)}</div>${it.options ? `<div class="o">${esc(it.options[l.opt].name)}</div>` : ""}</div>
+        <div class="step"><button data-dec="${l.id}" data-i="${l.opt ?? ""}" type="button" aria-label="Remove one">−</button><b>${l.qty}</b><button data-add="${l.id}" data-i="${l.opt ?? ""}" type="button" aria-label="Add one">+</button></div>
+        <div class="lp">${money(unitCents(l.id,l.opt) * l.qty)}</div></div>`; }).join("")}</div>
+     <label class="note pix" for="note">Allergies or requests</label>
+     <textarea id="note" maxlength="300" placeholder="e.g. no chilli on the wings">${esc(note)}</textarea>
+     <dl class="sum"><dt>Subtotal</dt><dd>${money(t.sub)}</dd><dt>GST 9%</dt><dd>${money(t.gst)}</dd><dt class="tot">Total</dt><dd class="tot">${money(t.total)}</dd></dl>
+     <div class="for-room">${room ? `<span>Delivering to <b>${esc(room.name)}</b></span>` : `<span>No room selected</span>`}<button data-pickroom type="button">${room ? "Change" : "Select room"}</button></div>
+     <button class="hlbar pay" id="pay" type="button" ${belowMin || state === "busy" ? "disabled" : ""}><svg width="14" height="16" viewBox="0 0 14 16" aria-hidden="true"><path d="M1 1l12 7-12 7z" fill="currentColor"/></svg><span class="lbl">${belowMin ? `Minimum order ${money(cents(S.minOrder))}` : state === "busy" ? "Opening payment…" : "Pay"}</span><span>${belowMin || state === "busy" ? "" : money(t.total)}</span></button>
+     <div class="go"><span>Secure payment</span><span class="gbar"></span><span>HitPay</span></div>
+     <div id="payMsg"></div>`;
+}
+
+// ===== Checkout =====
+async function checkout(){
+  if (!room) { afterRoom = true; open = "rooms"; renderRooms(); return; }
+  const note = ($("#note")?.value || "").trim(), t = totals(cart);
+  const order = {
+    room: room.name,
+    items: cart.map(l => ({ id: l.id, option: l.opt == null ? null : ITEMS[l.id].options[l.opt].name, qty: l.qty })),
+    note,
+    shown_total: (t.total / 100).toFixed(2)
+  };
+  if (!CONFIG.CHECKOUT_URL) {
+    $("#payMsg").innerHTML = `<div class="preview"><b>Preview mode.</b> Payment isn't connected yet. Make.com will receive this order, re-check the prices and create the HitPay payment.
+      <pre>${esc(JSON.stringify(order, null, 2))}</pre><pre>Madd Pizza ${money(t.madd)} (incl. GST ${money(t.gst)}) · Round2 ${money(t.round2)}</pre></div>`;
+    return;
+  }
+  renderCart("busy");
+  order.return_url = location.origin + location.pathname + "?room=" + encodeURIComponent(room.name.toLowerCase());
+  try {
+    const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 20000);
+    // Sent as a simple form post so the browser doesn't need a pre-flight check from Make.com.
+    const res = await fetch(CONFIG.CHECKOUT_URL, { method: "POST", body: new URLSearchParams({ order: JSON.stringify(order) }), signal: ctrl.signal });
+    clearTimeout(timer);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.url) throw new Error(data.error || "We couldn't start the payment.");
+    store.set("r2pending", { order: data.order, lines: cart, note, room: room.name, total: t.total, gst: t.gst, sub: t.sub, at: Date.now() });
+    location.href = data.url;
+  } catch (e) {
+    renderCart();
+    $("#payMsg").innerHTML = `<p class="msg err">${esc(e.name === "AbortError" ? "Payment took too long to open." : e.message)} Tap Pay to try again, or WhatsApp us.</p>`;
+  }
+}
+
+// ===== Events =====
+document.addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b) { if (e.target === $("#scrim")) hide(); return; }
+  const i = b.dataset.i === undefined || b.dataset.i === "" ? null : Number(b.dataset.i);
+  if (b.dataset.add) change(b.dataset.add, i, 1);
+  else if (b.dataset.dec) change(b.dataset.dec, i, -1);
+  else if (b.dataset.choose) { renderOptions(b.dataset.choose); show("opt:" + b.dataset.choose); }
+  else if (b.dataset.addopt) change(b.dataset.addopt, i, 1);
+  else if (b.dataset.room) { setRoom(b.dataset.room); if (afterRoom) { afterRoom = false; open = "cart"; renderCart(); } else hide(); }
+  else if (b.dataset.pickroom !== undefined) { afterRoom = true; open = "rooms"; renderRooms(); }
+  else if (b.dataset.close !== undefined) hide();
+  else if (b.dataset.tab) { const s = document.getElementById("s-" + b.dataset.tab); scrollTo({ top: s.getBoundingClientRect().top + scrollY - 60, behavior: "smooth" }); }
+  else if (b.id === "roomTag") { renderRooms(); show("rooms"); }
+  else if (b.id === "barBtn") { renderCart(); show("cart"); }
+  else if (b.id === "pay") checkout();
+});
+document.addEventListener("input", e => { if (e.target.id === "note") store.set("r2note", e.target.value); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && open) hide(); });
+function syncTabs(){
+  if (!MENU) return;
+  let cur = MENU.sections[0]?.id;
+  document.querySelectorAll("section[data-sec]").forEach(s => { if (s.getBoundingClientRect().top < 130) cur = s.dataset.sec; });
+  document.querySelectorAll(".tab").forEach(t => {
+    const on = t.dataset.tab === cur;
+    if (on && !t.classList.contains("on")) { const nav = $("#tabs"); nav.scrollTo({ left: t.offsetLeft - (nav.clientWidth - t.offsetWidth) / 2, behavior: "smooth" }); }
+    t.classList.toggle("on", on);
+  });
+}
+addEventListener("scroll", () => requestAnimationFrame(syncTabs), { passive: true });
+
+// ===== Start =====
+function boot(data){
+  S = Object.assign(S, data.settings || {});
+  data.sections.forEach(s => { s.items = s.items.filter(it => !it.hidden); });
+  data.sections = data.sections.filter(s => s.items.length);
+  MENU = data; ITEMS = {};
+  MENU.sections.forEach(s => s.items.forEach(it => { ITEMS[it.id] = it; }));
+  cart = (store.get("r2cart") || []).filter(l => ITEMS[l.id] && !ITEMS[l.id].soldOut && (!ITEMS[l.id].options || ITEMS[l.id].options[l.opt]));
+  renderMenu(); refresh(); returnScreen();
+}
+// ===== Back from HitPay =====
+function returnScreen(){
+  const q = new URLSearchParams(location.search), status = q.get("status");
+  if (!status) return;
+  history.replaceState(null, "", location.pathname + (room ? "?room=" + room.name.toLowerCase() : ""));
+  const p = store.get("r2pending");
+  if (status === "completed" && p) {
+    cart = []; store.set("r2cart", []); store.set("r2note", ""); store.set("r2pending", null); refresh();
+    const rows = p.lines.map(l => { const it = ITEMS[l.id]; if (!it) return "";
+      return `<div class="line"><div><div class="n">${esc(it.name)}</div>${it.options ? `<div class="o">${esc(it.options[l.opt]?.name || "")}</div>` : ""}</div><b>×${l.qty}</b><div class="lp">${money(unitCents(l.id,l.opt) * l.qty)}</div></div>`; }).join("");
+    $("#sheet").innerHTML = head("Payment received", "Order " + esc(p.order || "")) +
+      `<p class="lead">Thanks! We've sent your order to the kitchen. You'll see a message on your TV when it's at the pickup point.</p>
+       <div class="lines">${rows}</div>
+       ${p.note ? `<p class="lead" style="margin-top:12px">Note: ${esc(p.note)}</p>` : ""}
+       <dl class="sum"><dt>Subtotal</dt><dd>${money(p.sub)}</dd><dt>GST 9%</dt><dd>${money(p.gst)}</dd><dt class="tot">Paid</dt><dd class="tot">${money(p.total)}</dd></dl>
+       <button class="hlbar pay" data-close type="button"><span class="lbl">Add more items</span></button>
+       <p class="msg" style="color:var(--mute)">Need to change something? WhatsApp us on +65 9162 5767.</p>`;
+    show("done");
+  } else if (status !== "completed") {
+    renderCart(); show("cart");
+    $("#payMsg").innerHTML = `<p class="msg err">Payment wasn't completed. Your order is still here. Tap Pay to try again.</p>`;
+  }
+}
+
+paintRoom();
+if (MENU) boot(MENU);
+else fetch(CONFIG.MENU_URL + "?v=" + Date.now()).then(r => r.json()).then(boot)
+  .catch(() => { $("#menu").innerHTML = `<p class="loading">The menu didn't load. Pull down to refresh, or WhatsApp us to order.</p>`; });
+</script>
+
+</html>

@@ -1,0 +1,830 @@
+{
+ "settings": {
+  "markup": 0.1,
+  "gst": 0.09,
+  "minOrder": 10,
+  "minOrderEnabled": false
+ },
+ "updated": "2026-10-27",
+ "note": "Prices are Madd Pizza's own prices (before GST). Customers see price x 1.1 (Round2's 10%). GST 9% is charged on Madd Pizza's price only. Price source order: printed menu first, then maddpizza.sg. Items with hidden=true are drafts and don't show to customers.",
+ "sections": [
+  {
+   "id": "test",
+   "name": "Test",
+   "sub": "Payment test, not real food",
+   "items": [
+    {
+     "id": "test-item",
+     "name": "Test item",
+     "desc": "50 cent payment test. Nothing is made or delivered.",
+     "price": 0.5,
+     "test": true
+    }
+   ]
+  },
+  {
+   "id": "pizza",
+   "name": "Roman Pizza",
+   "sub": "Slice approx 12 × 25 cm · Full approx 66 × 25 cm",
+   "items": [
+    {
+     "id": "margherita",
+     "name": "Margherita",
+     "desc": "Tomato & fiordilatte",
+     "img": "4c079c_d0f123724d904c56b571fd9e58d128e0~mv2.jpg",
+     "options": [
+      {
+       "name": "Slice",
+       "price": 12
+      },
+      {
+       "name": "Full",
+       "price": 62
+      }
+     ]
+    },
+    {
+     "id": "marinara",
+     "name": "Marinara",
+     "desc": "Tomato, garlic, oregano & parsley",
+     "img": "4c079c_6a72496faa67424998f9b4717f8a1f0e~mv2.jpg",
+     "options": [
+      {
+       "name": "Slice",
+       "price": 10
+      },
+      {
+       "name": "Full",
+       "price": 53
+      }
+     ]
+    },
+    {
+     "id": "salami",
+     "name": "Salami",
+     "desc": "Tomato, fiordilatte & pepperoni salami",
+     "img": "4c079c_0cdc0ac8d6e0418db1fd6bc635c36fc6~mv2.jpg",
+     "options": [
+      {
+       "name": "Slice",
+       "price": 14
+      },
+      {
+       "name": "Full",
+       "price": 72
+      }
+     ]
+    },
+    {
+     "id": "zucchini-anchovies",
+     "name": "Zucchini & Anchovies",
+     "desc": "Fiordilatte, mascarpone, zucchini & anchovies",
+     "img": "4c079c_b16bfa2872464c6b9f6e0e59605e876a~mv2.jpg",
+     "options": [
+      {
+       "name": "Slice",
+       "price": 14
+      },
+      {
+       "name": "Full",
+       "price": 72
+      }
+     ]
+    },
+    {
+     "id": "eggplant-parmigiana",
+     "name": "Eggplant Parmigiana",
+     "desc": "Parmesan, fiordilatte, eggplant, cherry tomatoes, basil & oregano",
+     "img": "4c079c_1d972831dd01446e9f27706009356fcc~mv2.jpg",
+     "options": [
+      {
+       "name": "Slice",
+       "price": 14
+      },
+      {
+       "name": "Full",
+       "price": 72
+      }
+     ]
+    },
+    {
+     "id": "tuna-pizza",
+     "name": "Tuna",
+     "desc": "Tomato, fiordilatte, tuna, olives, onions & capers",
+     "img": "4c079c_0de90b904fd844bc9be8c08f0ae57501~mv2.jpg",
+     "options": [
+      {
+       "name": "Slice",
+       "price": 15
+      },
+      {
+       "name": "Full",
+       "price": 75
+      }
+     ]
+    },
+    {
+     "id": "quattro-formaggi",
+     "name": "Quattro Formaggi",
+     "desc": "Taleggio, fiordilatte, gorgonzola & parmesan",
+     "img": "4c079c_26879c63f1624efba49d5846c71e055b~mv2.jpg",
+     "options": [
+      {
+       "name": "Slice",
+       "price": 15
+      },
+      {
+       "name": "Full",
+       "price": 75
+      }
+     ]
+    },
+    {
+     "id": "parma-rocket-pizza",
+     "name": "Parma Ham & Rocket",
+     "desc": "Tomato, fiordilatte, Parma ham, rocket & Parmigiano Reggiano",
+     "img": "4c079c_64e7b9b0bf5b4f1f9cb88162142909f1~mv2.jpg",
+     "featured": true,
+     "options": [
+      {
+       "name": "Slice",
+       "price": 17
+      },
+      {
+       "name": "Full",
+       "price": 85
+      }
+     ]
+    },
+    {
+     "id": "burrata-parma-pizza",
+     "name": "Burrata, Parma Ham & Rocket",
+     "desc": "Tomato, fiordilatte, Parma ham, rocket, Parmigiano Reggiano & burrata",
+     "img": "4c079c_29aa92c6824445128c4c7556bd18e82f~mv2.jpg",
+     "options": [
+      {
+       "name": "Slice",
+       "price": 21
+      },
+      {
+       "name": "Full",
+       "price": 105
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "finger",
+   "name": "Finger Food",
+   "items": [
+    {
+     "id": "french-fries",
+     "name": "French Fries",
+     "desc": "Crispy golden fries with tartare sauce",
+     "price": 7.9,
+     "featured": true
+    },
+    {
+     "id": "corn-tortilla",
+     "name": "Corn Tortilla",
+     "desc": "With spicy salsa",
+     "price": 10
+    },
+    {
+     "id": "truffle-fries",
+     "name": "Truffle Fries",
+     "desc": "With truffle sauce & grated parmesan",
+     "price": 12
+    },
+    {
+     "id": "chicken-tender",
+     "name": "Chicken Tenders",
+     "desc": "Crispy, with Thai chili sauce",
+     "price": 13,
+     "featured": true
+    },
+    {
+     "id": "cheese-sticks",
+     "name": "Mozzarella Cheese Sticks",
+     "desc": "Deep-fried breaded cheese sticks with salsa",
+     "price": 13
+    },
+    {
+     "id": "buffalo-wings",
+     "name": "Buffalo Wings",
+     "desc": "Chicken wings in chef's special sauce",
+     "price": 13
+    },
+    {
+     "id": "chicken-wings",
+     "name": "Chicken Wings",
+     "desc": "Crispy, with Thai chili sauce",
+     "price": 15
+    },
+    {
+     "id": "calamari-prawns",
+     "name": "Calamari & Prawns",
+     "desc": "Deep-fried semolina-crusted squid and prawns",
+     "price": 16
+    }
+   ]
+  },
+  {
+   "id": "mains",
+   "name": "Main Course",
+   "items": [
+    {
+     "id": "seafood-mee-goreng",
+     "name": "Seafood Mee Goreng",
+     "desc": "Stir-fried yellow noodles with seafood in spicy sambal",
+     "price": 12
+    },
+    {
+     "id": "sambal-fried-rice",
+     "name": "Sambal Fried Rice",
+     "desc": "With prawns, squid, egg & special spicy sambal",
+     "price": 12
+    },
+    {
+     "id": "kung-pao-chicken",
+     "name": "Kung Pao Chicken",
+     "desc": "Chicken, cashews & vegetables in kung pao sauce, with rice",
+     "price": 15
+    },
+    {
+     "id": "hotdog",
+     "name": "Hotdog",
+     "desc": "Grilled sausage with French liver pâté, tomato concassé & fries",
+     "price": 16
+    },
+    {
+     "id": "chicken-parmigiana",
+     "name": "Chicken Parmigiana",
+     "desc": "Breaded chicken, tomato concassé & melted cheese, with fries & mesclun",
+     "price": 16
+    },
+    {
+     "id": "grilled-chicken-chop",
+     "name": "Grilled Chicken Chop",
+     "desc": "With potatoes, vegetables & black pepper sauce",
+     "price": 16
+    },
+    {
+     "id": "salted-egg-prawn",
+     "name": "Golden Sand Salted Egg Prawn",
+     "desc": "Prawns stir-fried in salted egg & butter, with rice",
+     "price": 16
+    },
+    {
+     "id": "sweet-sour-fish",
+     "name": "Sweet & Sour Fish",
+     "desc": "Deep-fried fish fillet in sweet & sour sauce, with rice",
+     "price": 16
+    },
+    {
+     "id": "roast-chicken",
+     "name": "Roast Chicken",
+     "desc": "Roasted spring chicken with vegetables & gremolata",
+     "price": 17
+    },
+    {
+     "id": "red-shrimp-pasta",
+     "name": "Red Shrimp Pasta",
+     "desc": "Spaghetti with shrimp & sun-dried tomatoes in cream sauce",
+     "price": 17
+    },
+    {
+     "id": "black-pepper-beef",
+     "name": "Black Pepper Beef",
+     "desc": "Stir-fried ribeye with onions & peppers, with rice",
+     "price": 17
+    },
+    {
+     "id": "fish-chips",
+     "name": "Fish & Chips",
+     "desc": "Beer-battered fish fillet with fries & tartare",
+     "price": 18,
+     "featured": true
+    },
+    {
+     "id": "burger",
+     "name": "Burger",
+     "desc": "Beef patty, bacon, onion jam, pineapple & cheese, with fries & coleslaw",
+     "featured": true,
+     "options": [
+      {
+       "name": "Burger",
+       "price": 18
+      },
+      {
+       "name": "With egg sunny side up",
+       "price": 19
+      }
+     ]
+    },
+    {
+     "id": "norwegian-salmon",
+     "name": "Norwegian Salmon",
+     "desc": "Pan-fried fillet with spring vegetables",
+     "price": 19
+    }
+   ]
+  },
+  {
+   "id": "pasta",
+   "name": "Pasta & Risotto",
+   "items": [
+    {
+     "id": "aglio-olio",
+     "name": "Spaghetti Aglio e Olio",
+     "desc": "White wine sauce with prawns, mussels, clams, garlic & chili",
+     "price": 17
+    },
+    {
+     "id": "carbonara",
+     "name": "Carbonara",
+     "desc": "Guanciale DOP & pecorino in a creamy yolk sauce",
+     "price": 17
+    },
+    {
+     "id": "ravioli",
+     "name": "Ravioli Ricotta & Spinach",
+     "desc": "In light cherry tomato sauce with basil",
+     "price": 17
+    },
+    {
+     "id": "tagliatelle-bolognese",
+     "name": "Tagliatelle Bolognese",
+     "desc": "Minced beef & tomato bolognese",
+     "price": 18
+    },
+    {
+     "id": "beef-lasagne",
+     "name": "Beef Lasagne",
+     "desc": "Homemade bolognese baked between pasta & béchamel",
+     "price": 18
+    }
+   ]
+  },
+  {
+   "id": "focaccia",
+   "name": "Focaccia Romana Sandwiches",
+   "sub": "Approx 12 × 25 cm",
+   "items": [
+    {
+     "id": "parma-stracchino",
+     "name": "Parma Ham, Rocket & Stracchino",
+     "desc": "",
+     "price": 15,
+     "img": "4c079c_415bcb1b09ae4a7da2989e6b85295521~mv2.jpg"
+    },
+    {
+     "id": "ham-taleggio",
+     "name": "Cooked Ham & Taleggio",
+     "desc": "",
+     "price": 15,
+     "img": "4c079c_d46444ce6f5c4c25a7fb38f467b517ec~mv2.jpg"
+    },
+    {
+     "id": "vegetarian-focaccia",
+     "name": "Vegetarian",
+     "desc": "Italian tomatoes, stracchino, parmesan & rocket",
+     "price": 15,
+     "img": "4c079c_ff5f55f60edb4e1e94e2bb90d7b215b3~mv2.jpg"
+    },
+    {
+     "id": "mortadella-provolone",
+     "name": "Mortadella & Provolone",
+     "desc": "",
+     "price": 15,
+     "img": "4c079c_377a3611d9be49a6b319ec0399b736c4~mv2.jpg"
+    },
+    {
+     "id": "truffle-mascarpone",
+     "name": "Truffle Pesto & Mascarpone",
+     "desc": "",
+     "price": 15,
+     "img": "4c079c_e3c9e2404f54446594cc3daef2e9736c~mv2.jpg"
+    },
+    {
+     "id": "porchetta-sandwich",
+     "name": "Porchetta Sandwich",
+     "desc": "Oven-roasted rind-on Spanish pork belly",
+     "price": 15,
+     "img": "4c079c_f8195ac645c64281abfcfa9d473f91e6~mv2.jpg"
+    }
+   ]
+  },
+  {
+   "id": "bruschetta",
+   "name": "Bruschetta",
+   "items": [
+    {
+     "id": "aglio-olio-bruschetta",
+     "name": "Aglio Olio",
+     "desc": "Garlic & olive oil",
+     "price": 7,
+     "img": "4c079c_7c03821df39e48c9b1bd21932c02c688~mv2.jpg"
+    },
+    {
+     "id": "pomodoro-bruschetta",
+     "name": "Pomodoro",
+     "desc": "Fresh Italian tomatoes & basil",
+     "price": 13,
+     "img": "4c079c_7af873052a6740088333bd99ad3eeef8~mv2.jpg"
+    },
+    {
+     "id": "cotto-stracchino-bruschetta",
+     "name": "Prosciutto Cotto & Stracchino",
+     "desc": "Cooked ham & cheese",
+     "price": 14,
+     "img": "4c079c_a1d20e50d0df4bb4b88f3b42e303f074~mv2.jpg"
+    },
+    {
+     "id": "porcini-bruschetta",
+     "name": "Porcini Mushroom",
+     "desc": "Porcini, parsley & garlic",
+     "price": 14,
+     "img": "4c079c_9bd07570873d4fc39640eb8359e6da01~mv2.jpg"
+    },
+    {
+     "id": "salmon-crostini",
+     "name": "Smoked Salmon Crostini",
+     "desc": "Smoked salmon & dill",
+     "price": 16,
+     "img": "4c079c_77b8629536ab40be8104d9625834ffac~mv2.jpg"
+    }
+   ]
+  },
+  {
+   "id": "starters",
+   "name": "Salad / Starters",
+   "items": [
+    {
+     "id": "carpaccio",
+     "name": "Carpaccio",
+     "desc": "Thinly sliced raw beef & parmesan",
+     "price": 17,
+     "img": "4c079c_0cdea091e95c417095ab1aa2b278c362~mv2.jpg"
+    },
+    {
+     "id": "prosciutto-melone",
+     "name": "Prosciutto & Melone",
+     "desc": "Italian rock melon & Parma ham",
+     "price": 18,
+     "img": "4c079c_930667170ada43b4a53392998cc8f058~mv2.jpg"
+    },
+    {
+     "id": "caprese",
+     "name": "Caprese",
+     "desc": "Buffalo mozzarella, basil & Italian tomatoes",
+     "price": 18,
+     "img": "4c079c_6ae5fcce0d4d49b784ae06b6b8d0ebb5~mv2.jpg"
+    },
+    {
+     "id": "porchetta",
+     "name": "Porchetta",
+     "desc": "Oven-roasted rind-on Spanish pork belly",
+     "price": 18,
+     "img": "4c079c_7d1421fc50c248a9b6834e0cdf6e662e~mv2.jpg"
+    },
+    {
+     "id": "burrata-prosciutto",
+     "name": "Burrata, Rocket & Prosciutto",
+     "desc": "Burrata, Parma ham & rocket",
+     "price": 22,
+     "img": "4c079c_194d3ff859904dcd908f09630c3b8fb1~mv2.jpg"
+    }
+   ]
+  },
+  {
+   "id": "bread",
+   "name": "Bread",
+   "items": [
+    {
+     "id": "focaccia-plain",
+     "name": "Focaccia Romana Plain",
+     "desc": "",
+     "options": [
+      {
+       "name": "Small",
+       "price": 5
+      },
+      {
+       "name": "Full",
+       "price": 25
+      }
+     ],
+     "img": "4c079c_8453512f165c44d19839f1b71b430ec0~mv2.jpg"
+    },
+    {
+     "id": "focaccia-pugliese",
+     "name": "Focaccia Pugliese",
+     "desc": "",
+     "options": [
+      {
+       "name": "Small",
+       "price": 6
+      },
+      {
+       "name": "Full",
+       "price": 22
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "platters",
+   "name": "Cold Cuts & Cheese Platters",
+   "items": [
+    {
+     "id": "salumi",
+     "name": "Misto Italia Salumi",
+     "desc": "Assorted Italian cold cuts",
+     "price": 26,
+     "img": "4c079c_b9e694b2bf8b4cf88412c6abfb3b9ef9~mv2.jpg"
+    },
+    {
+     "id": "formaggio",
+     "name": "Misto Italia Formaggio",
+     "desc": "Assorted Italian cheeses",
+     "price": 26,
+     "img": "4c079c_8e8a21517d7640b6b9c553ce6742f5c7~mv2.jpg"
+    }
+   ]
+  },
+  {
+   "id": "soup",
+   "name": "Soup",
+   "items": [
+    {
+     "id": "soup-of-the-day",
+     "name": "Chef's Soup of the Day",
+     "desc": "Ask us what's in the pot today",
+     "price": 9.9,
+     "img": "4c079c_7224a12b6a904b6c80b74f6724a04b05~mv2.png"
+    }
+   ]
+  },
+  {
+   "id": "dessert",
+   "name": "House Dessert",
+   "items": [
+    {
+     "id": "gelato",
+     "name": "Gelato",
+     "desc": "Vanilla, chocolate or strawberry",
+     "hidden": true,
+     "options": [
+      {
+       "name": "Vanilla",
+       "price": 5
+      },
+      {
+       "name": "Chocolate",
+       "price": 5
+      },
+      {
+       "name": "Strawberry",
+       "price": 5
+      }
+     ]
+    },
+    {
+     "id": "bomboloni",
+     "name": "Bomboloni",
+     "desc": "Traditional Italian donuts",
+     "options": [
+      {
+       "name": "Plain",
+       "price": 3
+      },
+      {
+       "name": "Custard / chocolate filling",
+       "price": 4
+      }
+     ],
+     "img": "4c079c_2c62408314224d7f89db7ecc21c95b3c~mv2.jpg"
+    },
+    {
+     "id": "crostata",
+     "name": "Crostata",
+     "desc": "Apricot pie",
+     "price": 9,
+     "img": "4c079c_9fbca32da76d41b98c709c9b7d16dda0~mv2.jpg"
+    },
+    {
+     "id": "burnt-cheesecake",
+     "name": "Burnt Cheesecake",
+     "desc": "",
+     "price": 10,
+     "img": "4c079c_7294187643d74258a433d32ec0bffd81~mv2.webp"
+    },
+    {
+     "id": "tiramisu-pistachio",
+     "name": "Tiramisu Pistachio",
+     "desc": "",
+     "price": 12,
+     "img": "4c079c_ba7b12d613b6403a82192d66295841a8~mv2.jpg"
+    }
+   ]
+  },
+  {
+   "id": "drinks",
+   "name": "Beverages",
+   "items": [
+    {
+     "id": "soft-drinks",
+     "name": "Soft Drinks",
+     "desc": "",
+     "options": [
+      {
+       "name": "Coke",
+       "price": 4
+      },
+      {
+       "name": "Coke Lite",
+       "price": 4
+      },
+      {
+       "name": "Sprite",
+       "price": 4
+      },
+      {
+       "name": "Ginger Ale",
+       "price": 4
+      }
+     ],
+     "img": "4c079c_14eb816d93f9468fbf4bc1cb9b97c90a~mv2.webp"
+    },
+    {
+     "id": "hot-tea",
+     "name": "Hot Tea",
+     "desc": "",
+     "options": [
+      {
+       "name": "Oolong",
+       "price": 4
+      },
+      {
+       "name": "Japanese Green Tea",
+       "price": 4
+      },
+      {
+       "name": "Earl Grey",
+       "price": 4
+      },
+      {
+       "name": "Chamomile",
+       "price": 4
+      },
+      {
+       "name": "English Breakfast",
+       "price": 4
+      },
+      {
+       "name": "Jasmine",
+       "price": 4
+      }
+     ],
+     "img": "4c079c_1f796a17512a4276959cb06e50491800~mv2.webp"
+    },
+    {
+     "id": "calamansi",
+     "name": "Calamansi Juice",
+     "desc": "Freshly squeezed",
+     "price": 4,
+     "img": "4c079c_8e73eaf034b64f2d84fef797d9ac7073~mv2.jpg"
+    },
+    {
+     "id": "iced-tea",
+     "name": "Iced Tea",
+     "desc": "Brewed in-house",
+     "price": 5,
+     "img": "4c079c_0cf1264c77f243e6bd733fda5c6c6383~mv2.jpg"
+    },
+    {
+     "id": "iced-lemon-tea",
+     "name": "Iced Lemon Tea",
+     "desc": "Brewed in-house",
+     "price": 5,
+     "img": "4c079c_52158918a73b489893aefda5b3745d2a~mv2.jpg"
+    },
+    {
+     "id": "lime-soda",
+     "name": "Lime Soda",
+     "desc": "Fresh lime, sugar syrup & soda",
+     "price": 5
+    },
+    {
+     "id": "fresh-juices",
+     "name": "Fresh Juices",
+     "desc": "Freshly squeezed",
+     "options": [
+      {
+       "name": "Orange",
+       "price": 6
+      },
+      {
+       "name": "Mango",
+       "price": 6
+      },
+      {
+       "name": "Apple",
+       "price": 6
+      }
+     ]
+    },
+    {
+     "id": "hot-chocolate",
+     "name": "Hot Chocolate",
+     "desc": "",
+     "price": 7,
+     "img": "4c079c_c21b638af8884c6c94e2a3929af54838~mv2.jpg"
+    },
+    {
+     "id": "smoothies",
+     "name": "Fruit Smoothies",
+     "desc": "Blended with ice & fresh milk",
+     "options": [
+      {
+       "name": "Mango",
+       "price": 7
+      },
+      {
+       "name": "Lime",
+       "price": 7
+      }
+     ],
+     "img": "4c079c_2b747fe23f744ba0a928a01d9c0e0635~mv2.jpg"
+    },
+    {
+     "id": "ice-blended-chocolate",
+     "name": "Ice Blended Chocolate",
+     "desc": "Rich chocolate blended with ice",
+     "price": 8,
+     "img": "4c079c_1e3397808ce04fa6b210d57c019375c5~mv2.jpg"
+    },
+    {
+     "id": "lassi",
+     "name": "Fruit Lassi",
+     "desc": "Blended with ice & fresh yoghurt",
+     "options": [
+      {
+       "name": "Mango",
+       "price": 8
+      },
+      {
+       "name": "Lime",
+       "price": 8
+      }
+     ],
+     "img": "4c079c_cc1253a86d024629a8138055ff5aa882~mv2.jpg"
+    },
+    {
+     "id": "audrey-hepburn",
+     "name": "Audrey Hepburn",
+     "desc": "Apple, ginger, lemongrass",
+     "price": 8,
+     "img": "4c079c_190cfbd2a59b4c6684645c77c7f4f2d6~mv2.webp"
+    },
+    {
+     "id": "liz-taylor",
+     "name": "Liz Taylor",
+     "desc": "Beetroot, carrot, apple, orange",
+     "price": 8,
+     "img": "4c079c_190cfbd2a59b4c6684645c77c7f4f2d6~mv2.webp"
+    },
+    {
+     "id": "edith-piaf",
+     "name": "Edith Piaf",
+     "desc": "Beetroot, apple, pineapple",
+     "price": 8,
+     "img": "4c079c_190cfbd2a59b4c6684645c77c7f4f2d6~mv2.webp"
+    },
+    {
+     "id": "milkshakes",
+     "name": "Milkshakes",
+     "desc": "",
+     "options": [
+      {
+       "name": "Vanilla",
+       "price": 10
+      },
+      {
+       "name": "Strawberry",
+       "price": 10
+      },
+      {
+       "name": "Chocolate",
+       "price": 10
+      }
+     ],
+     "img": "4c079c_cdebe174d85e48f6b331c5d027e7ac71~mv2.webp"
+    }
+   ]
+  }
+ ]
+}
