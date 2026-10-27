@@ -2,7 +2,7 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Round2 Room Menu</title>
+<title>Round2 Food Menu</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -173,7 +173,7 @@ textarea{display:block;width:100%;margin-top:8px;min-height:64px;resize:vertical
   <span class="wordmark">ROUND2</span>
   <button class="badge" id="roomTag" type="button" aria-label="Change room"></button>
 </header>
-<div class="wrap intro"><div class="eyebrow"><span>Room service</span><span class="count">by Madd Pizza</span></div><div class="divider" aria-hidden="true"><span></span><i></i><span></span></div></div>
+<div class="wrap intro"><div class="eyebrow"><span>Food &amp; drinks</span><span class="count">by Madd Pizza</span></div><div class="divider" aria-hidden="true"><span></span><i></i><span></span></div></div>
 <div class="tabs-shell"><nav class="wrap tabs" id="tabs" aria-label="Menu sections"></nav></div>
 <main class="wrap" id="menu"><p class="loading pix">Loading menu…</p></main>
 <div class="bar" id="bar" hidden><div class="wrap"><button class="hlbar" id="barBtn" type="button"><svg width="14" height="16" viewBox="0 0 14 16" aria-hidden="true"><path d="M1 1l12 7-12 7z" fill="currentColor"/></svg><span class="lbl">View order</span><span class="count" id="barCount">0</span><span class="amt" id="barAmt">$0.00</span></button></div></div>
@@ -329,7 +329,7 @@ function show(kind){ open = kind; $("#scrim").hidden = false; }
 function hide(){ open = null; afterRoom = false; $("#scrim").hidden = true; }
 const head = (t, tag) => `<div class="sheet-head"><div><div class="tagline">${tag || ""}</div><h3>${t}</h3></div><button class="x" data-close type="button" aria-label="Close">✕</button></div><div class="divider" aria-hidden="true"><span></span><i></i><span></span></div>`;
 function renderRooms(){
-  $("#sheet").innerHTML = head("Select room", "Player 1") + `<p class="lead">Your food is brought to this room.</p>
+  $("#sheet").innerHTML = head("Select room", "Player 1") + `<p class="lead">So we know whose order it is. You collect your food from the shoe rack outside the entrance.</p>
     <div class="rooms">${CONFIG.ROOMS.map(r => `<button class="room-pick${room && r.name === room.name ? " on" : ""}" style="--c:${r.color};--ci:${r.ink}" data-room="${r.name}" type="button"><b>${r.name}</b><span>${r.tier}</span></button>`).join("")}</div>`;
 }
 function renderOptions(id){
@@ -350,7 +350,7 @@ function renderCart(state){
      <label class="note pix" for="note">Allergies or requests</label>
      <textarea id="note" maxlength="300" placeholder="e.g. no chilli on the wings">${esc(note)}</textarea>
      <dl class="sum"><dt>Subtotal</dt><dd>${money(t.sub)}</dd><dt>GST 9%</dt><dd>${money(t.gst)}</dd><dt class="tot">Total</dt><dd class="tot">${money(t.total)}</dd></dl>
-     <div class="for-room">${room ? `<span>Delivering to <b>${esc(room.name)}</b></span>` : `<span>No room selected</span>`}<button data-pickroom type="button">${room ? "Change" : "Select room"}</button></div>
+     <div class="for-room">${room ? `<span>Order for <b>${esc(room.name)}</b> · collect at the entrance</span>` : `<span>No room selected</span>`}<button data-pickroom type="button">${room ? "Change" : "Select room"}</button></div>
      <button class="hlbar pay" id="pay" type="button" ${belowMin || state === "busy" ? "disabled" : ""}><svg width="14" height="16" viewBox="0 0 14 16" aria-hidden="true"><path d="M1 1l12 7-12 7z" fill="currentColor"/></svg><span class="lbl">${belowMin ? `Minimum order ${money(cents(S.minOrder))}` : state === "busy" ? "Opening payment…" : "Pay"}</span><span>${belowMin || state === "busy" ? "" : money(t.total)}</span></button>
      <div class="go"><span>Secure payment</span><span class="gbar"></span><span>HitPay</span></div>
      <div id="payMsg"></div>`;
