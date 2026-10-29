@@ -771,5 +771,105 @@ class Component extends DCLogic {
 })();
 
 </script>
+<script>
+/* ===== Round2 site stats (branch site-stats) =====
+   Counts what visitors do in this page and saves only numbers to the Round2 Firebase database, under /web:
+   - /web/days/<YYYY-MM-DD SG>/<counter>: +1 per visit for each thing a visit did (once per visit, so they read as
+     "how many visits reached this step"). Counters: visit, hNN (hour started, SG), dev_m / dev_d, entry_<screen>,
+     rooms, room_<name>, gallery, loadout, how, find, info_<tab>, book, sb_<SimplyBook step>, out_<link>.
+   - /web/live/<random id>: { t: server time, p: what they're looking at } every 30 s while the page is on screen,
+     removed when they leave. The control centre's Website tab counts entries newer than ~75 s as "on the site now".
+   No names, contact details, IPs or cookies are stored. A visit = this browser tab's session (sessionStorage).
+   Turn off for a load with ?notrack (or ?sim=..., which is staff testing). Rules for /web live in the Firebase console;
+   see docs in round2-tv-launcher/docs/site-stats.md. Everything is best-effort: if a write fails, the page doesn't care. */
+(function () {
+  'use strict';
+  try {
+    var q = new URLSearchParams(location.search);
+    if (q.has('notrack') || q.has('sim')) return;
+  } catch (e) { return; }
+  var DB = 'https://round2-tv-default-rtdb.asia-southeast1.firebasedatabase.app/web';
+  var ROOMS = ['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'maximillion'];
+  var MENUS = { 1: 'rooms', 2: 'loadout', 3: 'how', 4: 'find' };
+  function ss(k, v) { try { if (v === undefined) return sessionStorage.getItem(k); sessionStorage.setItem(k, v); } catch (e) { return null; } }
+  function sg() { var d = new Date(Date.now() + 8 * 3600e3); return { day: d.toISOString().slice(0, 10), hour: ('0' + d.getUTCHours()).slice(-2) }; }
+  var visitDay = ss('r2s.day'), first = !visitDay;
+  if (first) { visitDay = sg().day; ss('r2s.day', visitDay); }
+  var sid = ss('r2s.sid');
+  if (!sid) { sid = Math.random().toString(36).slice(2, 12) + Date.now().toString(36).slice(-4); ss('r2s.sid', sid); }
+
+  /* counters: batched, each once per visit */
+  var pend = {}, timer = null;
+  function count(k) {
+    k = String(k).toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 32);
+    if (!k || ss('r2s.c.' + k)) return;
+    ss('r2s.c.' + k, '1');
+    pend[k] = { '.sv': { increment: 1 } };
+    clearTimeout(timer); timer = setTimeout(flush, 800);
+  }
+  function flush(beacon) {
+    var keys = Object.keys(pend); if (!keys.length) return;
+    var body = JSON.stringify(pend); pend = {};
+    try { fetch(DB + '/days/' + visitDay + '.json', { method: 'PATCH', body: body, keepalive: !!beacon }).catch(function () {}); } catch (e) {}
+  }
+
+  /* what they're looking at, for the live view */
+  var where = 'home';
+  function live(gone) {
+    try {
+      if (gone) { fetch(DB + '/live/' + sid + '.json', { method: 'DELETE', keepalive: true }).catch(function () {}); return; }
+      if (document.visibilityState === 'hidden') return;
+      fetch(DB + '/live/' + sid + '.json', { method: 'PUT', body: JSON.stringify({ t: { '.sv': 'timestamp' }, p: where }) }).catch(function () {});
+    } catch (e) {}
+  }
+  function at(p) { if (p !== where) { where = p; live(); } }
+
+  /* the visit itself */
+  var st = window.R2_START || {};
+  var entry = st.book ? 'book' : st.info ? 'info' : MENUS[st.menu] || 'home';
+  if (first) {
+    count('visit'); count('h' + sg().hour);
+    count(innerWidth < 760 ? 'dev_m' : 'dev_d');
+    count('entry_' + entry);
+  }
+
+  /* screens: watch the page's own state changes (DCLogic is the runtime's component base) */
+  var last = {};
+  function seen(s) {
+    if (!s) return;
+    if (s.book && !last.book) { count('book'); }
+    if (s.menu !== last.menu && MENUS[s.menu]) count(MENUS[s.menu]);
+    if (s.menu === 1 && (s.pick !== last.pick || last.menu !== 1) && ROOMS[s.pick]) count('room_' + ROOMS[s.pick]);
+    if (s.gal && !last.gal) count('gallery');
+    if (s.info && s.info !== last.info) count('info_' + s.info);
+    last = { book: s.book, menu: s.menu, pick: s.pick, gal: s.gal, info: s.info };
+    at(s.book ? 'booking' : s.info ? 'info' : MENUS[s.menu] || 'home');
+  }
+  if (window.DCLogic) {
+    var orig = window.DCLogic.prototype.setState;
+    window.DCLogic.prototype.setState = function (u) { var r = orig.apply(this, arguments); try { seen(this.state); } catch (e) {} return r; };
+  }
+  seen({ book: !!st.book, menu: st.menu || 0, pick: st.pick || 0, gal: false, info: st.info || null });
+
+  /* SimplyBook form steps (it posts { event: 'stepChanged', step: 'category' | ... } to this page) */
+  addEventListener('message', function (e) {
+    if (!/simplybook\./.test(e.origin) || !e.data || typeof e.data !== 'object') return;
+    if (e.data.event === 'stepChanged' && typeof e.data.step === 'string') { count('sb_' + e.data.step); at('booking_' + e.data.step.slice(0, 14)); }
+  });
+
+  /* links out: WhatsApp, Telegram, Instagram, TikTok, Maps, email, phone */
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest && e.target.closest('a[href]'); if (!a) return;
+    var h = a.getAttribute('href') || '';
+    var k = /wa\.me|whatsapp/i.test(h) ? 'wa' : /t\.me|telegram/i.test(h) ? 'tg' : /instagram/i.test(h) ? 'ig' : /tiktok/i.test(h) ? 'tiktok' :
+      /maps\.|goo\.gl\/maps|maps\.app/i.test(h) ? 'maps' : /^mailto:/i.test(h) ? 'email' : /^tel:/i.test(h) ? 'phone' : /simplybook/i.test(h) ? 'simplybook' : null;
+    if (k) { count('out_' + k); flush(true); }
+  }, true);
+
+  live(); setInterval(live, 30000);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') live(); else flush(true); });
+  addEventListener('pagehide', function () { flush(true); live(true); });
+})();
+</script>
 </body>
 </html>
