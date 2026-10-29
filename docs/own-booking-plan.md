@@ -68,6 +68,14 @@ Code: `worker/round2-book.js` (deployed by pasting into Cloudflare via the Cloud
 - finalize (when DRY_RUN off): admin `getClientList(email,1)` / `addClient`, then `book(...)` with the pax intake field.
   The Make room-blocking scenario still mirrors Vale↔Atlas for services 28/29/32 and 33/35/37 – the Worker books on those same services.
 
+## Guest board (slots/index.html on this branch)
+Preview: https://raw.githack.com/donttelldadyet-prog/round2sg-home/own-booking/slots/index.html
+- Reads `/day?date=` from the Worker: per room, free starts in 15-min steps, longest stay (max 6 h) and price per length.
+  Free time = SimplyBook gaps of the day's service ∪ the Early Bird service (off-peak/peak open at 11:15, Early Bird owns 11:00), minus holds.
+- Flow: day → room → start → length (lengths that don't fit are greyed) → details (remembered on the phone) → HOLD & PAY
+  (countdown + Pay) → HitPay → back. Back button / Change booking / timer → slot released. No SimplyBook widget, no SimplyBook key on the page.
+- `slots/book.html` (SimplyBook widget step) removed.
+
 ## Open questions before going live
 - Does admin `book()` accept an end time past 3 h (extensions) on these services? Test with one real booking on a quiet far-off date, then cancel.
 - SimplyBook's booking price stays the service price; the HitPay amount is the real total – put the paid amount in the booking comment.
