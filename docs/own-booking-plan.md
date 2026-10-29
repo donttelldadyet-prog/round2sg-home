@@ -54,7 +54,15 @@ Code: `worker/round2-book.js` (deployed by pasting into Cloudflare via the Cloud
 - `/test` – simple phone form (room, date, 15-min start, 3–6 h, guest details → HitPay sandbox checkout).
 - `/quote` – price + free check. Prices come from the PRICES table at the top of `worker/round2-book.js` (not SimplyBook) – edit there. Early Bird = 11:00 start, $35 + its own extension rates (default day rate ÷ 3 per hour).
   Checked: Vale Tue 3 Nov 15:30 4h = 49 + 16.30; Max Fri 6 Nov 11:00 4h = 35 + 43; Kai Mon 9 Nov (Deepavali in lieu) 11:00 6h = 35 + 99; Bella Thu 16:00 6h = 79 + 47.40.
-- `/checkout` – re-checks the slot, holds it 15 min in KV (Vale/Atlas holds block each other), creates the HitPay payment request.
+- `/checkout` – re-checks the slot, then holds it for **10 min** in the `HoldBook` Durable Object (one strongly-consistent store, so two guests
+  can never hold the same time; Vale/Atlas holds block each other), then creates the HitPay payment request.
+- Hold release (fixes "paid but not in SimplyBook" / double bookings caused by SimplyBook timing out while guests type card details):
+  1. guest taps back / "Change booking" / returns from HitPay unpaid → `/release` frees the slot at once;
+  2. same phone or email starting a new checkout → their old hold is dropped;
+  3. hold is 10 min (same as the old SimplyBook timer);
+  4. whenever a hold ends (timer alarm, release, replaced) its **HitPay link is cancelled** (DELETE /payment-requests/{id}) – verified: link shows 404;
+  5. the page shows a countdown "We're holding this for you for 9:59" with the Pay button.
+- `claim()` in HoldBook lets only the first of webhook/redirect create the SimplyBook booking (no double booking from both firing).
 - `/done?ref=` – HitPay redirect; confirms payment with HitPay, then finalize (once).
 - `/hitpay` – webhook (Hitpay-Signature = HMAC-SHA256 of raw body with salt). Register in HitPay sandbox: Developers › Webhook Endpoints › `https://round2-book.donttelldadyet.workers.dev/hitpay`, event `payment_request.completed`.
 - finalize (when DRY_RUN off): admin `getClientList(email,1)` / `addClient`, then `book(...)` with the pax intake field.
