@@ -83,6 +83,17 @@ async function quote(env, b) {
   };
 }
 
+/* free gaps for a room on a day = SimplyBook gaps of the day's service UNION the Early Bird service
+   (the off-peak/peak services open at 11:15, Early Bird owns 11:00) */
+async function gapsFor(p, date, unit, dt) {
+  const ids = SVC[ROOMS[unit][1]];
+  const rs = await Promise.all([ids[dt], ids.eb].map((sid) => p('getAvailableTimeIntervals', [date, date, sid, unit, 1])
+    .then((r) => ((r && r[date] && r[date][unit]) || []).map((g) => [mins(g.from), mins(g.to) || 1440]))));
+  const all = rs.flat().sort((a, b) => a[0] - b[0]), out = [];
+  for (const g of all) { const l = out[out.length - 1]; if (l && g[0] <= l[1]) l[1] = Math.max(l[1], g[1]); else out.push([g[0], g[1]]); }
+  return out;
+}
+
 /* ---------- one day for the board: every room's free starts (15-min steps) with prices for 3–6 h ---------- */
 async function dayBoard(env, date) {
   if (!/^\d{4}-\d\d-\d\d$/.test(date || '')) throw new Error('Bad date');
@@ -93,8 +104,7 @@ async function dayBoard(env, date) {
   if (date < today) return { date, peak, ph: ph.has(date), rooms: {} };
   const p = await pub(env);
   const units = Object.keys(ROOMS);
-  const gaps = await Promise.all(units.map((u) => p('getAvailableTimeIntervals', [date, date, SVC[ROOMS[u][1]][dt], u, 1])
-    .then((r) => ((r && r[date] && r[date][u]) || []).map((g) => [mins(g.from), mins(g.to) || 1440])).catch(() => null)));
+  const gaps = await Promise.all(units.map((u) => gapsFor(p, date, u, dt).catch(() => null)));
   const holds = await book(env).list(date);
   const rooms = {};
   units.forEach((u, i) => {
@@ -200,8 +210,7 @@ const book = (env) => env.HOLDBOOK.get(env.HOLDBOOK.idFromName('main'));
 /* ---------- is the slot free? (SimplyBook gaps + unpaid holds) ---------- */
 async function isFree(env, q, ignoreRef) {
   const p = await pub(env);
-  const r = await p('getAvailableTimeIntervals', [q.date, q.date, q.checkEventId, q.unit, 1]);
-  const gaps = ((r && r[q.date] && r[q.date][q.unit]) || []).map((g) => [mins(g.from), mins(g.to) || 1440]);
+  const gaps = await gapsFor(p, q.date, q.unit, q.peak ? 'peak' : 'off');
   const s = mins(q.time), e = s + q.hours * 60;
   if (!gaps.some(([f, t]) => s >= f && e + BUF <= t)) return false;
   return !(await book(env).clash(q.date, [q.unit, MIRROR[q.unit]].filter(Boolean), s, e, ignoreRef || ''));
@@ -216,9 +225,8 @@ async function checkout(env, b, origin) {
   const pax = Math.max(1, Math.min(q.type === 'vip' ? 6 : 4, +b.pax || 1));
   if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || phone.length < 8) throw new Error('Please fill in name, email and phone');
   const p = await pub(env);
-  const r = await p('getAvailableTimeIntervals', [q.date, q.date, q.checkEventId, q.unit, 1]);
   const s = mins(q.time), e = s + q.hours * 60;
-  const gaps = ((r && r[q.date] && r[q.date][q.unit]) || []).map((g) => [mins(g.from), mins(g.to) || 1440]);
+  const gaps = await gapsFor(p, q.date, q.unit, q.peak ? 'peak' : 'off');
   if (!gaps.some(([f, t]) => s >= f && e + BUF <= t)) throw new Error('Sorry, that time was just taken – please pick another');
   const ref = 'R2B' + crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase();
   const hb = book(env);
