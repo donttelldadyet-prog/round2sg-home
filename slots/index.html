@@ -168,7 +168,7 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
       GROUPS.forEach(function (g) {
         html += '<div class="group px">' + g[0] + '</div>';
         g[1].forEach(function (uid) {
-          var R = ROOMS[uid], list = by[uid] || [], segs = '', opts = '';
+          var R = ROOMS[uid], list = by[uid] || [], segs = '', optl = [];
           list.forEach(function (x) {
             var cls = x.s.cat === '1' ? 'eb' : '', tier = (TIER[x.s.cat] || ['', ''])[0];
             x.rg.forEach(function (r) {
@@ -176,9 +176,10 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
               var label = (r[0] === r[1] ? 'Start ' + clock(r[0]) : 'Start ' + clock(r[0]) + '–' + clock(r[1]));
               var data = ' data-u="' + uid + '" data-s="' + x.s.sid + '" data-c="' + x.s.cat + '" data-l="' + esc(label + ' · ' + tier + ' $' + x.s.price) + '"';
               segs += '<button type="button" class="seg ' + cls + '"' + data + ' style="left:' + pos(r[0]) + ';width:calc(' + (100 * (r[1] - r[0] + 15) / span).toFixed(2) + '% - 1px)" aria-label="' + esc(R[0] + ': ' + label + ', ' + tier + ' $' + x.s.price) + '"></button>';
-              opts += '<button type="button" class="' + cls + '"' + data + '>' + esc(label) + '<small>' + tier + ' $' + x.s.price + '</small></button>';
+              optl.push([r[0], '<button type="button" class="' + cls + '"' + data + '>' + esc(label) + '<small>' + tier + ' $' + x.s.price + '</small></button>']);
             });
           });
+          var opts = optl.sort(function (a, b) { return a[0] - b[0]; }).map(function (o) { return o[1]; }).join('');   /* in time order */
           html += '<div class="room" style="--rc:' + R[1] + '"><div><h3>' + R[0] + '</h3><div class="ty">' + R[2] + '</div></div><div>' +
             '<div class="track">' + segs + '</div><div class="ticks">' + ticks + '</div>' +
             '<div class="opts">' + (opts || '<span class="none">Fully booked</span>') + '</div></div></div>';
