@@ -52,7 +52,7 @@ Secrets (HitPay API key + salt, SimplyBook admin user API key) live only as Work
 ## Test build deployed 30 Oct (DRY_RUN = 1 → pays in HitPay sandbox, does NOT write to SimplyBook)
 Code: `worker/round2-book.js` (deployed by pasting into Cloudflare via the Cloudflare MCP; KV `round2-book-holds`).
 - `/test` – simple phone form (room, date, 15-min start, 3–6 h, guest details → HitPay sandbox checkout).
-- `/quote` – price + free check. Prices read live from SimplyBook services/add-ons; Early Bird = 11:00 start, $35 + day rate ÷ 3 per extra hour.
+- `/quote` – price + free check. Prices come from the PRICES table at the top of `worker/round2-book.js` (not SimplyBook) – edit there. Early Bird = 11:00 start, $35 + its own extension rates (default day rate ÷ 3 per hour).
   Checked: Vale Tue 3 Nov 15:30 4h = 49 + 16.30; Max Fri 6 Nov 11:00 4h = 35 + 43; Kai Mon 9 Nov (Deepavali in lieu) 11:00 6h = 35 + 99; Bella Thu 16:00 6h = 79 + 47.40.
 - `/checkout` – re-checks the slot, holds it 15 min in KV (Vale/Atlas holds block each other), creates the HitPay payment request.
 - `/done?ref=` – HitPay redirect; confirms payment with HitPay, then finalize (once).

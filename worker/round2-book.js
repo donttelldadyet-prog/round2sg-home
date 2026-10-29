@@ -9,6 +9,13 @@ const EXTRA_PH = [];                       // in-lieu days Google hasn't listed 
 const ROOMS = { 5: ['Vale', 'netflix'], 7: ['Kaeden', 'netflix'], 8: ['Scarlett', 'netflix'], 9: ['Kai', 'deluxe'], 10: ['Bella', 'deluxe'], 12: ['Atlas', 'deluxe'], 11: ['Max', 'vip'] };
 const SVC = { netflix: { off: 28, peak: 29, eb: 32 }, deluxe: { off: 35, peak: 37, eb: 33 }, vip: { off: 36, peak: 38, eb: 34 } };
 const MIRROR = { 5: 12, 12: 5 };          // Vale sits under Atlas
+/* ===== PRICES – edit here. base = 3 hours; ext = extra price for +1h / +2h / +3h. =====
+   Early Bird = 11:00 start only. Its extensions default to the day's rate ÷ 3 per hour (no discount). */
+const PRICES = {
+  netflix: { off: { base: 49, ext: [16.30, 28.58, 39.20] }, peak: { base: 69, ext: [23, 40.25, 55.20] }, eb: { base: 35, ext: { off: [16.33, 32.67, 49], peak: [23, 46, 69] } } },
+  deluxe:  { off: { base: 79, ext: [26.30, 39.50, 47.40] }, peak: { base: 99, ext: [33, 49.50, 59.40] }, eb: { base: 35, ext: { off: [26.33, 52.67, 79], peak: [33, 66, 99] } } },
+  vip:     { off: { base: 109, ext: [36.30, 54.50, 65.40] }, peak: { base: 129, ext: [43, 64.50, 77.40] }, eb: { base: 35, ext: { off: [36.33, 72.67, 109], peak: [43, 86, 129] } } },
+};
 const PAX_FIELD = 'fb11a6d3f6a3baaf248df77785de850e';
 const BUF = 15, HOLD_SEC = 900, EB_START = 660;
 
@@ -47,22 +54,6 @@ async function holidays() {
   return out;
 }
 
-/* ---------- prices, straight from SimplyBook (services + their extension add-ons) ---------- */
-let CAT = null, CAT_AT = 0;
-async function catalogue(env) {
-  if (CAT && Date.now() - CAT_AT < 600000) return CAT;
-  const p = await pub(env);
-  const [ev, pr] = await Promise.all([p('getEventList', []), p('getProductList', [{}])]);
-  const prod = {}; Object.values(pr || {}).forEach((x) => { prod[x.id] = { price: +x.price, dur: +x.duration || 0 }; });
-  const svc = {};
-  Object.values(ev).forEach((e) => {
-    const ext = {};
-    (e.paid_attributes || []).forEach((a) => { const x = prod[a.product_id]; if (x && x.dur) ext[x.dur / 60] = { id: a.product_id, price: x.price }; });
-    svc[e.id] = { name: e.name, price: +e.price, ext };
-  });
-  CAT = svc; CAT_AT = Date.now(); return svc;
-}
-
 /* ---------- quote: which service, how much ---------- */
 async function quote(env, b) {
   const unit = String(b.unit), room = ROOMS[unit];
@@ -72,20 +63,15 @@ async function quote(env, b) {
   const hours = +b.hours; if (![3, 4, 5, 6].includes(hours)) throw new Error('Length must be 3 to 6 hours');
   const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
   if (b.date < today) throw new Error('That date has passed');
-  const [cat, ph] = await Promise.all([catalogue(env), holidays()]);
+  const ph = await holidays();
   const dow = new Date(b.date + 'T00:00:00Z').getUTCDay();          // 0 Sun … 6 Sat
   const peak = dow === 0 || dow === 5 || dow === 6 || ph.has(b.date);
-  const ids = SVC[room[1]];
-  const day = cat[peak ? ids.peak : ids.off];
+  const ids = SVC[room[1]], P = PRICES[room[1]], dt = peak ? 'peak' : 'off';
   const start = mins(b.time), eb = start === EB_START;
   const extH = hours - 3;
   let base, ext, eventId;
-  if (eb) { eventId = ids.eb; base = cat[ids.eb].price; ext = r2(day.price / 3 * extH); }
-  else {
-    eventId = peak ? ids.peak : ids.off; base = day.price;
-    ext = extH ? (day.ext[extH] || {}).price : 0;
-    if (ext === undefined) throw new Error('No +' + extH + 'h extension for this room');
-  }
+  if (eb) { eventId = ids.eb; base = P.eb.base; ext = extH ? P.eb.ext[dt][extH - 1] : 0; }
+  else { eventId = ids[dt]; base = P[dt].base; ext = extH ? P[dt].ext[extH - 1] : 0; }
   const end = start + hours * 60;
   return {
     unit: +unit, room: room[0], type: room[1], date: b.date, time: b.time, hours, peak, ph: ph.has(b.date), earlyBird: eb,
