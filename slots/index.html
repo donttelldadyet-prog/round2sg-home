@@ -59,8 +59,8 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 .chips button:disabled { opacity: .3; cursor: not-allowed; }
 .sum { padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
 .sum b { font-size: 18px; }
-.sum .go { font: 10px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 13px 16px; background: var(--acc); color: #0b0914; border: 0; cursor: pointer; }
-.sum .go:disabled { opacity: .35; cursor: not-allowed; }
+.go { font: 10px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 13px 16px; background: var(--acc); color: #0b0914; border: 0; cursor: pointer; }
+.go:disabled { opacity: .35; cursor: not-allowed; }
 .hint { font-size: 13px; color: var(--mute); }
 .note { font-size: 13px; color: var(--mute); padding: 0 16px 14px; margin: 0; }
 /* booking popup */
@@ -70,7 +70,14 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 .sheet .hd b { font-size: 17px; }
 .sheet .hd p { margin: 2px 0 0; color: var(--mute); font-size: 13px; }
 .sheet .x { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; background: transparent; color: var(--ink); border: 1px solid var(--line); padding: 8px 10px; cursor: pointer; flex: none; }
-.sheet iframe { display: block; width: 100%; height: 1100px; border: 0; background: #1f1e1e; }
+.fl { display: block; font-size: 12px; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; margin: 0 0 10px; }
+.fl input, .fl select { display: block; width: 100%; margin-top: 4px; padding: 11px 12px; font: 16px 'Chakra Petch', sans-serif; color: var(--ink); background: #06050a; border: 1px solid var(--line); text-transform: none; letter-spacing: 0; }
+.fl input:focus, .fl select:focus { outline: none; border-color: var(--acc); }
+.err { color: #ff8a8a; }
+.cd { font-size: 26px; color: var(--acc); margin: 6px 0 16px; }
+.wide { display: block; width: 100%; text-align: center; text-decoration: none; margin: 10px 0 0; box-sizing: border-box; }
+.banner { margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--acc); color: var(--ink); }
+.banner.ok { border-color: var(--free); }
 </style>
 </head>
 <body>
@@ -78,6 +85,7 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
   <div class="px kick">SAVE MENU · FREE SLOTS</div>
   <h1>WHAT'S FREE</h1>
   <p class="sub">Every room for the day you pick. Green is free time. Tap a room to choose your start time and how long you'll stay; the price updates as you go.</p>
+  <div class="banner" id="banner" hidden></div>
   <div class="days" id="days" role="group" aria-label="Day"></div>
   <div class="tiers" id="tiers"></div>
   <div id="board"><div class="state px load">LOADING SAVE SLOTS…</div></div>
@@ -92,83 +100,51 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
       <div class="sum"><div><div id="pWhen" class="hint"></div><b id="pPrice"></b></div><button class="go" id="pGo" type="button" disabled>CONTINUE</button></div>
       <p class="note" id="pNote"></p>
     </div>
-    <iframe id="mFrame" title="Booking form" hidden></iframe>
-  </div>
-</div>
-
-xed; inset: 0; background: rgba(6,5,10,.86); display: flex; align-items: flex-start; justify-content: center; padding: 18px 10px; overflow-y: auto; z-index: 9; }
-.sheet { width: 100%; max-width: 720px; background: var(--panel); border: 1px solid var(--line); }
-.sheet .hd { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--line); }
-.sheet .hd b { font-size: 17px; }
-.sheet .hd p { margin: 2px 0 0; color: var(--mute); font-size: 13px; }
-.sheet .x { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; background: transparent; color: var(--ink); border: 1px solid var(--line); padding: 8px 10px; cursor: pointer; flex: none; }
-.sheet iframe { display: block; width: 100%; height: 1100px; border: 0; background: #1f1e1e; }
-</style>
-</head>
-<body>
-<div class="wrap">
-  <div class="px kick">SAVE MENU · FREE SLOTS</div>
-  <h1>WHAT'S FREE</h1>
-  <p class="sub">Every room for the day you pick. Lit-up bars are times you can start a session (3 hours, extend later). Tap one to book that room. Prices follow the day and time automatically.</p>
-  <div class="days" id="days" role="group" aria-label="Day"></div>
-  <div class="tiers" id="tiers"></div>
-  <div id="board"><div class="state px load">LOADING SAVE SLOTS…</div></div>
-</div>
-
-<div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mTitle">
-  <div class="sheet">
-    <div class="hd"><div><b id="mTitle"></b><p id="mSub"></p></div><button class="x" id="mClose" type="button">× BACK</button></div>
-    <iframe id="mFrame" title="Booking form"></iframe>
+    <div id="det" hidden>
+      <div class="step"><h4>3 · YOUR DETAILS</h4>
+        <label class="fl">Name<input id="fName" autocomplete="name"></label>
+        <label class="fl">Mobile<input id="fPhone" type="tel" autocomplete="tel" inputmode="tel"></label>
+        <label class="fl">Email<input id="fEmail" type="email" autocomplete="email"></label>
+        <label class="fl">Guests<select id="fPax"></select></label>
+        <p class="hint">Confirmation and receipt go to this email.</p>
+      </div>
+      <div class="sum"><div><div id="dWhen" class="hint"></div><b id="dPrice"></b></div><button class="go" id="dGo" type="button">HOLD &amp; PAY</button></div>
+      <p class="note err" id="dErr"></p>
+    </div>
+    <div id="hold" hidden>
+      <div class="step"><h4>4 · PAY</h4>
+        <p class="hint" id="hWhat"></p>
+        <p class="hint">We're holding this for you for</p>
+        <div class="cd px" id="hCd">10:00</div>
+        <a class="go wide" id="hPay" href="#">PAY</a>
+        <button class="x wide" id="hChange" type="button">CHANGE BOOKING</button>
+        <p class="hint">Card, PayNow or Apple Pay on the next page. If you go back or the timer runs out, the slot is released for someone else.</p>
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
-/* Round2 availability board (round2sg-home/slots/). Reads free time from SimplyBook's public API (JSON-RPC,
-   public key: read-only, made to be used in web pages). Guests pick room, start time (15-minute steps) and length
-   here; the SimplyBook form is only used to finish the booking (slots/book.html). Bookings and payments stay in
-   SimplyBook. Rooms, tiers, prices and extension add-ons all come from SimplyBook, so changes there show up here.
-
-   How start times are worked out: getAvailableTimeIntervals gives each room's free gaps per service. A start time
-   works if start + session length + the service's buffer fits inside a gap (Early bird: the gap is its 11am–2pm
-   window, no buffer). SimplyBook's own slot list only offers starts 3h15 apart, which hid times like 3:30pm. */
+/* Round2 booking board (round2sg-home/slots/). Everything comes from the Round2 booking engine
+   (worker/round2-book.js on Cloudflare): /day gives every room's free starts in 15-min steps, how long each can run
+   and the price per length (our own price table – Early bird = 11am, $35 + its own extension rates; public holidays
+   use peak prices). Guests pick room → start → length → details → the engine holds the slot for 10 min and makes a
+   HitPay payment → after payment the engine puts the booking into SimplyBook (calendar, staff alerts, guest emails).
+   No SimplyBook widget and no SimplyBook key on this page. Docs: docs/own-booking-plan.md */
 (function () {
   'use strict';
-  var API = 'https://user-api.simplybook.asia/', COMPANY = 'round2sg';
-  var KEY = '836f9f17235f31adc467a581f851c463a9e8e63eb25c8e7fd193a9a0619977d9';   /* public JSON-RPC key (not the secret one) */
-  var ROOMS = {   /* SimplyBook provider id → name, colour, type */
-    5: ['Vale', '#E8436A', 'Netflix room'], 7: ['Kaeden', '#4DB848', 'Netflix room'], 8: ['Scarlett', '#F2C21B', 'Netflix room'],
-    9: ['Kai', '#24B49A', 'Deluxe room'], 10: ['Bella', '#7A5BE0', 'Deluxe room'], 12: ['Atlas', '#E9E7EF', 'Deluxe room'],
-    11: ['Maximillion', '#E0402F', 'VIP room']
+  var ENGINE = 'https://round2-book.donttelldadyet.workers.dev';   /* Round2 booking engine (Cloudflare) – prices, holds, HitPay */
+  var ROOMS = {   /* SimplyBook provider id → name, colour, type, max guests */
+    5: ['Vale', '#E8436A', 'Netflix room', 4], 7: ['Kaeden', '#4DB848', 'Netflix room', 4], 8: ['Scarlett', '#F2C21B', 'Netflix room', 4],
+    9: ['Kai', '#24B49A', 'Deluxe room', 4], 10: ['Bella', '#7A5BE0', 'Deluxe room', 4], 12: ['Atlas', '#E9E7EF', 'Deluxe room', 4],
+    11: ['Maximillion', '#E0402F', 'VIP room', 6]
   };
   var GROUPS = [['NETFLIX ROOMS', [5, 7, 8]], ['DELUXE ROOMS', [9, 10, 12]], ['VIP ROOM', [11]]];
-  var TIER = { 1: 'Early bird', 2: 'Peak', 3: 'Off peak' };
   var STEP = 15;
   var $ = function (id) { return document.getElementById(id); };
-  var token = null, meta = null, cache = {}, day = null, seq = 0, cur = null;
-
-  function rpc(url, method, params) {
-    var h = { 'Content-Type': 'application/json' };
-    if (token) { h['X-Company-Login'] = COMPANY; h['X-Token'] = token; }
-    return fetch(url, { method: 'POST', headers: h, body: JSON.stringify({ jsonrpc: '2.0', method: method, params: params, id: 1 }) })
-      .then(function (r) { return r.json(); }).then(function (j) { if (j.error) throw new Error(j.error.message || 'SimplyBook error'); return j.result; });
-  }
-  function login() { return rpc(API + 'login', 'getToken', [COMPANY, KEY]).then(function (t) { token = t; }); }
-  function loadMeta() {
-    return Promise.all([rpc(API, 'getEventList', []), rpc(API, 'getUnitList', []), rpc(API, 'getProductList', [{}])]).then(function (r) {
-      var ev = r[0], un = r[1], prod = {};
-      (r[2] || []).forEach(function (p) { if (p.is_active === '1') prod[p.id] = { id: p.id, dur: +p.duration || 0, price: +p.price || 0, name: p.name }; });
-      meta = {};
-      Object.keys(un).forEach(function (uid) {
-        if (!ROOMS[uid]) return;
-        meta[uid] = (un[uid].services || []).map(String).filter(function (sid) { return ev[sid] && ev[sid].is_active === '1' && ev[sid].is_public === '1'; }).map(function (sid) {
-          var e = ev[sid];
-          var ext = (e.paid_attributes || []).map(function (a) { return prod[a.product_id]; }).filter(function (p) { return p && p.dur > 0; })
-            .sort(function (a, b) { return a.dur - b.dur; });
-          return { sid: sid, cat: String((e.categories || [])[0] || ''), price: +e.price || 0, dur: +e.duration || 180, buf: +e.buffertime_after || 0, ext: ext };
-        });
-      });
-    });
-  }
+  var cache = {}, day = null, seq = 0, cur = null, timer = null;
+  var ss = { get: function (k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }, set: function (k, v) { try { if (v == null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (e) {} } };
+  function post(path, body) { return fetch(ENGINE + path, { method: 'POST', body: JSON.stringify(body), keepalive: true }).then(function (r) { return r.json(); }); }
   function sgNow() { return new Date(Date.now() + 8 * 3600e3); }
   function sgDate(offset) { return new Date(sgNow().getTime() + offset * 864e5).toISOString().slice(0, 10); }
   function mins(t) { var p = t.split(':'); return +p[0] * 60 + +p[1]; }
@@ -177,41 +153,21 @@ xed; inset: 0; background: rgba(6,5,10,.86); display: flex; align-items: flex-st
   function money(n) { return '$' + (Math.round(n * 100) % 100 ? n.toFixed(2) : Math.round(n)); }
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 
-  /* one day: for every room, the start times that work and, for each, which service (tier) and how long it can run */
-  function load(d) {
-    if (cache[d]) return cache[d];
-    var jobs = [];
-    Object.keys(meta).forEach(function (uid) {
-      meta[uid].forEach(function (s) {
-        jobs.push(rpc(API, 'getAvailableTimeIntervals', [d, d, s.sid, uid, 1]).then(function (r) {
-          return { uid: uid, s: s, gaps: ((r && r[d] && r[d][uid]) || []).map(function (g) { return [mins(g.from), mins(g.to)]; }) };
-        }, function () { return { uid: uid, s: s, gaps: [], err: true }; }));
+  /* one day from the engine: every room's free starts (15-min steps), how long each can run, and the price per length */
+  function load(d, fresh) {
+    if (cache[d] && !fresh) return cache[d];
+    cache[d] = fetch(ENGINE + '/day?date=' + d).then(function (r) { return r.json(); }).then(function (j) {
+      if (j.error) throw new Error(j.error);
+      var rooms = {};
+      Object.keys(j.rooms || {}).forEach(function (uid) {
+        var list = j.rooms[uid].map(function (o) { return { m: o.m, eb: o.eb, maxH: o.maxH, prices: o.prices, price: o.prices[3] }; });
+        var starts = {}; list.forEach(function (o) { starts[o.m] = o; });
+        var rg = []; list.forEach(function (o) { var r = rg[rg.length - 1]; if (r && o.m - r[1] <= STEP && o.eb === r[2]) r[1] = o.m; else rg.push([o.m, o.m, o.eb]); });
+        rooms[uid] = { list: list, starts: starts, ranges: rg };
       });
+      return { rooms: rooms, failed: !!j.failed, peak: j.peak, ph: j.ph };
     });
-    cache[d] = Promise.all(jobs).then(function (rows) {
-      var now = sgNow(), today = d === now.toISOString().slice(0, 10), nowM = now.getUTCHours() * 60 + now.getUTCMinutes();
-      var rooms = {}, failed = 0;
-      rows.forEach(function (x) {
-        if (x.err) failed++;
-        var R = rooms[x.uid] = rooms[x.uid] || { starts: {} };
-        x.gaps.forEach(function (g) {
-          var limit = g[1] - (x.s.cat === '1' ? 0 : x.s.buf);
-          for (var m = Math.ceil(g[0] / STEP) * STEP; m + x.s.dur <= limit; m += STEP) {
-            if (today && m < nowM + 15) continue;
-            var o = { m: m, s: x.s, room: limit - m };
-            var prev = R.starts[m];
-            if (!prev || o.s.price < prev.s.price) R.starts[m] = o;   /* same time in two tiers: the cheaper one */
-          }
-        });
-      });
-      Object.keys(rooms).forEach(function (uid) {
-        var list = Object.keys(rooms[uid].starts).map(Number).sort(function (a, b) { return a - b; }).map(function (m) { return rooms[uid].starts[m]; });
-        rooms[uid].list = list;
-        var rg = []; list.forEach(function (o) { var r = rg[rg.length - 1]; if (r && o.m - r[1] <= STEP && o.s.cat === r[2]) r[1] = o.m; else rg.push([o.m, o.m, o.s.cat]); });
-        rooms[uid].ranges = rg;
-      });
-      return { rooms: rooms, failed: failed === rows.length };
-    });
+    cache[d].catch(function () { delete cache[d]; });
     return cache[d];
   }
 
@@ -236,19 +192,19 @@ xed; inset: 0; background: rgba(6,5,10,.86); display: flex; align-items: flex-st
       data = res;
       if (res.failed) { $('board').innerHTML = '<p class="state">Couldn’t reach the booking calendar. <a style="color:var(--acc)" href="https://www.round2.sg/booknow">Book here instead</a>.</p>'; return; }
       var lo = 24 * 60, hi = 0, cats = {}, any = false;
-      Object.keys(res.rooms).forEach(function (uid) { res.rooms[uid].list.forEach(function (o) { lo = Math.min(lo, o.m); hi = Math.max(hi, o.m + o.s.dur); cats[o.s.cat] = 1; any = true; }); });
+      Object.keys(res.rooms).forEach(function (uid) { res.rooms[uid].list.forEach(function (o) { lo = Math.min(lo, o.m); hi = Math.max(hi, o.m + 180); if (o.eb) cats.eb = 1; any = true; }); });
       if (!any) { lo = 11 * 60; hi = 23 * 60; }
       lo = Math.floor(lo / 60) * 60; hi = Math.ceil(hi / 60) * 60;
       var span = hi - lo, pos = function (m) { return (100 * (m - lo) / span).toFixed(2) + '%'; };
       var ticks = ''; for (var t = lo; t <= hi; t += 120) ticks += '<span style="left:' + pos(t) + '">' + clock(t) + '</span>';
-      $('tiers').innerHTML = (cats['1'] ? '<span><i style="background:#66C7FF"></i>Early bird start</span>' : '') + '<span><i style="background:var(--free)"></i>You can start a session here</span><span>Sessions are 3 h, longer if you like</span>';
+      $('tiers').innerHTML = (cats.eb ? '<span><i style="background:#66C7FF"></i>Early bird · 11am, $35</span>' : '') + '<span><i style="background:var(--free)"></i>You can start a session here</span><span>' + (res.ph ? 'Public holiday · peak prices' : res.peak ? 'Peak day' : 'Off-peak day') + ' · 3–6 h</span>';
       var html = any ? '' : '<p class="state">Everything’s booked for this day. Try another day, or message us on <a style="color:var(--acc)" href="http://wa.me/6591625767" target="_blank" rel="noopener">WhatsApp</a>.</p>';
       GROUPS.forEach(function (g) {
         html += '<div class="group px">' + g[0] + '</div>';
         g[1].forEach(function (uid) {
           var R = ROOMS[uid], info = res.rooms[uid] || { list: [], ranges: [] }, segs = '';
-          info.ranges.forEach(function (r) { segs += '<span class="seg' + (r[2] === '1' ? ' eb' : '') + '" style="left:' + pos(r[0]) + ';width:calc(' + (100 * (r[1] - r[0] + STEP) / span).toFixed(2) + '% - 1px)"></span>'; });
-          var from = info.list.length ? Math.min.apply(null, info.list.map(function (o) { return o.s.price; })) : 0;
+          info.ranges.forEach(function (r) { segs += '<span class="seg' + (r[2] ? ' eb' : '') + '" style="left:' + pos(r[0]) + ';width:calc(' + (100 * (r[1] - r[0] + STEP) / span).toFixed(2) + '% - 1px)"></span>'; });
+          var from = info.list.length ? Math.min.apply(null, info.list.map(function (o) { return o.price; })) : 0;
           var txt = info.ranges.map(function (r) { return r[0] === r[1] ? clock(r[0]) : clock(r[0]) + '–' + clock(r[1]); }).join(', ');
           html += '<div class="room" style="--rc:' + R[1] + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': start ' + txt) + '"' : '') + '><div><h3>' + R[0] + '</h3><div class="ty">' + R[2] + '</div></div><div>' +
             '<div class="track">' + segs + '</div><div class="ticks">' + ticks + '</div>' +
@@ -260,39 +216,37 @@ xed; inset: 0; background: rgba(6,5,10,.86); display: flex; align-items: flex-st
     }).catch(function () { $('board').innerHTML = '<p class="state">Couldn’t reach the booking calendar. <a style="color:var(--acc)" href="https://www.round2.sg/booknow">Book here instead</a>.</p>'; });
   }
 
-  /* ---------- the picker: start time → length → continue ---------- */
+  /* ---------- the picker: start time → length → details → hold & pay ---------- */
+  function step(id) { ['pick', 'det', 'hold'].forEach(function (x) { $(x).hidden = x !== id; }); }
   function openRoom(uid) {
     var info = data && data.rooms[uid]; if (!info || !info.list.length) return;
     cur = { uid: uid, start: null, len: null };
     $('mTitle').textContent = ROOMS[uid][0] + ' · ' + ROOMS[uid][2];
     $('mSub').textContent = dayLabel(day);
     $('pTimes').innerHTML = info.list.map(function (o) {
-      return '<button type="button" data-m="' + o.m + '" class="' + (o.s.cat === '1' ? 'eb' : '') + '" aria-pressed="false">' + clock(o.m) + '<small>' + TIER[o.s.cat] + '</small></button>';
+      return '<button type="button" data-m="' + o.m + '" class="' + (o.eb ? 'eb' : '') + '" aria-pressed="false">' + clock(o.m) + '<small>' + (o.eb ? 'Early bird' : 'from ' + money(o.price)) + '</small></button>';
     }).join('');
-    $('pick').hidden = false; $('mFrame').hidden = true; $('mFrame').src = 'about:blank';
-    drawLens(); $('modal').hidden = false; document.body.style.overflow = 'hidden';
+    step('pick'); drawLens(); $('modal').hidden = false; document.body.style.overflow = 'hidden';
     count('board_pick');
   }
   function startObj() { return data.rooms[cur.uid].starts[cur.start]; }
   function drawLens() {
     var o = cur.start != null ? startObj() : null, h = '';
     if (!o) { $('pLens').innerHTML = '<span class="hint">Pick a start time first.</span>'; summary(); return; }
-    var opts = [{ id: null, dur: o.s.dur, price: o.s.price }].concat(o.s.ext.map(function (p) { return { id: p.id, dur: o.s.dur + p.dur, price: o.s.price + p.price }; }));
-    opts.forEach(function (x, i) {
-      var fits = o.m + x.dur <= o.m + o.room;
-      h += '<button type="button" data-i="' + i + '"' + (fits ? '' : ' disabled') + ' aria-pressed="' + (cur.len === i) + '">' + (x.dur / 60) + ' h<small>' + (fits ? 'till ' + clock(o.m + x.dur) + ' · ' + money(x.price) : 'not free') + '</small></button>';
-    });
-    cur.opts = opts;
-    if (cur.len != null && (!opts[cur.len] || o.m + opts[cur.len].dur > o.m + o.room)) cur.len = null;
-    if (cur.len == null) cur.len = 0;
+    for (var hrs = 3; hrs <= 6; hrs++) {
+      var fits = hrs <= o.maxH;
+      h += '<button type="button" data-i="' + hrs + '"' + (fits ? '' : ' disabled') + ' aria-pressed="' + (cur.len === hrs) + '">' + hrs + ' h<small>' + (fits ? 'till ' + clock(o.m + hrs * 60) + ' · ' + money(o.prices[hrs]) : 'not free') + '</small></button>';
+    }
+    if (cur.len == null || cur.len > o.maxH) cur.len = 3;
     $('pLens').innerHTML = h; markLen(); summary();
   }
   function markLen() { Array.prototype.forEach.call($('pLens').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(+b.getAttribute('data-i') === cur.len)); }); }
+  function when() { var o = startObj(); return dayLabel(day) + ' · ' + clock(o.m) + '–' + clock(o.m + cur.len * 60) + (o.eb ? ' · Early bird' : ''); }
   function summary() {
-    var o = cur.start != null ? startObj() : null, x = o && cur.opts && cur.opts[cur.len];
-    $('pWhen').textContent = o && x ? dayLabel(day) + ' · ' + clock(o.m) + '–' + clock(o.m + x.dur) + ' · ' + TIER[o.s.cat] : 'Pick a start time';
-    $('pPrice').textContent = x && o ? money(x.price) : '';
-    $('pGo').disabled = !(o && x);
+    var o = cur.start != null ? startObj() : null;
+    $('pWhen').textContent = o ? when() : 'Pick a start time';
+    $('pPrice').textContent = o ? money(o.prices[cur.len]) : '';
+    $('pGo').disabled = !o;
     $('pNote').textContent = '';
   }
   $('pTimes').addEventListener('click', function (e) {
@@ -303,16 +257,50 @@ xed; inset: 0; background: rgba(6,5,10,.86); display: flex; align-items: flex-st
   });
   $('pLens').addEventListener('click', function (e) { var b = e.target.closest('button[data-i]'); if (!b || b.disabled) return; cur.len = +b.getAttribute('data-i'); markLen(); summary(); });
 
-  /* continue: SimplyBook's form opens straight at Contact details with everything filled in (book.html builds its
-     booking link), so the guest only types their details, agrees to the terms and pays. */
+  /* details: remembered on this phone for next time */
   $('pGo').addEventListener('click', function () {
-    var o = startObj(), x = cur.opts[cur.len];
-    $('mSub').textContent = dayLabel(day) + ' · ' + clock(o.m) + '–' + clock(o.m + x.dur) + ' · ' + money(x.price) + ' — just your details and payment left.';
-    $('pick').hidden = true; $('mFrame').hidden = false;
-    $('mFrame').src = 'book.html?c=' + o.s.cat + '&s=' + o.s.sid + '&p=' + cur.uid + '&a=' + (x.id || 'no') + '&d=' + day + '&t=' + hhmm(o.m).slice(0, 5);
-    count('board_continue');
+    var o = startObj();
+    $('dWhen').textContent = when(); $('dPrice').textContent = money(o.prices[cur.len]); $('dErr').textContent = '';
+    var max = ROOMS[cur.uid][3], h = ''; for (var i = 1; i <= max; i++) h += '<option>' + i + '</option>'; $('fPax').innerHTML = h; $('fPax').value = Math.min(2, max);
+    try { var me = JSON.parse(localStorage.getItem('r2.me') || '{}'); ['Name', 'Phone', 'Email'].forEach(function (k) { if (me[k] && !$('f' + k).value) $('f' + k).value = me[k]; }); } catch (e) {}
+    step('det'); count('board_continue');
   });
-  function closeBook() { $('modal').hidden = true; $('mFrame').src = 'about:blank'; document.body.style.overflow = ''; }
+  $('dGo').addEventListener('click', function () {
+    var o = startObj(), b = $('dGo');
+    var body = { unit: cur.uid, date: day, time: hhmm(o.m).slice(0, 5), hours: cur.len, name: $('fName').value, phone: $('fPhone').value, email: $('fEmail').value, pax: $('fPax').value, ret: location.href.split(/[?#]/)[0] };
+    try { localStorage.setItem('r2.me', JSON.stringify({ Name: body.name, Phone: body.phone, Email: body.email })); } catch (e) {}
+    b.disabled = true; b.textContent = 'HOLDING…'; $('dErr').textContent = '';
+    post('/checkout', body).then(function (j) {
+      b.disabled = false; b.innerHTML = 'HOLD &amp; PAY';
+      if (!j.url) { $('dErr').textContent = j.error || 'Something went wrong – try again.'; if (/taken|paying/.test(j.error || '')) { load(day, true); } return; }
+      ss.set('r2.ref', j.ref); ss.set('r2.went', null);
+      showHold(j); count('board_hold');
+    }, function () { b.disabled = false; b.innerHTML = 'HOLD &amp; PAY'; $('dErr').textContent = 'No connection – try again.'; });
+  });
+  function showHold(j) {
+    $('hWhat').innerHTML = '<b>' + esc(ROOMS[cur.uid][0]) + '</b> · ' + esc(when()) + '<br><b>' + money(j.total) + '</b>';
+    $('hPay').href = j.url; $('hPay').textContent = 'PAY ' + money(j.total);
+    step('hold');
+    clearInterval(timer);
+    timer = setInterval(function () {
+      var s = Math.max(0, Math.round((j.holdUntil - Date.now()) / 1000));
+      $('hCd').textContent = Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2);
+      if (!s) release('Your 10 minutes ran out, so the slot was released. Pick a time again.');
+    }, 500);
+  }
+  function release(msg) {
+    var ref = ss.get('r2.ref'); ss.set('r2.ref', null); ss.set('r2.went', null); clearInterval(timer);
+    if (ref) post('/release', { ref: ref }).catch(function () {});
+    if (msg) banner(msg);
+    if (!$('modal').hidden) closeBook();
+    load(day, true); show(day);
+  }
+  $('hPay').addEventListener('click', function () { ss.set('r2.went', '1'); count('board_pay'); });
+  $('hChange').addEventListener('click', function () { release(''); });
+  /* back button from HitPay (page restored) → free the slot straight away */
+  addEventListener('pageshow', function () { if (ss.get('r2.ref') && ss.get('r2.went')) release('You left the payment page, so we released the slot. Pick a time again.'); });
+  function banner(t, ok) { $('banner').hidden = !t; $('banner').textContent = t || ''; $('banner').className = 'banner' + (ok ? ' ok' : ''); }
+  function closeBook() { $('modal').hidden = true; document.body.style.overflow = ''; }
 
   /* same visitor counters as the menu (Firebase /web), once per visit */
   function count(k) {
@@ -323,21 +311,17 @@ xed; inset: 0; background: rgba(6,5,10,.86); display: flex; align-items: flex-st
       fetch('https://round2-tv-default-rtdb.asia-southeast1.firebasedatabase.app/web/days/' + sgDate(0) + '.json', { method: 'PATCH', body: JSON.stringify(b) }).catch(function () {});
     } catch (e) {}
   }
-  addEventListener('message', function (e) {
-    if (e.data && typeof e.data.r2step === 'string') count('sb_' + e.data.r2step.toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 28));
-  });
 
   $('days').addEventListener('click', function (e) { var b = e.target.closest('button[data-d]'); if (b) show(b.getAttribute('data-d')); });
   $('board').addEventListener('click', function (e) { var b = e.target.closest('[data-u]'); if (b) openRoom(b.getAttribute('data-u')); });
   $('board').addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.room[data-u]')) { e.preventDefault(); openRoom(e.target.getAttribute('data-u')); } });
-  $('mClose').onclick = function () { if (!$('mFrame').hidden && cur) { $('mFrame').hidden = true; $('mFrame').src = 'about:blank'; $('pick').hidden = false; $('mSub').textContent = dayLabel(day); summary(); } else closeBook(); };
-  addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('modal').hidden) closeBook(); });
+  $('mClose').onclick = function () { if (!$('hold').hidden) release(''); else if (!$('det').hidden) step('pick'); else closeBook(); };
+  addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('modal').hidden && $('hold').hidden) closeBook(); });
 
   count('board');
+  if (/[?&]released=1/.test(location.search)) { ss.set('r2.ref', null); banner('Payment not completed – the slot was released. Pick a time again.'); }
   day = sgDate(0);
-  login().then(loadMeta).then(function () { show(day); }).catch(function () {
-    $('board').innerHTML = '<p class="state">Couldn’t reach the booking calendar. <a style="color:var(--acc)" href="https://www.round2.sg/booknow">Book here instead</a>.</p>';
-  });
+  show(day);
 }());
 </script>
 </body>

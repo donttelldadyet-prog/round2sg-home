@@ -83,6 +83,40 @@ async function quote(env, b) {
   };
 }
 
+/* ---------- one day for the board: every room's free starts (15-min steps) with prices for 3–6 h ---------- */
+async function dayBoard(env, date) {
+  if (!/^\d{4}-\d\d-\d\d$/.test(date || '')) throw new Error('Bad date');
+  const ph = await holidays();
+  const dow = new Date(date + 'T00:00:00Z').getUTCDay();
+  const peak = dow === 0 || dow === 5 || dow === 6 || ph.has(date), dt = peak ? 'peak' : 'off';
+  const now = new Date(Date.now() + 8 * 3600e3), today = now.toISOString().slice(0, 10), nowM = now.getUTCHours() * 60 + now.getUTCMinutes();
+  if (date < today) return { date, peak, ph: ph.has(date), rooms: {} };
+  const p = await pub(env);
+  const units = Object.keys(ROOMS);
+  const gaps = await Promise.all(units.map((u) => p('getAvailableTimeIntervals', [date, date, SVC[ROOMS[u][1]][dt], u, 1])
+    .then((r) => ((r && r[date] && r[date][u]) || []).map((g) => [mins(g.from), mins(g.to) || 1440])).catch(() => null)));
+  const holds = await book(env).list(date);
+  const rooms = {};
+  units.forEach((u, i) => {
+    const P = PRICES[ROOMS[u][1]], starts = [];
+    const mine = holds.filter((h) => h.unit === +u || h.unit === MIRROR[u]);
+    (gaps[i] || []).forEach(([f, t]) => {
+      for (let m = Math.ceil(f / 15) * 15; m + 180 + BUF <= t; m += 15) {
+        if (date === today && m < nowM + 15) continue;
+        let room = t - BUF - m;                                    // minutes until the room is needed again
+        mine.forEach((h) => { if (h.s < m + room + BUF && h.e + BUF > m) room = h.s >= m ? Math.min(room, h.s - BUF - m) : -1; });
+        if (room < 180) continue;
+        const eb = m === EB_START, maxH = Math.min(6, Math.floor(room / 60));
+        const prices = {};
+        for (let hrs = 3; hrs <= maxH; hrs++) prices[hrs] = eb ? r2(P.eb.base + (hrs > 3 ? P.eb.ext[dt][hrs - 4] : 0)) : r2(P[dt].base + (hrs > 3 ? P[dt].ext[hrs - 4] : 0));
+        starts.push({ m, eb, maxH, prices });
+      }
+    });
+    rooms[u] = starts;
+  });
+  return { date, peak, ph: ph.has(date), failed: gaps.every((g) => g === null), rooms };
+}
+
 /* ---------- HitPay ---------- */
 async function hitpay(env, method, path, form) {
   const r = await fetch(env.HITPAY_API + path, {
@@ -127,6 +161,7 @@ export class HoldBook extends DurableObject {
     this.arm();
     return { ok: true, released };
   }
+  list(date) { return this.rows(`SELECT unit, s, e FROM holds WHERE date = ? AND status = 'pending' AND exp > ?`, date, Date.now()); }
   setPr(ref, pr) { this.sql.exec(`UPDATE holds SET pr = ? WHERE ref = ?`, pr, ref); }
   get(ref) { const r = this.rows(`SELECT * FROM holds WHERE ref = ?`, ref)[0]; return r ? { ...r, data: JSON.parse(r.data || '{}') } : null; }
   /* guest came back without paying → free the slot now */
@@ -173,8 +208,10 @@ async function isFree(env, q, ignoreRef) {
 }
 
 /* ---------- checkout: hold the slot (atomic), then make the HitPay payment ---------- */
+const RET_OK = /^https:\/\/([a-z0-9-]+\.)*(round2\.sg|github\.io|githack\.com|workers\.dev)\//;
 async function checkout(env, b, origin) {
   const q = await quote(env, b);
+  const ret = RET_OK.test(String(b.ret || '')) ? String(b.ret).split(/[?#]/)[0] : '';
   const name = String(b.name || '').trim().slice(0, 80), email = String(b.email || '').trim().toLowerCase().slice(0, 120), phone = String(b.phone || '').replace(/[^\d+]/g, '').slice(0, 16);
   const pax = Math.max(1, Math.min(q.type === 'vip' ? 6 : 4, +b.pax || 1));
   if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || phone.length < 8) throw new Error('Please fill in name, email and phone');
@@ -185,7 +222,7 @@ async function checkout(env, b, origin) {
   if (!gaps.some(([f, t]) => s >= f && e + BUF <= t)) throw new Error('Sorry, that time was just taken – please pick another');
   const ref = 'R2B' + crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase();
   const hb = book(env);
-  const h = await hb.hold({ ref, date: q.date, unit: q.unit, units: [q.unit, MIRROR[q.unit]].filter(Boolean), s, e, phone: phone.slice(-8), email, data: { q, name, email, phone, pax } });
+  const h = await hb.hold({ ref, date: q.date, unit: q.unit, units: [q.unit, MIRROR[q.unit]].filter(Boolean), s, e, phone: phone.slice(-8), email, data: { q, name, email, phone, pax, ret } });
   for (const old of h.released || []) await cancelLink(env, old);            // their earlier unpaid link stops working
   if (!h.ok) throw new Error('Sorry, someone is paying for that time right now – please pick another');
   const when = new Date(q.date + 'T00:00:00Z').toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -231,7 +268,8 @@ async function finalize(env, ref, source) {
 
 /* ---------- pages ---------- */
 const PAGE = (body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Round2 · Book (test)</title>
-<style>body{margin:0;background:#1f1e1e;color:#f4f1fb;font:16px/1.5 system-ui,sans-serif}main{max-width:480px;margin:0 auto;padding:20px 16px}h1{font-size:20px}label{display:block;margin:12px 0 4px;color:#bababa;font-size:14px}
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#06050a;color:#f4f1fb;font:16px/1.5 'Chakra Petch',system-ui,sans-serif}h1{font-family:'Press Start 2P',monospace;letter-spacing:.04em;line-height:1.5}main{max-width:480px;margin:0 auto;padding:20px 16px}h1{font-size:20px}label{display:block;margin:12px 0 4px;color:#bababa;font-size:14px}
 select,input,button,.btn{display:block;width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid #444;background:#2a2929;color:#f4f1fb;font:inherit;text-align:center;text-decoration:none}button,.btn{background:#F2C21B;color:#111;border:0;font-weight:700;margin-top:18px}
 .q{margin-top:14px;padding:12px;border-radius:10px;background:#2a2929;color:#F2C21B}.err{color:#ff8080}.tag{display:inline-block;background:#F2C21B;color:#111;border-radius:6px;padding:0 6px;font-size:12px;margin-left:6px}
 .hold{display:none;margin-top:18px;padding:16px;border-radius:12px;border:1px solid #F2C21B}.big{font-size:28px;font-weight:700;color:#F2C21B}.ghost{background:none;border:1px solid #555;color:#bababa;margin-top:10px}</style></head><body><main>${body}</main></body></html>`;
@@ -284,6 +322,7 @@ export default {
     try {
       if (req.method === 'OPTIONS') return J({});
       if (u.pathname === '/ph') return J([...(await holidays())].sort());
+      if (u.pathname === '/day') return J(await dayBoard(env, u.searchParams.get('date')));
       if (u.pathname === '/quote' && req.method === 'POST') { const b = await req.json(); const q = await quote(env, b); q.free = await isFree(env, q); return J(q); }
       if (u.pathname === '/checkout' && req.method === 'POST') return J(await checkout(env, await req.json(), u.origin));
       if (u.pathname === '/release' && req.method === 'POST') { const { ref } = await req.json(); const r = await book(env).release(String(ref || '')); if (r) await cancelLink(env, r.pr); return J({ released: !!r }); }
@@ -300,11 +339,11 @@ export default {
         const pr = h.pr ? await hitpay(env, 'GET', '/payment-requests/' + h.pr).catch(() => ({})) : {};
         if (pr.status !== 'completed' && h.status !== 'paid' && h.status !== 'booking') {
           const p2 = await book(env).release(ref); if (p2) await cancelLink(env, p2.pr);
-          return Response.redirect(u.origin + '/test?released=1', 302);
+          return Response.redirect((h.data.ret || u.origin + '/test') + '?released=1', 302);
         }
         const f = await finalize(env, ref, 'redirect');
         const q = f.h.q;
-        return H(PAGE(f.ok ? `<h1>You're booked 🎉</h1><p><b>${esc(q.room)}</b>, ${esc(q.date)}, ${esc(q.time)}–${esc(q.end)} (${q.hours}h) · $${q.total.toFixed(2)} paid.</p><p>Ref ${esc(ref)}${f.h.done && f.h.done.dryRun ? ' · <span class="tag">TEST – not put in calendar</span>' : ''}</p><p>A confirmation email is on its way.</p><script>try{sessionStorage.clear()}catch(e){}</script>`
+        return H(PAGE(f.ok ? `<h1>You're booked 🎉</h1><p><b>${esc(q.room)}</b>, ${esc(q.date)}, ${esc(q.time)}–${esc(q.end)} (${q.hours}h) · $${q.total.toFixed(2)} paid.</p><p>Ref ${esc(ref)}${f.h.done && f.h.done.dryRun ? ' · <span class="tag">TEST – not put in calendar</span>' : ''}</p><p>A confirmation email is on its way.</p>${f.h.ret ? `<a class="btn" href="${esc(f.h.ret)}">Back to Round2</a>` : ''}<script>try{sessionStorage.clear()}catch(e){}</script>`
           : `<h1>Payment received</h1><p class="err">${esc(f.err)}</p><p>We'll WhatsApp you shortly. Ref ${esc(ref)}.</p>`));
       }
       if (u.pathname === '/test') return H(testForm());
