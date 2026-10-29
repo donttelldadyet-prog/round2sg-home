@@ -40,7 +40,14 @@ Secrets (HitPay API key + salt, SimplyBook admin user API key) live only as Work
 4. Booking page on `own-booking` branch (built from the availability board).
 5. Phone run-through with both owners → decide switch-over.
 
-## Needs from owners
-- HitPay **sandbox**: API key + salt (Settings › Payment gateway › API keys).
-- SimplyBook: Settings › API › admin "Secret key" is not needed – the Worker logs in with an admin user's login/password (store as secret) – pick which admin user.
-- PH dates for 2026–2027.
+## Done 30 Oct
+- Worker secrets: HITPAY_KEY, HITPAY_SALT, HITPAY_API (sandbox), SB_COMPANY, SB_USER, SB_PASS.
+- SimplyBook login copies the Make room-blocking scenario exactly:
+  `POST user-api.simplybook.asia/login/ getUserToken [company, user, pass]` →
+  `POST /admin` with headers `X-Company-Login`, `X-User-Token`; booking = `book [eventId, unitId, clientId, startDate, startTime, endDate, endTime, 0, {intakeField: value}]`.
+  `/selftest` on the Worker logs in and lists rooms – passed.
+- Public holidays: Google's public SG calendar (`en.singapore#holiday`), entries whose description starts "Public holiday"
+  (includes "Day off for …" / "… observed" in-lieu days). Mon–Thu PH → peak. Plus a manual extra list for in-lieu days Google adds late.
+
+## Later
+- Optional: a separate SimplyBook user for the Worker (the shared login also sits in the Make scenario).
