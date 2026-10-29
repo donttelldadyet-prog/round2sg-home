@@ -49,6 +49,13 @@ Not done (in order):
   33/35/37 Deluxe) and the existing Make scenario "[BACKEND] SYSTEM BLOCKS MIRROR ROOMS" (id 6990225) blocks the other room as today.
   That scenario hard-codes service ids – any new service must be added there. If mirroring is ever moved into the Worker, turn that Make branch off first.
 
+## Decision 30 Oct: Early Bird extensions WITHOUT new SimplyBook services
+The Worker books Early Bird on the existing live services 32/33/34 with an explicit end time (e.g. 11:00–15:00 for 3 h + 1 h),
+the same way the Make mirror scenario creates its blocker bookings (admin `book()` with start AND end, no payment step).
+Make already mirrors 32 (Vale) and 33 (Atlas) and copies the booking's start/end, so the extended time is blocked too.
+So the hidden services 39–44 and add-ons 38–55 are NOT needed – leave hidden, delete later with the owner.
+To confirm in to-do #1 (real test booking): SimplyBook accepts the longer end time on 32/33/34.
+
 ## Related, already live
 - Guest TV messages + control centre (repo `round2-tv-launcher`, Make scenarios 8249444/8251356, `cue.round2.sg`), site stats in Firebase `/web`.
 - Hidden SimplyBook Early Bird services 39–44 + add-ons 38–55 exist but were NOT switched on (guest page ignored the 11:00 fixed time).
