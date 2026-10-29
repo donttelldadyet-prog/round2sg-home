@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Round2 · Free slots</title>
+<base target="_top">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root { --bg: #06050a; --panel: #0b0914; --line: rgba(244,241,251,.14); --ink: #f4f1fb; --mute: #a79fbd; --acc: #F2C21B; --free: #5BE37D; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 'Chakra Petch', system-ui, sans-serif; }
+[hidden] { display: none !important; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 22px 16px 40px; }
+.px { font-family: 'Press Start 2P', monospace; letter-spacing: .12em; }
+.kick { font-size: 9px; color: var(--acc); }
+h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4; margin: 8px 0 6px; letter-spacing: .04em; }
+.sub { color: var(--mute); margin: 0 0 18px; max-width: 640px; }
+.days { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; }
+.days button { flex: none; min-width: 84px; padding: 10px 10px 8px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); font: inherit; cursor: pointer; text-align: left; }
+.days button b { display: block; font-size: 15px; }
+.days button span { font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; }
+.days button[aria-pressed="true"] { border-color: var(--acc); box-shadow: inset 0 0 0 1px var(--acc); }
+.tiers { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 12px 0 16px; font-size: 12px; color: var(--mute); }
+.tiers i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+.group { margin: 18px 0 6px; font-size: 9px; color: var(--mute); }
+.room { display: grid; grid-template-columns: 150px 1fr; gap: 14px; align-items: center; padding: 12px 14px; margin: 8px 0; background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--rc); }
+.room h3 { margin: 0; font-size: 17px; }
+.room .ty { font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; }
+.track { position: relative; height: 26px; background: rgba(244,241,251,.05); }
+.track .seg { position: absolute; top: 0; bottom: 0; background: var(--free); opacity: .9; cursor: pointer; border: 0; padding: 0; }
+.track .seg.eb { background: #66C7FF; }
+.track .seg:hover, .track .seg:focus-visible { opacity: 1; outline: 2px solid var(--ink); outline-offset: 1px; }
+.ticks { position: relative; height: 14px; font-size: 10px; color: var(--mute); margin-top: 3px; }
+.ticks span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.opts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.opts button { font: inherit; font-size: 13px; padding: 6px 10px; cursor: pointer; background: transparent; color: var(--ink); border: 1px solid var(--free); }
+.opts button.eb { border-color: #66C7FF; }
+.opts button small { color: var(--mute); margin-left: 6px; }
+.none { font-size: 13px; color: var(--mute); }
+.state { padding: 30px 0; color: var(--mute); }
+.load { font-size: 9px; color: var(--acc); }
+@media (max-width: 640px) { .room { grid-template-columns: 1fr; gap: 8px; } h1 { font-size: 16px; } }
+/* booking popup */
+.modal { position: fixed; inset: 0; background: rgba(6,5,10,.86); display: flex; align-items: flex-start; justify-content: center; padding: 18px 10px; overflow-y: auto; z-index: 9; }
+.sheet { width: 100%; max-width: 720px; background: var(--panel); border: 1px solid var(--line); }
+.sheet .hd { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.sheet .hd b { font-size: 17px; }
+.sheet .hd p { margin: 2px 0 0; color: var(--mute); font-size: 13px; }
+.sheet .x { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; background: transparent; color: var(--ink); border: 1px solid var(--line); padding: 8px 10px; cursor: pointer; flex: none; }
+.sheet iframe { display: block; width: 100%; height: 1100px; border: 0; background: #1f1e1e; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="px kick">SAVE MENU · FREE SLOTS</div>
+  <h1>WHAT'S FREE</h1>
+  <p class="sub">Every room for the day you pick. Lit-up bars are times you can start a session (3 hours, extend later). Tap one to book that room. Prices follow the day and time automatically.</p>
+  <div class="days" id="days" role="group" aria-label="Day"></div>
+  <div class="tiers" id="tiers"></div>
+  <div id="board"><div class="state px load">LOADING SAVE SLOTS…</div></div>
+</div>
+
+<div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="sheet">
+    <div class="hd"><div><b id="mTitle"></b><p id="mSub"></p></div><button class="x" id="mClose" type="button">× BACK</button></div>
+    <iframe id="mFrame" title="Booking form"></iframe>
+  </div>
+</div>
+
+<script>
+/* Round2 availability board (round2sg-home/slots/). Reads free start times from SimplyBook's public API
+   (JSON-RPC, public key: read-only, made to be used in web pages) and opens the SimplyBook form already set
+   to the room and price tier the guest tapped (slots/book.html). Bookings and payments stay in SimplyBook.
+   Room / tier ids come from SimplyBook, so new rooms or prices there show up here by themselves. */
+(function () {
+  'use strict';
+  var API = 'https://user-api.simplybook.asia/', COMPANY = 'round2sg';
+  var KEY = '836f9f17235f31adc467a581f851c463a9e8e63eb25c8e7fd193a9a0619977d9';   /* public JSON-RPC key (not the secret one) */
+  var ROOMS = {   /* SimplyBook provider id → how it shows here */
+    5: ['Vale', '#E8436A', 'Netflix room'], 7: ['Kaeden', '#4DB848', 'Netflix room'], 8: ['Scarlett', '#F2C21B', 'Netflix room'],
+    9: ['Kai', '#24B49A', 'Deluxe room'], 10: ['Bella', '#7A5BE0', 'Deluxe room'], 12: ['Atlas', '#E9E7EF', 'Deluxe room'],
+    11: ['Maximillion', '#E0402F', 'VIP room']
+  };
+  var GROUPS = [['NETFLIX ROOMS', [5, 7, 8]], ['DELUXE ROOMS', [9, 10, 12]], ['VIP ROOM', [11]]];
+  var TIER = { 1: ['Early bird', 'eb'], 2: ['Peak', 'pk'], 3: ['Off peak', 'op'] };
+  var $ = function (id) { return document.getElementById(id); };
+  var token = null, meta = null, cache = {}, day = null, seq = 0;
+
+  function rpc(url, method, params) {
+    var h = { 'Content-Type': 'application/json' };
+    if (token) { h['X-Company-Login'] = COMPANY; h['X-Token'] = token; }
+    return fetch(url, { method: 'POST', headers: h, body: JSON.stringify({ jsonrpc: '2.0', method: method, params: params, id: 1 }) })
+      .then(function (r) { return r.json(); }).then(function (j) { if (j.error) throw new Error(j.error.message || 'SimplyBook error'); return j.result; });
+  }
+  function login() {
+    return rpc(API + 'login', 'getToken', [COMPANY, KEY]).then(function (t) { token = t; });
+  }
+  function loadMeta() {
+    return Promise.all([rpc(API, 'getEventList', []), rpc(API, 'getUnitList', [])]).then(function (r) {
+      var ev = r[0], un = r[1];
+      meta = {};
+      Object.keys(un).forEach(function (uid) {
+        if (!ROOMS[uid]) return;
+        meta[uid] = (un[uid].services || []).map(String).filter(function (sid) { return ev[sid] && ev[sid].is_active === '1' && ev[sid].is_public === '1'; })
+          .map(function (sid) { var e = ev[sid], cat = (e.categories || [])[0]; return { sid: sid, cat: cat, price: Math.round(parseFloat(e.price)), dur: +e.duration || 180 }; });
+      });
+    });
+  }
+  function sgDate(offset) { return new Date(Date.now() + 8 * 3600e3 + offset * 864e5).toISOString().slice(0, 10); }
+  function load(d) {
+    if (cache[d]) return cache[d];
+    var jobs = [];
+    Object.keys(meta).forEach(function (uid) {
+      meta[uid].forEach(function (s) {
+        jobs.push(rpc(API, 'getStartTimeMatrix', [d, d, s.sid, uid, 1]).then(function (m) { return { uid: uid, s: s, times: (m && m[d]) || [] }; }, function () { return { uid: uid, s: s, times: [], err: true }; }));
+      });
+    });
+    cache[d] = Promise.all(jobs);
+    return cache[d];
+  }
+
+  /* times → ranges of start times (a gap bigger than the usual step starts a new range) */
+  function mins(t) { var p = t.split(':'); return +p[0] * 60 + +p[1]; }
+  function clock(m) { var h = Math.floor(m / 60) % 24, mm = m % 60; return ((h + 11) % 12 + 1) + (mm ? ':' + ('0' + mm).slice(-2) : '') + (h < 12 ? 'am' : 'pm'); }
+  function ranges(times) {
+    var ms = times.map(mins).sort(function (a, b) { return a - b; }), out = [], step = 15;
+    for (var i = 1; i < ms.length; i++) if (ms[i] - ms[i - 1] > 0) { step = Math.min(step, ms[i] - ms[i - 1]); }
+    ms.forEach(function (m) { var r = out[out.length - 1]; if (r && m - r[1] <= step) r[1] = m; else out.push([m, m]); });
+    return out;
+  }
+
+  function drawDays() {
+    var h = '';
+    for (var i = 0; i < 14; i++) {
+      var d = sgDate(i), dt = new Date(d + 'T12:00:00Z'), wd = dt.getUTCDay();
+      var name = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][wd];
+      h += '<button type="button" data-d="' + d + '" aria-pressed="' + (d === day) + '"><span>' + name + '</span><b>' + dt.getUTCDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][dt.getUTCMonth()] + '</b></button>';
+    }
+    $('days').innerHTML = h;
+  }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  function show(d) {
+    day = d; drawDays();
+    var my = ++seq;
+    $('board').innerHTML = '<div class="state px load">LOADING SAVE SLOTS…</div>';
+    load(d).then(function (rows) {
+      if (my !== seq) return;
+      var by = {}, lo = 24 * 60, hi = 0, failed = 0, tiersSeen = {};
+      rows.forEach(function (x) {
+        if (x.err) failed++;
+        var rg = ranges(x.times);
+        rg.forEach(function (r) { lo = Math.min(lo, r[0]); hi = Math.max(hi, r[1]); });
+        if (rg.length) tiersSeen[x.s.cat] = x.s.price;
+        (by[x.uid] = by[x.uid] || []).push({ s: x.s, rg: rg });
+      });
+      if (lo > hi) { lo = 11 * 60; hi = 23 * 60; }
+      lo = Math.floor(lo / 60) * 60; hi = Math.ceil((hi + 15) / 60) * 60;
+      var span = hi - lo, pos = function (m) { return (100 * (m - lo) / span).toFixed(2) + '%'; };
+      var ticks = ''; for (var t = lo; t <= hi; t += 120) ticks += '<span style="left:' + pos(t) + '">' + clock(t) + '</span>';
+      $('tiers').innerHTML = Object.keys(TIER).filter(function (c) { return tiersSeen[c] != null; }).map(function (c) {
+        return '<span><i style="background:' + (c === '1' ? '#66C7FF' : 'var(--free)') + '"></i>' + TIER[c][0] + '</span>';
+      }).join('') + '<span>Session 3 h · add hours in the next step</span>';
+      var html = '', any = false;
+      GROUPS.forEach(function (g) {
+        html += '<div class="group px">' + g[0] + '</div>';
+        g[1].forEach(function (uid) {
+          var R = ROOMS[uid], list = by[uid] || [], segs = '', opts = '';
+          list.forEach(function (x) {
+            var cls = x.s.cat === '1' ? 'eb' : '', tier = (TIER[x.s.cat] || ['', ''])[0];
+            x.rg.forEach(function (r) {
+              any = true;
+              var label = (r[0] === r[1] ? 'Start ' + clock(r[0]) : 'Start ' + clock(r[0]) + '–' + clock(r[1]));
+              var data = ' data-u="' + uid + '" data-s="' + x.s.sid + '" data-c="' + x.s.cat + '" data-l="' + esc(label + ' · ' + tier + ' $' + x.s.price) + '"';
+              segs += '<button type="button" class="seg ' + cls + '"' + data + ' style="left:' + pos(r[0]) + ';width:calc(' + (100 * (r[1] - r[0] + 15) / span).toFixed(2) + '% - 1px)" aria-label="' + esc(R[0] + ': ' + label + ', ' + tier + ' $' + x.s.price) + '"></button>';
+              opts += '<button type="button" class="' + cls + '"' + data + '>' + esc(label) + '<small>' + tier + ' $' + x.s.price + '</small></button>';
+            });
+          });
+          html += '<div class="room" style="--rc:' + R[1] + '"><div><h3>' + R[0] + '</h3><div class="ty">' + R[2] + '</div></div><div>' +
+            '<div class="track">' + segs + '</div><div class="ticks">' + ticks + '</div>' +
+            '<div class="opts">' + (opts || '<span class="none">Fully booked</span>') + '</div></div></div>';
+        });
+      });
+      if (failed === rows.length) html = '<p class="state">Couldn’t reach the booking calendar. <a style="color:var(--acc)" href="https://www.round2.sg/booknow">Book here instead</a>.</p>';
+      else if (!any) html = '<p class="state">Everything’s booked for this day. Try another day, or message us on <a style="color:var(--acc)" href="http://wa.me/6591625767" target="_blank" rel="noopener">WhatsApp</a>.</p>' + html;
+      $('board').innerHTML = html;
+      if (my === seq) load(sgDate(1));   /* warm up tomorrow */
+    }).catch(function () { $('board').innerHTML = '<p class="state">Couldn’t reach the booking calendar. <a style="color:var(--acc)" href="https://www.round2.sg/booknow">Book here instead</a>.</p>'; });
+  }
+
+  function openBook(b) {
+    var uid = b.getAttribute('data-u'), R = ROOMS[uid];
+    $('mTitle').textContent = R[0] + ' · ' + R[2];
+    $('mSub').textContent = b.getAttribute('data-l') + ' — pick your add-ons, then the exact time.';
+    $('mFrame').src = 'book.html?c=' + b.getAttribute('data-c') + '&s=' + b.getAttribute('data-s') + '&p=' + uid;
+    $('modal').hidden = false; document.body.style.overflow = 'hidden';
+    count('board_pick');
+  }
+  function closeBook() { $('modal').hidden = true; $('mFrame').src = 'about:blank'; document.body.style.overflow = ''; }
+
+  /* same visitor counters as the menu (Firebase /web), once per visit */
+  function count(k) {
+    try {
+      if (sessionStorage.getItem('r2s.c.' + k)) return; sessionStorage.setItem('r2s.c.' + k, '1');
+      var d = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10), b = {}; b[k] = { '.sv': { increment: 1 } };
+      fetch('https://round2-tv-default-rtdb.asia-southeast1.firebasedatabase.app/web/days/' + d + '.json', { method: 'PATCH', body: JSON.stringify(b) }).catch(function () {});
+    } catch (e) {}
+  }
+  addEventListener('message', function (e) {
+    if (e.data && typeof e.data.r2step === 'string') count('sb_' + e.data.r2step.toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 28));
+  });
+
+  $('days').addEventListener('click', function (e) { var b = e.target.closest('button[data-d]'); if (b) show(b.getAttribute('data-d')); });
+  $('board').addEventListener('click', function (e) { var b = e.target.closest('button[data-u]'); if (b) openBook(b); });
+  $('mClose').onclick = closeBook;
+  addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('modal').hidden) closeBook(); });
+
+  if (!/[?&]notrack/.test(location.search)) count('board');
+  day = sgDate(0);
+  login().then(loadMeta).then(function () { show(day); }).catch(function () {
+    $('board').innerHTML = '<p class="state">Couldn’t reach the booking calendar. <a style="color:var(--acc)" href="https://www.round2.sg/booknow">Book here instead</a>.</p>';
+  });
+}());
+</script>
+</body>
+</html>

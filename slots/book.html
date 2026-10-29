@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Round2 · Book</title>
+<style>
+html, body { margin: 0; background: #1f1e1e; }
+#sb { min-height: 600px; }
+.load { padding: 40px 20px; text-align: center; font: 9px/1.6 'Press Start 2P', monospace; letter-spacing: .14em; color: #F2C21B; }
+</style>
+</head>
+<body>
+<div id="sb"><div class="load">LOADING…</div></div>
+<script>
+/* The SimplyBook form, opened already on one room and price tier (it starts at Add-ons, then the time).
+   Used inside the availability board (slots/index.html). ?c=category&s=service&p=provider (SimplyBook ids).
+   One page per form, because SimplyBook allows one widget per page. */
+(function () {
+  var q = new URLSearchParams(location.search);
+  var pre = {};
+  ['c', 's', 'p'].forEach(function (k, i) { var v = (q.get(k) || '').replace(/[^0-9]/g, ''); if (v) pre[['category', 'service', 'provider'][i]] = v; });
+  var CFG = {"widget_type":"iframe","url":"https:\/\/round2sg.simplybook.asia","theme":"simple_beauty_theme","theme_settings":{"sb_base_color":"#000000","header_color":"#000000","timeline_hide_unavailable":"1","hide_past_days":"1","timeline_show_end_time":"1","timeline_modern_display":"as_slots","display_item_mode":"block","body_bg_color":"#1f1e1e","sb_review_image":"1","dark_font_color":"#8f8f8f","light_font_color":"#bababa","btn_color_1":"#000000","sb_company_label_color":"#000000","hide_img_mode":"0","show_sidebar":"1","sb_busy":"#d1d1d1","sb_available":"#000000"},"timeline":"flexible","datepicker":"top_calendar","is_rtl":false,"app_config":{"clear_session":0,"allow_switch_to_ada":0,"predefined":[]}};
+  CFG.container_id = 'sb';
+  if (pre.service) CFG.app_config.predefined = pre;
+  /* pass the booking steps up to the board, and count them like the menu does (same /web counters) */
+  addEventListener('message', function (e) {
+    if (!/simplybook\./.test(e.origin) || !e.data || typeof e.data !== 'object') return;
+    if (e.data.event === 'stepChanged' && typeof e.data.step === 'string') try { parent.postMessage({ r2step: e.data.step }, '*'); } catch (x) {}
+  });
+  var s = document.createElement('script');
+  s.src = 'https://widget.simplybook.asia/v2/widget/widget.js';
+  s.onload = function () { document.getElementById('sb').innerHTML = ''; new window.SimplybookWidget(CFG); };
+  s.onerror = function () { document.getElementById('sb').innerHTML = '<p style="padding:24px;color:#f4f1fb;font-family:sans-serif">The booking form didn’t load. <a style="color:#F2C21B" href="https://www.round2.sg/booknow" target="_top">Book here instead</a>.</p>'; };
+  document.head.appendChild(s);
+}());
+</script>
+</body>
+</html>
