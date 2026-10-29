@@ -49,5 +49,21 @@ Secrets (HitPay API key + salt, SimplyBook admin user API key) live only as Work
 - Public holidays: Google's public SG calendar (`en.singapore#holiday`), entries whose description starts "Public holiday"
   (includes "Day off for …" / "… observed" in-lieu days). Mon–Thu PH → peak. Plus a manual extra list for in-lieu days Google adds late.
 
+## Test build deployed 30 Oct (DRY_RUN = 1 → pays in HitPay sandbox, does NOT write to SimplyBook)
+Code: `worker/round2-book.js` (deployed by pasting into Cloudflare via the Cloudflare MCP; KV `round2-book-holds`).
+- `/test` – simple phone form (room, date, 15-min start, 3–6 h, guest details → HitPay sandbox checkout).
+- `/quote` – price + free check. Prices read live from SimplyBook services/add-ons; Early Bird = 11:00 start, $35 + day rate ÷ 3 per extra hour.
+  Checked: Vale Tue 3 Nov 15:30 4h = 49 + 16.30; Max Fri 6 Nov 11:00 4h = 35 + 43; Kai Mon 9 Nov (Deepavali in lieu) 11:00 6h = 35 + 99; Bella Thu 16:00 6h = 79 + 47.40.
+- `/checkout` – re-checks the slot, holds it 15 min in KV (Vale/Atlas holds block each other), creates the HitPay payment request.
+- `/done?ref=` – HitPay redirect; confirms payment with HitPay, then finalize (once).
+- `/hitpay` – webhook (Hitpay-Signature = HMAC-SHA256 of raw body with salt). Register in HitPay sandbox: Developers › Webhook Endpoints › `https://round2-book.donttelldadyet.workers.dev/hitpay`, event `payment_request.completed`.
+- finalize (when DRY_RUN off): admin `getClientList(email,1)` / `addClient`, then `book(...)` with the pax intake field.
+  The Make room-blocking scenario still mirrors Vale↔Atlas for services 28/29/32 and 33/35/37 – the Worker books on those same services.
+
+## Open questions before going live
+- Does admin `book()` accept an end time past 3 h (extensions) on these services? Test with one real booking on a quiet far-off date, then cancel.
+- SimplyBook's booking price stays the service price; the HitPay amount is the real total – put the paid amount in the booking comment.
+- Staff alert when "paid but slot taken" (Telegram, like the room-menu scenarios).
+
 ## Later
 - Optional: a separate SimplyBook user for the Worker (the shared login also sits in the Make scenario).
