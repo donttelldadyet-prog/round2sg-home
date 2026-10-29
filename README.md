@@ -17,3 +17,6 @@ The last `<script>` in `index.html` counts what visitors do in the menu (screens
 and who's on it right now, and saves only numbers to the Round2 Firebase database under `/web`. The control centre's Website tab shows them.
 Full explanation, data layout and the one-time Firebase rule: `docs/site-stats.md` in **round2-tv-launcher**.
 Turn it off for one load with `?notrack`. It never blocks or changes the page.
+
+## Own booking system (branch own-booking)
+Start with [HANDOFF.md](HANDOFF.md) – status, how to deploy, open to-dos and the owners' decisions.
