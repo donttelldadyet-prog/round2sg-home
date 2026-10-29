@@ -30,7 +30,7 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 .room h3 { margin: 0; font-size: 17px; }
 .room .ty { font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; }
 .track { position: relative; height: 26px; background: rgba(244,241,251,.05); }
-.track .seg { position: absolute; top: 0; bottom: 0; background: var(--free); opacity: .9; cursor: pointer; border: 0; padding: 0; }
+.track .seg { position: absolute; top: 0; bottom: 0; background: var(--free); opacity: .9; }
 .track .seg.eb { background: #66C7FF; }
 .track .seg:hover, .track .seg:focus-visible { opacity: 1; outline: 2px solid var(--ink); outline-offset: 1px; }
 .ticks { position: relative; height: 14px; font-size: 10px; color: var(--mute); margin-top: 3px; }
@@ -43,8 +43,60 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 .state { padding: 30px 0; color: var(--mute); }
 .load { font-size: 9px; color: var(--acc); }
 @media (max-width: 640px) { .room { grid-template-columns: 1fr; gap: 8px; } h1 { font-size: 16px; } }
+.room { cursor: pointer; }
+.room:hover { border-color: rgba(244,241,251,.3); }
+.room .free { font-size: 13px; color: var(--free); margin-top: 6px; }
+.room .free.no { color: var(--mute); }
+.pickb { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 9px 12px; background: var(--acc); color: #0b0914; border: 0; cursor: pointer; margin-top: 8px; }
+.step { padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.step h4 { margin: 0 0 10px; font: 9px 'Press Start 2P', monospace; letter-spacing: .12em; color: var(--acc); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chips button { font: inherit; font-size: 14px; padding: 7px 11px; cursor: pointer; background: transparent; color: var(--ink); border: 1px solid var(--line); min-width: 74px; }
+.chips button small { display: block; font-size: 10px; color: var(--mute); text-transform: uppercase; letter-spacing: .06em; }
+.chips button.eb { border-color: rgba(102,199,255,.6); }
+.chips button[aria-pressed="true"] { background: var(--acc); color: #0b0914; border-color: var(--acc); }
+.chips button[aria-pressed="true"] small { color: #0b0914; }
+.chips button:disabled { opacity: .3; cursor: not-allowed; }
+.sum { padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.sum b { font-size: 18px; }
+.sum .go { font: 10px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 13px 16px; background: var(--acc); color: #0b0914; border: 0; cursor: pointer; }
+.sum .go:disabled { opacity: .35; cursor: not-allowed; }
+.hint { font-size: 13px; color: var(--mute); }
+.note { font-size: 13px; color: var(--mute); padding: 0 16px 14px; margin: 0; }
 /* booking popup */
 .modal { position: fixed; inset: 0; background: rgba(6,5,10,.86); display: flex; align-items: flex-start; justify-content: center; padding: 18px 10px; overflow-y: auto; z-index: 9; }
+.sheet { width: 100%; max-width: 720px; background: var(--panel); border: 1px solid var(--line); }
+.sheet .hd { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.sheet .hd b { font-size: 17px; }
+.sheet .hd p { margin: 2px 0 0; color: var(--mute); font-size: 13px; }
+.sheet .x { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; background: transparent; color: var(--ink); border: 1px solid var(--line); padding: 8px 10px; cursor: pointer; flex: none; }
+.sheet iframe { display: block; width: 100%; height: 1100px; border: 0; background: #1f1e1e; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="px kick">SAVE MENU · FREE SLOTS</div>
+  <h1>WHAT'S FREE</h1>
+  <p class="sub">Every room for the day you pick. Green is free time. Tap a room to choose your start time and how long you'll stay; the price updates as you go.</p>
+  <div class="days" id="days" role="group" aria-label="Day"></div>
+  <div class="tiers" id="tiers"></div>
+  <div id="board"><div class="state px load">LOADING SAVE SLOTS…</div></div>
+</div>
+
+<div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mTitle">
+  <div class="sheet">
+    <div class="hd"><div><b id="mTitle"></b><p id="mSub"></p></div><button class="x" id="mClose" type="button">× BACK</button></div>
+    <div id="pick">
+      <div class="step"><h4>1 · START TIME</h4><div class="chips" id="pTimes"></div></div>
+      <div class="step"><h4>2 · HOW LONG</h4><div class="chips" id="pLens"></div></div>
+      <div class="sum"><div><div id="pWhen" class="hint"></div><b id="pPrice"></b></div><button class="go" id="pGo" type="button" disabled>CONTINUE</button></div>
+      <p class="note" id="pNote"></p>
+    </div>
+    <iframe id="mFrame" title="Booking form" hidden></iframe>
+  </div>
+</div>
+
+xed; inset: 0; background: rgba(6,5,10,.86); display: flex; align-items: flex-start; justify-content: center; padding: 18px 10px; overflow-y: auto; z-index: 9; }
 .sheet { width: 100%; max-width: 720px; background: var(--panel); border: 1px solid var(--line); }
 .sheet .hd { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--line); }
 .sheet .hd b { font-size: 17px; }
@@ -71,23 +123,28 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 </div>
 
 <script>
-/* Round2 availability board (round2sg-home/slots/). Reads free start times from SimplyBook's public API
-   (JSON-RPC, public key: read-only, made to be used in web pages) and opens the SimplyBook form already set
-   to the room and price tier the guest tapped (slots/book.html). Bookings and payments stay in SimplyBook.
-   Room / tier ids come from SimplyBook, so new rooms or prices there show up here by themselves. */
+/* Round2 availability board (round2sg-home/slots/). Reads free time from SimplyBook's public API (JSON-RPC,
+   public key: read-only, made to be used in web pages). Guests pick room, start time (15-minute steps) and length
+   here; the SimplyBook form is only used to finish the booking (slots/book.html). Bookings and payments stay in
+   SimplyBook. Rooms, tiers, prices and extension add-ons all come from SimplyBook, so changes there show up here.
+
+   How start times are worked out: getAvailableTimeIntervals gives each room's free gaps per service. A start time
+   works if start + session length + the service's buffer fits inside a gap (Early bird: the gap is its 11am–2pm
+   window, no buffer). SimplyBook's own slot list only offers starts 3h15 apart, which hid times like 3:30pm. */
 (function () {
   'use strict';
   var API = 'https://user-api.simplybook.asia/', COMPANY = 'round2sg';
   var KEY = '836f9f17235f31adc467a581f851c463a9e8e63eb25c8e7fd193a9a0619977d9';   /* public JSON-RPC key (not the secret one) */
-  var ROOMS = {   /* SimplyBook provider id → how it shows here */
+  var ROOMS = {   /* SimplyBook provider id → name, colour, type */
     5: ['Vale', '#E8436A', 'Netflix room'], 7: ['Kaeden', '#4DB848', 'Netflix room'], 8: ['Scarlett', '#F2C21B', 'Netflix room'],
     9: ['Kai', '#24B49A', 'Deluxe room'], 10: ['Bella', '#7A5BE0', 'Deluxe room'], 12: ['Atlas', '#E9E7EF', 'Deluxe room'],
     11: ['Maximillion', '#E0402F', 'VIP room']
   };
   var GROUPS = [['NETFLIX ROOMS', [5, 7, 8]], ['DELUXE ROOMS', [9, 10, 12]], ['VIP ROOM', [11]]];
-  var TIER = { 1: ['Early bird', 'eb'], 2: ['Peak', 'pk'], 3: ['Off peak', 'op'] };
+  var TIER = { 1: 'Early bird', 2: 'Peak', 3: 'Off peak' };
+  var STEP = 15;
   var $ = function (id) { return document.getElementById(id); };
-  var token = null, meta = null, cache = {}, day = null, seq = 0;
+  var token = null, meta = null, cache = {}, day = null, seq = 0, cur = null;
 
   function rpc(url, method, params) {
     var h = { 'Content-Type': 'application/json' };
@@ -95,41 +152,67 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
     return fetch(url, { method: 'POST', headers: h, body: JSON.stringify({ jsonrpc: '2.0', method: method, params: params, id: 1 }) })
       .then(function (r) { return r.json(); }).then(function (j) { if (j.error) throw new Error(j.error.message || 'SimplyBook error'); return j.result; });
   }
-  function login() {
-    return rpc(API + 'login', 'getToken', [COMPANY, KEY]).then(function (t) { token = t; });
-  }
+  function login() { return rpc(API + 'login', 'getToken', [COMPANY, KEY]).then(function (t) { token = t; }); }
   function loadMeta() {
-    return Promise.all([rpc(API, 'getEventList', []), rpc(API, 'getUnitList', [])]).then(function (r) {
-      var ev = r[0], un = r[1];
+    return Promise.all([rpc(API, 'getEventList', []), rpc(API, 'getUnitList', []), rpc(API, 'getProductList', [{}])]).then(function (r) {
+      var ev = r[0], un = r[1], prod = {};
+      (r[2] || []).forEach(function (p) { if (p.is_active === '1') prod[p.id] = { id: p.id, dur: +p.duration || 0, price: +p.price || 0, name: p.name }; });
       meta = {};
       Object.keys(un).forEach(function (uid) {
         if (!ROOMS[uid]) return;
-        meta[uid] = (un[uid].services || []).map(String).filter(function (sid) { return ev[sid] && ev[sid].is_active === '1' && ev[sid].is_public === '1'; })
-          .map(function (sid) { var e = ev[sid], cat = (e.categories || [])[0]; return { sid: sid, cat: cat, price: Math.round(parseFloat(e.price)), dur: +e.duration || 180 }; });
+        meta[uid] = (un[uid].services || []).map(String).filter(function (sid) { return ev[sid] && ev[sid].is_active === '1' && ev[sid].is_public === '1'; }).map(function (sid) {
+          var e = ev[sid];
+          var ext = (e.paid_attributes || []).map(function (a) { return prod[a.product_id]; }).filter(function (p) { return p && p.dur > 0; })
+            .sort(function (a, b) { return a.dur - b.dur; });
+          return { sid: sid, cat: String((e.categories || [])[0] || ''), price: +e.price || 0, dur: +e.duration || 180, buf: +e.buffertime_after || 0, ext: ext };
+        });
       });
     });
   }
-  function sgDate(offset) { return new Date(Date.now() + 8 * 3600e3 + offset * 864e5).toISOString().slice(0, 10); }
+  function sgNow() { return new Date(Date.now() + 8 * 3600e3); }
+  function sgDate(offset) { return new Date(sgNow().getTime() + offset * 864e5).toISOString().slice(0, 10); }
+  function mins(t) { var p = t.split(':'); return +p[0] * 60 + +p[1]; }
+  function hhmm(m) { return ('0' + Math.floor(m / 60)).slice(-2) + ':' + ('0' + m % 60).slice(-2) + ':00'; }
+  function clock(m) { var h = Math.floor(m / 60) % 24, mm = m % 60; return ((h + 11) % 12 + 1) + (mm ? ':' + ('0' + mm).slice(-2) : '') + (h < 12 ? 'am' : 'pm'); }
+  function money(n) { return '$' + (Math.round(n * 100) % 100 ? n.toFixed(2) : Math.round(n)); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  /* one day: for every room, the start times that work and, for each, which service (tier) and how long it can run */
   function load(d) {
     if (cache[d]) return cache[d];
     var jobs = [];
     Object.keys(meta).forEach(function (uid) {
       meta[uid].forEach(function (s) {
-        jobs.push(rpc(API, 'getStartTimeMatrix', [d, d, s.sid, uid, 1]).then(function (m) { return { uid: uid, s: s, times: (m && m[d]) || [] }; }, function () { return { uid: uid, s: s, times: [], err: true }; }));
+        jobs.push(rpc(API, 'getAvailableTimeIntervals', [d, d, s.sid, uid, 1]).then(function (r) {
+          return { uid: uid, s: s, gaps: ((r && r[d] && r[d][uid]) || []).map(function (g) { return [mins(g.from), mins(g.to)]; }) };
+        }, function () { return { uid: uid, s: s, gaps: [], err: true }; }));
       });
     });
-    cache[d] = Promise.all(jobs);
+    cache[d] = Promise.all(jobs).then(function (rows) {
+      var now = sgNow(), today = d === now.toISOString().slice(0, 10), nowM = now.getUTCHours() * 60 + now.getUTCMinutes();
+      var rooms = {}, failed = 0;
+      rows.forEach(function (x) {
+        if (x.err) failed++;
+        var R = rooms[x.uid] = rooms[x.uid] || { starts: {} };
+        x.gaps.forEach(function (g) {
+          var limit = g[1] - (x.s.cat === '1' ? 0 : x.s.buf);
+          for (var m = Math.ceil(g[0] / STEP) * STEP; m + x.s.dur <= limit; m += STEP) {
+            if (today && m < nowM + 15) continue;
+            var o = { m: m, s: x.s, room: limit - m };
+            var prev = R.starts[m];
+            if (!prev || o.s.price < prev.s.price) R.starts[m] = o;   /* same time in two tiers: the cheaper one */
+          }
+        });
+      });
+      Object.keys(rooms).forEach(function (uid) {
+        var list = Object.keys(rooms[uid].starts).map(Number).sort(function (a, b) { return a - b; }).map(function (m) { return rooms[uid].starts[m]; });
+        rooms[uid].list = list;
+        var rg = []; list.forEach(function (o) { var r = rg[rg.length - 1]; if (r && o.m - r[1] <= STEP && o.s.cat === r[2]) r[1] = o.m; else rg.push([o.m, o.m, o.s.cat]); });
+        rooms[uid].ranges = rg;
+      });
+      return { rooms: rooms, failed: failed === rows.length };
+    });
     return cache[d];
-  }
-
-  /* times → ranges of start times (a gap bigger than the usual step starts a new range) */
-  function mins(t) { var p = t.split(':'); return +p[0] * 60 + +p[1]; }
-  function clock(m) { var h = Math.floor(m / 60) % 24, mm = m % 60; return ((h + 11) % 12 + 1) + (mm ? ':' + ('0' + mm).slice(-2) : '') + (h < 12 ? 'am' : 'pm'); }
-  function ranges(times) {
-    var ms = times.map(mins).sort(function (a, b) { return a - b; }), out = [], step = 15;
-    for (var i = 1; i < ms.length; i++) if (ms[i] - ms[i - 1] > 0) { step = Math.min(step, ms[i] - ms[i - 1]); }
-    ms.forEach(function (m) { var r = out[out.length - 1]; if (r && m - r[1] <= step) r[1] = m; else out.push([m, m]); });
-    return out;
   }
 
   function drawDays() {
@@ -141,73 +224,104 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
     }
     $('days').innerHTML = h;
   }
-  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function dayLabel(d) { var dt = new Date(d + 'T12:00:00Z'); return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dt.getUTCDay()] + ' ' + dt.getUTCDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][dt.getUTCMonth()]; }
 
+  var data = null;
   function show(d) {
     day = d; drawDays();
     var my = ++seq;
     $('board').innerHTML = '<div class="state px load">LOADING SAVE SLOTS…</div>';
-    load(d).then(function (rows) {
+    load(d).then(function (res) {
       if (my !== seq) return;
-      var by = {}, lo = 24 * 60, hi = 0, failed = 0, tiersSeen = {};
-      rows.forEach(function (x) {
-        if (x.err) failed++;
-        var rg = ranges(x.times);
-        rg.forEach(function (r) { lo = Math.min(lo, r[0]); hi = Math.max(hi, r[1]); });
-        if (rg.length) tiersSeen[x.s.cat] = x.s.price;
-        (by[x.uid] = by[x.uid] || []).push({ s: x.s, rg: rg });
-      });
-      if (lo > hi) { lo = 11 * 60; hi = 23 * 60; }
-      lo = Math.floor(lo / 60) * 60; hi = Math.ceil((hi + 15) / 60) * 60;
+      data = res;
+      if (res.failed) { $('board').innerHTML = '<p class="state">Couldn’t reach the booking calendar. <a style="color:var(--acc)" href="https://www.round2.sg/booknow">Book here instead</a>.</p>'; return; }
+      var lo = 24 * 60, hi = 0, cats = {}, any = false;
+      Object.keys(res.rooms).forEach(function (uid) { res.rooms[uid].list.forEach(function (o) { lo = Math.min(lo, o.m); hi = Math.max(hi, o.m + o.s.dur); cats[o.s.cat] = 1; any = true; }); });
+      if (!any) { lo = 11 * 60; hi = 23 * 60; }
+      lo = Math.floor(lo / 60) * 60; hi = Math.ceil(hi / 60) * 60;
       var span = hi - lo, pos = function (m) { return (100 * (m - lo) / span).toFixed(2) + '%'; };
       var ticks = ''; for (var t = lo; t <= hi; t += 120) ticks += '<span style="left:' + pos(t) + '">' + clock(t) + '</span>';
-      $('tiers').innerHTML = Object.keys(TIER).filter(function (c) { return tiersSeen[c] != null; }).map(function (c) {
-        return '<span><i style="background:' + (c === '1' ? '#66C7FF' : 'var(--free)') + '"></i>' + TIER[c][0] + '</span>';
-      }).join('') + '<span>Session 3 h · add hours in the next step</span>';
-      var html = '', any = false;
+      $('tiers').innerHTML = (cats['1'] ? '<span><i style="background:#66C7FF"></i>Early bird start</span>' : '') + '<span><i style="background:var(--free)"></i>You can start a session here</span><span>Sessions are 3 h, longer if you like</span>';
+      var html = any ? '' : '<p class="state">Everything’s booked for this day. Try another day, or message us on <a style="color:var(--acc)" href="http://wa.me/6591625767" target="_blank" rel="noopener">WhatsApp</a>.</p>';
       GROUPS.forEach(function (g) {
         html += '<div class="group px">' + g[0] + '</div>';
         g[1].forEach(function (uid) {
-          var R = ROOMS[uid], list = by[uid] || [], segs = '', optl = [];
-          list.forEach(function (x) {
-            var cls = x.s.cat === '1' ? 'eb' : '', tier = (TIER[x.s.cat] || ['', ''])[0];
-            x.rg.forEach(function (r) {
-              any = true;
-              var label = (r[0] === r[1] ? 'Start ' + clock(r[0]) : 'Start ' + clock(r[0]) + '–' + clock(r[1]));
-              var data = ' data-u="' + uid + '" data-s="' + x.s.sid + '" data-c="' + x.s.cat + '" data-l="' + esc(label + ' · ' + tier + ' $' + x.s.price) + '"';
-              segs += '<button type="button" class="seg ' + cls + '"' + data + ' style="left:' + pos(r[0]) + ';width:calc(' + (100 * (r[1] - r[0] + 15) / span).toFixed(2) + '% - 1px)" aria-label="' + esc(R[0] + ': ' + label + ', ' + tier + ' $' + x.s.price) + '"></button>';
-              optl.push([r[0], '<button type="button" class="' + cls + '"' + data + '>' + esc(label) + '<small>' + tier + ' $' + x.s.price + '</small></button>']);
-            });
-          });
-          var opts = optl.sort(function (a, b) { return a[0] - b[0]; }).map(function (o) { return o[1]; }).join('');   /* in time order */
-          html += '<div class="room" style="--rc:' + R[1] + '"><div><h3>' + R[0] + '</h3><div class="ty">' + R[2] + '</div></div><div>' +
+          var R = ROOMS[uid], info = res.rooms[uid] || { list: [], ranges: [] }, segs = '';
+          info.ranges.forEach(function (r) { segs += '<span class="seg' + (r[2] === '1' ? ' eb' : '') + '" style="left:' + pos(r[0]) + ';width:calc(' + (100 * (r[1] - r[0] + STEP) / span).toFixed(2) + '% - 1px)"></span>'; });
+          var from = info.list.length ? Math.min.apply(null, info.list.map(function (o) { return o.s.price; })) : 0;
+          var txt = info.ranges.map(function (r) { return r[0] === r[1] ? clock(r[0]) : clock(r[0]) + '–' + clock(r[1]); }).join(', ');
+          html += '<div class="room" style="--rc:' + R[1] + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': start ' + txt) + '"' : '') + '><div><h3>' + R[0] + '</h3><div class="ty">' + R[2] + '</div></div><div>' +
             '<div class="track">' + segs + '</div><div class="ticks">' + ticks + '</div>' +
-            '<div class="opts">' + (opts || '<span class="none">Fully booked</span>') + '</div></div></div>';
+            (info.list.length ? '<div class="free">Start ' + esc(txt) + ' · from ' + money(from) + '</div><button class="pickb" type="button" data-u="' + uid + '">PICK A TIME</button>' : '<div class="free no">Fully booked</div>') + '</div></div>';
         });
       });
-      if (failed === rows.length) html = '<p class="state">Couldn’t reach the booking calendar. <a style="color:var(--acc)" href="https://www.round2.sg/booknow">Book here instead</a>.</p>';
-      else if (!any) html = '<p class="state">Everything’s booked for this day. Try another day, or message us on <a style="color:var(--acc)" href="http://wa.me/6591625767" target="_blank" rel="noopener">WhatsApp</a>.</p>' + html;
       $('board').innerHTML = html;
-      if (my === seq) load(sgDate(1));   /* warm up tomorrow */
+      if (my === seq) load(sgDate(1));
     }).catch(function () { $('board').innerHTML = '<p class="state">Couldn’t reach the booking calendar. <a style="color:var(--acc)" href="https://www.round2.sg/booknow">Book here instead</a>.</p>'; });
   }
 
-  function openBook(b) {
-    var uid = b.getAttribute('data-u'), R = ROOMS[uid];
-    $('mTitle').textContent = R[0] + ' · ' + R[2];
-    $('mSub').textContent = b.getAttribute('data-l') + ' — pick your add-ons, then the exact time.';
-    $('mFrame').src = 'book.html?c=' + b.getAttribute('data-c') + '&s=' + b.getAttribute('data-s') + '&p=' + uid;
-    $('modal').hidden = false; document.body.style.overflow = 'hidden';
+  /* ---------- the picker: start time → length → continue ---------- */
+  function openRoom(uid) {
+    var info = data && data.rooms[uid]; if (!info || !info.list.length) return;
+    cur = { uid: uid, start: null, len: null };
+    $('mTitle').textContent = ROOMS[uid][0] + ' · ' + ROOMS[uid][2];
+    $('mSub').textContent = dayLabel(day);
+    $('pTimes').innerHTML = info.list.map(function (o) {
+      return '<button type="button" data-m="' + o.m + '" class="' + (o.s.cat === '1' ? 'eb' : '') + '" aria-pressed="false">' + clock(o.m) + '<small>' + TIER[o.s.cat] + '</small></button>';
+    }).join('');
+    $('pick').hidden = false; $('mFrame').hidden = true; $('mFrame').src = 'about:blank';
+    drawLens(); $('modal').hidden = false; document.body.style.overflow = 'hidden';
     count('board_pick');
   }
+  function startObj() { return data.rooms[cur.uid].starts[cur.start]; }
+  function drawLens() {
+    var o = cur.start != null ? startObj() : null, h = '';
+    if (!o) { $('pLens').innerHTML = '<span class="hint">Pick a start time first.</span>'; summary(); return; }
+    var opts = [{ id: null, dur: o.s.dur, price: o.s.price }].concat(o.s.ext.map(function (p) { return { id: p.id, dur: o.s.dur + p.dur, price: o.s.price + p.price }; }));
+    opts.forEach(function (x, i) {
+      var fits = o.m + x.dur <= o.m + o.room;
+      h += '<button type="button" data-i="' + i + '"' + (fits ? '' : ' disabled') + ' aria-pressed="' + (cur.len === i) + '">' + (x.dur / 60) + ' h<small>' + (fits ? 'till ' + clock(o.m + x.dur) + ' · ' + money(x.price) : 'not free') + '</small></button>';
+    });
+    cur.opts = opts;
+    if (cur.len != null && (!opts[cur.len] || o.m + opts[cur.len].dur > o.m + o.room)) cur.len = null;
+    if (cur.len == null) cur.len = 0;
+    $('pLens').innerHTML = h; markLen(); summary();
+  }
+  function markLen() { Array.prototype.forEach.call($('pLens').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(+b.getAttribute('data-i') === cur.len)); }); }
+  function summary() {
+    var o = cur.start != null ? startObj() : null, x = o && cur.opts && cur.opts[cur.len];
+    $('pWhen').textContent = o && x ? dayLabel(day) + ' · ' + clock(o.m) + '–' + clock(o.m + x.dur) + ' · ' + TIER[o.s.cat] : 'Pick a start time';
+    $('pPrice').textContent = x && o ? money(x.price) : '';
+    $('pGo').disabled = !(o && x);
+    $('pNote').textContent = '';
+  }
+  $('pTimes').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-m]'); if (!b) return;
+    cur.start = +b.getAttribute('data-m');
+    Array.prototype.forEach.call($('pTimes').querySelectorAll('button'), function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+    drawLens();
+  });
+  $('pLens').addEventListener('click', function (e) { var b = e.target.closest('button[data-i]'); if (!b || b.disabled) return; cur.len = +b.getAttribute('data-i'); markLen(); summary(); });
+
+  /* continue: SimplyBook's form finishes it (details + payment). It opens on this room and tier; for now the guest
+     re-picks the length add-on and time there, so we spell out exactly what to choose. */
+  $('pGo').addEventListener('click', function () {
+    var o = startObj(), x = cur.opts[cur.len];
+    var want = (x.id ? 'tick “+' + (x.dur - o.s.dur) / 60 + ' hour' + (x.dur - o.s.dur > 60 ? 's' : '') + '”, then ' : '') + 'pick ' + dayLabel(day) + ' at ' + clock(o.m) + '.';
+    $('mSub').textContent = dayLabel(day) + ' · ' + clock(o.m) + '–' + clock(o.m + x.dur) + ' · ' + money(x.price) + '. In the form: ' + want;
+    $('pick').hidden = true; $('mFrame').hidden = false;
+    $('mFrame').src = 'book.html?c=' + o.s.cat + '&s=' + o.s.sid + '&p=' + cur.uid;
+    count('board_continue');
+  });
   function closeBook() { $('modal').hidden = true; $('mFrame').src = 'about:blank'; document.body.style.overflow = ''; }
 
   /* same visitor counters as the menu (Firebase /web), once per visit */
   function count(k) {
+    if (/[?&]notrack/.test(location.search)) return;
     try {
       if (sessionStorage.getItem('r2s.c.' + k)) return; sessionStorage.setItem('r2s.c.' + k, '1');
-      var d = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10), b = {}; b[k] = { '.sv': { increment: 1 } };
-      fetch('https://round2-tv-default-rtdb.asia-southeast1.firebasedatabase.app/web/days/' + d + '.json', { method: 'PATCH', body: JSON.stringify(b) }).catch(function () {});
+      var b = {}; b[k] = { '.sv': { increment: 1 } };
+      fetch('https://round2-tv-default-rtdb.asia-southeast1.firebasedatabase.app/web/days/' + sgDate(0) + '.json', { method: 'PATCH', body: JSON.stringify(b) }).catch(function () {});
     } catch (e) {}
   }
   addEventListener('message', function (e) {
@@ -215,11 +329,12 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
   });
 
   $('days').addEventListener('click', function (e) { var b = e.target.closest('button[data-d]'); if (b) show(b.getAttribute('data-d')); });
-  $('board').addEventListener('click', function (e) { var b = e.target.closest('button[data-u]'); if (b) openBook(b); });
-  $('mClose').onclick = closeBook;
+  $('board').addEventListener('click', function (e) { var b = e.target.closest('[data-u]'); if (b) openRoom(b.getAttribute('data-u')); });
+  $('board').addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.room[data-u]')) { e.preventDefault(); openRoom(e.target.getAttribute('data-u')); } });
+  $('mClose').onclick = function () { if (!$('mFrame').hidden && cur) { $('mFrame').hidden = true; $('mFrame').src = 'about:blank'; $('pick').hidden = false; summary(); } else closeBook(); };
   addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('modal').hidden) closeBook(); });
 
-  if (!/[?&]notrack/.test(location.search)) count('board');
+  count('board');
   day = sgDate(0);
   login().then(loadMeta).then(function () { show(day); }).catch(function () {
     $('board').innerHTML = '<p class="state">Couldn’t reach the booking calendar. <a style="color:var(--acc)" href="https://www.round2.sg/booknow">Book here instead</a>.</p>';
