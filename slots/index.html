@@ -303,14 +303,13 @@ xed; inset: 0; background: rgba(6,5,10,.86); display: flex; align-items: flex-st
   });
   $('pLens').addEventListener('click', function (e) { var b = e.target.closest('button[data-i]'); if (!b || b.disabled) return; cur.len = +b.getAttribute('data-i'); markLen(); summary(); });
 
-  /* continue: SimplyBook's form finishes it (details + payment). It opens on this room and tier; for now the guest
-     re-picks the length add-on and time there, so we spell out exactly what to choose. */
+  /* continue: SimplyBook's form opens straight at Contact details with everything filled in (book.html builds its
+     booking link), so the guest only types their details, agrees to the terms and pays. */
   $('pGo').addEventListener('click', function () {
     var o = startObj(), x = cur.opts[cur.len];
-    var want = (x.id ? 'tick “+' + (x.dur - o.s.dur) / 60 + ' hour' + (x.dur - o.s.dur > 60 ? 's' : '') + '”, then ' : '') + 'pick ' + dayLabel(day) + ' at ' + clock(o.m) + '.';
-    $('mSub').textContent = dayLabel(day) + ' · ' + clock(o.m) + '–' + clock(o.m + x.dur) + ' · ' + money(x.price) + '. In the form: ' + want;
+    $('mSub').textContent = dayLabel(day) + ' · ' + clock(o.m) + '–' + clock(o.m + x.dur) + ' · ' + money(x.price) + ' — just your details and payment left.';
     $('pick').hidden = true; $('mFrame').hidden = false;
-    $('mFrame').src = 'book.html?c=' + o.s.cat + '&s=' + o.s.sid + '&p=' + cur.uid;
+    $('mFrame').src = 'book.html?c=' + o.s.cat + '&s=' + o.s.sid + '&p=' + cur.uid + '&a=' + (x.id || 'no') + '&d=' + day + '&t=' + hhmm(o.m).slice(0, 5);
     count('board_continue');
   });
   function closeBook() { $('modal').hidden = true; $('mFrame').src = 'about:blank'; document.body.style.overflow = ''; }
@@ -331,7 +330,7 @@ xed; inset: 0; background: rgba(6,5,10,.86); display: flex; align-items: flex-st
   $('days').addEventListener('click', function (e) { var b = e.target.closest('button[data-d]'); if (b) show(b.getAttribute('data-d')); });
   $('board').addEventListener('click', function (e) { var b = e.target.closest('[data-u]'); if (b) openRoom(b.getAttribute('data-u')); });
   $('board').addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.room[data-u]')) { e.preventDefault(); openRoom(e.target.getAttribute('data-u')); } });
-  $('mClose').onclick = function () { if (!$('mFrame').hidden && cur) { $('mFrame').hidden = true; $('mFrame').src = 'about:blank'; $('pick').hidden = false; summary(); } else closeBook(); };
+  $('mClose').onclick = function () { if (!$('mFrame').hidden && cur) { $('mFrame').hidden = true; $('mFrame').src = 'about:blank'; $('pick').hidden = false; $('mSub').textContent = dayLabel(day); summary(); } else closeBook(); };
   addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('modal').hidden) closeBook(); });
 
   count('board');
