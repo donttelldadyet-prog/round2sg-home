@@ -73,7 +73,7 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 .track { height: 34px; border-radius: 3px; overflow: hidden;
   background: repeating-linear-gradient(135deg, rgba(244,241,251,.06) 0 6px, rgba(244,241,251,.02) 6px 12px); }
 .track .hr { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(244,241,251,.16); }
-.track .seg { background: var(--tc); opacity: .85; border-radius: 3px; top: 3px; bottom: 3px; }
+.track .seg { background: var(--rc, var(--tc)); opacity: .85; border-radius: 3px; top: 3px; bottom: 3px; }
 .track .seg.eb { background: var(--eb); }
 .ticks span::before { content: ''; position: absolute; left: 50%; top: -4px; width: 1px; height: 4px; background: rgba(244,241,251,.35); }
 /* Early bird: its own chip, easy to see, and clearly marked when taken */
@@ -81,7 +81,7 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 .ebchip b { font: 8px 'Press Start 2P', monospace; letter-spacing: .1em; color: var(--eb); }
 .ebchip.gone { border-color: var(--line); background: transparent; color: var(--mute); cursor: default; text-decoration: line-through; text-decoration-color: rgba(244,241,251,.35); }
 .ebchip.gone b { color: var(--mute); }
-.room .free { color: var(--tc); }
+.room .free { color: var(--rc, var(--tc)); }
 /* by time / earliest */
 .hours { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 10px; scrollbar-width: thin; }
 .hours button { flex: none; font: inherit; font-size: 14px; padding: 8px 12px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); cursor: pointer; }
@@ -97,7 +97,7 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 @media (max-width: 640px) { .row { grid-template-columns: 1fr auto; } .row .pickb { grid-column: 1 / -1; justify-self: start; } }
 .room { cursor: pointer; }
 .room:hover { border-color: rgba(244,241,251,.3); }
-.room .free { font-size: 13px; color: var(--free); margin-top: 6px; }
+.room .free { font-size: 13px; color: var(--rc, var(--free)); margin-top: 6px; }
 .room .free.no { color: var(--mute); }
 .pickb { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 9px 12px; background: var(--acc); color: #0b0914; border: 0; cursor: pointer; margin-top: 8px; }
 .step { padding: 14px 16px; border-bottom: 1px solid var(--line); }
@@ -223,8 +223,8 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
     9: ['Kai', '#24B49A', 'Deluxe room', 4], 10: ['Bella', '#7A5BE0', 'Deluxe room', 4], 12: ['Atlas', '#E9E7EF', 'Deluxe room', 4],
     11: ['Maximillion', '#E0402F', 'VIP room', 6]
   };
-  /* tiers: name, rooms, colour (free time and the section's top line) */
-  var GROUPS = [['NETFLIX ROOMS', [5, 7, 8], '#FF5A6E'], ['DELUXE ROOMS', [9, 10, 12], '#B48CFF'], ['VIP ROOM', [11], '#F2C21B']];
+  /* tiers: name, rooms, colour (the section's top line and title). Free-time bars use each room's own character colour. */
+  var GROUPS = [['NETFLIX ROOMS', [5, 7, 8], '#FF5A6E'], ['DELUXE ROOMS', [9, 10, 12], '#B48CFF'], ['VIP ROOM', [11], '#E0402F']];
   var TIER = {}; GROUPS.forEach(function (g) { g[1].forEach(function (u) { TIER[u] = g[2]; }); });
   var EB = 11 * 60, view = 'room', hourSel = null;
   try { view = localStorage.getItem('r2.view') || 'room'; } catch (e) {}
@@ -375,7 +375,7 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
     rows.sort(function (a, b) { return a[1].m - b[1].m || a[1].prices[3] - b[1].prices[3]; });
     return rows.map(function (r) {
       var uid = r[0], o = r[1], R = ROOMS[uid];
-      return '<div class="row" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3>' + R[0] + '</h3><div class="ty" style="color:' + TIER[uid] + '">' + R[2] + '</div></div>' +
+      return '<div class="row" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3>' + R[0] + '</h3><div class="ty" style="color:' + R[1] + '">' + R[2] + '</div></div>' +
         '<div class="when">' + clock(o.m) + (o.eb ? ' · Early bird' : '') + '<small>' + money(o.prices[3]) + ' for 3 h · up to ' + o.maxH + ' h</small></div>' +
         '<button class="pickb" type="button" data-u="' + uid + '" data-m="' + o.m + '">START ' + clock(o.m).toUpperCase() + '</button></div>';
     }).join('');
