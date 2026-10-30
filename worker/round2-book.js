@@ -504,8 +504,9 @@ async function gm(env, req) {
    POST /menu/checkout (form field "order"): re-prices from the published menu.json exactly like Make's old ROOM MENU
      CHECKOUT, keeps the order here, makes the HitPay payment (webhook → /menu/hitpay, back to the menu page).
    POST /menu/hitpay (HitPay) and POST /menu/return (the menu page when the guest comes back): ask HitPay itself whether it's
-     paid (never trust the caller), then – once – hand the order to Make's [BACKEND] ROOM MENU PAID ORDER for the kitchen
-     Telegram slip, the TV alert, the accounting sheet and the Drive slip (fields order, details, k = secret MENU_MAKE_K).
+     paid (never trust the caller), then – once – send the TV alert and the kitchen Telegram slip from here, and hand the order
+     to Make's [BACKEND] ROOM MENU PAID ORDER for the accounting sheet and the Drive slip that the kitchen phone prints
+     (fields order, details, k = secret MENU_MAKE_K, tv/tg = "sent" when done here so Make skips them).
    Test payments (sandbox) go out with base 0, which Make already prints as "*** TEST PAYMENT - DO NOT MAKE ***" and
    files as TEST in the sheet. */
 const MENU_JSON = 'https://donttelldadyet-prog.github.io/round2sg-home/menu/menu.json';
@@ -544,6 +545,26 @@ async function menuCheckout(env, req, origin) {
   if (prev && prev !== pr.id) await cancelLink(env, prev);
   return J({ url: pr.url, order: ref, no: orderNo, request_id: pr.id, test: isSandbox(env) || undefined });
 }
+const KITCHEN_CHAT = '-5417846512';
+function kitchenSlip(rec) {
+  return '================================\n          ROUND2 FOOD\n================================\n' + (rec.base === 0 ? '*** TEST PAYMENT - DO NOT MAKE ***' : '') +
+    '\nROOM: ' + String(rec.room).toUpperCase() + '\nORDER: #' + rec.orderNo + '\n\n--------------------------------\n' + rec.lines +
+    '\n--------------------------------\n\nREMARKS: ' + (rec.note || '-') + '\nSTATUS: PAID\n\nPrepared in collaboration with\nMadd Pizza <3\n================================';
+}
+/* the TV in the room: same record Make used to write (secret TV_KEY = the TV messages key) */
+async function menuTv(env, rec, ref) {
+  if (!env.TV_KEY) return '';
+  const r = await fetch('https://round2-tv-default-rtdb.asia-southeast1.firebasedatabase.app/r2/' + env.TV_KEY + '/' + String(rec.room).toLowerCase() + '/last.json', { method: 'PUT',
+    body: JSON.stringify({ type: 'received', no: rec.orderNo, items: String(rec.lines).split('\n').join(' · '), ref, t: { '.sv': 'timestamp' } }) }).catch(() => null);
+  return r && r.ok ? 'sent' : '';
+}
+/* the kitchen's Telegram group (secret TG_BOT_TOKEN = the bot Make uses; without it Make still sends the slip) */
+async function menuTelegram(env, rec, ref) {
+  if (!env.TG_BOT_TOKEN) return '';
+  const r = await fetch('https://api.telegram.org/bot' + env.TG_BOT_TOKEN + '/sendMessage', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: KITCHEN_CHAT, text: kitchenSlip(rec), reply_markup: { inline_keyboard: [[{ text: '✅ Food is at the pickup point', callback_data: 'pickup:' + ref }]] } }) }).catch(() => null);
+  return r && r.ok ? 'sent' : '';
+}
 /* paid? ask HitPay, then hand it to Make exactly once */
 async function menuPaid(env, ref) {
   const hb = book(env), rec = await hb.menuGet(ref);
@@ -555,7 +576,10 @@ async function menuPaid(env, ref) {
   const pay = (d.payments || [])[0] || {};
   const details = { status: d.status, amount: d.amount, id: d.id, reference_number: d.reference_number || ref,
     payments: [{ id: pay.id || '', amount: pay.amount || d.amount, fees: pay.fees || 0, payment_type: pay.payment_type || '', status: pay.status || 'succeeded', updated_at: pay.updated_at || new Date().toISOString() }] };
-  const r = await fetch(MENU_PAID_HOOK, { method: 'POST', body: new URLSearchParams({ reference_number: ref, k: env.MENU_MAKE_K, order: JSON.stringify(rec), details: JSON.stringify(details) }) }).catch(() => null);
+  /* straight away, from here: the room's TV ("order locked in") and the kitchen's Telegram slip with the pickup button
+     (button presses still go to Make's [CONTROL] MADD PAYOUT TELEGRAM). Make is told what's done so it doesn't repeat it. */
+  const tv = await menuTv(env, rec, ref), tg = await menuTelegram(env, rec, ref);
+  const r = await fetch(MENU_PAID_HOOK, { method: 'POST', body: new URLSearchParams({ reference_number: ref, k: env.MENU_MAKE_K, order: JSON.stringify(rec), details: JSON.stringify(details), tv, tg }) }).catch(() => null);
   if (!r || !r.ok) { await hb.menuSet(ref, 'pending'); return { ok: false, err: 'Make didn’t answer – will retry on the next HitPay call' }; }
   return { ok: true, sent: true };
 }
