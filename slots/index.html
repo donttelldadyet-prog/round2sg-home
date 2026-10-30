@@ -253,6 +253,9 @@ h3.nm, .nm { color: var(--rc); }
   'use strict';
   var ENGINE = 'https://round2-book.donttelldadyet.workers.dev';   /* Round2 booking engine (Cloudflare) – prices, holds, HitPay */
   var SB_BOOK = 'https://www.round2.sg/booknow';   /* the SimplyBook booking page (safe mode) */
+  /* TEST MODE: the control centre's Test bench opens this page with ?test=<test code>; checkout then uses the HitPay
+     SANDBOX (no real money) even when guests pay live. Remembered for this tab only. */
+  var TEST = (function () { var c = new URLSearchParams(location.search).get('test') || ''; try { if (c) sessionStorage.setItem('r2.test', c); else c = sessionStorage.getItem('r2.test') || ''; } catch (e) {} return c; }());
   var ROOMS = {   /* SimplyBook provider id → name, colour, type, max guests */
     5: ['Vale', '#E8436A', 'Netflix room', 3], 7: ['Kaeden', '#4DB848', 'Netflix room', 3], 8: ['Scarlett', '#F2C21B', 'Netflix room', 3],
     9: ['Kai', '#24B49A', 'Deluxe room', 4], 10: ['Bella', '#7A5BE0', 'Deluxe room', 4], 12: ['Atlas', '#E9E7EF', 'Deluxe room', 5],
@@ -552,7 +555,7 @@ h3.nm, .nm { color: var(--rc); }
   });
   $('dGo').addEventListener('click', function () {
     var o = startObj(), b = $('dGo');
-    var body = { unit: cur.uid, date: day, time: hhmm(o.m).slice(0, 5), hours: cur.len, name: $('fName').value, phone: fullPhone(), email: $('fEmail').value, pax: $('fPax').value, msg: celMsg(), ret: location.href.split(/[?#]/)[0] };
+    var body = { unit: cur.uid, date: day, time: hhmm(o.m).slice(0, 5), hours: cur.len, name: $('fName').value, phone: fullPhone(), email: $('fEmail').value, pax: $('fPax').value, msg: celMsg(), ret: location.href.split(/[?#]/)[0], test: TEST || undefined };
     try { localStorage.setItem('r2.me', JSON.stringify({ Name: body.name, Phone: $('fPhone').value, Cc: $('fCc').value, Email: body.email })); } catch (e) {}
     b.disabled = true; b.textContent = 'HOLDING…'; $('dErr').textContent = '';
     post('/checkout', body).then(function (j) {
@@ -659,14 +662,21 @@ h3.nm, .nm { color: var(--rc); }
   if (/[?&]released=1/.test(location.search)) { ss.set('r2.ref', null); banner('Payment not completed – the slot was released. Pick a time again.'); }
   day = sgDate(0);
   show(day);
-  /* booking switch (control centre › Systems › Booking switch): in safe mode this page only shows a button to the
-     SimplyBook booking page (the old way, still fully working) – the engine also refuses new holds then */
-  fetch(ENGINE + '/mode', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (m) {
-    if (!m || m.booking !== 'simplybook') return;
+  if (TEST) banner('TEST MODE · payments go to the HitPay sandbox (card 4242 4242 4242 4242). The booking still lands in SimplyBook: cancel it after.');
+  /* booking switch (control centre › Systems): in SAFE MODE this page shows the SimplyBook booking calendar itself,
+     embedded right here (same widget and look as the website's old Book screen) – guests book the old way, nothing
+     else changes. The engine also refuses new online holds then. */
+  var SB_CFG = {"widget_type":"iframe","url":"https:\/\/round2sg.simplybook.asia","theme":"simple_beauty_theme","theme_settings":{"sb_base_color":"#000000","header_color":"#000000","timeline_hide_unavailable":"1","hide_past_days":"1","timeline_show_end_time":"1","timeline_modern_display":"as_slots","display_item_mode":"block","body_bg_color":"#1f1e1e","sb_review_image":"1","sb_review_image_preview":"\/uploads\/round2sg\/image_files\/preview\/a1bc29b99f83ef0399c2a0b50dbdf383.png","dark_font_color":"#8f8f8f","light_font_color":"#bababa","btn_color_1":"#000000","sb_company_label_color":"#000000","hide_img_mode":"0","show_sidebar":"1","sb_busy":"#d1d1d1","sb_available":"#000000"},"timeline":"flexible","datepicker":"top_calendar","is_rtl":false,"app_config":{"clear_session":0,"allow_switch_to_ada":0,"predefined":[]}};
+  function safeMode() {
     document.querySelector('.wrap').innerHTML = '<div class="px kick">SAVE MENU</div><h1>BOOK A ROOM</h1>' +
-      '<p class="sub">Online booking is on our booking calendar for now.</p><a class="go wide" style="max-width:420px" href="' + SB_BOOK + '">BOOK NOW</a>' +
+      '<div id="r2sb" style="position:relative;min-height:640px;background:#1f1e1e;margin-top:12px"><div class="px load" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">LOADING SAVE SLOTS…</div></div>' +
       '<p class="sub" style="margin-top:18px">Questions? <a style="color:var(--acc)" href="https://wa.me/6591625767" target="_blank" rel="noopener">WhatsApp us</a>.</p>';
-  }).catch(function () {});
+    var s = document.createElement('script'); s.src = 'https://widget.simplybook.asia/v2/widget/widget.js';
+    s.onload = function () { var box = $('r2sb'); box.innerHTML = ''; var cfg = JSON.parse(JSON.stringify(SB_CFG)); cfg.container_id = 'r2sb'; new window.SimplybookWidget(cfg); };
+    s.onerror = function () { $('r2sb').innerHTML = '<p style="padding:24px">The booking calendar didn’t load. <a style="color:var(--acc)" href="' + SB_BOOK + '">Open it here</a>.</p>'; };
+    document.head.appendChild(s);
+  }
+  if (!TEST) fetch(ENGINE + '/mode', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (m) { if (m && m.booking === 'simplybook') safeMode(); }).catch(function () {});
 }());
 </script>
 </body>
