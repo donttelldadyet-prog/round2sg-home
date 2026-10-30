@@ -247,7 +247,6 @@ h3.nm, .nm { color: var(--rc); }
   /* small pixel icons (12×12, drawn in the text colour) to break up the text: room type, steps, late night, celebrating */
   var PIX = {
    tv: ['..#.....#...','...#...#....','....#.#.....','############','#..........#','#...#......#','#...###....#','#...#####..#','#...###....#','#...#......#','#..........#','############'],
-   pad:['............','............','.##########.','#..........#','#.#.....#..#','###....#.#.#','#.#.....#..#','#...####...#','#..##..##..#','.##......##.','............','............'],
    crown:['............','.#...##...#.','.##..##..##.','.###.##.###.','.##########.','.##########.','.##.####.##.','.##########.','............','.##########.','............','............'],
    cal:['..#.....#...','############','#..........#','############','#..........#','#.##.##.##.#','#.##.##.##.#','#..........#','#.##.##....#','#.##.##....#','#..........#','############'],
    eye:['............','............','....####....','..##....##..','.#...##...#.','#...####...#','#...####...#','.#...##...#.','..##....##..','....####....','............','............'],
@@ -256,11 +255,22 @@ h3.nm, .nm { color: var(--rc); }
    user:['....####....','...#....#...','...#....#...','...#....#...','....####....','............','..########..','.#........#.','#..........#','#..........#','#..........#','############'],
    card:['............','############','#..........#','############','############','#..........#','#..........#','#.####.....#','#..........#','############','............','............'],
    cake:['.....##.....','......#.....','.....##.....','.....##.....','.##########.','.#........#.','.#.##..##.#.','.##########.','#..........#','#.#.#..#.#.#','#..........#','############'],
+   cat:['............','.#.......#..','.##.....##..','.#.#####.#..','.#.......#..','#..#...#..#.','#.........#.','#....#....#.','.#..#.#..#..','..#.....#...','...#####....','............'],
+   mount:['............','............','.....#......','....#.#.....','...#...#.#..','..#.#.#.#.#.','..#..#..#..#','.#.........#','.#.........#','#...........','############','............'],
+   book:['............','.####..####.','#....##....#','#.##.##.##.#','#....##....#','#.##.##.##.#','#....##....#','#.##.##.##.#','#....##....#','.####..####.','.....##.....','............'],
+   sunset:['............','.....##.....','..#..##..#..','...#....#...','....####....','...######...','..########..','############','............','.##..##..##.','............','..##..##....'],
+   car:['............','............','...######...','..#..#...#..','.#...#....#.','############','#..........#','#.##....##.#','############','.##......##.','.##......##.','............'],
+   sofa:['............','............','..########..','.#........#.','.#........#.','##........##','#.########.#','#..........#','############','.#........#.','.#........#.','............'],
+   gem:['............','..########..','.#..#..#..#.','#..#....#..#','############','.#..#..#..#.','..#..##..#..','...#.##.#...','....#..#....','.....##.....','............','............'],
+   spark:['.....##.....','.....##.....','.....##.....','....####....','.##########.','############','.##########.','....####....','.....##.....','.....##.....','.....##.....','............'],
+   leaf:['.........###','......######','....#####..#','...####...#.','..####...#..','..###...#...','.###...#....','.##...#.....','.#.###......','.###........','#...........','............'],
    moon:['....####....','..###.......','.##.........','.#..........','##..........','##..........','##..........','##.........#','.##.......##','.###.....##.','..########..','....####....'],
   };
   function ic(n, cls) { var p = PIX[n], r = ''; for (var y = 0; y < 12; y++) for (var x = 0; x < 12; x++) if (p[y][x] === '#') r += 'M' + x + ' ' + y + 'h1v1h-1z';
     return '<svg class="ic' + (cls ? ' ' + cls : '') + '" viewBox="0 0 12 12" aria-hidden="true" shape-rendering="crispEdges"><path d="' + r + '" fill="currentColor"/></svg>'; }
-  function typeIc(uid) { var t = ROOMS[uid][2]; return /VIP/i.test(t) ? 'crown' : /Deluxe/i.test(t) ? 'pad' : 'tv'; }
+  /* each character's own icon (their personality / room theme); tiers get a neutral one (no "movies only" / "games only" hint) */
+  var CHARIC = { 5: 'cat', 7: 'leaf', 8: 'spark', 9: 'mount', 10: 'book', 12: 'sunset', 11: 'car' };
+  var TIERIC = { 'NETFLIX ROOMS': 'sofa', 'DELUXE ROOMS': 'gem', 'VIP ROOM': 'crown' };
   [].forEach.call(document.querySelectorAll('i[data-ic]'), function (el) { el.outerHTML = ic(el.getAttribute('data-ic')); });
   var TIER = {}; GROUPS.forEach(function (g) { g[1].forEach(function (u) { TIER[u] = g[2]; }); });
   var EB = 11 * 60, view = 'room', hourSel = null;
@@ -356,7 +366,7 @@ h3.nm, .nm { color: var(--rc); }
     /* top line = equal bands of each room's colour, so no one character owns the section */
     var n = g[1].length, tg = 'linear-gradient(90deg,' + g[1].map(function (u, i) { return ROOMS[u][1] + ' ' + (100 * i / n).toFixed(2) + '% ' + (100 * (i + 1) / n).toFixed(2) + '%'; }).join(',') + ')';
     var names = g[1].map(function (u) { return '<span style="color:' + ROOMS[u][1] + '">' + ROOMS[u][0] + '</span>'; }).join(' · ');
-    return '<section class="tier" style="--tg:' + tg + '"><header><span class="px">' + ic(typeIc(g[1][0])) + g[0] + '</span><span>' + names + '</span></header>' + inner + '</section>';
+    return '<section class="tier" style="--tg:' + tg + '"><header><span class="px">' + ic(TIERIC[g[0]]) + g[0] + '</span><span>' + names + '</span></header>' + inner + '</section>';
   }
   function byRoom() {
     /* the day's span: earliest start to the latest finish, whole hours */
@@ -378,7 +388,7 @@ h3.nm, .nm { color: var(--rc); }
         var rgs = info.ranges.filter(function (r) { return !r[2]; });
         var txt = rgs.map(function (r) { return r[0] === r[1] ? clock(r[0]) : clock(r[0]) + ' to ' + clock(r[1]); }).join(', or ');
         var lead = rgs.length === 1 && rgs[0][0] === rgs[0][1] ? 'Slot available starting at ' : 'Slots available starting anytime from ';
-        inner += '<div class="room" style="--rc:' + R[1] + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': ' + (txt ? lead + txt : 'early bird')) + '"' : '') + '><div><h3 class="nm">' + ic(typeIc(uid)) + R[0] + '</h3><div class="ty">' + R[2] + '</div>' + ebChip(uid) + '</div><div>' +
+        inner += '<div class="room" style="--rc:' + R[1] + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': ' + (txt ? lead + txt : 'early bird')) + '"' : '') + '><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty">' + R[2] + '</div>' + ebChip(uid) + '</div><div>' +
           '<div class="track">' + lines + segs + '</div><div class="ticks">' + ticks + '</div>' +
           (day3.length ? '<div class="free">' + lead + esc(txt) + ' · from ' + money(from) + '</div><button class="pickb" type="button" data-u="' + uid + '">PICK A TIME</button>'
             : info.list.length ? '<div class="free">Only the early bird is free</div>' : '<div class="free no">Fully booked</div>') + '</div></div>';
@@ -403,7 +413,7 @@ h3.nm, .nm { color: var(--rc); }
       g[1].forEach(function (uid) {
         var list = hours[hourSel] && hours[hourSel][uid]; if (!list) return;
         var o = list[0], R = ROOMS[uid];
-        inner += '<div class="row" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm">' + ic(typeIc(uid)) + R[0] + '</h3><div class="ty">' + R[2] + '</div></div>' +
+        inner += '<div class="row" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty">' + R[2] + '</div></div>' +
           '<div class="when">' + list.map(function (x) { return clock(x.m); }).join(' · ') + '<small>' + (o.eb ? 'Early bird · ' : '') + 'from ' + money(o.prices[3]) + ' · up to ' + o.maxH + ' h</small></div>' +
           '<button class="pickb" type="button" data-u="' + uid + '" data-m="' + o.m + '">START ' + clock(o.m).toUpperCase() + '</button></div>';
       });
@@ -421,7 +431,7 @@ h3.nm, .nm { color: var(--rc); }
     var top = ebs.length ? '<div class="ebnote"><b>EARLY BIRD AVAILABLE</b> 11am start · $35 for 3 h · ' + ebs.join(', ') + '</div>' : '';
     return top + rows.map(function (r) {
       var uid = r[0], o = r[1], R = ROOMS[uid];
-      return '<div class="row' + (o.eb ? ' ebrow' : '') + '" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm">' + ic(typeIc(uid)) + R[0] + '</h3><div class="ty" style="color:' + R[1] + '">' + R[2] + '</div></div>' +
+      return '<div class="row' + (o.eb ? ' ebrow' : '') + '" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty" style="color:' + R[1] + '">' + R[2] + '</div></div>' +
         '<div class="when">' + (o.eb ? '<span class="ebtag">EARLY BIRD AVAILABLE</span>' : '') + clock(o.m) + '<small>' + money(o.prices[3]) + ' for 3 h · up to ' + o.maxH + ' h</small></div>' +
         '<button class="pickb" type="button" data-u="' + uid + '" data-m="' + o.m + '">START ' + clock(o.m).toUpperCase() + '</button></div>';
     }).join('');
@@ -432,7 +442,7 @@ h3.nm, .nm { color: var(--rc); }
   function openRoom(uid, m) {
     var info = data && data.rooms[uid]; if (!info || !info.list.length) return;
     cur = { uid: uid, start: m != null && info.starts[m] ? m : null, len: null };
-    $('mTitle').innerHTML = '<span class="nm" style="--rc:' + ROOMS[uid][1] + '">' + ic(typeIc(uid)) + ROOMS[uid][0] + '</span> · ' + ROOMS[uid][2];
+    $('mTitle').innerHTML = '<span class="nm" style="--rc:' + ROOMS[uid][1] + '">' + ic(CHARIC[uid]) + ROOMS[uid][0] + '</span> · ' + ROOMS[uid][2];
     /* like the TV launcher: once a room is picked, its character's colour leads (buttons, selections) */
     $('modal').style.setProperty('--acc', ROOMS[uid][1]); $('modal').style.setProperty('--acc-ink', uid == 10 || uid == 11 ? '#ffffff' : '#0b0914');
     $('mSub').textContent = dayLabel(day);
