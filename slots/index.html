@@ -109,6 +109,10 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 .chips button[aria-pressed="true"] { background: var(--acc); color: #0b0914; border-color: var(--acc); }
 .chips button[aria-pressed="true"] small { color: #0b0914; }
 .chips button:disabled { opacity: .3; cursor: not-allowed; }
+/* longer stays cost less per hour: a "SAVE x%" flag on those lengths */
+.chips button { position: relative; }
+.chips button .save { position: absolute; top: -9px; right: -6px; font: 7px 'Press Start 2P', monospace; letter-spacing: .06em; padding: 4px 5px; background: #3DDC84; color: #0b0914; }
+.saved { color: #3DDC84; font-size: 13px; margin-left: 8px; font-weight: 600; }
 .sum { padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
 .sum b { font-size: 18px; }
 .go { font: 10px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 13px 16px; background: var(--acc); color: #0b0914; border: 0; cursor: pointer; }
@@ -162,7 +166,7 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
     <div class="hd"><div><b id="mTitle"></b><p id="mSub"></p></div><button class="x" id="mClose" type="button">× BACK</button></div>
     <div id="pick">
       <div class="step"><h4>1 · START TIME</h4><div class="chips" id="pTimes"></div></div>
-      <div class="step"><h4>2 · HOW LONG</h4><div class="chips" id="pLens"></div></div>
+      <div class="step"><h4>2 · HOW LONG</h4><p class="hint" id="pSave" style="margin:-4px 0 12px"></p><div class="chips" id="pLens"></div></div>
       <div class="sum"><div><div id="pWhen" class="hint"></div><b id="pPrice"></b></div><button class="go" id="pGo" type="button" disabled>CONTINUE</button></div>
       <p class="note" id="pNote"></p>
     </div>
@@ -391,14 +395,24 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
     count('board_pick');
   }
   function startObj() { return data.rooms[cur.uid].starts[cur.start]; }
+  /* how much a longer stay saves against paying the 3-hour rate for every hour (Early Bird: no extra saving –
+     the $35 start is the deal, and its extra hours are the day's rate ÷ 3) */
+  function saving(o, hrs) {
+    if (o.eb || hrs <= 3 || !o.prices[3] || !o.prices[hrs]) return null;
+    var full = o.prices[3] / 3 * hrs, amt = full - o.prices[hrs], pct = Math.round(amt / full * 100);
+    return pct >= 1 ? { pct: pct, amt: amt } : null;
+  }
   function drawLens() {
     var o = cur.start != null ? startObj() : null, h = '';
-    if (!o) { $('pLens').innerHTML = '<span class="hint">Pick a start time first.</span>'; summary(); return; }
+    if (!o) { $('pSave').textContent = ''; $('pLens').innerHTML = '<span class="hint">Pick a start time first.</span>'; summary(); return; }
     for (var hrs = 3; hrs <= 6; hrs++) {
       var fits = hrs <= o.maxH;
-      h += '<button type="button" data-i="' + hrs + '"' + (fits ? '' : ' disabled') + ' aria-pressed="' + (cur.len === hrs) + '">' + hrs + ' h<small>' + (fits ? 'till ' + clock(o.m + hrs * 60) + ' · ' + money(o.prices[hrs]) : 'not free') + '</small></button>';
+      var sv = fits ? saving(o, hrs) : null;
+      h += '<button type="button" data-i="' + hrs + '"' + (fits ? '' : ' disabled') + ' aria-pressed="' + (cur.len === hrs) + '">' + (sv ? '<span class="save">SAVE ' + sv.pct + '%</span>' : '') + hrs + ' h<small>' + (fits ? 'till ' + clock(o.m + hrs * 60) + ' · ' + money(o.prices[hrs]) : 'not free') + '</small></button>';
     }
     if (cur.len == null || cur.len > o.maxH) cur.len = 3;
+    var best = [5, 6].map(function (x) { return saving(o, x); });
+    $('pSave').textContent = o.eb ? 'Early bird: the $35 start is the deal; extra hours are the normal hourly rate.' : (best[0] || best[1]) ? 'Stay longer, pay less per hour' + (best[0] ? ': 5 h saves ' + best[0].pct + '%' : '') + (best[1] ? (best[0] ? ', ' : ': ') + '6 h saves ' + best[1].pct + '%' : '') + '.' : '';
     $('pLens').innerHTML = h; markLen(); summary();
   }
   function markLen() { Array.prototype.forEach.call($('pLens').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(+b.getAttribute('data-i') === cur.len)); }); }
@@ -406,7 +420,8 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
   function summary() {
     var o = cur.start != null ? startObj() : null;
     $('pWhen').textContent = o ? when() : 'Pick a start time';
-    $('pPrice').textContent = o ? money(o.prices[cur.len]) : '';
+    var sv = o ? saving(o, cur.len) : null;
+    $('pPrice').innerHTML = o ? money(o.prices[cur.len]) + (sv ? '<span class="saved">you save ' + money(Math.round(sv.amt * 100) / 100) + ' (' + sv.pct + '%)</span>' : '') : '';
     $('pGo').disabled = !o;
     $('pNote').textContent = '';
   }
