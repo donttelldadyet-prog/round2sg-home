@@ -212,6 +212,12 @@ export class HoldBook extends DurableObject {
     return this.rows(`SELECT COUNT(*) AS n FROM gmq`)[0].n;
   }
   qList() { this.qInit(); return this.rows(`SELECT * FROM gmq ORDER BY at`); }
+  /* food menu orders waiting for payment (status pending → sending → paid) */
+  mInit() { if (this.mReady) return; this.mReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS menu (ref TEXT PRIMARY KEY, data TEXT, status TEXT, t INTEGER)`); }
+  menuPut(ref, rec) { this.mInit(); this.sql.exec(`INSERT OR REPLACE INTO menu VALUES (?, ?, 'pending', ?)`, ref, JSON.stringify(rec), Date.now()); this.sql.exec(`DELETE FROM menu WHERE t < ?`, Date.now() - 30 * 86400e3); }
+  menuGet(ref) { this.mInit(); const r = this.rows(`SELECT * FROM menu WHERE ref = ?`, ref)[0]; return r ? { ...JSON.parse(r.data), status: r.status } : null; }
+  menuClaim(ref) { this.mInit(); const r = this.rows(`SELECT status FROM menu WHERE ref = ?`, ref)[0]; if (!r || r.status !== 'pending') return false; this.sql.exec(`UPDATE menu SET status = 'paid' WHERE ref = ?`, ref); return true; }
+  menuSet(ref, st) { this.mInit(); this.sql.exec(`UPDATE menu SET status = ? WHERE ref = ?`, st, ref); }
   /* any pending hold overlapping s–e (plus cleaning buffer) on these rooms? */
   clash(date, units, s, e, ignore = '') {
     const now = Date.now();
@@ -492,25 +498,28 @@ async function gm(env, req) {
   return gmJ(j);
 }
 
-/* ---------- food menu checkout: POST /menu/checkout (form field "order", same as the Make webhook) ----------
-   Replaces Make's [BACKEND] ROOM MENU CHECKOUT, which stays as the menu page's backup. Same rules: re-prices the order from
-   the published menu.json, checks the total the guest saw, makes the HitPay payment (live account: secret MENU_HITPAY_KEY),
-   and writes the pending order into Make's data store 235217 through Make's API (secret MAKE_API_TOKEN; API calls cost no
-   operations), so Make's [BACKEND] ROOM MENU PAID ORDER (HitPay's webhook → kitchen Telegram, TV alert, accounting sheet,
-   Drive slip) works exactly as before. Without those secrets it answers {fallback:true} and the page uses Make. */
+/* ---------- food menu (room QR menu, round2sg-home menu/) ----------
+   One HitPay setting for the whole engine: the booking page AND the menu use the secrets HITPAY_KEY / HITPAY_SALT /
+   HITPAY_API (sandbox while testing; change those three to the live account to go live – both switch together).
+   POST /menu/checkout (form field "order"): re-prices from the published menu.json exactly like Make's old ROOM MENU
+     CHECKOUT, keeps the order here, makes the HitPay payment (webhook → /menu/hitpay, back to the menu page).
+   POST /menu/hitpay (HitPay) and POST /menu/return (the menu page when the guest comes back): ask HitPay itself whether it's
+     paid (never trust the caller), then – once – hand the order to Make's [BACKEND] ROOM MENU PAID ORDER for the kitchen
+     Telegram slip, the TV alert, the accounting sheet and the Drive slip (fields order, details, k = secret MENU_MAKE_K).
+   Test payments (sandbox) go out with base 0, which Make already prints as "*** TEST PAYMENT - DO NOT MAKE ***" and
+   files as TEST in the sheet. */
 const MENU_JSON = 'https://donttelldadyet-prog.github.io/round2sg-home/menu/menu.json';
 const MENU_PAID_HOOK = 'https://hook.eu1.make.com/55nh6wniq1wftco8af9486noj4xugasl';
 const MENU_RETURN = 'https://donttelldadyet-prog.github.io/round2sg-home/menu/';
 const MENU_ROOMS = ['Kai', 'Bella', 'Atlas', 'Max', 'Scarlett', 'Vale', 'Kaeden'];
-const MENU_HITPAY = 'https://api.hit-pay.com/v1';
-const MAKE_API = 'https://eu1.make.com/api/v2';
-async function menuCheckout(env, req) {
-  const no = (msg, s = 409) => J({ error: msg }, s), fb = (why) => J({ fallback: true, why }, 503);
-  if (!env.MENU_HITPAY_KEY || !env.MAKE_API_TOKEN) return fb('not set up');
-  const who = req.headers.get('cf-connecting-ip') || 'x';
-  if (!(await book(env).gmRate(who + ':menu', 20))) return no('Too many tries. Wait a few minutes, or WhatsApp us.', 429);
+const isSandbox = (env) => /sandbox/i.test(env.HITPAY_API || '');
+async function menuCheckout(env, req, origin) {
+  const no = (msg, s = 409) => J({ error: msg }, s);
+  if (!env.HITPAY_KEY || !env.HITPAY_API || !env.MENU_MAKE_K) return no('Payment isn’t set up yet. Please WhatsApp us to order.', 503);
+  const hb = book(env), who = req.headers.get('cf-connecting-ip') || 'x';
+  if (!(await hb.gmRate(who + ':menu', 20))) return no('Too many tries. Wait a few minutes, or WhatsApp us.', 429);
   let o; try { o = JSON.parse(new URLSearchParams(await req.text()).get('order') || ''); } catch (e) { return no('Something in your order couldn’t be read. Refresh the page and try again.', 400); }
-  let menu; try { const r = await fetch(MENU_JSON + '?v=' + Date.now(), { cf: { cacheTtl: 30 } }); menu = await r.json(); } catch (e) { return fb('menu.json'); }
+  let menu; try { const r = await fetch(MENU_JSON + '?v=' + Date.now(), { cf: { cacheTtl: 30 } }); menu = await r.json(); } catch (e) { return no('The menu couldn’t be checked just now. Try again in a minute.', 503); }
   const P = menu.prices || {}, pc = P.pc || {}, pm = P.pm || {}, pn = P.pn || {}, g = +((menu.settings || {}).gst) || 0;
   const items = Array.isArray(o.items) ? o.items : [];
   const L = items.map((x) => { const k = String(x.k || ''), q = Math.round(+x.q || 0), c = k in pc ? +pc[k] : -1, m = k in pm ? +pm[k] : 0;
@@ -524,25 +533,31 @@ async function menuCheckout(env, req) {
   const sg = new Date(Date.now() + 8 * 3600e3).toISOString(), ymd = sg.slice(2, 10).replace(/-/g, ''), hms = sg.slice(11, 19).replace(/:/g, '');
   const ref = 'R2-' + ymd + '-' + hms + '-' + room.toUpperCase(), orderNo = hms;
   const lines = L.map((x) => x.l), summary = lines.join(', ');
-  /* HitPay (live) */
-  const form = new URLSearchParams({ amount: (total / 100).toFixed(2), currency: 'SGD', reference_number: ref, send_email: 'false', allow_repeated_payments: 'false',
-    purpose: 'Round2 food order #' + orderNo + ' (' + room + '): ' + (summary.length > 200 ? summary.slice(0, 197) + '...' : summary),
-    webhook: MENU_PAID_HOOK, redirect_url: MENU_RETURN + '?room=' + room.toLowerCase() });
-  form.append('payment_methods[]', 'paynow_online'); form.append('payment_methods[]', 'card');
-  const H = { 'X-BUSINESS-API-KEY': env.MENU_HITPAY_KEY, 'X-Requested-With': 'XMLHttpRequest' };
-  let pr; try { const r = await fetch(MENU_HITPAY + '/payment-requests', { method: 'POST', headers: { ...H, 'Content-Type': 'application/x-www-form-urlencoded' }, body: form }); pr = await r.json(); if (!r.ok || !pr.url) throw new Error('hitpay ' + r.status); } catch (e) { return fb('hitpay'); }
-  /* the pending order, where Make's PAID ORDER scenario looks for it */
-  const rec = { gst, sub, base, note: String(o.note || '').slice(0, 500), room, lines: lines.join('\n'), total, status: 'pending', orderNo, createdAt: new Date().toISOString(), requestId: pr.id };
+  let pr;
   try {
-    const r = await fetch(MAKE_API + '/data-stores/235217/data', { method: 'POST', headers: { Authorization: 'Token ' + env.MAKE_API_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: ref, data: rec }) });
-    if (!r.ok) throw new Error('make ' + r.status + ' ' + (await r.text()).slice(0, 120));
-  } catch (e) {
-    await fetch(MENU_HITPAY + '/payment-requests/' + pr.id, { method: 'DELETE', headers: H }).catch(() => null);
-    return fb(String(e.message || e).slice(0, 140));
-  }
+    pr = await hitpay(env, 'POST', '/payment-requests', { amount: (total / 100).toFixed(2), currency: 'SGD', reference_number: ref, send_email: 'false', allow_repeated_payments: 'false',
+      purpose: (isSandbox(env) ? 'TEST · ' : '') + 'Round2 food order #' + orderNo + ' (' + room + '): ' + (summary.length > 190 ? summary.slice(0, 187) + '...' : summary),
+      webhook: origin + '/menu/hitpay', redirect_url: MENU_RETURN + '?room=' + room.toLowerCase() });
+  } catch (e) { return no('The payment page couldn’t be opened. Try again, or WhatsApp us.', 502); }
+  await hb.menuPut(ref, { gst, sub, base: isSandbox(env) ? 0 : base, note: String(o.note || '').slice(0, 500), room, lines: lines.join('\n'), total, status: 'pending', orderNo, createdAt: new Date().toISOString(), requestId: pr.id });
   const prev = String(o.prev || '');
-  if (prev && prev !== pr.id) await fetch(MENU_HITPAY + '/payment-requests/' + encodeURIComponent(prev), { method: 'DELETE', headers: H }).catch(() => null);
-  return J({ url: pr.url, order: ref, no: orderNo, request_id: pr.id, via: 'cloudflare' });
+  if (prev && prev !== pr.id) await cancelLink(env, prev);
+  return J({ url: pr.url, order: ref, no: orderNo, request_id: pr.id, test: isSandbox(env) || undefined });
+}
+/* paid? ask HitPay, then hand it to Make exactly once */
+async function menuPaid(env, ref) {
+  const hb = book(env), rec = await hb.menuGet(ref);
+  if (!rec) return { ok: false, err: 'unknown order' };
+  if (rec.status !== 'pending') return { ok: true, already: rec.status };
+  const d = await hitpay(env, 'GET', '/payment-requests/' + rec.requestId).catch(() => null);
+  if (!d || d.status !== 'completed' || Math.round(+d.amount * 100) !== rec.total) return { ok: false, err: 'not paid yet' };
+  if (!(await hb.menuClaim(ref))) return { ok: true, already: 'paid' };
+  const pay = (d.payments || [])[0] || {};
+  const details = { status: d.status, amount: d.amount, id: d.id, reference_number: d.reference_number || ref,
+    payments: [{ id: pay.id || '', amount: pay.amount || d.amount, fees: pay.fees || 0, payment_type: pay.payment_type || '', status: pay.status || 'succeeded', updated_at: pay.updated_at || new Date().toISOString() }] };
+  const r = await fetch(MENU_PAID_HOOK, { method: 'POST', body: new URLSearchParams({ reference_number: ref, k: env.MENU_MAKE_K, order: JSON.stringify(rec), details: JSON.stringify(details) }) }).catch(() => null);
+  if (!r || !r.ok) { await hb.menuSet(ref, 'pending'); return { ok: false, err: 'Make didn’t answer – will retry on the next HitPay call' }; }
+  return { ok: true, sent: true };
 }
 
 /* ---------- pages ---------- */
@@ -626,7 +641,11 @@ export default {
           : `<h1>Payment received</h1><p class="err">${esc(f.err)}</p><p>We'll WhatsApp you shortly. Ref ${esc(ref)}.</p>`));
       }
       if (u.pathname === '/gm' && req.method === 'POST') return await gm(env, req);
-      if (u.pathname === '/menu/checkout' && req.method === 'POST') return await menuCheckout(env, req);
+      if (u.pathname === '/menu/checkout' && req.method === 'POST') return await menuCheckout(env, req, u.origin);
+      if ((u.pathname === '/menu/hitpay' || u.pathname === '/menu/return') && req.method === 'POST') {
+        const f = new URLSearchParams(await req.text()), ref = String(f.get('reference_number') || f.get('order') || '').replace(/[^A-Za-z0-9-]/g, '');
+        return J(ref ? await menuPaid(env, ref) : { ok: false });
+      }
       if (u.pathname === '/test') return H(testForm());
       if (u.pathname === '/selftest') { const a = await admin(env); const units = await a('getUnitList', []); return J({ sbLogin: true, rooms: Object.values(units).map((x) => x.name), dryRun: env.DRY_RUN === '1' }); }
       return J({ ok: true, svc: 'round2-book' });

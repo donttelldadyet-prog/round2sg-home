@@ -33,11 +33,14 @@ Not done (in order):
 5. Board design changes the owner asked for (below).
 6. Go-live: live HitPay key/salt (owner pastes into Cloudflare), `HITPAY_API=https://api.hit-pay.com/v1`, `DRY_RUN=0`, put the board behind the menu's Book button, merge only on approval.
 
-## Food menu payment via Cloudflare (30 Oct)
-`menu/index.html` (on main) now asks the engine first: POST `/menu/checkout` (worker `menuCheckout`). It re-prices from menu.json exactly
-like Make's ROOM MENU CHECKOUT, creates the LIVE HitPay payment (secret `MENU_HITPAY_KEY`) with Make's PAID ORDER webhook, and writes the
-pending order into Make data store 235217 via Make's API (secret `MAKE_API_TOKEN`, no operations used), so PAID ORDER (Telegram, TV alert,
-sheet, Drive) is unchanged. If either secret is missing or anything fails it answers `{fallback:true}` and the page uses the Make checkout.
+## Food menu payment via Cloudflare (30 Oct) – ONE HitPay setting for booking + menu
+The engine's secrets `HITPAY_KEY` / `HITPAY_SALT` / `HITPAY_API` are used by BOTH the booking page and the room menu (sandbox now;
+put the live account's values in those three to take both live together). `menu/index.html` (on main) posts to `/menu/checkout`
+(re-prices from menu.json like the old Make checkout, keeps the order in the engine, creates the HitPay payment with webhook
+`/menu/hitpay`). `/menu/hitpay` and `/menu/return` ask HitPay whether it's paid, then once POST `order`, `details`, `k` (secret
+`MENU_MAKE_K`) to Make's [BACKEND] ROOM MENU PAID ORDER, which now reads those instead of its data store + HitPay (filter on `k`)
+and still does the Telegram slip, TV alert, Drive slip and accounting sheet. Sandbox orders go with base 0 → slip says
+"TEST PAYMENT - DO NOT MAKE", sheet says TEST. Make's ROOM MENU CHECKOUT is switched off (not needed).
 Guest messages: all pages go through `/gm` (front door) and the timer is the engine's alarm – see round2-tv-launcher docs/guest-messages.md.
 
 ## Booking times – read docs/booking-times.md (30 Oct)
