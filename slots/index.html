@@ -18,11 +18,24 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4
 .kick { font-size: 9px; color: var(--acc); }
 h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4; margin: 8px 0 6px; letter-spacing: .04em; }
 .sub { color: var(--mute); margin: 0 0 18px; max-width: 640px; }
-.days { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: thin; }
-.days button { flex: none; min-width: 84px; padding: 10px 10px 8px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); font: inherit; cursor: pointer; text-align: left; }
-.days button b { display: block; font-size: 15px; }
-.days button span { font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; }
-.days button[aria-pressed="true"] { border-color: var(--acc); box-shadow: inset 0 0 0 1px var(--acc); }
+/* month calendar (like SimplyBook's date picker): any date up to a year ahead */
+.cal { max-width: 420px; background: var(--panel); border: 1px solid var(--line); padding: 10px 10px 8px; }
+.cal .mh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.cal .mh b { font: 10px 'Press Start 2P', monospace; letter-spacing: .08em; }
+.cal .mh button { font: inherit; font-size: 18px; width: 40px; height: 34px; background: transparent; color: var(--ink); border: 1px solid var(--line); cursor: pointer; }
+.cal .mh button:disabled { opacity: .25; cursor: default; }
+.cal .g { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal .wd { font-size: 10px; color: var(--mute); text-align: center; text-transform: uppercase; letter-spacing: .06em; padding-bottom: 2px; }
+.cal .g button { position: relative; font: inherit; font-size: 15px; height: 40px; background: transparent; color: var(--ink); border: 1px solid transparent; cursor: pointer; }
+.cal .g button:hover { border-color: var(--line); }
+.cal .g button:disabled { color: rgba(244,241,251,.2); cursor: default; border-color: transparent; }
+.cal .g button.pk::after { content: ''; position: absolute; left: 50%; bottom: 5px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--acc); }
+.cal .g button.td { border-color: rgba(244,241,251,.35); }
+.cal .g button[aria-pressed="true"] { background: var(--acc); color: #0b0914; border-color: var(--acc); }
+.cal .g button[aria-pressed="true"]::after { background: #0b0914; }
+.cal .ft { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 11px; color: var(--mute); }
+.cal .ft i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--acc); margin-right: 5px; vertical-align: 1px; }
+.cal .ft a { color: var(--acc); cursor: pointer; text-decoration: underline; }
 .tiers { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 12px 0 16px; font-size: 12px; color: var(--mute); }
 .tiers i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
 .group { margin: 18px 0 6px; font-size: 9px; color: var(--mute); }
@@ -53,8 +66,6 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 .views { display: flex; gap: 6px; margin: 4px 0 6px; flex-wrap: wrap; }
 .lbl { font-size: 9px; color: var(--mute); margin: 0 0 8px; }
 .lbl span { color: var(--acc); margin-left: 8px; }
-.days button.m1 { border-left: 3px solid var(--acc); }
-.days button small { display: block; font-size: 9px; color: var(--acc); letter-spacing: .08em; text-transform: uppercase; }
 .views button { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 10px 12px; background: transparent; color: var(--ink); border: 1px solid var(--line); cursor: pointer; }
 .views button[aria-pressed="true"] { background: var(--acc); color: #0b0914; border-color: var(--acc); }
 /* the timeline: hour lines, labels every 2 h, free time in the tier colour, booked time striped */
@@ -131,7 +142,7 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
   <p class="sub">Pick a day, then look by room, by the time you'd like to start, or the earliest free. Coloured bars are times you can start; tap a room to choose your start and how long you'll stay.</p>
   <div class="banner" id="banner" hidden></div>
   <div class="lbl px">1 · PICK A DAY <span id="monthNow"></span></div>
-  <div class="days" id="days" role="group" aria-label="Day"></div>
+  <div class="cal" id="days" role="group" aria-label="Pick a day"></div>
   <div class="lbl px" style="margin-top:20px">2 · HOW DO YOU WANT TO LOOK?</div>
   <div class="views" id="views" role="group" aria-label="View">
     <button type="button" data-v="room" aria-pressed="true">BY ROOM</button>
@@ -209,7 +220,7 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
   var TIER = {}; GROUPS.forEach(function (g) { g[1].forEach(function (u) { TIER[u] = g[2]; }); });
   var EB = 11 * 60, view = 'room', hourSel = null;
   try { view = localStorage.getItem('r2.view') || 'room'; } catch (e) {}
-  var STEP = 15, DAYS = 62;
+  var STEP = 15, AHEAD = 12, calM = null, PH = {};   /* AHEAD = months ahead guests can book */
   var $ = function (id) { return document.getElementById(id); };
   var cache = {}, day = null, seq = 0, cur = null, timer = null;
   var ss = { get: function (k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }, set: function (k, v) { try { if (v == null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (e) {} } };
@@ -240,16 +251,26 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
     return cache[d];
   }
 
+  var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var MONTH = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+  /* month calendar: Mon-first grid, past days greyed, peak days (Fri–Sun, public holidays) dotted */
+  function ym(d) { return d.slice(0, 7); }
+  function addMonth(m, n) { var y = +m.slice(0, 4), mo = +m.slice(5, 7) - 1 + n; y += Math.floor(mo / 12); mo = ((mo % 12) + 12) % 12; return y + '-' + ('0' + (mo + 1)).slice(-2); }
   function drawDays() {
-    var h = '';
-    var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    for (var i = 0; i < DAYS; i++) {   /* about two months ahead */
-      var d = sgDate(i), dt = new Date(d + 'T12:00:00Z'), wd = dt.getUTCDay(), first = dt.getUTCDate() === 1 && i > 0;
-      var name = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][wd];
-      h += '<button type="button" data-d="' + d + '"' + (first ? ' class="m1"' : '') + ' aria-pressed="' + (d === day) + '">' + (first ? '<small>' + MON[dt.getUTCMonth()] + '</small>' : '') + '<span>' + name + '</span><b>' + dt.getUTCDate() + ' ' + MON[dt.getUTCMonth()] + '</b></button>';
+    var today = sgDate(0), first = ym(today), last = addMonth(first, AHEAD);
+    if (!calM) calM = ym(day || today);
+    var y = +calM.slice(0, 4), mo = +calM.slice(5, 7) - 1;
+    var start = (new Date(Date.UTC(y, mo, 1)).getUTCDay() + 6) % 7, n = new Date(Date.UTC(y, mo + 1, 0)).getUTCDate();
+    var h = '<div class="mh"><button type="button" data-step="-1" aria-label="Previous month"' + (calM <= first ? ' disabled' : '') + '>‹</button><b>' + MONTH[mo] + ' ' + y + '</b><button type="button" data-step="1" aria-label="Next month"' + (calM >= last ? ' disabled' : '') + '>›</button></div><div class="g">';
+    ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].forEach(function (w) { h += '<div class="wd">' + w + '</div>'; });
+    for (var i = 0; i < start; i++) h += '<span></span>';
+    for (var dd = 1; dd <= n; dd++) {
+      var d = calM + '-' + ('0' + dd).slice(-2), wd = (start + dd - 1) % 7, past = d < today, peak = wd >= 4 || PH[d];
+      h += '<button type="button" data-d="' + d + '" class="' + (peak ? 'pk' : '') + (d === today ? ' td' : '') + '" aria-pressed="' + (d === day) + '"' + (past ? ' disabled' : '') + ' aria-label="' + dayLabel(d) + (PH[d] ? ', public holiday' : '') + '">' + dd + '</button>';
     }
-    var sc = $('days').scrollLeft; $('days').innerHTML = h; $('days').scrollLeft = sc;
-    $('monthNow').textContent = day ? MON[+day.slice(5, 7) - 1] + ' ' + day.slice(0, 4) : '';
+    h += '</div><div class="ft"><span><i></i>Peak day (Fri–Sun, public holidays)</span>' + (calM !== first || day !== today ? '<a data-today="1">Today</a>' : '') + '</div>';
+    $('days').innerHTML = h;
+    $('monthNow').textContent = day ? dayLabel(day) : '';
   }
   function dayLabel(d) { var dt = new Date(d + 'T12:00:00Z'); return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dt.getUTCDay()] + ' ' + dt.getUTCDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][dt.getUTCMonth()]; }
 
@@ -473,7 +494,13 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
     } catch (e) {}
   }
 
-  $('days').addEventListener('click', function (e) { var b = e.target.closest('button[data-d]'); if (b) show(b.getAttribute('data-d')); });
+  $('days').addEventListener('click', function (e) {
+    var st = e.target.closest('button[data-step]'); if (st) { calM = addMonth(calM, +st.getAttribute('data-step')); drawDays(); return; }
+    if (e.target.closest('[data-today]')) { calM = null; show(sgDate(0)); return; }
+    var b = e.target.closest('button[data-d]'); if (b && !b.disabled) show(b.getAttribute('data-d'));
+  });
+  /* public holidays for the peak dots */
+  fetch(ENGINE + '/ph').then(function (r) { return r.json(); }).then(function (l) { (l || []).forEach(function (d) { PH[d] = 1; }); drawDays(); }).catch(function () {});
   $('board').addEventListener('click', function (e) {
     var h = e.target.closest('button[data-h]'); if (h) { hourSel = +h.getAttribute('data-h'); render(); return; }
     var b = e.target.closest('[data-u]'); if (b) openRoom(b.getAttribute('data-u'), b.hasAttribute('data-m') ? +b.getAttribute('data-m') : null);

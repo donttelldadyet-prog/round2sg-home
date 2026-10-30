@@ -275,10 +275,14 @@ async function finalize(env, ref, source) {
       result = { dryRun: true, would: ['book', q.eventId, q.unit, 'client(' + d.email + ')', q.date, q.time + ':00', q.endDate, q.end + ':00', 0, { [PAX_FIELD]: String(d.pax) }] };
     } else {
       const a = await admin(env);
-      let cid;
-      const found = await a('getClientList', [d.email, 1]).catch(() => null);
-      if (found && Object.keys(found).length) cid = Object.values(found)[0].id;
-      else cid = await a('addClient', [{ name: d.name, email: d.email, phone: d.phone }]);
+      /* the booking must carry the name the guest TYPED (staff check it at the door), so reuse a contact only when
+         its email AND name match; otherwise make a new contact with the typed name */
+      const norm = (x) => String(x || '').toLowerCase().replace(/\s+/g, ' ').trim();
+      const found = Object.values((await a('getClientList', [d.email, 50]).catch(() => null)) || {});
+      const same = found.find((c) => norm(c.email) === d.email && norm(c.name) === norm(d.name));
+      let cid = same && same.id;
+      if (!cid) cid = await a('addClient', [{ name: d.name, email: d.email, phone: d.phone }]).catch((e) => { if (!found[0]) throw e; return null; });
+      if (!cid) cid = found[0].id;          // SimplyBook refused a second contact for this email: use the old one (the note still has the typed name)
       const bk = await a('book', [q.eventId, q.unit, cid, q.date, q.time + ':00', q.endDate, q.end + ':00', 0, { [PAX_FIELD]: String(d.pax) }]);
       const b0 = bk && bk.bookings && bk.bookings[0];
       result = { bookingId: b0 && b0.id, code: b0 && b0.code };
