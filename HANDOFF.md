@@ -31,9 +31,17 @@ Not done (in order):
 3. Staff alert (Telegram, like the room-menu scenarios) when a payment couldn't be booked ("refund needed").
 4. HitPay sandbox webhook: Developers › Webhook Endpoints › `…workers.dev/hitpay`, event `payment_request.completed` (owner may have done this – check).
 5. Board design changes the owner asked for (below).
-6. Go-live: live HitPay key/salt (owner pastes into Cloudflare), `HITPAY_API=https://api.hit-pay.com/v1`, `DRY_RUN=0`, put the board behind the menu's Book button, merge only on approval.
+6. Go-live: owner pastes the live HitPay key/salt into `HITPAY_LIVE_KEY` / `HITPAY_LIVE_SALT` (the sandbox ones stay in `HITPAY_KEY` / `HITPAY_SALT` / `HITPAY_API`), put the board behind the menu's Book button, merge only on approval.
 
-## Food menu payment via Cloudflare (30 Oct) – ONE HitPay setting for booking + menu
+## Payments: live for guests, sandbox for tests – no switch (30 Oct, owner's decision)
+- Two HitPay accounts in Cloudflare: sandbox `HITPAY_KEY`/`HITPAY_SALT`/`HITPAY_API`, live `HITPAY_LIVE_KEY`/`HITPAY_LIVE_SALT`.
+- Guests always pay live once the live key is in (before that everything is sandbox). Test tools send `TEST_CODE`
+  (= the menu's sim code) → that one request uses the sandbox: booking page `?test=CODE` (control centre › Systems › Test
+  bench), menu `?sim=CODE` + "Full flow: HitPay sandbox". Each hold/order stores `pay` and is checked/cancelled with those keys.
+- Safe mode (control centre › Systems › Switches, needs `SWITCH_PASS` + `SWITCH_PIN`): the booking page shows the SimplyBook
+  widget embedded instead, and the engine refuses new holds.
+
+## Food menu payment via Cloudflare (30 Oct) – ONE HitPay setting for booking + menu (superseded by the section above for which keys)
 The engine's secrets `HITPAY_KEY` / `HITPAY_SALT` / `HITPAY_API` are used by BOTH the booking page and the room menu (sandbox now;
 put the live account's values in those three to take both live together). `menu/index.html` (on main) posts to `/menu/checkout`
 (re-prices from menu.json like the old Make checkout, keeps the order in the engine, creates the HitPay payment with webhook
