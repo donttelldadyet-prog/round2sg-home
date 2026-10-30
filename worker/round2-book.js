@@ -30,6 +30,7 @@ const bufTo = (t) => (t >= CLOSE ? 0 : BUF);
 /* guest messages (round2-tv-launcher docs/guest-messages.md): a celebration message written while booking */
 /* the Make webhook: secret GM_HOOK_URL once the webhook is swapped for a new one (the old address below is public in git history) */
 const GM_HOOK = 'https://hook.eu1.make.com/0vs25z4g3omjuvbdxwstdgofqhc3p2e4';
+const FOLLOW_MS = 10 * 60e3;
 const GM_ROOM = { 5: 'vale', 7: 'kaeden', 8: 'scarlett', 9: 'kai', 10: 'bella', 12: 'atlas', 11: 'max' };
 const GM_KINDS = ['birthday', 'anniversary', 'celebrate', 'note'];
 
@@ -210,10 +211,92 @@ export class HoldBook extends DurableObject {
       if (d.status === 'approved' && d.onTv !== 'yes' && +d.end > now && +d.at) this.sql.exec(`INSERT OR REPLACE INTO gmq VALUES (?, ?, ?, ?, 0)`, x.key, d.room || '', +d.at, +d.end);
     }
     this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('synced', ?)`, String(now));
+    this.lSync(links);
     this.arm();
     return this.rows(`SELECT COUNT(*) AS n FROM gmq`)[0].n;
   }
   qList() { this.qInit(); return this.rows(`SELECT * FROM gmq ORDER BY at`); }
+  /* ---- messages follow their booking (docs/guest-messages.md "Follows the booking"): every open guest link with its room
+     and start, and the SimplyBook booking it belongs to (bid = the booking in that room starting at exactly that time).
+     Every 10 min, and just before a message goes to its TV, the engine looks at SimplyBook: booking moved (time or room)
+     → the link moves with it; booking cancelled → the link is cancelled (or, if the same guest has exactly one other
+     upcoming booking, i.e. cancel-and-rebook, it moves there). Staff moving a link by hand unbinds it, so the engine
+     never fights a manual change; it binds again only if a booking starts exactly at the new room + time. */
+  lInit() { this.qInit(); if (this.lReady) return; this.lReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS gml (code TEXT PRIMARY KEY, room TEXT, start INTEGER, endt INTEGER, bid TEXT, cid TEXT)`); }
+  lSet(code, room, start, endt) { this.lInit(); if (!this.rows(`SELECT 1 FROM gml WHERE code = ?`, code).length) this.sql.exec(`INSERT INTO gml VALUES (?, ?, ?, ?, NULL, NULL)`, code, room || '', +start, +endt); this.arm(); }
+  lSync(links) {
+    this.lInit(); const now = Date.now(), keep = new Set();
+    for (const x of links || []) {
+      const d = x.data || {};
+      if (!x.key || /^R2/.test(x.key) || d.status === 'cancelled' || !(+d.end > now) || !(+d.start)) continue;
+      keep.add(x.key);
+      const o = this.rows(`SELECT * FROM gml WHERE code = ?`, x.key)[0];
+      if (!o) this.sql.exec(`INSERT INTO gml VALUES (?, ?, ?, ?, NULL, NULL)`, x.key, d.room || '', +d.start, +d.end);
+      else if (o.room !== (d.room || '') || +o.start !== +d.start) this.sql.exec(`UPDATE gml SET room = ?, start = ?, endt = ?, bid = NULL, cid = NULL WHERE code = ?`, d.room || '', +d.start, +d.end, x.key);
+    }
+    for (const r of this.rows(`SELECT code FROM gml`)) if (!keep.has(r.code)) this.sql.exec(`DELETE FROM gml WHERE code = ?`, r.code);
+  }
+  lList() { this.lInit(); return this.rows(`SELECT * FROM gml ORDER BY start`); }
+  fLog(e) {
+    this.lInit(); const r = this.rows(`SELECT v FROM kv WHERE k = 'follow'`)[0], l = r ? JSON.parse(r.v) : [];
+    l.unshift(Object.assign({ t: Date.now() }, e)); this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('follow', ?)`, JSON.stringify(l.slice(0, 30)));
+  }
+  fStat() { this.lInit(); this.arm(); const now = Date.now(), L = this.rows(`SELECT bid FROM gml WHERE endt > ?`, now); return { links: L.length, bound: L.filter((x) => x.bid).length, last: +((this.rows(`SELECT v FROM kv WHERE k = 'followed'`)[0] || {}).v || 0), log: this.fLogGet().slice(0, 5).map((x) => ({ t: x.t, a: x.a, room: x.room, why: x.why })) }; }
+  fLogGet() { this.lInit(); const r = this.rows(`SELECT v FROM kv WHERE k = 'follow'`)[0]; return r ? JSON.parse(r.v) : []; }
+  async follow(dry) {
+    this.lInit(); const env = this.env, now = Date.now();
+    if (!dry) this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('followed', ?)`, String(now));
+    this.sql.exec(`DELETE FROM gml WHERE endt < ?`, now);
+    const L = this.rows(`SELECT * FROM gml WHERE start > ? ORDER BY start`, now - 30 * 60e3);
+    if (!L.length || !env.SB_USER || !env.GM_STAFF) return { links: 0 };
+    const a = await admin(env), UNIT = {}; for (const u in GM_ROOM) UNIT[GM_ROOM[u]] = +u;
+    const sgMs = (t) => { const m = String(t || '').match(/(\d{4})-(\d\d)-(\d\d)[ T](\d\d):(\d\d)/); return m ? Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5]) - 8 * 3600e3 : 0; };
+    const day = new Date(now + 8 * 3600e3).toISOString().slice(0, 10), rng = { date_from: addDays(day, -1), date_to: addDays(day, 120) };
+    let raw0 = null;
+    const get = async (type) => Object.values((await a('getBookings', [Object.assign({ booking_type: type }, rng)])) || {})
+      .map((b) => { if (!raw0) raw0 = b; return b; }).map((b) => ({ id: String(b.id), unit: +b.unit_id, start: sgMs(b.start_date || b.start_date_time), cid: String(b.client_id || '') })).filter((b) => b.id && b.start);
+    const live = await get('non_cancelled');
+    const seen = { n: live.length, fields: raw0 ? Object.keys(raw0).slice(0, 40) : [], sample: raw0 ? { start_date: raw0.start_date, unit_id: raw0.unit_id } : null };
+    if (!live.length) return { links: L.length, seen, error: 'SimplyBook gave no bookings – nothing changed' };
+    let gone = null; const acts = [], bound = new Set(L.map((l) => l.bid).filter(Boolean));
+    for (const l of L) {
+      if (!l.bid) {
+        const m = live.filter((b) => b.unit === UNIT[l.room] && b.start === +l.start);
+        if (m.length === 1) { acts.push({ code: l.code, a: 'bind', bid: m[0].id }); if (!dry) this.sql.exec(`UPDATE gml SET bid = ?, cid = ? WHERE code = ?`, m[0].id, m[0].cid, l.code); bound.add(m[0].id); }
+        continue;
+      }
+      let b = live.find((x) => x.id === l.bid), how = 'move';
+      if (!b) {
+        gone = gone || await get('cancelled').catch(() => []);
+        if (!gone.some((x) => x.id === l.bid)) { acts.push({ code: l.code, a: 'lost', bid: l.bid }); continue; }   // not in SimplyBook's lists: leave it
+        const again = l.cid ? live.filter((x) => x.cid === l.cid && x.start > now && !bound.has(x.id) && GM_ROOM[x.unit]) : [];
+        if (again.length === 1) { b = again[0]; how = 'rebooked'; } else { acts.push({ code: l.code, a: 'cancel', bid: l.bid, room: l.room, from: +l.start }); continue; }
+      }
+      if (!GM_ROOM[b.unit]) { acts.push({ code: l.code, a: 'skip', why: 'room ' + b.unit }); continue; }
+      if (b.unit !== UNIT[l.room] || b.start !== +l.start || b.id !== l.bid) acts.push({ code: l.code, a: how, bid: b.id, cid: b.cid, room: GM_ROOM[b.unit], start: b.start, fromRoom: l.room, from: +l.start });
+    }
+    /* safety: SimplyBook hiccups shouldn't wipe the day's messages */
+    if (acts.filter((x) => x.a === 'cancel').length > 3) { const e = { a: 'held', why: 'more than 3 cancels at once – nothing cancelled, check by hand' }; if (!dry) this.fLog(e); return { links: L.length, acts, held: true }; }
+    if (dry) return { links: L.length, acts, seen };
+    const call = (body) => fetch(env.GM_HOOK_URL || GM_HOOK, { method: 'POST', body: new URLSearchParams(body) }).then((r) => r.text()).catch((e) => 'error ' + e);
+    let changed = false;
+    for (const x of acts) {
+      if (x.a === 'move' || x.a === 'rebooked') {
+        this.sql.exec(`UPDATE gml SET room = ?, start = ?, endt = ?, bid = ?, cid = ? WHERE code = ?`, x.room, x.start, x.start + 3 * 3600e3, x.bid, x.cid, x.code);
+        const r = await call({ action: 'move', staff: env.GM_STAFF, code: x.code, start: x.start, room: x.room });
+        this.fLog({ code: x.code, a: x.a, room: x.room, start: x.start, fromRoom: x.fromRoom, from: x.from, r: String(r).slice(0, 60) }); changed = true;
+      } else if (x.a === 'cancel') {
+        this.sql.exec(`DELETE FROM gml WHERE code = ?`, x.code); this.sql.exec(`DELETE FROM gmq WHERE code = ?`, x.code);
+        const r = await call({ action: 'cancel', staff: env.GM_STAFF, code: x.code });
+        this.fLog({ code: x.code, a: 'cancel', room: x.room, from: x.from, r: String(r).slice(0, 60) }); changed = true;
+      }
+    }
+    if (changed) {   /* the timer's queue and the staff list follow */
+      this.gmDrop('__LIST__');
+      try { const j = JSON.parse(await call({ action: 'list', staff: env.GM_STAFF })); if (j.links) this.qSync(j.links); } catch (e) {}
+    }
+    return { links: L.length, acts };
+  }
   /* booking switch (control centre › Systems): 'new' = this booking page, 'simplybook' = safe mode, guests book on SimplyBook */
   getMode() { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = 'mode'`)[0]; return Object.assign({ booking: 'new' }, r ? JSON.parse(r.v) : {}); }
   setMode(m) { this.qInit(); this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('mode', ?)`, JSON.stringify(m)); return m; }
@@ -278,7 +361,10 @@ export class HoldBook extends DurableObject {
     const n = this.rows(`SELECT MIN(exp) AS t FROM holds WHERE status = 'pending'`)[0];
     const q = this.rows(`SELECT MIN(at) AS t FROM gmq WHERE pushed = 0`)[0];
     const syn = +((this.rows(`SELECT v FROM kv WHERE k = 'synced'`)[0] || {}).v || 0);
-    const ts = [n && n.t ? n.t + 1000 : 0, q && q.t ? q.t - 60e3 : 0, syn ? syn + 86400e3 : 0].filter((t) => t > 0);
+    this.lInit();
+    const fl = this.rows(`SELECT COUNT(*) AS n FROM gml WHERE endt > ?`, Date.now())[0].n, fol = +((this.rows(`SELECT v FROM kv WHERE k = 'followed'`)[0] || {}).v || 0);
+    const lsy = this.rows(`SELECT 1 FROM kv WHERE k = 'lsynced'`).length;
+    const ts = [n && n.t ? n.t + 1000 : 0, q && q.t ? q.t - 60e3 : 0, syn ? syn + 86400e3 : 0, fl ? fol + FOLLOW_MS : 0, lsy ? 0 : Date.now() + 2000].filter((t) => t > 0);
     if (ts.length) this.ctx.storage.setAlarm(Math.max(Date.now() + 1000, Math.min(...ts)));
   }
   /* timer ran out → release the hold and kill its HitPay link */
@@ -295,8 +381,15 @@ export class HoldBook extends DurableObject {
     const call = (body) => fetch(env.GM_HOOK_URL || GM_HOOK, { method: 'POST', body: new URLSearchParams(body) }).then((r) => r.text()).catch(() => '');
     /* once a day: rebuild the queue from Make (anything queued another way still goes out) */
     const syn = +((this.rows(`SELECT v FROM kv WHERE k = 'synced'`)[0] || {}).v || 0);
-    if (now - syn > 86400e3) { try { const j = JSON.parse(await call({ action: 'list', staff: env.GM_STAFF })); if (j.links) this.qSync(j.links); } catch (e) { this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('synced', ?)`, String(now - 86400e3 + 3600e3)); } }
+    const lsy = this.rows(`SELECT 1 FROM kv WHERE k = 'lsynced'`).length;   /* first run of "follows the booking": learn every open link once */
+    if (!lsy) this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('lsynced', '1')`);   // only ever once, even if Make doesn't answer
+    if (now - syn > 86400e3 || !lsy) { try { const j = JSON.parse(await call({ action: 'list', staff: env.GM_STAFF })); if (j.links) this.qSync(j.links); } catch (e) { this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('synced', ?)`, String(now - 86400e3 + 3600e3)); } }
     this.sql.exec(`DELETE FROM gmq WHERE endt < ?`, now);
+    /* messages follow their booking: every 10 min, and again right before one goes to its TV */
+    this.lInit();
+    const fol = +((this.rows(`SELECT v FROM kv WHERE k = 'followed'`)[0] || {}).v || 0);
+    const soon = this.rows(`SELECT 1 FROM gmq WHERE pushed = 0 AND at - 120000 <= ?`, now).length;
+    if (now - fol >= FOLLOW_MS - 5000 || (soon && now - fol > 60e3)) await this.follow(false).catch((e) => this.fLog({ a: 'error', why: String(e.message || e).slice(0, 80) }));
     for (const m of this.rows(`SELECT * FROM gmq WHERE pushed = 0 AND at - 60000 <= ? ORDER BY at`, now)) {
       const t = await call({ action: 'push', staff: env.GM_STAFF, code: m.code });
       this.sql.exec(`UPDATE gmq SET pushed = 1 WHERE code = ?`, m.code);
@@ -444,6 +537,7 @@ async function tvMessage(env, d, q, ref) {
   const m = d.msg;
   await call({ action: 'submit', code: link.code, kind: m.kind, to: m.to, from: m.from, title: m.title, text: m.text, at: start + m.after * 60e3 });
   await book(env).qSet(link.code, GM_ROOM[q.unit], start + m.after * 60e3, start + q.hours * 3600e3).catch(() => null);
+  await book(env).lSet(link.code, GM_ROOM[q.unit], start, start + 3 * 3600e3).catch(() => null);
   await book(env).gmDrop('__LIST__').catch(() => null);
   return { code: link.code, at: start + m.after * 60e3 };
 }
@@ -475,7 +569,12 @@ async function gm(env, req) {
   if (act === 'queue') {   /* staff: what the timer will send, and the last send */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     if (f.sync) await gmList(env, hb);
-    return gmJ({ ok: true, queue: await hb.qList(), now: Date.now() });
+    return gmJ({ ok: true, queue: await hb.qList(), follow: await hb.lList(), followLog: await hb.fLogGet(), now: Date.now() });
+  }
+  if (act === 'follow') {   /* staff: run the "messages follow their booking" check now (dry=1: only show what it would do) */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    if (!f.dry) await gmList(env, hb).catch(() => null);
+    return gmJ(Object.assign({ ok: true }, await hb.follow(!!f.dry)));
   }
   if (!guest && !GM_STAFF_ACTIONS.includes(act)) return gmJ({ error: 'Unknown action.' });
   if (!(await hb.gmRate(who + (guest ? ':g' : ':s'), guest ? 30 : 200))) return gmJ({ error: 'Too many tries. Wait a few minutes and try again.' });
@@ -779,6 +878,8 @@ export default {
           st.sbLogin = await admin(env).then(() => 'ok').catch((e) => 'failed: ' + String(e.message || e).slice(0, 80));
           st.sbPublic = await pub(env).then(() => 'ok').catch((e) => 'failed: ' + String(e.message || e).slice(0, 80));
           st.timerQueue = await book(env).qList().then((l) => l.length).catch(() => null);
+          st.follow = await book(env).fStat().catch((e) => ({ error: String(e.message || e).slice(0, 80) }));
+          if (st.follow && st.follow.links) { const fd = await book(env).follow(true).catch((e) => ({ error: String(e.message || e).slice(0, 80) })); st.follow.check = { seen: fd.seen && fd.seen.n, error: fd.error, would: (fd.acts || []).map((x) => x.a + (x.room ? ' ' + x.room : '')) }; if (u.searchParams.get('deep') === '2') st.follow.check.sb = fd.seen; }   /* messages follow their booking (no codes here) */
         }
         return J(st);
       }
@@ -842,7 +943,7 @@ export default {
           const q = h.data.q, start = Date.UTC(+q.date.slice(0, 4), +q.date.slice(5, 7) - 1, +q.date.slice(8, 10), +q.time.slice(0, 2), +q.time.slice(3, 5)) - 8 * 3600e3;
           const r = await fetch(env.GM_HOOK_URL || GM_HOOK, { method: 'POST', body: new URLSearchParams({ action: 'create', staff: env.GM_STAFF, room: GM_ROOM[q.unit], start, label: 'Online · ' + h.data.name.slice(0, 30) }) }).then((x) => x.json()).catch(() => ({}));
           if (!r.code) return H(PAGE('<h1>Couldn’t open the message page</h1><p>Please try again in a minute, or WhatsApp us on +65 9162 5767.</p>'));
-          tv = { code: r.code }; await hb.setTv(ref, tv); await hb.gmDrop('__LIST__');
+          tv = { code: r.code }; await hb.setTv(ref, tv); await hb.gmDrop('__LIST__'); await hb.lSet(r.code, GM_ROOM[q.unit], start, start + 3 * 3600e3).catch(() => null);
         }
         return Response.redirect('https://cue.round2.sg/' + tv.code, 302);
       }
