@@ -492,6 +492,59 @@ async function gm(env, req) {
   return gmJ(j);
 }
 
+/* ---------- food menu checkout: POST /menu/checkout (form field "order", same as the Make webhook) ----------
+   Replaces Make's [BACKEND] ROOM MENU CHECKOUT, which stays as the menu page's backup. Same rules: re-prices the order from
+   the published menu.json, checks the total the guest saw, makes the HitPay payment (live account: secret MENU_HITPAY_KEY),
+   and writes the pending order into Make's data store 235217 through Make's API (secret MAKE_API_TOKEN; API calls cost no
+   operations), so Make's [BACKEND] ROOM MENU PAID ORDER (HitPay's webhook → kitchen Telegram, TV alert, accounting sheet,
+   Drive slip) works exactly as before. Without those secrets it answers {fallback:true} and the page uses Make. */
+const MENU_JSON = 'https://donttelldadyet-prog.github.io/round2sg-home/menu/menu.json';
+const MENU_PAID_HOOK = 'https://hook.eu1.make.com/55nh6wniq1wftco8af9486noj4xugasl';
+const MENU_RETURN = 'https://donttelldadyet-prog.github.io/round2sg-home/menu/';
+const MENU_ROOMS = ['Kai', 'Bella', 'Atlas', 'Max', 'Scarlett', 'Vale', 'Kaeden'];
+const MENU_HITPAY = 'https://api.hit-pay.com/v1';
+const MAKE_API = 'https://eu1.make.com/api/v2';
+async function menuCheckout(env, req) {
+  const no = (msg, s = 409) => J({ error: msg }, s), fb = (why) => J({ fallback: true, why }, 503);
+  if (!env.MENU_HITPAY_KEY || !env.MAKE_API_TOKEN) return fb('not set up');
+  const who = req.headers.get('cf-connecting-ip') || 'x';
+  if (!(await book(env).gmRate(who + ':menu', 20))) return no('Too many tries. Wait a few minutes, or WhatsApp us.', 429);
+  let o; try { o = JSON.parse(new URLSearchParams(await req.text()).get('order') || ''); } catch (e) { return no('Something in your order couldn’t be read. Refresh the page and try again.', 400); }
+  let menu; try { const r = await fetch(MENU_JSON + '?v=' + Date.now(), { cf: { cacheTtl: 30 } }); menu = await r.json(); } catch (e) { return fb('menu.json'); }
+  const P = menu.prices || {}, pc = P.pc || {}, pm = P.pm || {}, pn = P.pn || {}, g = +((menu.settings || {}).gst) || 0;
+  const items = Array.isArray(o.items) ? o.items : [];
+  const L = items.map((x) => { const k = String(x.k || ''), q = Math.round(+x.q || 0), c = k in pc ? +pc[k] : -1, m = k in pm ? +pm[k] : 0;
+    return { q, c, t: c * q, mt: m * q, l: q + ' x ' + (pn[k] || 'UNKNOWN ITEM') }; });
+  const sub = L.reduce((a, x) => a + x.t, 0), base = L.reduce((a, x) => a + x.mt, 0), gst = Math.round(base * g), total = sub + gst;
+  const room = String(o.room || '');
+  if (!MENU_ROOMS.includes(room)) return no('Please choose your room first.');
+  if (!L.length || L.length > 30 || L.some((x) => x.q < 1 || x.q > 20)) return no('Your order couldn’t be checked. Refresh the page and try again.');
+  if (L.some((x) => x.c < 0)) return no('Something in your order is sold out or no longer on the menu. Refresh the page and check your order.');
+  if (total <= 0 || total !== Math.round(+o.shown_total * 100)) return no('The menu prices changed. Refresh the page and check your order.');
+  const sg = new Date(Date.now() + 8 * 3600e3).toISOString(), ymd = sg.slice(2, 10).replace(/-/g, ''), hms = sg.slice(11, 19).replace(/:/g, '');
+  const ref = 'R2-' + ymd + '-' + hms + '-' + room.toUpperCase(), orderNo = hms;
+  const lines = L.map((x) => x.l), summary = lines.join(', ');
+  /* HitPay (live) */
+  const form = new URLSearchParams({ amount: (total / 100).toFixed(2), currency: 'SGD', reference_number: ref, send_email: 'false', allow_repeated_payments: 'false',
+    purpose: 'Round2 food order #' + orderNo + ' (' + room + '): ' + (summary.length > 200 ? summary.slice(0, 197) + '...' : summary),
+    webhook: MENU_PAID_HOOK, redirect_url: MENU_RETURN + '?room=' + room.toLowerCase() });
+  form.append('payment_methods[]', 'paynow_online'); form.append('payment_methods[]', 'card');
+  const H = { 'X-BUSINESS-API-KEY': env.MENU_HITPAY_KEY, 'X-Requested-With': 'XMLHttpRequest' };
+  let pr; try { const r = await fetch(MENU_HITPAY + '/payment-requests', { method: 'POST', headers: { ...H, 'Content-Type': 'application/x-www-form-urlencoded' }, body: form }); pr = await r.json(); if (!r.ok || !pr.url) throw new Error('hitpay ' + r.status); } catch (e) { return fb('hitpay'); }
+  /* the pending order, where Make's PAID ORDER scenario looks for it */
+  const rec = { gst, sub, base, note: String(o.note || '').slice(0, 500), room, lines: lines.join('\n'), total, status: 'pending', orderNo, createdAt: new Date().toISOString(), requestId: pr.id };
+  try {
+    const r = await fetch(MAKE_API + '/data-stores/235217/data', { method: 'POST', headers: { Authorization: 'Token ' + env.MAKE_API_TOKEN, 'Content-Type': 'application/json' }, body: JSON.stringify({ key: ref, data: rec }) });
+    if (!r.ok) throw new Error('make ' + r.status + ' ' + (await r.text()).slice(0, 120));
+  } catch (e) {
+    await fetch(MENU_HITPAY + '/payment-requests/' + pr.id, { method: 'DELETE', headers: H }).catch(() => null);
+    return fb(String(e.message || e).slice(0, 140));
+  }
+  const prev = String(o.prev || '');
+  if (prev && prev !== pr.id) await fetch(MENU_HITPAY + '/payment-requests/' + encodeURIComponent(prev), { method: 'DELETE', headers: H }).catch(() => null);
+  return J({ url: pr.url, order: ref, no: orderNo, request_id: pr.id, via: 'cloudflare' });
+}
+
 /* ---------- pages ---------- */
 const PAGE = (body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Round2 · Book (test)</title>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -573,6 +626,7 @@ export default {
           : `<h1>Payment received</h1><p class="err">${esc(f.err)}</p><p>We'll WhatsApp you shortly. Ref ${esc(ref)}.</p>`));
       }
       if (u.pathname === '/gm' && req.method === 'POST') return await gm(env, req);
+      if (u.pathname === '/menu/checkout' && req.method === 'POST') return await menuCheckout(env, req);
       if (u.pathname === '/test') return H(testForm());
       if (u.pathname === '/selftest') { const a = await admin(env); const units = await a('getUnitList', []); return J({ sbLogin: true, rooms: Object.values(units).map((x) => x.name), dryRun: env.DRY_RUN === '1' }); }
       return J({ ok: true, svc: 'round2-book' });
