@@ -253,6 +253,8 @@ export class HoldBook extends DurableObject {
     this.sql.exec(`UPDATE holds SET status = 'booking' WHERE ref = ?`, ref);
     return true;
   }
+  /* "Find my booking": paid, not yet past, matching email + last 8 digits of the mobile */
+  find(email, p8, today) { return this.rows(`SELECT ref, date FROM holds WHERE status = 'paid' AND email = ? AND phone = ? AND date >= ? ORDER BY date, s LIMIT 6`, email, p8, today); }
   setTv(ref, tv) { const h = this.get(ref); if (!h || !h.data.done) return; h.data.done.tv = tv; this.sql.exec(`UPDATE holds SET data = ? WHERE ref = ?`, JSON.stringify(h.data), ref); }
   done(ref, result) {
     const h = this.get(ref); if (!h) return;
@@ -366,7 +368,11 @@ async function finalize(env, ref, source) {
       const a = await admin(env);
       /* every booking gets its OWN contact with exactly the name typed on the page – guests use fun names or a
          different name each time, and staff greet them by it at the door. Never reuse an old contact. */
-      let cid = await a('addClient', [{ name: d.name, email: d.email, phone: d.phone }]).catch(() => null);
+      /* ONE email per guest: SimplyBook emails once when the booking is made and again when it's confirmed. So the contact is
+         made without the email, booked (that email goes nowhere), given the email, then confirmed → only the confirmation
+         email reaches the guest. If SimplyBook won't take a contact without email, fall back to the normal way (2 emails). */
+      let cid = await a('addClient', [{ name: d.name, phone: d.phone }]).catch(() => null), late = !!cid;
+      if (!cid) cid = await a('addClient', [{ name: d.name, email: d.email, phone: d.phone }]).catch(() => null);
       if (!cid) {                            // only if SimplyBook refuses a second contact for this email
         const found = Object.values((await a('getClientList', [d.email, 1]).catch(() => null)) || {});
         if (!found[0]) throw new Error('could not create the SimplyBook contact');
@@ -378,7 +384,8 @@ async function finalize(env, ref, source) {
       const bk = await a('book', [q.eventId, q.unit, cid, q.date, q.time + ':00', endDate, hhmm(eB) + ':00', 0, { [PAX_FIELD]: String(d.pax) }]);
       const b0 = bk && bk.bookings && bk.bookings[0];
       result = { bookingId: b0 && b0.id, code: b0 && b0.code };
-      /* SimplyBook's own guest bookings are confirmed; ours came in unconfirmed, which may be why staff got no push */
+      if (late) result.email = await a('editClient', [cid, { name: d.name, email: d.email, phone: d.phone }]).then(() => 'ok').catch((e) => 'no: ' + String(e.message || e).slice(0, 60));
+      /* SimplyBook's own guest bookings are confirmed; ours come in unconfirmed. Confirming sends the guest's one email. */
       if (b0 && b0.id) result.confirm = await a('confirmBooking', [b0.id]).then(() => 'ok').catch((e) => 'no: ' + String(e.message || e).slice(0, 60));
       /* the details SimplyBook doesn't show: the name typed on the page (SimplyBook keeps an existing contact's name),
          what was really paid (SimplyBook shows the base service price) */
@@ -604,7 +611,7 @@ function bookedPage(env, ref, d, origin) {
   /* add-to-calendar file (session time only – the 15 min cleaning isn't the guest's) */
   const z = (t) => q.date.replace(/-/g, '') + 'T' + t.replace(':', '') + '00', endDay = q.endDate.replace(/-/g, '');
   const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Round2//Booking//EN', 'BEGIN:VEVENT', 'UID:' + ref + '@round2.sg', 'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z',
-    'DTSTART;TZID=Asia/Singapore:' + z(q.time), 'DTEND;TZID=Asia/Singapore:' + endDay + 'T' + q.end.replace(':', '') + '00', 'SUMMARY:Round2 · ' + room, 'DESCRIPTION:Booking ref ' + ref + '. Need to change something? WhatsApp +65 9162 5767.', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+    'DTSTART;TZID=Asia/Singapore:' + z(q.time), 'DTEND;TZID=Asia/Singapore:' + endDay + 'T' + q.end.replace(':', '') + '00', 'SUMMARY:Round2 · ' + room, 'DESCRIPTION:Booking ref ' + ref + '. Your booking and TV message: ' + origin + '/done?ref=' + ref + ' · Need to change something? WhatsApp +65 9162 5767.', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
   const msgBox = tv
     ? `<div class="card msg"><div class="k">TV MESSAGE</div><p>${msg ? `<b>${esc(msg.title)}</b> pops up on the TV ${msg.after ? msg.after + ' minutes after you start' : 'when you start'}.` : 'Your message link is ready.'}</p><a class="btn ghost" href="https://cue.round2.sg/${esc(tv.code)}">${msg ? 'Change the message' : 'Write the message'}</a><p class="fine">You can change it until it pops up: cue.round2.sg/${esc(tv.code)}</p></div>`
     : `<div class="card msg"><div class="k">CELEBRATING?</div><p>Put a birthday, anniversary or any message on the room’s TV. It pops up during your session.</p><a class="btn ghost" href="${origin}/done/message?ref=${esc(ref)}">Add a message for the TV</a></div>`;
@@ -631,12 +638,12 @@ ${msgBox}
 <div class="card"><div class="k">WHEN YOU ARRIVE</div><ul><li>Come in and take a seat in our lobby. We’ll know you’ve arrived and come to show you to ${esc(room)}.</li><li>Your booking is under <b>${esc(d.name)}</b>.</li><li>Please be on time: your session ends at ${esc(clock(q.end))}.</li><li>A confirmation email is on its way to ${esc(d.email)}.</li></ul></div>
 <div class="row"><a class="btn ghost" download="Round2-${esc(ref)}.ics" href="data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}">Add to calendar</a><a class="btn ghost" href="https://wa.me/6591625767?text=${encodeURIComponent('Hi Round2, about my booking ' + ref)}">WhatsApp us</a></div>
 ${d.ret ? `<a class="btn" href="${esc(d.ret)}">Back to Round2</a>` : '<a class="btn" href="https://www.round2.sg">Back to Round2</a>'}
-<p class="fine">Keep this page: open the same link again to see your booking or add a TV message.</p>
+<p class="fine">Closed this page? Find it again any time at <a style="color:#f4f1fb" href="${origin}/find">${origin.replace('https://', '')}/find</a> with your email and mobile number. It’s also in your calendar entry.</p>
 <script>try{sessionStorage.clear()}catch(e){}</script></main></body></html>`;
 }
 
 /* ---------- pages ---------- */
-const PAGE = (body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Round2 · Book (test)</title>
+const PAGE = (body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Round2 · Booking</title>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>body{margin:0;background:#06050a;color:#f4f1fb;font:16px/1.5 'Chakra Petch',system-ui,sans-serif}h1{font-family:'Press Start 2P',monospace;letter-spacing:.04em;line-height:1.5}main{max-width:480px;margin:0 auto;padding:20px 16px}h1{font-size:20px}label{display:block;margin:12px 0 4px;color:#bababa;font-size:14px}
 select,input,button,.btn{display:block;width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid #444;background:#2a2929;color:#f4f1fb;font:inherit;text-align:center;text-decoration:none}button,.btn{background:#F2C21B;color:#111;border:0;font-weight:700;margin-top:18px}
@@ -715,6 +722,24 @@ export default {
         if (f.ok) return H(bookedPage(env, ref, f.h, u.origin));
         return H(PAGE(f.ok ? `<h1>You're booked 🎉</h1><p><b>${esc(q.room)}</b>, ${esc(q.date)}, ${esc(q.time)}–${esc(q.end)} (${q.hours}h) · $${q.total.toFixed(2)} paid.</p><p>Ref ${esc(ref)}${f.h.done && f.h.done.dryRun ? ' · <span class="tag">TEST – not put in calendar</span>' : ''}</p><p>A confirmation email is on its way.</p>${f.h.done && f.h.done.tv && f.h.done.tv.code ? `<p>Your message pops up on the TV ${f.h.msg.after ? f.h.msg.after + ' minutes after you start' : 'when you start'}. Want to change it? <a style="color:#F2C21B" href="https://cue.round2.sg/${esc(f.h.done.tv.code)}">cue.round2.sg/${esc(f.h.done.tv.code)}</a></p>` : ''}${f.h.ret ? `<a class="btn" href="${esc(f.h.ret)}">Back to Round2</a>` : ''}<script>try{sessionStorage.clear()}catch(e){}</script>`
           : `<h1>Payment received</h1><p class="err">${esc(f.err)}</p><p>We'll WhatsApp you shortly. Ref ${esc(ref)}.</p>`));
+      }
+      /* "Find my booking": email + mobile → the confirmation page again (to see it or add/change the TV message) */
+      if (u.pathname === '/find') {
+        const form = (err, em = '') => H(PAGE(`<h1>Find my booking</h1><p>Enter the email and mobile number you booked with. You’ll get your booking page back, where you can add or change your TV message.</p>
+<form method="post"><label>Email</label><input name="email" type="email" required value="${esc(em)}"><label>Mobile</label><input name="phone" type="tel" required placeholder="8123 4567"><button>Find it</button></form>${err ? `<p class="err">${err}</p>` : ''}
+<p style="color:#bababa;font-size:14px;margin-top:18px">Booked on WhatsApp or by phone? Message us on <a style="color:#F2C21B" href="https://wa.me/6591625767">WhatsApp</a>.</p>`));
+        if (req.method !== 'POST') return form();
+        const f = new URLSearchParams(await req.text()), em = String(f.get('email') || '').trim().toLowerCase(), p8 = String(f.get('phone') || '').replace(/\D/g, '').slice(-8);
+        if (!em || p8.length < 8) return form('Please enter your email and full mobile number.', em);
+        const hb = book(env);
+        if (!(await hb.gmRate('find:' + (req.headers.get('cf-connecting-ip') || '?'), 10))) return form('Too many tries. Please wait 10 minutes, or WhatsApp us.', em);
+        const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+        const list = await hb.find(em, p8, today);
+        if (!list.length) return form('We couldn’t find an upcoming online booking with that email and mobile. Check for typos, or WhatsApp us.', em);
+        if (list.length === 1) return Response.redirect(u.origin + '/done?ref=' + list[0].ref, 303);
+        const rows = [];
+        for (const r of list) { const h = await hb.get(r.ref), q = h.data.q; rows.push(`<a class="btn" style="margin-top:10px" href="/done?ref=${r.ref}">${esc(q.unit === 11 ? 'Maximillion' : q.room)} · ${esc(q.date)} · ${esc(q.time)}</a>`); }
+        return H(PAGE(`<h1>Your bookings</h1><p>Pick one:</p>${rows.join('')}`));
       }
       /* "Add a message for the TV" on the confirmation page: make the guest-message link only when it's wanted */
       if (u.pathname === '/done/message') {
