@@ -163,6 +163,8 @@ h3.nm, .nm { color: var(--rc); }
 .cel { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
 .cel input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--acc); flex: none; }
 .cel small { color: var(--mute); }
+.cel .celline { display: block; margin: 4px 0 6px; }
+.cel small { display: block; }
 .fl textarea { display: block; width: 100%; margin-top: 4px; padding: 11px 12px; font: 16px 'Chakra Petch', sans-serif; color: var(--ink); background: #06050a; border: 1px solid var(--line); resize: vertical; }
 .fl input, .fl select { display: block; width: 100%; margin-top: 4px; padding: 11px 12px; font: 16px 'Chakra Petch', sans-serif; color: var(--ink); background: #06050a; border: 1px solid var(--line); text-transform: none; letter-spacing: 0; }
 .fl .tel { display: flex; gap: 6px; }
@@ -214,7 +216,7 @@ h3.nm, .nm { color: var(--rc); }
         <p class="hint">Overseas number? Change +65 to your country code. We may WhatsApp you on this number. Confirmation and receipt go to this email.</p>
       </div>
       <div class="step celstep">
-        <label class="cel"><input type="checkbox" id="cOn"> <span><b>Celebrating?</b> <span class="beta">BETA</span> We’ll put your message on the big screen in your Round2 room <i data-ic="cake"></i><br><small>Birthday, anniversary or anything. It pops up on the TV in your room during the first hour of your session, and you can change it later. This is new: if it doesn’t show up, just tell our staff and we’ll put it on for you.</small></span></label>
+        <label class="cel"><input type="checkbox" id="cOn"> <span><b>Celebrating?</b> <span class="beta">BETA</span><span class="celline">We’ll put your message on the big screen in your Round2 room <i data-ic="cake"></i></span><small>Birthday, anniversary or anything. It pops up on the TV in your room during the first hour of your session, and you can change it later. This is new: if it doesn’t show up, just tell our staff and we’ll put it on for you.</small></span></label>
         <div id="cBox" hidden>
           <div class="chips" id="cKind" style="margin:10px 0">
             <button type="button" data-k="birthday" aria-pressed="true">Birthday</button><button type="button" data-k="anniversary" aria-pressed="false">Anniversary</button>
