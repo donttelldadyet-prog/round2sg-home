@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
-:root { --bg: #06050a; --panel: #0b0914; --line: rgba(244,241,251,.14); --ink: #f4f1fb; --mute: #a79fbd; --acc: #F2C21B; --free: #5BE37D; }
+:root { --bg: #06050a; --panel: #0b0914; --line: rgba(244,241,251,.14); --ink: #f4f1fb; --mute: #a79fbd; --acc: #F2C21B; --free: #5BE37D; --eb: #66C7FF; --tc: #5BE37D; }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 'Chakra Petch', system-ui, sans-serif; }
 [hidden] { display: none !important; }
@@ -26,7 +26,7 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 .tiers { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 12px 0 16px; font-size: 12px; color: var(--mute); }
 .tiers i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
 .group { margin: 18px 0 6px; font-size: 9px; color: var(--mute); }
-.room { display: grid; grid-template-columns: 150px 1fr; gap: 14px; align-items: center; padding: 12px 14px; margin: 8px 0; background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--rc); }
+.room { display: grid; grid-template-columns: 190px 1fr; gap: 14px; align-items: center; padding: 12px 14px; margin: 8px 0; background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--rc); }
 .room h3 { margin: 0; font-size: 17px; }
 .room .ty { font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; }
 .track { position: relative; height: 26px; background: rgba(244,241,251,.05); }
@@ -43,6 +43,42 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 .state { padding: 30px 0; color: var(--mute); }
 .load { font-size: 9px; color: var(--acc); }
 @media (max-width: 640px) { .room { grid-template-columns: 1fr; gap: 8px; } h1 { font-size: 16px; } }
+/* tiers: boxed, colour-coded sections */
+.tier { margin: 18px 0 8px; border: 1px solid var(--line); border-top: 3px solid var(--tc); background: rgba(244,241,251,.02); padding: 10px 12px 6px; }
+.tier > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 4px; }
+.tier > header .px { font-size: 10px; color: var(--tc); }
+.tier > header span { font-size: 13px; color: var(--mute); }
+.tier .room { margin: 8px 0; }
+/* views */
+.views { display: flex; gap: 6px; margin: 4px 0 6px; flex-wrap: wrap; }
+.views button { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 10px 12px; background: transparent; color: var(--ink); border: 1px solid var(--line); cursor: pointer; }
+.views button[aria-pressed="true"] { background: var(--acc); color: #0b0914; border-color: var(--acc); }
+/* the timeline: hour lines, labels every 2 h, free time in the tier colour, booked time striped */
+.track { height: 34px; border-radius: 3px; overflow: hidden;
+  background: repeating-linear-gradient(135deg, rgba(244,241,251,.06) 0 6px, rgba(244,241,251,.02) 6px 12px); }
+.track .hr { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(244,241,251,.16); }
+.track .seg { background: var(--tc); opacity: .85; border-radius: 3px; top: 3px; bottom: 3px; }
+.track .seg.eb { background: var(--eb); }
+.ticks span::before { content: ''; position: absolute; left: 50%; top: -4px; width: 1px; height: 4px; background: rgba(244,241,251,.35); }
+/* Early bird: its own chip, easy to see, and clearly marked when taken */
+.ebchip { display: inline-flex; align-items: center; gap: 8px; margin: 8px 8px 0 0; padding: 7px 10px; font-size: 12px; white-space: nowrap; border: 1px solid var(--eb); color: var(--ink); background: rgba(102,199,255,.12); cursor: pointer; font-family: inherit; }
+.ebchip b { font: 8px 'Press Start 2P', monospace; letter-spacing: .1em; color: var(--eb); }
+.ebchip.gone { border-color: var(--line); background: transparent; color: var(--mute); cursor: default; text-decoration: line-through; text-decoration-color: rgba(244,241,251,.35); }
+.ebchip.gone b { color: var(--mute); }
+.room .free { color: var(--tc); }
+/* by time / earliest */
+.hours { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0 10px; scrollbar-width: thin; }
+.hours button { flex: none; font: inherit; font-size: 14px; padding: 8px 12px; background: var(--panel); color: var(--ink); border: 1px solid var(--line); cursor: pointer; }
+.hours button small { display: block; font-size: 10px; color: var(--mute); }
+.hours button[aria-pressed="true"] { border-color: var(--acc); box-shadow: inset 0 0 0 1px var(--acc); }
+.hours button:disabled { opacity: .3; cursor: default; }
+.row { display: grid; grid-template-columns: minmax(120px, 1fr) 1.6fr auto; align-items: center; gap: 10px 14px; padding: 12px 14px; margin: 8px 0; background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--rc); cursor: pointer; }
+.row h3 { margin: 0; font-size: 17px; }
+.row .ty { font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; }
+.row .when { font-size: 15px; }
+.row .when small { display: block; font-size: 12px; color: var(--mute); }
+.row .pickb { margin-top: 0; }
+@media (max-width: 640px) { .row { grid-template-columns: 1fr auto; } .row .pickb { grid-column: 1 / -1; justify-self: start; } }
 .room { cursor: pointer; }
 .room:hover { border-color: rgba(244,241,251,.3); }
 .room .free { font-size: 13px; color: var(--free); margin-top: 6px; }
@@ -84,9 +120,14 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 <div class="wrap">
   <div class="px kick">SAVE MENU · FREE SLOTS</div>
   <h1>WHAT'S FREE</h1>
-  <p class="sub">Every room for the day you pick. Green is free time. Tap a room to choose your start time and how long you'll stay; the price updates as you go.</p>
+  <p class="sub">Pick a day, then look by room, by the time you'd like to start, or the earliest free. Coloured bars are times you can start; tap a room to choose your start and how long you'll stay.</p>
   <div class="banner" id="banner" hidden></div>
   <div class="days" id="days" role="group" aria-label="Day"></div>
+  <div class="views" id="views" role="group" aria-label="View">
+    <button type="button" data-v="room" aria-pressed="true">BY ROOM</button>
+    <button type="button" data-v="time" aria-pressed="false">BY TIME</button>
+    <button type="button" data-v="early" aria-pressed="false">EARLIEST</button>
+  </div>
   <div class="tiers" id="tiers"></div>
   <div id="board"><div class="state px load">LOADING SAVE SLOTS…</div></div>
 </div>
@@ -139,7 +180,11 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
     9: ['Kai', '#24B49A', 'Deluxe room', 4], 10: ['Bella', '#7A5BE0', 'Deluxe room', 4], 12: ['Atlas', '#E9E7EF', 'Deluxe room', 4],
     11: ['Maximillion', '#E0402F', 'VIP room', 6]
   };
-  var GROUPS = [['NETFLIX ROOMS', [5, 7, 8]], ['DELUXE ROOMS', [9, 10, 12]], ['VIP ROOM', [11]]];
+  /* tiers: name, rooms, colour (free time and the section's top line) */
+  var GROUPS = [['NETFLIX ROOMS', [5, 7, 8], '#FF5A6E'], ['DELUXE ROOMS', [9, 10, 12], '#B48CFF'], ['VIP ROOM', [11], '#F2C21B']];
+  var TIER = {}; GROUPS.forEach(function (g) { g[1].forEach(function (u) { TIER[u] = g[2]; }); });
+  var EB = 11 * 60, view = 'room', hourSel = null;
+  try { view = localStorage.getItem('r2.view') || 'room'; } catch (e) {}
   var STEP = 15;
   var $ = function (id) { return document.getElementById(id); };
   var cache = {}, day = null, seq = 0, cur = null, timer = null;
@@ -191,40 +236,105 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
       if (my !== seq) return;
       data = res;
       if (res.failed) { $('board').innerHTML = '<p class="state">Couldn’t reach the booking calendar. <a style="color:var(--acc)" href="https://www.round2.sg/booknow">Book here instead</a>.</p>'; return; }
-      var lo = 24 * 60, hi = 0, cats = {}, any = false;
-      Object.keys(res.rooms).forEach(function (uid) { res.rooms[uid].list.forEach(function (o) { lo = Math.min(lo, o.m); hi = Math.max(hi, o.m + 180); if (o.eb) cats.eb = 1; any = true; }); });
-      if (!any) { lo = 11 * 60; hi = 23 * 60; }
-      lo = Math.floor(lo / 60) * 60; hi = Math.ceil(hi / 60) * 60;
-      var span = hi - lo, pos = function (m) { return (100 * (m - lo) / span).toFixed(2) + '%'; };
-      var ticks = ''; for (var t = lo; t <= hi; t += 120) ticks += '<span style="left:' + pos(t) + '">' + clock(t) + '</span>';
-      $('tiers').innerHTML = (cats.eb ? '<span><i style="background:#66C7FF"></i>Early bird · 11am, $35</span>' : '') + '<span><i style="background:var(--free)"></i>You can start a session here</span><span>' + (res.ph ? 'Public holiday · peak prices' : res.peak ? 'Peak day' : 'Off-peak day') + ' · 3–6 h</span>';
-      var html = any ? '' : '<p class="state">Everything’s booked for this day. Try another day, or message us on <a style="color:var(--acc)" href="http://wa.me/6591625767" target="_blank" rel="noopener">WhatsApp</a>.</p>';
-      GROUPS.forEach(function (g) {
-        html += '<div class="group px">' + g[0] + '</div>';
-        g[1].forEach(function (uid) {
-          var R = ROOMS[uid], info = res.rooms[uid] || { list: [], ranges: [] }, segs = '';
-          info.ranges.forEach(function (r) { segs += '<span class="seg' + (r[2] ? ' eb' : '') + '" style="left:' + pos(r[0]) + ';width:calc(' + (100 * (r[1] - r[0] + STEP) / span).toFixed(2) + '% - 1px)"></span>'; });
-          var from = info.list.length ? Math.min.apply(null, info.list.map(function (o) { return o.price; })) : 0;
-          var txt = info.ranges.map(function (r) { return r[0] === r[1] ? clock(r[0]) : clock(r[0]) + '–' + clock(r[1]); }).join(', ');
-          html += '<div class="room" style="--rc:' + R[1] + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': start ' + txt) + '"' : '') + '><div><h3>' + R[0] + '</h3><div class="ty">' + R[2] + '</div></div><div>' +
-            '<div class="track">' + segs + '</div><div class="ticks">' + ticks + '</div>' +
-            (info.list.length ? '<div class="free">Start ' + esc(txt) + ' · from ' + money(from) + '</div><button class="pickb" type="button" data-u="' + uid + '">PICK A TIME</button>' : '<div class="free no">Fully booked</div>') + '</div></div>';
-        });
-      });
-      $('board').innerHTML = html;
+      render();
       if (my === seq) load(sgDate(1));
     }).catch(function () { $('board').innerHTML = '<p class="state">Couldn’t reach the booking calendar. <a style="color:var(--acc)" href="https://www.round2.sg/booknow">Book here instead</a>.</p>'; });
   }
 
+  /* ---------- three ways to look at a day ---------- */
+  function noneMsg() { return '<p class="state">Everything’s booked for this day. Try another day, or message us on <a style="color:var(--acc)" href="http://wa.me/6591625767" target="_blank" rel="noopener">WhatsApp</a>.</p>'; }
+  /* Early bird (11am) is offered on this day unless it's today and 11am has passed */
+  function ebPossible() { var n = sgNow(); return day > sgDate(0) || (n.getUTCHours() * 60 + n.getUTCMinutes()) < EB - 15; }
+  function ebChip(uid) {
+    var info = data.rooms[uid], o = info && info.starts[EB];
+    if (o) return '<button type="button" class="ebchip" data-u="' + uid + '" data-m="' + EB + '"><b>EARLY BIRD</b> 11am · ' + money(o.prices[3]) + '</button>';
+    return ebPossible() ? '<span class="ebchip gone"><b>EARLY BIRD</b> 11am · taken</span>' : '';
+  }
+  function render() {
+    var res = data, any = false;
+    Object.keys(res.rooms).forEach(function (uid) { if (res.rooms[uid].list.length) any = true; });
+    Array.prototype.forEach.call($('views').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === view)); });
+    $('tiers').innerHTML = '<span><i style="background:var(--eb)"></i>Early bird · 11am start, $35</span><span>' + (res.ph ? 'Public holiday · peak prices' : res.peak ? 'Peak day' : 'Off-peak day') + ' · 3–6 h sessions</span>';
+    if (!any) { $('board').innerHTML = noneMsg(); return; }
+    $('board').innerHTML = view === 'time' ? byTime() : view === 'early' ? byEarliest() : byRoom();
+    var sel = $('board').querySelector('.hours button[aria-pressed="true"]'); if (sel && sel.scrollIntoView) { try { sel.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (e) {} }
+  }
+  function tierBox(g, inner) {
+    var names = g[1].map(function (u) { return ROOMS[u][0]; }).join(' · ');
+    return '<section class="tier" style="--tc:' + g[2] + '"><header><span class="px">' + g[0] + '</span><span>' + names + '</span></header>' + inner + '</section>';
+  }
+  function byRoom() {
+    /* the day's span: earliest start to the latest finish, whole hours */
+    var lo = 24 * 60, hi = 0, res = data;
+    Object.keys(res.rooms).forEach(function (uid) { res.rooms[uid].list.forEach(function (o) { lo = Math.min(lo, o.m); hi = Math.max(hi, o.m + 180); }); });
+    lo = Math.floor(Math.min(lo, ebPossible() ? EB : lo) / 60) * 60; hi = Math.ceil(hi / 60) * 60;
+    var span = hi - lo, pos = function (m) { return (100 * (m - lo) / span).toFixed(2) + '%'; };
+    var ticks = '', lines = '';
+    for (var t = lo; t <= hi; t += 60) { lines += '<i class="hr" style="left:' + pos(t) + '"></i>'; if ((t - lo) % 120 === 0) ticks += '<span style="left:' + pos(t) + '">' + clock(t) + '</span>'; }
+    var html = '';
+    GROUPS.forEach(function (g) {
+      var inner = '';
+      g[1].forEach(function (uid) {
+        var R = ROOMS[uid], info = res.rooms[uid] || { list: [], ranges: [], starts: {} }, segs = '';
+        var day3 = info.list.filter(function (o) { return !o.eb; });
+        info.ranges.forEach(function (r) { if (r[2]) return; segs += '<span class="seg" style="left:' + pos(r[0]) + ';width:calc(' + (100 * (r[1] - r[0] + STEP) / span).toFixed(2) + '% - 1px)"></span>'; });
+        var from = day3.length ? Math.min.apply(null, day3.map(function (o) { return o.price; })) : 0;
+        var txt = info.ranges.filter(function (r) { return !r[2]; }).map(function (r) { return r[0] === r[1] ? clock(r[0]) : clock(r[0]) + '–' + clock(r[1]); }).join(', ');
+        inner += '<div class="room" style="--rc:' + R[1] + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': start ' + (txt || 'early bird')) + '"' : '') + '><div><h3>' + R[0] + '</h3><div class="ty">' + R[2] + '</div>' + ebChip(uid) + '</div><div>' +
+          '<div class="track">' + lines + segs + '</div><div class="ticks">' + ticks + '</div>' +
+          (day3.length ? '<div class="free">Start ' + esc(txt) + ' · from ' + money(from) + '</div><button class="pickb" type="button" data-u="' + uid + '">PICK A TIME</button>'
+            : info.list.length ? '<div class="free">Only the early bird is free</div>' : '<div class="free no">Fully booked</div>') + '</div></div>';
+      });
+      html += tierBox(g, inner);
+    });
+    return html;
+  }
+  /* "what's free at 8pm?": pick an hour, see every room that can start in it */
+  function byTime() {
+    var res = data, hours = {};
+    Object.keys(res.rooms).forEach(function (uid) { res.rooms[uid].list.forEach(function (o) { var h = Math.floor(o.m / 60) * 60; (hours[h] = hours[h] || {})[uid] = (hours[h][uid] || []).concat(o); }); });
+    var keys = Object.keys(hours).map(Number).sort(function (a, b) { return a - b; });
+    if (hourSel == null || !hours[hourSel]) { var n = sgNow(), nowH = day === sgDate(0) ? n.getUTCHours() * 60 : 0, pref = keys.filter(function (h) { return h >= Math.max(nowH, 19 * 60); })[0]; hourSel = pref != null ? pref : keys[0]; }
+    var chips = '<div class="hours" id="hours">' + keys.map(function (h) {
+      var c = Object.keys(hours[h]).length;
+      return '<button type="button" data-h="' + h + '" aria-pressed="' + (h === hourSel) + '">' + clock(h) + '<small>' + c + ' room' + (c > 1 ? 's' : '') + '</small></button>';
+    }).join('') + '</div>';
+    var html = chips;
+    GROUPS.forEach(function (g) {
+      var inner = '';
+      g[1].forEach(function (uid) {
+        var list = hours[hourSel] && hours[hourSel][uid]; if (!list) return;
+        var o = list[0], R = ROOMS[uid];
+        inner += '<div class="row" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3>' + R[0] + '</h3><div class="ty">' + R[2] + '</div></div>' +
+          '<div class="when">' + list.map(function (x) { return clock(x.m); }).join(' · ') + '<small>' + (o.eb ? 'Early bird · ' : '') + 'from ' + money(o.prices[3]) + ' · up to ' + o.maxH + ' h</small></div>' +
+          '<button class="pickb" type="button" data-u="' + uid + '" data-m="' + o.m + '">START ' + clock(o.m).toUpperCase() + '</button></div>';
+      });
+      if (inner) html += tierBox(g, inner);
+    });
+    return html;
+  }
+  /* earliest free start for every room, soonest first */
+  function byEarliest() {
+    var res = data, rows = [];
+    Object.keys(res.rooms).forEach(function (uid) { var l = res.rooms[uid].list; if (l.length) rows.push([uid, l[0]]); });
+    rows.sort(function (a, b) { return a[1].m - b[1].m || a[1].prices[3] - b[1].prices[3]; });
+    return rows.map(function (r) {
+      var uid = r[0], o = r[1], R = ROOMS[uid];
+      return '<div class="row" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3>' + R[0] + '</h3><div class="ty" style="color:' + TIER[uid] + '">' + R[2] + '</div></div>' +
+        '<div class="when">' + clock(o.m) + (o.eb ? ' · Early bird' : '') + '<small>' + money(o.prices[3]) + ' for 3 h · up to ' + o.maxH + ' h</small></div>' +
+        '<button class="pickb" type="button" data-u="' + uid + '" data-m="' + o.m + '">START ' + clock(o.m).toUpperCase() + '</button></div>';
+    }).join('');
+  }
+
   /* ---------- the picker: start time → length → details → hold & pay ---------- */
   function step(id) { ['pick', 'det', 'hold'].forEach(function (x) { $(x).hidden = x !== id; }); }
-  function openRoom(uid) {
+  function openRoom(uid, m) {
     var info = data && data.rooms[uid]; if (!info || !info.list.length) return;
-    cur = { uid: uid, start: null, len: null };
+    cur = { uid: uid, start: m != null && info.starts[m] ? m : null, len: null };
     $('mTitle').textContent = ROOMS[uid][0] + ' · ' + ROOMS[uid][2];
     $('mSub').textContent = dayLabel(day);
     $('pTimes').innerHTML = info.list.map(function (o) {
-      return '<button type="button" data-m="' + o.m + '" class="' + (o.eb ? 'eb' : '') + '" aria-pressed="false">' + clock(o.m) + '<small>' + (o.eb ? 'Early bird' : 'from ' + money(o.price)) + '</small></button>';
+      return '<button type="button" data-m="' + o.m + '" class="' + (o.eb ? 'eb' : '') + '" aria-pressed="' + (o.m === cur.start) + '">' + clock(o.m) + '<small>' + (o.eb ? 'Early bird' : 'from ' + money(o.price)) + '</small></button>';
     }).join('');
     step('pick'); drawLens(); $('modal').hidden = false; document.body.style.overflow = 'hidden';
     count('board_pick');
@@ -313,8 +423,16 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
   }
 
   $('days').addEventListener('click', function (e) { var b = e.target.closest('button[data-d]'); if (b) show(b.getAttribute('data-d')); });
-  $('board').addEventListener('click', function (e) { var b = e.target.closest('[data-u]'); if (b) openRoom(b.getAttribute('data-u')); });
-  $('board').addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.room[data-u]')) { e.preventDefault(); openRoom(e.target.getAttribute('data-u')); } });
+  $('board').addEventListener('click', function (e) {
+    var h = e.target.closest('button[data-h]'); if (h) { hourSel = +h.getAttribute('data-h'); render(); return; }
+    var b = e.target.closest('[data-u]'); if (b) openRoom(b.getAttribute('data-u'), b.hasAttribute('data-m') ? +b.getAttribute('data-m') : null);
+  });
+  $('board').addEventListener('keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.room[data-u], .row[data-u]')) { e.preventDefault(); openRoom(e.target.getAttribute('data-u'), e.target.hasAttribute('data-m') ? +e.target.getAttribute('data-m') : null); } });
+  $('views').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-v]'); if (!b) return;
+    view = b.getAttribute('data-v'); try { localStorage.setItem('r2.view', view); } catch (x) {}
+    if (data && !data.failed) render(); count('board_view_' + view);
+  });
   $('mClose').onclick = function () { if (!$('hold').hidden) release(''); else if (!$('det').hidden) step('pick'); else closeBook(); };
   addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('modal').hidden && $('hold').hidden) closeBook(); });
 
