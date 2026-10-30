@@ -47,6 +47,10 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 .group { margin: 18px 0 6px; font-size: 9px; color: var(--mute); }
 .room { display: grid; grid-template-columns: 190px 1fr; gap: 14px; align-items: center; padding: 14px 16px; margin: 12px 0; background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--rc); }
 .room h3 { margin: 0; font-size: 17px; }
+.ic { display: inline-block; width: 1em; height: 1em; vertical-align: -.12em; flex: none; }
+h3.nm .ic, #mTitle .ic { width: 15px; height: 15px; margin-right: 8px; vertical-align: -1px; }
+.lbl .ic, .step h4 .ic { width: 11px; height: 11px; margin-right: 7px; vertical-align: -1px; color: var(--mute); }
+.tier > header .ic { width: 12px; height: 12px; margin-right: 8px; vertical-align: -1px; color: var(--tg); }
 /* each character's name in their colour */
 h3.nm, .nm { color: var(--rc); }
 .room .ty { font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; }
@@ -163,9 +167,9 @@ h3.nm, .nm { color: var(--rc); }
   <p class="sub">Pick a day, then look by room, by the time you'd like to start, or the earliest free. Coloured bars are times you can start; tap a room to choose your start and how long you'll stay.</p>
   <p class="sub" style="margin-top:-6px">Already booked? <a style="color:var(--acc)" href="https://round2-book.donttelldadyet.workers.dev/find">Manage your booking</a> or add a TV message.</p>
   <div class="banner" id="banner" hidden></div>
-  <div class="lbl px dayhd">1 · PICK A DAY <span id="monthNow"></span><button type="button" id="toToday" hidden>BACK TO TODAY</button></div>
+  <div class="lbl px dayhd"><i data-ic="cal"></i>1 · PICK A DAY <span id="monthNow"></span><button type="button" id="toToday" hidden>BACK TO TODAY</button></div>
   <div class="cal" id="days" role="group" aria-label="Pick a day"></div>
-  <div class="lbl px" style="margin-top:20px">2 · HOW DO YOU WANT TO LOOK?</div>
+  <div class="lbl px" style="margin-top:20px"><i data-ic="eye"></i>2 · HOW DO YOU WANT TO LOOK?</div>
   <div class="views" id="views" role="group" aria-label="View">
     <button type="button" data-v="room" aria-pressed="true">BY ROOM</button>
     <button type="button" data-v="time" aria-pressed="false">BY TIME</button>
@@ -173,20 +177,20 @@ h3.nm, .nm { color: var(--rc); }
   </div>
   <div class="tiers" id="tiers"></div>
   <div id="board"><div class="state px load">LOADING SAVE SLOTS…</div></div>
-  <p class="sub" style="margin-top:18px">🌙 Late night? Every online session must end by 11:15pm, so the latest start for 3 hours is 8:15pm. Want to start later or stay past 11:15pm? <a style="color:var(--acc)" href="https://wa.me/6591625767?text=Hi%20Round2%2C%20I%27d%20like%20a%20late-night%20session%20(past%2011%3A15pm)" target="_blank" rel="noopener">WhatsApp us</a> and we’ll arrange it.</p>
+  <p class="sub" style="margin-top:18px"><i data-ic="moon"></i> Late night? Every online session must end by 11:15pm, so the latest start for 3 hours is 8:15pm. Want to start later or stay past 11:15pm? <a style="color:var(--acc)" href="https://wa.me/6591625767?text=Hi%20Round2%2C%20I%27d%20like%20a%20late-night%20session%20(past%2011%3A15pm)" target="_blank" rel="noopener">WhatsApp us</a> and we’ll arrange it.</p>
 </div>
 
 <div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mTitle">
   <div class="sheet">
     <div class="hd"><div><b id="mTitle"></b><p id="mSub"></p></div><button class="x" id="mClose" type="button">× BACK</button></div>
     <div id="pick">
-      <div class="step"><h4>1 · START TIME</h4><div class="chips" id="pTimes"></div></div>
-      <div class="step"><h4>2 · HOW LONG</h4><p class="hint" id="pSave" style="margin:-4px 0 12px"></p><div class="chips" id="pLens"></div><p class="hint" style="margin:12px 0 0">🌙 Staying past 11:15pm? Late-night sessions are arranged on <a style="color:var(--acc)" href="https://wa.me/6591625767?text=Hi%20Round2%2C%20I%27d%20like%20a%20late-night%20session%20(past%2011%3A15pm)" target="_blank" rel="noopener">WhatsApp</a>.</p></div>
+      <div class="step"><h4><i data-ic="clock"></i>1 · START TIME</h4><div class="chips" id="pTimes"></div></div>
+      <div class="step"><h4><i data-ic="glass"></i>2 · HOW LONG</h4><p class="hint" id="pSave" style="margin:-4px 0 12px"></p><div class="chips" id="pLens"></div><p class="hint" style="margin:12px 0 0"><i data-ic="moon"></i> Staying past 11:15pm? Late-night sessions are arranged on <a style="color:var(--acc)" href="https://wa.me/6591625767?text=Hi%20Round2%2C%20I%27d%20like%20a%20late-night%20session%20(past%2011%3A15pm)" target="_blank" rel="noopener">WhatsApp</a>.</p></div>
       <div class="sum"><div><div id="pWhen" class="hint"></div><b id="pPrice"></b></div><button class="go" id="pGo" type="button" disabled>CONTINUE</button></div>
       <p class="note" id="pNote"></p>
     </div>
     <div id="det" hidden>
-      <div class="step"><h4>3 · YOUR DETAILS</h4>
+      <div class="step"><h4><i data-ic="user"></i>3 · YOUR DETAILS</h4>
         <label class="fl">Name<input id="fName" autocomplete="name"></label>
         <label class="fl">Mobile (WhatsApp)<span class="tel"><input id="fCc" type="tel" inputmode="tel" autocomplete="tel-country-code" value="+65" aria-label="Country code" maxlength="5"><input id="fPhone" type="tel" autocomplete="tel-national" inputmode="tel" placeholder="8123 4567" aria-label="Mobile number"></span></label>
         <label class="fl">Email<input id="fEmail" type="email" autocomplete="email"></label>
@@ -194,7 +198,7 @@ h3.nm, .nm { color: var(--rc); }
         <p class="hint">Overseas number? Change +65 to your country code. We may WhatsApp you on this number. Confirmation and receipt go to this email.</p>
       </div>
       <div class="step">
-        <label class="cel"><input type="checkbox" id="cOn"> <span><b>Celebrating?</b> Put a message on the room’s TV 🎂<br><small>Birthday, anniversary or anything. It pops up in the first hour, and you can change it later.</small></span></label>
+        <label class="cel"><input type="checkbox" id="cOn"> <span><b>Celebrating?</b> Put a message on the room’s TV <i data-ic="cake"></i><br><small>Birthday, anniversary or anything. It pops up in the first hour, and you can change it later.</small></span></label>
         <div id="cBox" hidden>
           <div class="chips" id="cKind" style="margin:10px 0">
             <button type="button" data-k="birthday" aria-pressed="true">Birthday</button><button type="button" data-k="anniversary" aria-pressed="false">Anniversary</button>
@@ -211,7 +215,7 @@ h3.nm, .nm { color: var(--rc); }
       <p class="note err" id="dErr"></p>
     </div>
     <div id="hold" hidden>
-      <div class="step"><h4>4 · PAY</h4>
+      <div class="step"><h4><i data-ic="card"></i>4 · PAY</h4>
         <p class="hint" id="hWhat"></p>
         <p class="hint">We're holding this for you for</p>
         <div class="cd px" id="hCd">10:00</div>
@@ -240,6 +244,24 @@ h3.nm, .nm { color: var(--rc); }
   };
   /* tiers: name, rooms, colour (the section's top line and title). Free-time bars use each room's own character colour. */
   var GROUPS = [['NETFLIX ROOMS', [5, 7, 8], '#FF5A6E'], ['DELUXE ROOMS', [9, 10, 12], '#B48CFF'], ['VIP ROOM', [11], '#E0402F']];
+  /* small pixel icons (12×12, drawn in the text colour) to break up the text: room type, steps, late night, celebrating */
+  var PIX = {
+   tv: ['..#.....#...','...#...#....','....#.#.....','############','#..........#','#...#......#','#...###....#','#...#####..#','#...###....#','#...#......#','#..........#','############'],
+   pad:['............','............','.##########.','#..........#','#.#.....#..#','###....#.#.#','#.#.....#..#','#...####...#','#..##..##..#','.##......##.','............','............'],
+   crown:['............','.#...##...#.','.##..##..##.','.###.##.###.','.##########.','.##########.','.##.####.##.','.##########.','............','.##########.','............','............'],
+   cal:['..#.....#...','############','#..........#','############','#..........#','#.##.##.##.#','#.##.##.##.#','#..........#','#.##.##....#','#.##.##....#','#..........#','############'],
+   eye:['............','............','....####....','..##....##..','.#...##...#.','#...####...#','#...####...#','.#...##...#.','..##....##..','....####....','............','............'],
+   clock:['...######...','..#......#..','.#...#....#.','#....#.....#','#....#.....#','#....###...#','#.......#..#','#........#.#','#..........#','.#........#.','..#......#..','...######...'],
+   glass:['############','.#........#.','.#........#.','..#.####.#..','...#.##.#...','....#..#....','....#..#....','...#....#...','..#..##..#..','.#..####..#.','.#.######.#.','############'],
+   user:['....####....','...#....#...','...#....#...','...#....#...','....####....','............','..########..','.#........#.','#..........#','#..........#','#..........#','############'],
+   card:['............','############','#..........#','############','############','#..........#','#..........#','#.####.....#','#..........#','############','............','............'],
+   cake:['.....##.....','......#.....','.....##.....','.....##.....','.##########.','.#........#.','.#.##..##.#.','.##########.','#..........#','#.#.#..#.#.#','#..........#','############'],
+   moon:['....####....','..###.......','.##.........','.#..........','##..........','##..........','##..........','##.........#','.##.......##','.###.....##.','..########..','....####....'],
+  };
+  function ic(n, cls) { var p = PIX[n], r = ''; for (var y = 0; y < 12; y++) for (var x = 0; x < 12; x++) if (p[y][x] === '#') r += 'M' + x + ' ' + y + 'h1v1h-1z';
+    return '<svg class="ic' + (cls ? ' ' + cls : '') + '" viewBox="0 0 12 12" aria-hidden="true" shape-rendering="crispEdges"><path d="' + r + '" fill="currentColor"/></svg>'; }
+  function typeIc(uid) { var t = ROOMS[uid][2]; return /VIP/i.test(t) ? 'crown' : /Deluxe/i.test(t) ? 'pad' : 'tv'; }
+  [].forEach.call(document.querySelectorAll('i[data-ic]'), function (el) { el.outerHTML = ic(el.getAttribute('data-ic')); });
   var TIER = {}; GROUPS.forEach(function (g) { g[1].forEach(function (u) { TIER[u] = g[2]; }); });
   var EB = 11 * 60, view = 'room', hourSel = null;
   try { view = localStorage.getItem('r2.view') || 'room'; } catch (e) {}
@@ -334,7 +356,7 @@ h3.nm, .nm { color: var(--rc); }
     /* top line = equal bands of each room's colour, so no one character owns the section */
     var n = g[1].length, tg = 'linear-gradient(90deg,' + g[1].map(function (u, i) { return ROOMS[u][1] + ' ' + (100 * i / n).toFixed(2) + '% ' + (100 * (i + 1) / n).toFixed(2) + '%'; }).join(',') + ')';
     var names = g[1].map(function (u) { return '<span style="color:' + ROOMS[u][1] + '">' + ROOMS[u][0] + '</span>'; }).join(' · ');
-    return '<section class="tier" style="--tg:' + tg + '"><header><span class="px">' + g[0] + '</span><span>' + names + '</span></header>' + inner + '</section>';
+    return '<section class="tier" style="--tg:' + tg + '"><header><span class="px">' + ic(typeIc(g[1][0])) + g[0] + '</span><span>' + names + '</span></header>' + inner + '</section>';
   }
   function byRoom() {
     /* the day's span: earliest start to the latest finish, whole hours */
@@ -356,7 +378,7 @@ h3.nm, .nm { color: var(--rc); }
         var rgs = info.ranges.filter(function (r) { return !r[2]; });
         var txt = rgs.map(function (r) { return r[0] === r[1] ? clock(r[0]) : clock(r[0]) + ' to ' + clock(r[1]); }).join(', or ');
         var lead = rgs.length === 1 && rgs[0][0] === rgs[0][1] ? 'Slot available starting at ' : 'Slots available starting anytime from ';
-        inner += '<div class="room" style="--rc:' + R[1] + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': ' + (txt ? lead + txt : 'early bird')) + '"' : '') + '><div><h3 class="nm">' + R[0] + '</h3><div class="ty">' + R[2] + '</div>' + ebChip(uid) + '</div><div>' +
+        inner += '<div class="room" style="--rc:' + R[1] + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': ' + (txt ? lead + txt : 'early bird')) + '"' : '') + '><div><h3 class="nm">' + ic(typeIc(uid)) + R[0] + '</h3><div class="ty">' + R[2] + '</div>' + ebChip(uid) + '</div><div>' +
           '<div class="track">' + lines + segs + '</div><div class="ticks">' + ticks + '</div>' +
           (day3.length ? '<div class="free">' + lead + esc(txt) + ' · from ' + money(from) + '</div><button class="pickb" type="button" data-u="' + uid + '">PICK A TIME</button>'
             : info.list.length ? '<div class="free">Only the early bird is free</div>' : '<div class="free no">Fully booked</div>') + '</div></div>';
@@ -381,7 +403,7 @@ h3.nm, .nm { color: var(--rc); }
       g[1].forEach(function (uid) {
         var list = hours[hourSel] && hours[hourSel][uid]; if (!list) return;
         var o = list[0], R = ROOMS[uid];
-        inner += '<div class="row" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm">' + R[0] + '</h3><div class="ty">' + R[2] + '</div></div>' +
+        inner += '<div class="row" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm">' + ic(typeIc(uid)) + R[0] + '</h3><div class="ty">' + R[2] + '</div></div>' +
           '<div class="when">' + list.map(function (x) { return clock(x.m); }).join(' · ') + '<small>' + (o.eb ? 'Early bird · ' : '') + 'from ' + money(o.prices[3]) + ' · up to ' + o.maxH + ' h</small></div>' +
           '<button class="pickb" type="button" data-u="' + uid + '" data-m="' + o.m + '">START ' + clock(o.m).toUpperCase() + '</button></div>';
       });
@@ -399,7 +421,7 @@ h3.nm, .nm { color: var(--rc); }
     var top = ebs.length ? '<div class="ebnote"><b>EARLY BIRD AVAILABLE</b> 11am start · $35 for 3 h · ' + ebs.join(', ') + '</div>' : '';
     return top + rows.map(function (r) {
       var uid = r[0], o = r[1], R = ROOMS[uid];
-      return '<div class="row' + (o.eb ? ' ebrow' : '') + '" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm">' + R[0] + '</h3><div class="ty" style="color:' + R[1] + '">' + R[2] + '</div></div>' +
+      return '<div class="row' + (o.eb ? ' ebrow' : '') + '" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm">' + ic(typeIc(uid)) + R[0] + '</h3><div class="ty" style="color:' + R[1] + '">' + R[2] + '</div></div>' +
         '<div class="when">' + (o.eb ? '<span class="ebtag">EARLY BIRD AVAILABLE</span>' : '') + clock(o.m) + '<small>' + money(o.prices[3]) + ' for 3 h · up to ' + o.maxH + ' h</small></div>' +
         '<button class="pickb" type="button" data-u="' + uid + '" data-m="' + o.m + '">START ' + clock(o.m).toUpperCase() + '</button></div>';
     }).join('');
@@ -410,7 +432,7 @@ h3.nm, .nm { color: var(--rc); }
   function openRoom(uid, m) {
     var info = data && data.rooms[uid]; if (!info || !info.list.length) return;
     cur = { uid: uid, start: m != null && info.starts[m] ? m : null, len: null };
-    $('mTitle').innerHTML = '<span class="nm" style="--rc:' + ROOMS[uid][1] + '">' + ROOMS[uid][0] + '</span> · ' + ROOMS[uid][2];
+    $('mTitle').innerHTML = '<span class="nm" style="--rc:' + ROOMS[uid][1] + '">' + ic(typeIc(uid)) + ROOMS[uid][0] + '</span> · ' + ROOMS[uid][2];
     /* like the TV launcher: once a room is picked, its character's colour leads (buttons, selections) */
     $('modal').style.setProperty('--acc', ROOMS[uid][1]); $('modal').style.setProperty('--acc-ink', uid == 10 || uid == 11 ? '#ffffff' : '#0b0914');
     $('mSub').textContent = dayLabel(day);
