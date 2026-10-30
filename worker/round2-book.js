@@ -299,8 +299,17 @@ async function finalize(env, ref, source) {
   } catch (err) { result = { problem: 'paid – booking not created: ' + String(err.message || err).slice(0, 150) }; }
   result.at = Date.now(); result.source = source;
   await hb.done(ref, result);
+  if (!result.problem && !result.dryRun) await paidStat(q, d).catch(() => null);
   d.done = result;
   return result.problem ? { ok: false, err: result.problem, h: d } : { ok: true, h: d };
+}
+
+/* website stats (Firebase /web, round2-tv-launcher docs/site-stats.md): +1 paid booking for today, per room, per length.
+   Numbers only. The control centre's Website tab shows them next to the booking page's own counters. */
+async function paidStat(q, d) {
+  const day = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10), inc = { '.sv': { increment: 1 } };
+  const body = { board_paid: inc, ['board_paid_' + GM_ROOM[q.unit].replace('max', 'maximillion')]: inc, ['board_paid_len_' + q.hours]: inc };
+  await fetch('https://round2-tv-default-rtdb.asia-southeast1.firebasedatabase.app/web/days/' + day + '.json', { method: 'PATCH', body: JSON.stringify(body) });
 }
 
 /* celebration message → the guest messages system (Make "GUEST MESSAGE LINKS"): a link for this booking, then the

@@ -396,7 +396,7 @@ h3.nm, .nm { color: var(--rc); }
   }
 
   /* ---------- the picker: start time → length → details → hold & pay ---------- */
-  function step(id) { ['pick', 'det', 'hold'].forEach(function (x) { $(x).hidden = x !== id; }); }
+  function step(id) { ['pick', 'det', 'hold'].forEach(function (x) { $(x).hidden = x !== id; }); at({ pick: 'board_room', det: 'board_details', hold: 'board_paying' }[id]); }
   function openRoom(uid, m) {
     var info = data && data.rooms[uid]; if (!info || !info.list.length) return;
     cur = { uid: uid, start: m != null && info.starts[m] ? m : null, len: null };
@@ -408,7 +408,7 @@ h3.nm, .nm { color: var(--rc); }
       return '<button type="button" data-m="' + o.m + '" class="' + (o.eb ? 'eb' : '') + '" aria-pressed="' + (o.m === cur.start) + '">' + clock(o.m) + '<small>' + (o.eb ? 'Early bird' : 'from ' + money(o.price)) + '</small></button>';
     }).join('');
     step('pick'); drawLens(); $('modal').hidden = false; document.body.style.overflow = 'hidden';
-    count('board_pick');
+    count('board_pick'); count('board_room_' + GM[uid]);
   }
   function startObj() { return data.rooms[cur.uid].starts[cur.start]; }
   /* how much a longer stay saves against paying the 3-hour rate for every hour (Early Bird: no extra saving –
@@ -488,6 +488,9 @@ h3.nm, .nm { color: var(--rc); }
     var max = ROOMS[cur.uid][3], h = ''; for (var i = 1; i <= max; i++) h += '<option>' + i + '</option>'; $('fPax').innerHTML = h; $('fPax').value = Math.min(2, max);
     try { var me = JSON.parse(localStorage.getItem('r2.me') || '{}'); ['Name', 'Phone', 'Email'].forEach(function (k) { if (me[k] && !$('f' + k).value) $('f' + k).value = me[k]; }); if (me.Cc) $('fCc').value = me.Cc; } catch (e) {}
     step('det'); count('board_continue');
+    count('board_len_' + cur.len); count(o.eb ? 'board_eb' : data.ph ? 'board_ph' : data.peak ? 'board_peak' : 'board_offpeak');
+    var ahead = Math.round((new Date(day + 'T00:00:00Z') - new Date(sgDate(0) + 'T00:00:00Z')) / 864e5);
+    count('board_ahead_' + (ahead === 0 ? 'today' : ahead === 1 ? 'tomorrow' : ahead <= 7 ? 'week' : ahead <= 31 ? 'month' : ahead <= 92 ? '3months' : 'later'));
   });
   $('dGo').addEventListener('click', function () {
     var o = startObj(), b = $('dGo');
@@ -499,6 +502,7 @@ h3.nm, .nm { color: var(--rc); }
       if (!j.url) { $('dErr').textContent = j.error || 'Something went wrong – try again.'; if (/taken|paying/.test(j.error || '')) { load(day, true); } return; }
       ss.set('r2.ref', j.ref); ss.set('r2.went', null);
       showHold(j); count('board_hold');
+      if (body.msg) count('board_cel'); if (!/^\+65/.test(body.phone)) count('board_intl');
     }, function () { b.disabled = false; b.innerHTML = 'HOLD &amp; PAY'; $('dErr').textContent = 'No connection – try again.'; });
   });
   function showHold(j) {
@@ -513,28 +517,54 @@ h3.nm, .nm { color: var(--rc); }
     }, 500);
   }
   function release(msg) {
-    var ref = ss.get('r2.ref'); ss.set('r2.ref', null); ss.set('r2.went', null); clearInterval(timer);
+    var ref = ss.get('r2.ref'); if (ref) count(ss.get('r2.went') ? 'board_left_pay' : 'board_let_go'); ss.set('r2.ref', null); ss.set('r2.went', null); clearInterval(timer);
     if (ref) post('/release', { ref: ref }).catch(function () {});
     if (msg) banner(msg);
     if (!$('modal').hidden) closeBook();
-    load(day, true); show(day);
+    at('board'); load(day, true); show(day);
   }
   $('hPay').addEventListener('click', function () { ss.set('r2.went', '1'); count('board_pay'); });
   $('hChange').addEventListener('click', function () { release(''); });
   /* back button from HitPay (page restored) → free the slot straight away */
   addEventListener('pageshow', function () { if (ss.get('r2.ref') && ss.get('r2.went')) release('You left the payment page, so we released the slot. Pick a time again.'); });
   function banner(t, ok) { $('banner').hidden = !t; $('banner').textContent = t || ''; $('banner').className = 'banner' + (ok ? ' ok' : ''); }
-  function closeBook() { $('modal').hidden = true; document.body.style.overflow = ''; }
+  function closeBook() { $('modal').hidden = true; document.body.style.overflow = ''; at('board'); }
 
-  /* same visitor counters as the menu (Firebase /web), once per visit */
+  /* visitor stats – same Firebase /web counters and live view as the website menu (round2-tv-launcher docs/site-stats.md).
+     Counters are once per visit (this tab), numbers only – no names, contacts or IPs. ?notrack turns it off.
+     board · board_room_<name> · board_continue · board_len_<3-6> · board_ahead_<today|tomorrow|week|month|3months|later>
+     board_eb / board_offpeak / board_peak / board_ph · board_hold · board_cel · board_intl · board_pay · board_left_pay ·
+     board_let_go · board_paid (+ board_paid_<name>, written by the booking engine once SimplyBook has the booking) */
+  var DB = 'https://round2-tv-default-rtdb.asia-southeast1.firebasedatabase.app/web', TRACK = !/[?&](notrack|sim=)/.test(location.search);
+  var GM = { 5: 'vale', 7: 'kaeden', 8: 'scarlett', 9: 'kai', 10: 'bella', 12: 'atlas', 11: 'maximillion' };
+  var sid = ss.get('r2s.sid'); if (!sid) { sid = Math.random().toString(36).slice(2, 12) + Date.now().toString(36).slice(-4); ss.set('r2s.sid', sid); }
+  var pend = {}, ptimer = null, where = 'board';
   function count(k) {
-    if (/[?&]notrack/.test(location.search)) return;
+    if (!TRACK) return;
+    k = String(k).toLowerCase().replace(/[^a-z0-9_]/g, '_').slice(0, 32);
+    if (ss.get('r2s.c.' + k)) return; ss.set('r2s.c.' + k, '1');
+    pend[k] = { '.sv': { increment: 1 } }; clearTimeout(ptimer); ptimer = setTimeout(flush, 600);
+  }
+  function flush(beacon) {
+    var keys = Object.keys(pend); if (!keys.length) return;
+    var body = JSON.stringify(pend); pend = {};
+    try { fetch(DB + '/days/' + sgDate(0) + '.json', { method: 'PATCH', body: body, keepalive: !!beacon }).catch(function () {}); } catch (e) {}
+  }
+  /* "on the site now": where they are in the booking page, refreshed every 30 s, removed when they leave */
+  function live(gone) {
+    if (!TRACK) return;
     try {
-      if (sessionStorage.getItem('r2s.c.' + k)) return; sessionStorage.setItem('r2s.c.' + k, '1');
-      var b = {}; b[k] = { '.sv': { increment: 1 } };
-      fetch('https://round2-tv-default-rtdb.asia-southeast1.firebasedatabase.app/web/days/' + sgDate(0) + '.json', { method: 'PATCH', body: JSON.stringify(b) }).catch(function () {});
+      if (gone) { fetch(DB + '/live/' + sid + '.json', { method: 'DELETE', keepalive: true }).catch(function () {}); return; }
+      if (document.visibilityState === 'hidden') return;
+      fetch(DB + '/live/' + sid + '.json', { method: 'PUT', body: JSON.stringify({ t: { '.sv': 'timestamp' }, p: where }) }).catch(function () {});
     } catch (e) {}
   }
+  function at(p) { if (p && p !== where) { where = p; live(); } }
+  setInterval(live, 30000);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') live(); else flush(true); });
+  addEventListener('pagehide', function () { flush(true); live(true); });
+  live();
+  if (!ss.get('r2s.c.board')) { var hr = ('0' + sgNow().getUTCHours()).slice(-2); count('board_h' + hr); count(innerWidth < 760 ? 'board_dev_m' : 'board_dev_d'); }
 
   $('days').addEventListener('click', function (e) {
     var st = e.target.closest('button[data-step]'); if (st) { calM = addMonth(calM, +st.getAttribute('data-step')); drawDays(); return; }
