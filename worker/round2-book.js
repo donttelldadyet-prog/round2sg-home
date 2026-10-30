@@ -1,5 +1,5 @@
 /* Round2 booking Worker (Cloudflare). Test build – see docs/own-booking-plan.md.
-   Secrets: HITPAY_KEY, HITPAY_SALT, HITPAY_API (sandbox), HITPAY_LIVE_KEY, HITPAY_LIVE_SALT, SWITCH_PASS, SWITCH_PIN, SB_COMPANY, SB_USER, SB_PASS.  Vars: SB_PUBLIC_KEY, DRY_RUN ("1" = don't create SimplyBook bookings).
+   Secrets: HITPAY_KEY, HITPAY_SALT, HITPAY_API (sandbox), HITPAY_LIVE_KEY, HITPAY_LIVE_SALT, TEST_CODE, SWITCH_PASS, SWITCH_PIN, SB_COMPANY, SB_USER, SB_PASS.  Vars: SB_PUBLIC_KEY, DRY_RUN ("1" = don't create SimplyBook bookings).
    Durable Object HOLDBOOK (class HoldBook): one place that holds unpaid slots, so two guests can't hold the same time,
    and whose alarm releases a hold after 10 min AND cancels its HitPay link (no paying for a released slot).
    Routes: GET /ph, POST /quote, POST /checkout, POST /release, POST /hitpay (webhook), GET /done?ref=, GET /test, GET /selftest
@@ -215,7 +215,7 @@ export class HoldBook extends DurableObject {
   }
   qList() { this.qInit(); return this.rows(`SELECT * FROM gmq ORDER BY at`); }
   /* booking switch (control centre › Systems): 'new' = this booking page, 'simplybook' = safe mode, guests book on SimplyBook */
-  getMode() { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = 'mode'`)[0]; return Object.assign({ booking: 'new', pay: 'test' }, r ? JSON.parse(r.v) : {}); }
+  getMode() { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = 'mode'`)[0]; return Object.assign({ booking: 'new' }, r ? JSON.parse(r.v) : {}); }
   setMode(m) { this.qInit(); this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('mode', ?)`, JSON.stringify(m)); return m; }
   /* wrong-password lock for the booking switch: 5 wrong tries in 30 min → locked for 30 min */
   lockOk(who) { this.gmInit(); this.sql.exec(`DELETE FROM gmrate WHERE t < ?`, Date.now() - 1800e3); return this.rows(`SELECT COUNT(*) AS n FROM gmrate WHERE who = ?`, who)[0].n < 5; }
@@ -283,9 +283,8 @@ export class HoldBook extends DurableObject {
   }
   /* timer ran out → release the hold and kill its HitPay link */
   async alarm() {
-    const due = this.rows(`SELECT ref, pr FROM holds WHERE status = 'pending' AND exp <= ?`, Date.now());
-    const pe = payEnv(this.env, this.getMode().pay);
-    for (const d of due) { this.sql.exec(`UPDATE holds SET status = 'released' WHERE ref = ?`, d.ref); await cancelLink(pe, d.pr); }
+    const due = this.rows(`SELECT ref, pr, data FROM holds WHERE status = 'pending' AND exp <= ?`, Date.now());
+    for (const d of due) { this.sql.exec(`UPDATE holds SET status = 'released' WHERE ref = ?`, d.ref); let pay = ''; try { pay = JSON.parse(d.data || '{}').pay; } catch (e) {} await cancelLink(envFor(this.env, pay), d.pr); }
     this.sql.exec(`DELETE FROM holds WHERE status = 'released' AND created < ?`, Date.now() - 7 * 86400e3);
     try { await this.qRun(); } catch (e) {}
     this.arm();
@@ -322,7 +321,8 @@ async function isFree(env, q, ignoreRef) {
 
 /* ---------- checkout: hold the slot (atomic), then make the HitPay payment ---------- */
 const RET_OK = /^https:\/\/([a-z0-9-]+\.)*(round2\.sg|github\.io|githack\.com|workers\.dev)\//;
-async function checkout(env, b, origin) {
+async function checkout(env0, b, origin) {
+  const env = envFor(env0, isTestRun(env0, b.test) ? 'test' : 'live'), pay = payOf(env);   /* test tools → sandbox, guests → live */
   if ((await book(env).getMode()).booking === 'simplybook') throw new Error('Online booking is on our SimplyBook page right now: www.round2.sg/booknow');
   const q = await quote(env, b);
   const ret = RET_OK.test(String(b.ret || '')) ? String(b.ret).split(/[?#]/)[0] : '';
@@ -346,20 +346,20 @@ async function checkout(env, b, origin) {
   if (!gaps.some(([f, t]) => s >= f && e + bufTo(t) <= t)) throw new Error('Sorry, that time was just taken – please pick another');
   const ref = 'R2B' + crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase();
   const hb = book(env);
-  const h = await hb.hold({ ref, date: q.date, unit: q.unit, units: [q.unit, MIRROR[q.unit]].filter(Boolean), s, e, phone: phone.slice(-8), email, data: { q, name, email, phone, pax, ret, msg } });
-  for (const old of h.released || []) await cancelLink(env, old);            // their earlier unpaid link stops working
+  const h = await hb.hold({ ref, date: q.date, unit: q.unit, units: [q.unit, MIRROR[q.unit]].filter(Boolean), s, e, phone: phone.slice(-8), email, data: { q, name, email, phone, pax, ret, msg, pay } });
+  for (const old of h.released || []) await cancelAny(env, old);            // their earlier unpaid link stops working
   if (!h.ok) throw new Error('Sorry, someone is paying for that time right now – please pick another');
   const when = new Date(q.date + 'T00:00:00Z').toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
   let pr;
   try {
     pr = await hitpay(env, 'POST', '/payment-requests', {
       amount: q.total.toFixed(2), currency: 'SGD', name, email, phone,
-      purpose: `Round2 ${q.room} · ${when} ${q.time}–${q.end} (${q.hours}h)`,
+      purpose: (pay === 'test' ? 'TEST · ' : '') + `Round2 ${q.room} · ${when} ${q.time}–${q.end} (${q.hours}h)`,
       reference_number: ref, redirect_url: `${origin}/done?ref=${ref}`, webhook: `${origin}/booking/hitpay`,
     });
   } catch (err) { await hb.release(ref); throw err; }
   await hb.setPr(ref, pr.id);
-  return { ref, url: pr.url, total: q.total, room: q.room, date: q.date, time: q.time, end: q.end, holdUntil: Date.now() + HOLD_SEC * 1000 };
+  return { ref, url: pr.url, total: q.total, room: q.room, date: q.date, time: q.time, end: q.end, holdUntil: Date.now() + HOLD_SEC * 1000, test: pay === 'test' || undefined };
 }
 
 /* ---------- after payment: put the booking into SimplyBook (exactly once) ---------- */
@@ -403,7 +403,7 @@ async function finalize(env, ref, source) {
       if (b0 && b0.id) result.confirm = await a('confirmBooking', [b0.id]).then(() => 'ok').catch((e) => 'no: ' + String(e.message || e).slice(0, 60));
       /* the details SimplyBook doesn't show: the name typed on the page (SimplyBook keeps an existing contact's name),
          what was really paid (SimplyBook shows the base service price) */
-      const note = `Online booking (round2.sg) · paid $${q.total.toFixed(2)} via HitPay · ref ${ref}\nBooked as: ${d.name} · ${d.phone} · ${d.email} · ${d.pax} guests` +
+      const note = (d.pay === 'test' ? '*** TEST BOOKING (HitPay sandbox, nobody paid) – CANCEL IT ***\n' : '') + `Online booking (round2.sg) · paid $${q.total.toFixed(2)} via HitPay · ref ${ref}\nBooked as: ${d.name} · ${d.phone} · ${d.email} · ${d.pax} guests` +
         `\nGuest session ${q.time}–${q.end} (the SimplyBook end, ${hhmm(eB)}, includes 15 min cleaning)` +
         (q.hours > 3 ? `\nIncludes +${q.hours - 3}h extension (${q.time}–${q.end})` : '') + (d.msg ? `\nTV message: ${d.msg.kind}, ${d.msg.after} min after start` : '') +
         (d.agreed ? `\nAgreed to T&C, privacy policy and "non-cancellable, non-refundable" at ${new Date(d.agreed + 8 * 3600e3).toISOString().slice(0, 16).replace('T', ' ')}` : '');
@@ -414,7 +414,7 @@ async function finalize(env, ref, source) {
   result.at = Date.now(); result.source = source;
   /* paid but not in SimplyBook (slot gone, SimplyBook down…): tell staff straight away so they can call / refund */
   if (result.problem) await staffAlert(env, `⚠️ ONLINE BOOKING NEEDS A HUMAN\n${result.problem}\n\nRef ${ref}\n${q.room} · ${q.date} ${q.time}–${q.end} (${q.hours}h) · paid $${q.total.toFixed(2)}\n${d.name} · ${d.phone} · ${d.email}`).catch(() => null);
-  else if (!result.dryRun) await staffAlert(env, `🎮 NEW ONLINE BOOKING\n${q.unit === 11 ? 'Maximillion' : q.room} · ${q.date} ${q.time}–${q.end} (${q.hours}h)\n${d.name} · ${d.pax} guests · ${d.phone}\nPaid $${q.total.toFixed(2)}${isSandbox(env) ? ' (TEST)' : ''} · ref ${ref}${d.msg ? '\nTV message: ' + d.msg.kind : ''}`).catch(() => null);
+  else if (!result.dryRun) await staffAlert(env, `🎮 NEW ONLINE BOOKING\n${q.unit === 11 ? 'Maximillion' : q.room} · ${q.date} ${q.time}–${q.end} (${q.hours}h)\n${d.name} · ${d.pax} guests · ${d.phone}\nPaid $${q.total.toFixed(2)}${d.pay === 'test' ? ' (TEST – sandbox, cancel it)' : ''} · ref ${ref}${d.msg ? '\nTV message: ' + d.msg.kind : ''}`).catch(() => null);
   await hb.done(ref, result);
   if (!result.problem && !result.dryRun) await paidStat(q, d).catch(() => null);
   d.done = result;
@@ -530,8 +530,8 @@ async function gm(env, req) {
 }
 
 /* ---------- food menu (room QR menu, round2sg-home menu/) ----------
-   One HitPay setting for the whole engine: the booking page AND the menu use the same keys – test or live is the
-   control centre's Payments switch (see payEnv below); both switch together.
+   Payments: guests pay LIVE once the live key is in Cloudflare; the control centre's test tools (TEST_CODE) always use the
+   HitPay sandbox – see envFor below. Same rule for the booking page and the menu.
    POST /menu/checkout (form field "order"): re-prices from the published menu.json exactly like Make's old ROOM MENU
      CHECKOUT, keeps the order here, makes the HitPay payment (webhook → /menu/hitpay, back to the menu page).
    POST /menu/hitpay (HitPay) and POST /menu/return (the menu page when the guest comes back): ask HitPay itself whether it's
@@ -545,20 +545,31 @@ const MENU_PAID_HOOK = 'https://hook.eu1.make.com/55nh6wniq1wftco8af9486noj4xuga
 const MENU_RETURN = 'https://donttelldadyet-prog.github.io/round2sg-home/menu/';
 const MENU_ROOMS = ['Kai', 'Bella', 'Atlas', 'Max', 'Scarlett', 'Vale', 'Kaeden'];
 const isSandbox = (env) => /sandbox/i.test(env.HITPAY_API || '');
-/* TWO HitPay accounts in Cloudflare: test = HITPAY_KEY / HITPAY_SALT / HITPAY_API (sandbox), live = HITPAY_LIVE_KEY /
-   HITPAY_LIVE_SALT (api.hit-pay.com). Which one is used is the "Payments" switch in the control centre (Systems ›
-   Switches, same two passwords as the booking switch), saved in the engine. Every request picks its keys from it. */
+/* TWO HitPay accounts in Cloudflare (no switch): real guests always pay on LIVE (HITPAY_LIVE_KEY / HITPAY_LIVE_SALT,
+   api.hit-pay.com) once those are pasted in; test runs always use the SANDBOX (HITPAY_KEY / HITPAY_SALT / HITPAY_API).
+   A test run = the booking page or menu sends the secret TEST_CODE (the control centre's test tools do this).
+   Until the live key is in Cloudflare, everything uses the sandbox (pre-launch). Each hold / order remembers which one
+   it used (data.pay = 'test' | 'live'), so its payment is always checked and cancelled with the right keys. */
 const HITPAY_LIVE_API = 'https://api.hit-pay.com/v1';
-function payEnv(env, pay) {
-  if (pay !== 'live') return env;
-  return Object.assign(Object.create(env), env, { HITPAY_KEY: env.HITPAY_LIVE_KEY, HITPAY_SALT: env.HITPAY_LIVE_SALT, HITPAY_API: HITPAY_LIVE_API });
+const liveReady = (env) => !!env.HITPAY_LIVE_KEY && !!env.HITPAY_LIVE_SALT && !/paste/.test(env.HITPAY_LIVE_KEY + env.HITPAY_LIVE_SALT);
+function rawEnv(env) { return env.RAW || env; }
+function envFor(env, pay) {
+  const e0 = rawEnv(env);
+  if (pay === 'test' || !liveReady(e0)) return e0;
+  const e = Object.assign(Object.create(e0), e0, { HITPAY_KEY: e0.HITPAY_LIVE_KEY, HITPAY_SALT: e0.HITPAY_LIVE_SALT, HITPAY_API: HITPAY_LIVE_API });
+  e.RAW = e0; return e;
 }
-async function menuCheckout(env, req, origin) {
+const payOf = (env) => (isSandbox(env) ? 'test' : 'live');
+const isTestRun = (env, code) => !!rawEnv(env).TEST_CODE && !!code && String(code) === rawEnv(env).TEST_CODE;
+/* a HitPay link whose account isn't known (an older unpaid hold): try both */
+const cancelAny = async (env, pr) => { if (!pr) return; await cancelLink(envFor(env, 'live'), pr); if (liveReady(rawEnv(env))) await cancelLink(envFor(env, 'test'), pr); };
+async function menuCheckout(env0, req, origin) {
   const no = (msg, s = 409) => J({ error: msg }, s);
+  const form = new URLSearchParams(await req.text()), env = envFor(env0, isTestRun(env0, form.get('test')) ? 'test' : 'live'), pay = payOf(env);
   if (!env.HITPAY_KEY || !env.HITPAY_API || !env.MENU_MAKE_K) return no('Payment isn’t set up yet. Please WhatsApp us to order.', 503);
   const hb = book(env), who = req.headers.get('cf-connecting-ip') || 'x';
   if (!(await hb.gmRate(who + ':menu', 20))) return no('Too many tries. Wait a few minutes, or WhatsApp us.', 429);
-  let o; try { o = JSON.parse(new URLSearchParams(await req.text()).get('order') || ''); } catch (e) { return no('Something in your order couldn’t be read. Refresh the page and try again.', 400); }
+  let o; try { o = JSON.parse(form.get('order') || ''); } catch (e) { return no('Something in your order couldn’t be read. Refresh the page and try again.', 400); }
   let menu; try { const r = await fetch(MENU_JSON + '?v=' + Date.now(), { cf: { cacheTtl: 30 } }); menu = await r.json(); } catch (e) { return no('The menu couldn’t be checked just now. Try again in a minute.', 503); }
   const P = menu.prices || {}, pc = P.pc || {}, pm = P.pm || {}, pn = P.pn || {}, g = +((menu.settings || {}).gst) || 0;
   const items = Array.isArray(o.items) ? o.items : [];
@@ -576,13 +587,13 @@ async function menuCheckout(env, req, origin) {
   let pr;
   try {
     pr = await hitpay(env, 'POST', '/payment-requests', { amount: (total / 100).toFixed(2), currency: 'SGD', reference_number: ref, send_email: 'false', allow_repeated_payments: 'false',
-      purpose: (isSandbox(env) ? 'TEST · ' : '') + 'Round2 food order #' + orderNo + ' (' + room + '): ' + (summary.length > 190 ? summary.slice(0, 187) + '...' : summary),
+      purpose: (pay === 'test' ? 'TEST · ' : '') + 'Round2 food order #' + orderNo + ' (' + room + '): ' + (summary.length > 190 ? summary.slice(0, 187) + '...' : summary),
       webhook: origin + '/menu/hitpay', redirect_url: MENU_RETURN + '?room=' + room.toLowerCase() });
   } catch (e) { return no('The payment page couldn’t be opened. Try again, or WhatsApp us.', 502); }
-  await hb.menuPut(ref, { gst, sub, base: isSandbox(env) ? 0 : base, note: String(o.note || '').slice(0, 500), room, lines: lines.join('\n'), total, status: 'pending', orderNo, createdAt: new Date().toISOString(), requestId: pr.id });
+  await hb.menuPut(ref, { pay, gst, sub, base: pay === 'test' ? 0 : base, note: String(o.note || '').slice(0, 500), room, lines: lines.join('\n'), total, status: 'pending', orderNo, createdAt: new Date().toISOString(), requestId: pr.id });
   const prev = String(o.prev || '');
   if (prev && prev !== pr.id) await cancelLink(env, prev);
-  return J({ url: pr.url, order: ref, no: orderNo, request_id: pr.id, test: isSandbox(env) || undefined });
+  return J({ url: pr.url, order: ref, no: orderNo, request_id: pr.id, test: pay === 'test' || undefined });
 }
 const KITCHEN_CHAT = '-5417846512';
 function kitchenSlip(rec) {
@@ -605,9 +616,10 @@ async function menuTelegram(env, rec, ref) {
   return r && r.ok ? 'sent' : '';
 }
 /* paid? ask HitPay, then hand it to Make exactly once */
-async function menuPaid(env, ref) {
-  const hb = book(env), rec = await hb.menuGet(ref);
+async function menuPaid(env0, ref) {
+  const hb = book(env0), rec = await hb.menuGet(ref);
   if (!rec) return { ok: false, err: 'unknown order' };
+  const env = envFor(env0, rec.pay || (rec.base === 0 ? 'test' : 'live'));
   if (rec.status !== 'pending') return { ok: true, already: rec.status };
   const d = await hitpay(env, 'GET', '/payment-requests/' + rec.requestId).catch(() => null);
   if (!d || d.status !== 'completed' || Math.round(+d.amount * 100) !== rec.total) return { ok: false, err: 'not paid yet' };
@@ -630,7 +642,7 @@ function bookedPage(env, ref, d, origin) {
   const q = d.q, done = d.done || {}, look = ROOM_LOOK[q.unit] || ['#f4f1fb', '#0b0914', ''], room = q.unit === 11 ? 'Maximillion' : q.room;
   const dt = new Date(q.date + 'T12:00:00Z'), dayTxt = dt.toLocaleDateString('en-SG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
   const clock = (t) => { const [h, m] = t.split(':').map(Number); return ((h + 11) % 12 + 1) + (m ? ':' + String(m).padStart(2, '0') : '') + (h % 24 < 12 ? 'am' : 'pm'); };
-  const msg = d.msg, tv = done.tv && done.tv.code ? done.tv : null, test = !!done.dryRun || isSandbox(env);
+  const msg = d.msg, tv = done.tv && done.tv.code ? done.tv : null, test = !!done.dryRun || d.pay === 'test';
   /* add-to-calendar file (session time only – the 15 min cleaning isn't the guest's) */
   const z = (t) => q.date.replace(/-/g, '') + 'T' + t.replace(':', '') + '00', endDay = q.endDate.replace(/-/g, '');
   const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Round2//Booking//EN', 'BEGIN:VEVENT', 'UID:' + ref + '@round2.sg', 'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z',
@@ -718,7 +730,7 @@ const back=new URLSearchParams(location.search).get('released');if(back)note('Pa
 export default {
   async fetch(req, env0) {
     const u = new URL(req.url);
-    const env = payEnv(env0, (await book(env0).getMode().catch(() => ({}))).pay);
+    const env = envFor(env0, 'live');   /* default for anything not tied to a hold/order: live once the live key is in */
     try {
       if (req.method === 'OPTIONS') return J({});
       if (u.pathname === '/ph') return J([...(await holidays())].sort());
@@ -738,21 +750,17 @@ export default {
         }
         const cur = await hb.getMode(), by = String(f.by || '').slice(0, 30), nm = Object.assign({}, cur, { t: Date.now(), by });
         if (f.booking !== undefined) { if (!['new', 'simplybook'].includes(f.booking)) return J({ error: 'booking must be new or simplybook' }, 400); nm.booking = f.booking; }
-        if (f.pay !== undefined) {
-          if (!['test', 'live'].includes(f.pay)) return J({ error: 'pay must be test or live' }, 400);
-          if (f.pay === 'live' && (!env0.HITPAY_LIVE_KEY || !env0.HITPAY_LIVE_SALT || /paste/.test(env0.HITPAY_LIVE_KEY + env0.HITPAY_LIVE_SALT))) return J({ error: 'The live HitPay key and salt aren’t in Cloudflare yet' }, 400);
-          nm.pay = f.pay;
-        }
+        if (f.pay !== undefined) return J({ error: 'Payments aren’t switched: guests always pay live, test tools always use the sandbox' }, 400);
         const m = await hb.setMode(nm);
         const said = (f.booking !== undefined && f.booking !== cur.booking ? (f.booking === 'simplybook' ? '🛟 Online booking switched to SAFE MODE (SimplyBook page)' : '✅ Online booking switched back to the NEW booking page') : '') +
-          (f.pay !== undefined && f.pay !== cur.pay ? (f.pay === 'live' ? '💳 Payments switched to LIVE (real money)' : '🧪 Payments switched to TEST (sandbox)') : '');
+'';
         if (said) await staffAlert(env, said + (by ? ' · by ' + by : '')).catch(() => null);
         return J(m);
       }
       if (u.pathname === '/status') {
-        const st = { payments: isSandbox(env) ? 'test' : 'live', dryRun: env.DRY_RUN === '1', simplybook: !!(env.SB_COMPANY && env.SB_USER && env.SB_PASS),
+        const st = { payments: liveReady(env0) ? 'live' : 'test', testCode: !!env0.TEST_CODE, dryRun: env.DRY_RUN === '1', simplybook: !!(env.SB_COMPANY && env.SB_USER && env.SB_PASS),
           sbSecret: !!env.SB_SECRET && !/paste/.test(env.SB_SECRET), kitchenBot: !!env.TG_BOT_TOKEN, staffAlerts: !!env.STAFF_CHAT, guestMessages: !!env.GM_STAFF,
-          menuSheet: !!env.MENU_MAKE_K, tvKey: !!env.TV_KEY, liveKeys: !!env0.HITPAY_LIVE_KEY && !/paste/.test(env0.HITPAY_LIVE_KEY), switchSet: !!env0.SWITCH_PASS && !/paste/.test(env0.SWITCH_PASS + env0.SWITCH_PIN), booking: (await book(env).getMode()).booking, t: Date.now() };
+          menuSheet: !!env.MENU_MAKE_K, tvKey: !!env.TV_KEY, liveKeys: liveReady(env0), switchSet: !!env0.SWITCH_PASS && !/paste/.test(env0.SWITCH_PASS + env0.SWITCH_PIN), booking: (await book(env).getMode()).booking, t: Date.now() };
         if (u.searchParams.get('deep')) {
           st.sbLogin = await admin(env).then(() => 'ok').catch((e) => 'failed: ' + String(e.message || e).slice(0, 80));
           st.sbPublic = await pub(env).then(() => 'ok').catch((e) => 'failed: ' + String(e.message || e).slice(0, 80));
@@ -764,10 +772,10 @@ export default {
       if (u.pathname === '/quote' && req.method === 'POST') { const b = await req.json(); const q = await quote(env, b); q.free = await isFree(env, q); return J(q); }
       if (u.pathname === '/checkout' && req.method === 'POST') return J(await checkout(env, await req.json(), u.origin));
       if (u.pathname === '/agree' && req.method === 'POST') { const { ref } = await req.json(); return J({ ok: await book(env).agree(String(ref || '').replace(/[^A-Z0-9]/g, '')) }); }
-      if (u.pathname === '/release' && req.method === 'POST') { const { ref } = await req.json(); const r = await book(env).release(String(ref || '')); if (r) await cancelLink(env, r.pr); return J({ released: !!r }); }
+      if (u.pathname === '/release' && req.method === 'POST') { const { ref } = await req.json(); const hb = book(env), h0 = await hb.get(String(ref || '')); const r = await hb.release(String(ref || '')); if (r) await cancelLink(envFor(env, h0 && h0.data.pay), r.pr); return J({ released: !!r }); }
       if (u.pathname === '/hitpay' && req.method === 'POST') {
         const raw = await req.text(), sig = req.headers.get('Hitpay-Signature') || '';
-        if ((await hmacHex(env.HITPAY_SALT, raw)) !== sig) return J({ error: 'bad signature' }, 401);
+        if ((await hmacHex(envFor(env, 'live').HITPAY_SALT, raw)) !== sig && (await hmacHex(envFor(env, 'test').HITPAY_SALT, raw)) !== sig) return J({ error: 'bad signature' }, 401);
         const p = JSON.parse(raw);
         if (p.status === 'completed' && p.reference_number) return J(await finalize(env, p.reference_number, 'webhook'));
         return J({ ignored: p.status });
@@ -775,9 +783,10 @@ export default {
       if (u.pathname === '/done') {
         const ref = (u.searchParams.get('ref') || '').replace(/[^A-Z0-9]/g, '');
         const h = await book(env).get(ref); if (!h) return H(PAGE('<h1>Booking not found</h1>'));
-        const pr = h.pr ? await hitpay(env, 'GET', '/payment-requests/' + h.pr).catch(() => ({})) : {};
+        const henv = envFor(env, h.data.pay);
+        const pr = h.pr ? await hitpay(henv, 'GET', '/payment-requests/' + h.pr).catch(() => ({})) : {};
         if (pr.status !== 'completed' && h.status !== 'paid' && h.status !== 'booking') {
-          const p2 = await book(env).release(ref); if (p2) await cancelLink(env, p2.pr);
+          const p2 = await book(env).release(ref); if (p2) await cancelLink(henv, p2.pr);
           return Response.redirect((h.data.ret || u.origin + '/test') + '?released=1', 302);
         }
         const f = await finalize(env, ref, 'redirect');
@@ -833,11 +842,11 @@ export default {
       if (u.pathname === '/booking/hitpay' && req.method === 'POST') {
         const ref = String(new URLSearchParams(await req.text()).get('reference_number') || '').replace(/[^A-Z0-9]/g, '');
         const h = ref ? await book(env).get(ref) : null; if (!h || !h.pr) return J({ ok: false });
-        const pr = await hitpay(env, 'GET', '/payment-requests/' + h.pr).catch(() => ({}));
+        const pr = await hitpay(envFor(env, h.data.pay), 'GET', '/payment-requests/' + h.pr).catch(() => ({}));
         if (pr.status !== 'completed') return J({ ok: false, status: pr.status || '?' });
         const f = await finalize(env, ref, 'webhook'); return J({ ok: f.ok });
       }
-      if (u.pathname === '/test') return isSandbox(env) ? H(testForm()) : J({ error: 'test page is off while payments are live' }, 404);
+      if (u.pathname === '/test') return !liveReady(env0) ? H(testForm()) : J({ error: 'test page is off while payments are live' }, 404);
       if (u.pathname === '/selftest') { const a = await admin(env); const units = await a('getUnitList', []); return J({ sbLogin: true, rooms: Object.values(units).map((x) => x.name), dryRun: env.DRY_RUN === '1' }); }
       return J({ ok: true, svc: 'round2-book' });
     } catch (e) { return J({ error: String(e.message || e) }, 400); }
