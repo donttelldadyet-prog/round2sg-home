@@ -7,7 +7,7 @@
 <base target="_top">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&family=Righteous&family=Quicksand:wght@700&family=Orbitron:wght@700&family=Josefin+Sans:wght@600&family=IM+Fell+English:ital@1&family=Cinzel:wght@700&family=Racing+Sans+One&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
 :root { --bg: #06050a; --panel: #0b0914; --line: rgba(244,241,251,.14); --ink: #f4f1fb; --mute: #a79fbd; --acc: #F2C21B; --free: #5BE37D; --eb: #66C7FF; --tc: #5BE37D; }
 * { box-sizing: border-box; }
@@ -47,8 +47,8 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 .group { margin: 18px 0 6px; font-size: 9px; color: var(--mute); }
 .room { display: grid; grid-template-columns: 190px 1fr; gap: 14px; align-items: center; padding: 12px 14px; margin: 8px 0; background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--rc); }
 .room h3 { margin: 0; font-size: 17px; }
-/* each character's name in their colour and a font that suits them */
-h3.nm, .nm { color: var(--rc); font-family: var(--nf); font-size: 21px; line-height: 1.15; letter-spacing: .01em; }
+/* each character's name in their colour */
+h3.nm, .nm { color: var(--rc); }
 .room .ty { font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; }
 .track { position: relative; height: 26px; background: rgba(244,241,251,.05); }
 .track .seg { position: absolute; top: 0; bottom: 0; background: var(--free); opacity: .9; }
@@ -231,10 +231,6 @@ h3.nm, .nm { color: var(--rc); font-family: var(--nf); font-size: 21px; line-hei
     9: ['Kai', '#24B49A', 'Deluxe room', 4], 10: ['Bella', '#7A5BE0', 'Deluxe room', 4], 12: ['Atlas', '#E9E7EF', 'Deluxe room', 4],
     11: ['Maximillion', '#E0402F', 'VIP room', 6]
   };
-  /* name fonts, picked for each character: Vale playful Bauhaus rebel, Kaeden clean and simple, Scarlett cosmic,
-     Kai calm and natural, Bella dark academia, Atlas Greek and graceful, Max racing */
-  var FONT = { 5: "'Righteous', sans-serif", 7: "'Quicksand', sans-serif", 8: "'Orbitron', sans-serif", 9: "'Josefin Sans', sans-serif",
-    10: "'IM Fell English', serif; font-style: italic", 12: "'Cinzel', serif", 11: "'Racing Sans One', sans-serif" };
   /* tiers: name, rooms, colour (the section's top line and title). Free-time bars use each room's own character colour. */
   var GROUPS = [['NETFLIX ROOMS', [5, 7, 8], '#FF5A6E'], ['DELUXE ROOMS', [9, 10, 12], '#B48CFF'], ['VIP ROOM', [11], '#E0402F']];
   var TIER = {}; GROUPS.forEach(function (g) { g[1].forEach(function (u) { TIER[u] = g[2]; }); });
@@ -350,7 +346,7 @@ h3.nm, .nm { color: var(--rc); font-family: var(--nf); font-size: 21px; line-hei
         info.ranges.forEach(function (r) { if (r[2]) return; segs += '<span class="seg" style="left:' + pos(r[0]) + ';width:calc(' + (100 * (r[1] - r[0] + STEP) / span).toFixed(2) + '% - 1px)"></span>'; });
         var from = day3.length ? Math.min.apply(null, day3.map(function (o) { return o.price; })) : 0;
         var txt = info.ranges.filter(function (r) { return !r[2]; }).map(function (r) { return r[0] === r[1] ? clock(r[0]) : clock(r[0]) + '–' + clock(r[1]); }).join(', ');
-        inner += '<div class="room" style="--rc:' + R[1] + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': start ' + (txt || 'early bird')) + '"' : '') + '><div><h3 class="nm" style="--nf:' + FONT[uid] + '">' + R[0] + '</h3><div class="ty">' + R[2] + '</div>' + ebChip(uid) + '</div><div>' +
+        inner += '<div class="room" style="--rc:' + R[1] + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': start ' + (txt || 'early bird')) + '"' : '') + '><div><h3 class="nm">' + R[0] + '</h3><div class="ty">' + R[2] + '</div>' + ebChip(uid) + '</div><div>' +
           '<div class="track">' + lines + segs + '</div><div class="ticks">' + ticks + '</div>' +
           (day3.length ? '<div class="free">Start ' + esc(txt) + ' · from ' + money(from) + '</div><button class="pickb" type="button" data-u="' + uid + '">PICK A TIME</button>'
             : info.list.length ? '<div class="free">Only the early bird is free</div>' : '<div class="free no">Fully booked</div>') + '</div></div>';
@@ -375,7 +371,7 @@ h3.nm, .nm { color: var(--rc); font-family: var(--nf); font-size: 21px; line-hei
       g[1].forEach(function (uid) {
         var list = hours[hourSel] && hours[hourSel][uid]; if (!list) return;
         var o = list[0], R = ROOMS[uid];
-        inner += '<div class="row" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm" style="--nf:' + FONT[uid] + '">' + R[0] + '</h3><div class="ty">' + R[2] + '</div></div>' +
+        inner += '<div class="row" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm">' + R[0] + '</h3><div class="ty">' + R[2] + '</div></div>' +
           '<div class="when">' + list.map(function (x) { return clock(x.m); }).join(' · ') + '<small>' + (o.eb ? 'Early bird · ' : '') + 'from ' + money(o.prices[3]) + ' · up to ' + o.maxH + ' h</small></div>' +
           '<button class="pickb" type="button" data-u="' + uid + '" data-m="' + o.m + '">START ' + clock(o.m).toUpperCase() + '</button></div>';
       });
@@ -390,7 +386,7 @@ h3.nm, .nm { color: var(--rc); font-family: var(--nf); font-size: 21px; line-hei
     rows.sort(function (a, b) { return a[1].m - b[1].m || a[1].prices[3] - b[1].prices[3]; });
     return rows.map(function (r) {
       var uid = r[0], o = r[1], R = ROOMS[uid];
-      return '<div class="row" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm" style="--nf:' + FONT[uid] + '">' + R[0] + '</h3><div class="ty" style="color:' + R[1] + '">' + R[2] + '</div></div>' +
+      return '<div class="row" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm">' + R[0] + '</h3><div class="ty" style="color:' + R[1] + '">' + R[2] + '</div></div>' +
         '<div class="when">' + clock(o.m) + (o.eb ? ' · Early bird' : '') + '<small>' + money(o.prices[3]) + ' for 3 h · up to ' + o.maxH + ' h</small></div>' +
         '<button class="pickb" type="button" data-u="' + uid + '" data-m="' + o.m + '">START ' + clock(o.m).toUpperCase() + '</button></div>';
     }).join('');
@@ -401,7 +397,7 @@ h3.nm, .nm { color: var(--rc); font-family: var(--nf); font-size: 21px; line-hei
   function openRoom(uid, m) {
     var info = data && data.rooms[uid]; if (!info || !info.list.length) return;
     cur = { uid: uid, start: m != null && info.starts[m] ? m : null, len: null };
-    $('mTitle').innerHTML = '<span class="nm" style="--rc:' + ROOMS[uid][1] + ';--nf:' + FONT[uid] + '">' + ROOMS[uid][0] + '</span> · ' + ROOMS[uid][2];
+    $('mTitle').innerHTML = '<span class="nm" style="--rc:' + ROOMS[uid][1] + '">' + ROOMS[uid][0] + '</span> · ' + ROOMS[uid][2];
     $('mSub').textContent = dayLabel(day);
     $('pTimes').innerHTML = info.list.map(function (o) {
       return '<button type="button" data-m="' + o.m + '" class="' + (o.eb ? 'eb' : '') + '" aria-pressed="' + (o.m === cur.start) + '">' + clock(o.m) + '<small>' + (o.eb ? 'Early bird' : 'from ' + money(o.price)) + '</small></button>';
