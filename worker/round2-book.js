@@ -100,7 +100,9 @@ async function quote(env, b) {
 async function gapsFor(p, date, unit, dt) {
   const ids = SVC[ROOMS[unit][1]];
   const rs = await Promise.all([ids[dt], ids.eb].map((sid) => p('getAvailableTimeIntervals', [date, date, sid, unit, 1])
-    .then((r) => ((r && r[date] && r[date][unit]) || []).map((g) => [mins(g.from), mins(g.to) || 1440]))));
+    .then((r) => ((r && r[date] && r[date][unit]) || []).map((g) => { const f = mins(g.from); let t = mins(g.to); if (t <= f) t += 1440;
+      /* online guests never get past closing, even if SimplyBook's hours run later (staff stretch late sessions by hand) */
+      return [f, Math.min(t, CLOSE)]; }).filter(([f, t]) => t > f))));
   const all = rs.flat().sort((a, b) => a[0] - b[0]), out = [];
   for (const g of all) { const l = out[out.length - 1]; if (l && g[0] <= l[1]) l[1] = Math.max(l[1], g[1]); else out.push([g[0], g[1]]); }
   return out;
