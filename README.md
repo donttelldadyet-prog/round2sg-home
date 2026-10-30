@@ -29,13 +29,13 @@ go through the engine.
 **The Round2 engine** = Cloudflare Worker `round2-book` (`https://round2-book.donttelldadyet.workers.dev`), source
 `worker/round2-book.js` in **round2sg-home** (branch `own-booking` until merged). One Durable Object (`HoldBook`) holds its
 state (SQLite) and wakes itself with alarms. Deploy = upload that file through the Cloudflare API with `keep_bindings`
-(see round2sg-home `HANDOFF.md`). Secrets live only in Cloudflare (names: `HITPAY_KEY`, `HITPAY_SALT`, `HITPAY_API`,
+(see round2sg-home `HANDOFF.md`). Secrets live only in Cloudflare (names: `HITPAY_KEY`, `HITPAY_SALT`, `HITPAY_API` (sandbox), `HITPAY_LIVE_KEY`, `HITPAY_LIVE_SALT`, `TEST_CODE`, `SWITCH_PASS`, `SWITCH_PIN`,
 `SB_COMPANY`, `SB_USER`, `SB_PASS`, `GM_STAFF`, `GM_HOOK_URL`, `MENU_MAKE_K`, `TV_KEY`, `TG_BOT_TOKEN`, `STAFF_CHAT`).
 
 | Job | Where it runs | Notes |
 |---|---|---|
 | Booking page (`slots/`): free times, prices, holds, HitPay, writing into SimplyBook | Engine | SimplyBook is the calendar. Bookings end 15 min after the session (cleaning) – `docs/booking-times.md` |
-| Room food menu (`menu/`): pricing check, HitPay payment, payment check | Engine | Same HitPay setting as bookings (sandbox → live by changing the 3 HitPay secrets) |
+| Room food menu (`menu/`): pricing check, HitPay payment, payment check | Engine | Guests pay live (once `HITPAY_LIVE_*` are in), test tools always the sandbox – same as bookings |
 | Food order → room TV alert + kitchen Telegram slip | Engine | Instantly after payment |
 | Food order → accounting sheet + Drive slip (kitchen phone prints it) | Make `[BACKEND] ROOM MENU PAID ORDER` | Called once per paid order by the engine |
 | Telegram pickup button, Madd nightly settlement | Make (`[CONTROL] MADD PAYOUT TELEGRAM`, `[BACKEND] MADD NIGHTLY SETTLEMENT LOG`) | |
