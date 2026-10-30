@@ -1,5 +1,5 @@
 /* Round2 booking Worker (Cloudflare). Test build – see docs/own-booking-plan.md.
-   Secrets: HITPAY_KEY, HITPAY_SALT, HITPAY_API, SB_COMPANY, SB_USER, SB_PASS.  Vars: SB_PUBLIC_KEY, DRY_RUN ("1" = don't create SimplyBook bookings).
+   Secrets: HITPAY_KEY, HITPAY_SALT, HITPAY_API (sandbox), HITPAY_LIVE_KEY, HITPAY_LIVE_SALT, SWITCH_PASS, SWITCH_PIN, SB_COMPANY, SB_USER, SB_PASS.  Vars: SB_PUBLIC_KEY, DRY_RUN ("1" = don't create SimplyBook bookings).
    Durable Object HOLDBOOK (class HoldBook): one place that holds unpaid slots, so two guests can't hold the same time,
    and whose alarm releases a hold after 10 min AND cancels its HitPay link (no paying for a released slot).
    Routes: GET /ph, POST /quote, POST /checkout, POST /release, POST /hitpay (webhook), GET /done?ref=, GET /test, GET /selftest
@@ -215,7 +215,7 @@ export class HoldBook extends DurableObject {
   }
   qList() { this.qInit(); return this.rows(`SELECT * FROM gmq ORDER BY at`); }
   /* booking switch (control centre › Systems): 'new' = this booking page, 'simplybook' = safe mode, guests book on SimplyBook */
-  getMode() { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = 'mode'`)[0]; return r ? JSON.parse(r.v) : { booking: 'new' }; }
+  getMode() { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = 'mode'`)[0]; return Object.assign({ booking: 'new', pay: 'test' }, r ? JSON.parse(r.v) : {}); }
   setMode(m) { this.qInit(); this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('mode', ?)`, JSON.stringify(m)); return m; }
   /* wrong-password lock for the booking switch: 5 wrong tries in 30 min → locked for 30 min */
   lockOk(who) { this.gmInit(); this.sql.exec(`DELETE FROM gmrate WHERE t < ?`, Date.now() - 1800e3); return this.rows(`SELECT COUNT(*) AS n FROM gmrate WHERE who = ?`, who)[0].n < 5; }
@@ -284,7 +284,8 @@ export class HoldBook extends DurableObject {
   /* timer ran out → release the hold and kill its HitPay link */
   async alarm() {
     const due = this.rows(`SELECT ref, pr FROM holds WHERE status = 'pending' AND exp <= ?`, Date.now());
-    for (const d of due) { this.sql.exec(`UPDATE holds SET status = 'released' WHERE ref = ?`, d.ref); await cancelLink(this.env, d.pr); }
+    const pe = payEnv(this.env, this.getMode().pay);
+    for (const d of due) { this.sql.exec(`UPDATE holds SET status = 'released' WHERE ref = ?`, d.ref); await cancelLink(pe, d.pr); }
     this.sql.exec(`DELETE FROM holds WHERE status = 'released' AND created < ?`, Date.now() - 7 * 86400e3);
     try { await this.qRun(); } catch (e) {}
     this.arm();
@@ -529,8 +530,8 @@ async function gm(env, req) {
 }
 
 /* ---------- food menu (room QR menu, round2sg-home menu/) ----------
-   One HitPay setting for the whole engine: the booking page AND the menu use the secrets HITPAY_KEY / HITPAY_SALT /
-   HITPAY_API (sandbox while testing; change those three to the live account to go live – both switch together).
+   One HitPay setting for the whole engine: the booking page AND the menu use the same keys – test or live is the
+   control centre's Payments switch (see payEnv below); both switch together.
    POST /menu/checkout (form field "order"): re-prices from the published menu.json exactly like Make's old ROOM MENU
      CHECKOUT, keeps the order here, makes the HitPay payment (webhook → /menu/hitpay, back to the menu page).
    POST /menu/hitpay (HitPay) and POST /menu/return (the menu page when the guest comes back): ask HitPay itself whether it's
@@ -544,6 +545,14 @@ const MENU_PAID_HOOK = 'https://hook.eu1.make.com/55nh6wniq1wftco8af9486noj4xuga
 const MENU_RETURN = 'https://donttelldadyet-prog.github.io/round2sg-home/menu/';
 const MENU_ROOMS = ['Kai', 'Bella', 'Atlas', 'Max', 'Scarlett', 'Vale', 'Kaeden'];
 const isSandbox = (env) => /sandbox/i.test(env.HITPAY_API || '');
+/* TWO HitPay accounts in Cloudflare: test = HITPAY_KEY / HITPAY_SALT / HITPAY_API (sandbox), live = HITPAY_LIVE_KEY /
+   HITPAY_LIVE_SALT (api.hit-pay.com). Which one is used is the "Payments" switch in the control centre (Systems ›
+   Switches, same two passwords as the booking switch), saved in the engine. Every request picks its keys from it. */
+const HITPAY_LIVE_API = 'https://api.hit-pay.com/v1';
+function payEnv(env, pay) {
+  if (pay !== 'live') return env;
+  return Object.assign(Object.create(env), env, { HITPAY_KEY: env.HITPAY_LIVE_KEY, HITPAY_SALT: env.HITPAY_LIVE_SALT, HITPAY_API: HITPAY_LIVE_API });
+}
 async function menuCheckout(env, req, origin) {
   const no = (msg, s = 409) => J({ error: msg }, s);
   if (!env.HITPAY_KEY || !env.HITPAY_API || !env.MENU_MAKE_K) return no('Payment isn’t set up yet. Please WhatsApp us to order.', 503);
@@ -707,8 +716,9 @@ const back=new URLSearchParams(location.search).get('released');if(back)note('Pa
 }
 
 export default {
-  async fetch(req, env) {
+  async fetch(req, env0) {
     const u = new URL(req.url);
+    const env = payEnv(env0, (await book(env0).getMode().catch(() => ({}))).pay);
     try {
       if (req.method === 'OPTIONS') return J({});
       if (u.pathname === '/ph') return J([...(await holidays())].sort());
@@ -719,22 +729,30 @@ export default {
         const hb = book(env);
         if (req.method !== 'POST') return J(await hb.getMode());
         const f = await req.json().catch(() => ({}));
-        if (!env.SWITCH_PASS || !env.SWITCH_PIN || /paste/.test(env.SWITCH_PASS + env.SWITCH_PIN)) return J({ error: 'The switch passwords aren’t set up in Cloudflare yet' }, 403);
+        if (!env0.SWITCH_PASS || !env0.SWITCH_PIN || /paste/.test(env0.SWITCH_PASS + env0.SWITCH_PIN)) return J({ error: 'The switch passwords aren’t set up in Cloudflare yet' }, 403);
         const ip = req.headers.get('cf-connecting-ip') || '?';
         if (!(await hb.lockOk('sw:' + ip)) || !(await hb.lockOk('sw:all'))) return J({ error: 'Locked for 30 minutes after too many wrong tries' }, 429);
-        if (String(f.pass || '') !== env.SWITCH_PASS || String(f.pin || '') !== env.SWITCH_PIN) {
+        if (String(f.pass || '') !== env0.SWITCH_PASS || String(f.pin || '') !== env0.SWITCH_PIN) {
           await hb.lockFail('sw:' + ip); await hb.lockFail('sw:all');
           return J({ error: 'Password or PIN is wrong' }, 403);
         }
-        if (!['new', 'simplybook'].includes(f.booking)) return J({ error: 'booking must be new or simplybook' }, 400);
-        const m = await hb.setMode({ booking: f.booking, t: Date.now(), by: String(f.by || '').slice(0, 30) });
-        await staffAlert(env, f.booking === 'simplybook' ? '🛟 Online booking switched to SAFE MODE (SimplyBook page)' + (m.by ? ' by ' + m.by : '') : '✅ Online booking switched back to the NEW booking page' + (m.by ? ' by ' + m.by : '')).catch(() => null);
+        const cur = await hb.getMode(), by = String(f.by || '').slice(0, 30), nm = Object.assign({}, cur, { t: Date.now(), by });
+        if (f.booking !== undefined) { if (!['new', 'simplybook'].includes(f.booking)) return J({ error: 'booking must be new or simplybook' }, 400); nm.booking = f.booking; }
+        if (f.pay !== undefined) {
+          if (!['test', 'live'].includes(f.pay)) return J({ error: 'pay must be test or live' }, 400);
+          if (f.pay === 'live' && (!env0.HITPAY_LIVE_KEY || !env0.HITPAY_LIVE_SALT || /paste/.test(env0.HITPAY_LIVE_KEY + env0.HITPAY_LIVE_SALT))) return J({ error: 'The live HitPay key and salt aren’t in Cloudflare yet' }, 400);
+          nm.pay = f.pay;
+        }
+        const m = await hb.setMode(nm);
+        const said = (f.booking !== undefined && f.booking !== cur.booking ? (f.booking === 'simplybook' ? '🛟 Online booking switched to SAFE MODE (SimplyBook page)' : '✅ Online booking switched back to the NEW booking page') : '') +
+          (f.pay !== undefined && f.pay !== cur.pay ? (f.pay === 'live' ? '💳 Payments switched to LIVE (real money)' : '🧪 Payments switched to TEST (sandbox)') : '');
+        if (said) await staffAlert(env, said + (by ? ' · by ' + by : '')).catch(() => null);
         return J(m);
       }
       if (u.pathname === '/status') {
         const st = { payments: isSandbox(env) ? 'test' : 'live', dryRun: env.DRY_RUN === '1', simplybook: !!(env.SB_COMPANY && env.SB_USER && env.SB_PASS),
           sbSecret: !!env.SB_SECRET && !/paste/.test(env.SB_SECRET), kitchenBot: !!env.TG_BOT_TOKEN, staffAlerts: !!env.STAFF_CHAT, guestMessages: !!env.GM_STAFF,
-          menuSheet: !!env.MENU_MAKE_K, tvKey: !!env.TV_KEY, booking: (await book(env).getMode()).booking, t: Date.now() };
+          menuSheet: !!env.MENU_MAKE_K, tvKey: !!env.TV_KEY, liveKeys: !!env0.HITPAY_LIVE_KEY && !/paste/.test(env0.HITPAY_LIVE_KEY), switchSet: !!env0.SWITCH_PASS && !/paste/.test(env0.SWITCH_PASS + env0.SWITCH_PIN), booking: (await book(env).getMode()).booking, t: Date.now() };
         if (u.searchParams.get('deep')) {
           st.sbLogin = await admin(env).then(() => 'ok').catch((e) => 'failed: ' + String(e.message || e).slice(0, 80));
           st.sbPublic = await pub(env).then(() => 'ok').catch((e) => 'failed: ' + String(e.message || e).slice(0, 80));
