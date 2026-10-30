@@ -210,10 +210,11 @@ if (typeof module !== "undefined") module.exports = { r2Key, r2PriceTable };
 const CONFIG = {
   // Make.com webhook that checks the order, creates the HitPay payment and replies {"url": "..."}.
   // Leave empty for preview mode (no payment).
-  // Round2 booking engine (Cloudflare) makes the payment first; the Make webhook below is only the backup when it can't.
-  ENGINE_URL: "https://round2-book.donttelldadyet.workers.dev/menu/checkout",
-  CHECKOUT_URL: "https://hook.eu1.make.com/3gdpop9ed64rk2slmzfq9ry73oajd9sk",
-  PAID_URL: "https://hook.eu1.make.com/55nh6wniq1wftco8af9486noj4xugasl",
+  // Round2 booking engine (Cloudflare): checks the order, makes the HitPay payment (same HitPay setting as the booking
+  // page: sandbox while testing), confirms the payment with HitPay and hands paid orders to Make for the kitchen slip,
+  // TV alert and accounting. round2sg-home worker/round2-book.js "food menu". Empty = preview mode (no payment).
+  CHECKOUT_URL: "https://round2-book.donttelldadyet.workers.dev/menu/checkout",
+  PAID_URL: "https://round2-book.donttelldadyet.workers.dev/menu/return",
   SIM_URL: "https://hook.eu1.make.com/v8v3kyfg3ai41r0l21duy346vrucxequ",   // TEST ONLY: ?sim=<code> sends a fake order (no payment) to test Telegram and the TV alert
   WHATSAPP: "+65 9162 5767",
   MENU_URL: "menu.json",
@@ -390,11 +391,7 @@ async function checkout(){
       return { res, data: await res.json().catch(() => ({})) }; } finally { clearTimeout(timer); }
   };
   try {
-    // Cloudflare first (free, fast). Only if it can't be reached or says so ({fallback}) does Make.com make the payment.
-    let r = null;
-    if (CONFIG.ENGINE_URL) { try { r = await post(CONFIG.ENGINE_URL, 12000); } catch (e) { r = null; } }
-    if (!r || r.data.fallback || (r.res.status >= 500 && !r.data.error)) r = await post(CONFIG.CHECKOUT_URL, 20000);
-    const res = r.res, data = r.data;
+    const r = await post(CONFIG.CHECKOUT_URL, 20000), res = r.res, data = r.data;
     if (!res.ok || !data.url) throw new Error(data.error || "We couldn't start the payment.");
     store.set("r2pending", { order: data.order, no: data.no, request_id: data.request_id, lines: cart, note, room: room.name, total: t.total, gst: t.gst, sub: t.sub, at: Date.now() });
     location.href = data.url;
@@ -486,7 +483,7 @@ function returnScreen(){
   history.replaceState(null, "", location.pathname + (room ? "?room=" + room.name.toLowerCase() : ""));
   const p = store.get("r2pending");
   if (status === "completed" && p) {
-    // Backup to HitPay's own notification: Make.com checks the payment with HitPay before sending anything to the kitchen.
+    // Backup to HitPay's own notification: the engine checks the payment with HitPay before sending anything to the kitchen.
     if (CONFIG.PAID_URL) try { navigator.sendBeacon(CONFIG.PAID_URL, new URLSearchParams({ reference_number: p.order || "", payment_request_id: q.get("reference") || "", status, source: "return" })); } catch {}
     cart = []; store.set("r2cart", []); store.set("r2note", ""); store.set("r2pending", null); refresh();
     doneScreen(p, false);
