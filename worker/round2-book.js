@@ -20,6 +20,14 @@ const PRICES = {
 };
 const PAX_FIELD = 'fb11a6d3f6a3baaf248df77785de850e';
 const BUF = 15, HOLD_SEC = 600, EB_START = 660;
+/* cleaning time is only needed before the NEXT booking: a session may run right up to closing (11:15pm),
+   so the last start is 8:15pm, not 8pm */
+const CLOSE = 23 * 60 + 15;
+const bufTo = (t) => (t >= CLOSE ? 0 : BUF);
+/* guest messages (round2-tv-launcher docs/guest-messages.md): a celebration message written while booking */
+const GM_HOOK = 'https://hook.eu1.make.com/0vs25z4g3omjuvbdxwstdgofqhc3p2e4';
+const GM_ROOM = { 5: 'vale', 7: 'kaeden', 8: 'scarlett', 9: 'kai', 10: 'bella', 12: 'atlas', 11: 'max' };
+const GM_KINDS = ['birthday', 'anniversary', 'celebrate', 'note'];
 
 const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type' } });
 const H = (html) => new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } });
@@ -111,9 +119,9 @@ async function dayBoard(env, date) {
     const P = PRICES[ROOMS[u][1]], starts = [];
     const mine = holds.filter((h) => h.unit === +u || h.unit === MIRROR[u]);
     (gaps[i] || []).forEach(([f, t]) => {
-      for (let m = Math.ceil(f / 15) * 15; m + 180 + BUF <= t; m += 15) {
+      for (let m = Math.ceil(f / 15) * 15; m + 180 + bufTo(t) <= t; m += 15) {
         if (date === today && m < nowM + 15) continue;
-        let room = t - BUF - m;                                    // minutes until the room is needed again
+        let room = t - bufTo(t) - m;                               // minutes until the room is needed again
         mine.forEach((h) => { if (h.s < m + room + BUF && h.e + BUF > m) room = h.s >= m ? Math.min(room, h.s - BUF - m) : -1; });
         if (room < 180) continue;
         const eb = m === EB_START, maxH = Math.min(6, Math.floor(room / 60));
@@ -213,7 +221,7 @@ async function isFree(env, q, ignoreRef) {
   const p = await pub(env);
   const gaps = await gapsFor(p, q.date, q.unit, q.peak ? 'peak' : 'off');
   const s = mins(q.time), e = s + q.hours * 60;
-  if (!gaps.some(([f, t]) => s >= f && e + BUF <= t)) return false;
+  if (!gaps.some(([f, t]) => s >= f && e + bufTo(t) <= t)) return false;
   return !(await book(env).clash(q.date, [q.unit, MIRROR[q.unit]].filter(Boolean), s, e, ignoreRef || ''));
 }
 
@@ -225,13 +233,21 @@ async function checkout(env, b, origin) {
   const name = String(b.name || '').trim().slice(0, 80), email = String(b.email || '').trim().toLowerCase().slice(0, 120), phone = String(b.phone || '').replace(/[^\d+]/g, '').slice(0, 16);
   const pax = Math.max(1, Math.min(q.type === 'vip' ? 6 : 4, +b.pax || 1));
   if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || phone.length < 8) throw new Error('Please fill in name, email and phone');
+  /* optional celebration message for the room TV, shown 0–60 min after the start */
+  let msg = null;
+  if (b.msg && GM_KINDS.includes(b.msg.kind)) {
+    const t = (x, n) => String(x || '').replace(/\s+/g, ' ').trim().slice(0, n);
+    msg = { kind: b.msg.kind, to: t(b.msg.to, 40), from: t(b.msg.from, 40), title: t(b.msg.title, 60), text: String(b.msg.text || '').trim().slice(0, 600),
+      after: Math.max(0, Math.min(60, Math.round((+b.msg.after || 0) / 15) * 15)) };
+    if (!msg.title || !msg.text) throw new Error('Add a headline and a message for the TV, or untick the celebration');
+  }
   const p = await pub(env);
   const s = mins(q.time), e = s + q.hours * 60;
   const gaps = await gapsFor(p, q.date, q.unit, q.peak ? 'peak' : 'off');
-  if (!gaps.some(([f, t]) => s >= f && e + BUF <= t)) throw new Error('Sorry, that time was just taken – please pick another');
+  if (!gaps.some(([f, t]) => s >= f && e + bufTo(t) <= t)) throw new Error('Sorry, that time was just taken – please pick another');
   const ref = 'R2B' + crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase();
   const hb = book(env);
-  const h = await hb.hold({ ref, date: q.date, unit: q.unit, units: [q.unit, MIRROR[q.unit]].filter(Boolean), s, e, phone: phone.slice(-8), email, data: { q, name, email, phone, pax, ret } });
+  const h = await hb.hold({ ref, date: q.date, unit: q.unit, units: [q.unit, MIRROR[q.unit]].filter(Boolean), s, e, phone: phone.slice(-8), email, data: { q, name, email, phone, pax, ret, msg } });
   for (const old of h.released || []) await cancelLink(env, old);            // their earlier unpaid link stops working
   if (!h.ok) throw new Error('Sorry, someone is paying for that time right now – please pick another');
   const when = new Date(q.date + 'T00:00:00Z').toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -267,12 +283,35 @@ async function finalize(env, ref, source) {
       const bk = await a('book', [q.eventId, q.unit, cid, q.date, q.time + ':00', q.endDate, q.end + ':00', 0, { [PAX_FIELD]: String(d.pax) }]);
       const b0 = bk && bk.bookings && bk.bookings[0];
       result = { bookingId: b0 && b0.id, code: b0 && b0.code };
+      /* the details SimplyBook doesn't show: the name typed on the page (SimplyBook keeps an existing contact's name),
+         what was really paid (SimplyBook shows the base service price) */
+      const note = `Online booking (round2.sg) · paid $${q.total.toFixed(2)} via HitPay · ref ${ref}\nBooked as: ${d.name} · ${d.phone} · ${d.email} · ${d.pax} guests` +
+        (q.hours > 3 ? `\nIncludes +${q.hours - 3}h extension (${q.time}–${q.end})` : '') + (d.msg ? `\nTV message: ${d.msg.kind}, ${d.msg.after} min after start` : '');
+      if (b0 && b0.id) result.comment = await a('setBookingComment', [b0.id, note]).then(() => 'saved').catch((e) => 'not saved: ' + String(e.message || e).slice(0, 80));
     }
+    if (d.msg && !result.dryRun) result.tv = await tvMessage(env, d, q, ref).catch((e) => ({ problem: String(e.message || e).slice(0, 120) }));
   } catch (err) { result = { problem: 'paid – booking not created: ' + String(err.message || err).slice(0, 150) }; }
   result.at = Date.now(); result.source = source;
   await hb.done(ref, result);
   d.done = result;
   return result.problem ? { ok: false, err: result.problem, h: d } : { ok: true, h: d };
+}
+
+/* celebration message → the guest messages system (Make "GUEST MESSAGE LINKS"): a link for this booking, then the
+   message on it. It then shows in the control centre's Guest messages like any other (staff can move or cancel it),
+   and the guest can still change it at cue.round2.sg/CODE until it pops up. */
+async function tvMessage(env, d, q, ref) {
+  if (!env.GM_STAFF) return { problem: 'no staff code' };
+  const call = async (body) => {
+    const r = await fetch(GM_HOOK, { method: 'POST', body: new URLSearchParams(body) });
+    const t = await r.text(); let j; try { j = JSON.parse(t); } catch (e) { throw new Error('Make: ' + t.slice(0, 60)); }
+    if (j.error) throw new Error(j.error); return j;
+  };
+  const start = Date.UTC(+q.date.slice(0, 4), +q.date.slice(5, 7) - 1, +q.date.slice(8, 10), +q.time.slice(0, 2), +q.time.slice(3, 5)) - 8 * 3600e3;
+  const link = await call({ action: 'create', staff: env.GM_STAFF, room: GM_ROOM[q.unit], start, label: 'Online · ' + d.name.slice(0, 30) });
+  const m = d.msg;
+  await call({ action: 'submit', code: link.code, kind: m.kind, to: m.to, from: m.from, title: m.title, text: m.text, at: start + m.after * 60e3 });
+  return { code: link.code, at: start + m.after * 60e3 };
 }
 
 /* ---------- pages ---------- */
@@ -352,7 +391,7 @@ export default {
         }
         const f = await finalize(env, ref, 'redirect');
         const q = f.h.q;
-        return H(PAGE(f.ok ? `<h1>You're booked 🎉</h1><p><b>${esc(q.room)}</b>, ${esc(q.date)}, ${esc(q.time)}–${esc(q.end)} (${q.hours}h) · $${q.total.toFixed(2)} paid.</p><p>Ref ${esc(ref)}${f.h.done && f.h.done.dryRun ? ' · <span class="tag">TEST – not put in calendar</span>' : ''}</p><p>A confirmation email is on its way.</p>${f.h.ret ? `<a class="btn" href="${esc(f.h.ret)}">Back to Round2</a>` : ''}<script>try{sessionStorage.clear()}catch(e){}</script>`
+        return H(PAGE(f.ok ? `<h1>You're booked 🎉</h1><p><b>${esc(q.room)}</b>, ${esc(q.date)}, ${esc(q.time)}–${esc(q.end)} (${q.hours}h) · $${q.total.toFixed(2)} paid.</p><p>Ref ${esc(ref)}${f.h.done && f.h.done.dryRun ? ' · <span class="tag">TEST – not put in calendar</span>' : ''}</p><p>A confirmation email is on its way.</p>${f.h.done && f.h.done.tv && f.h.done.tv.code ? `<p>Your message pops up on the TV ${f.h.msg.after ? f.h.msg.after + ' minutes after you start' : 'when you start'}. Want to change it? <a style="color:#F2C21B" href="https://cue.round2.sg/${esc(f.h.done.tv.code)}">cue.round2.sg/${esc(f.h.done.tv.code)}</a></p>` : ''}${f.h.ret ? `<a class="btn" href="${esc(f.h.ret)}">Back to Round2</a>` : ''}<script>try{sessionStorage.clear()}catch(e){}</script>`
           : `<h1>Payment received</h1><p class="err">${esc(f.err)}</p><p>We'll WhatsApp you shortly. Ref ${esc(ref)}.</p>`));
       }
       if (u.pathname === '/probe' && u.searchParams.get('k') === String(env.SB_PUBLIC_KEY).slice(0, 12)) {   /* TEMP: look at the last test booking */

@@ -51,6 +51,10 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 .tier .room { margin: 8px 0; }
 /* views */
 .views { display: flex; gap: 6px; margin: 4px 0 6px; flex-wrap: wrap; }
+.lbl { font-size: 9px; color: var(--mute); margin: 0 0 8px; }
+.lbl span { color: var(--acc); margin-left: 8px; }
+.days button.m1 { border-left: 3px solid var(--acc); }
+.days button small { display: block; font-size: 9px; color: var(--acc); letter-spacing: .08em; text-transform: uppercase; }
 .views button { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 10px 12px; background: transparent; color: var(--ink); border: 1px solid var(--line); cursor: pointer; }
 .views button[aria-pressed="true"] { background: var(--acc); color: #0b0914; border-color: var(--acc); }
 /* the timeline: hour lines, labels every 2 h, free time in the tier colour, booked time striped */
@@ -107,6 +111,10 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 .sheet .hd p { margin: 2px 0 0; color: var(--mute); font-size: 13px; }
 .sheet .x { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; background: transparent; color: var(--ink); border: 1px solid var(--line); padding: 8px 10px; cursor: pointer; flex: none; }
 .fl { display: block; font-size: 12px; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; margin: 0 0 10px; }
+.cel { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
+.cel input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--acc); flex: none; }
+.cel small { color: var(--mute); }
+.fl textarea { display: block; width: 100%; margin-top: 4px; padding: 11px 12px; font: 16px 'Chakra Petch', sans-serif; color: var(--ink); background: #06050a; border: 1px solid var(--line); resize: vertical; }
 .fl input, .fl select { display: block; width: 100%; margin-top: 4px; padding: 11px 12px; font: 16px 'Chakra Petch', sans-serif; color: var(--ink); background: #06050a; border: 1px solid var(--line); text-transform: none; letter-spacing: 0; }
 .fl input:focus, .fl select:focus { outline: none; border-color: var(--acc); }
 .err { color: #ff8a8a; }
@@ -122,7 +130,9 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
   <h1>WHAT'S FREE</h1>
   <p class="sub">Pick a day, then look by room, by the time you'd like to start, or the earliest free. Coloured bars are times you can start; tap a room to choose your start and how long you'll stay.</p>
   <div class="banner" id="banner" hidden></div>
+  <div class="lbl px">1 · PICK A DAY <span id="monthNow"></span></div>
   <div class="days" id="days" role="group" aria-label="Day"></div>
+  <div class="lbl px" style="margin-top:20px">2 · HOW DO YOU WANT TO LOOK?</div>
   <div class="views" id="views" role="group" aria-label="View">
     <button type="button" data-v="room" aria-pressed="true">BY ROOM</button>
     <button type="button" data-v="time" aria-pressed="false">BY TIME</button>
@@ -148,6 +158,20 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
         <label class="fl">Email<input id="fEmail" type="email" autocomplete="email"></label>
         <label class="fl">Guests<select id="fPax"></select></label>
         <p class="hint">Confirmation and receipt go to this email.</p>
+      </div>
+      <div class="step">
+        <label class="cel"><input type="checkbox" id="cOn"> <span><b>Celebrating?</b> Put a message on the room’s TV 🎂<br><small>Birthday, anniversary or anything. It pops up in the first hour, and you can change it later.</small></span></label>
+        <div id="cBox" hidden>
+          <div class="chips" id="cKind" style="margin:10px 0">
+            <button type="button" data-k="birthday" aria-pressed="true">Birthday</button><button type="button" data-k="anniversary" aria-pressed="false">Anniversary</button>
+            <button type="button" data-k="celebrate" aria-pressed="false">Celebration</button><button type="button" data-k="note" aria-pressed="false">Note</button>
+          </div>
+          <label class="fl">For (name, optional)<input id="cTo" maxlength="40"></label>
+          <label class="fl">Headline<input id="cTitle" maxlength="60"></label>
+          <label class="fl">Message<textarea id="cText" maxlength="600" rows="4"></textarea></label>
+          <label class="fl">From<input id="cFrom" maxlength="40"></label>
+          <label class="fl">Show it<select id="cAfter"><option value="0">When the session starts</option><option value="15">15 min in</option><option value="30">30 min in</option><option value="45">45 min in</option><option value="60">1 hour in</option></select></label>
+        </div>
       </div>
       <div class="sum"><div><div id="dWhen" class="hint"></div><b id="dPrice"></b></div><button class="go" id="dGo" type="button">HOLD &amp; PAY</button></div>
       <p class="note err" id="dErr"></p>
@@ -185,7 +209,7 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
   var TIER = {}; GROUPS.forEach(function (g) { g[1].forEach(function (u) { TIER[u] = g[2]; }); });
   var EB = 11 * 60, view = 'room', hourSel = null;
   try { view = localStorage.getItem('r2.view') || 'room'; } catch (e) {}
-  var STEP = 15;
+  var STEP = 15, DAYS = 62;
   var $ = function (id) { return document.getElementById(id); };
   var cache = {}, day = null, seq = 0, cur = null, timer = null;
   var ss = { get: function (k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }, set: function (k, v) { try { if (v == null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (e) {} } };
@@ -218,12 +242,14 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 
   function drawDays() {
     var h = '';
-    for (var i = 0; i < 14; i++) {
-      var d = sgDate(i), dt = new Date(d + 'T12:00:00Z'), wd = dt.getUTCDay();
+    var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    for (var i = 0; i < DAYS; i++) {   /* about two months ahead */
+      var d = sgDate(i), dt = new Date(d + 'T12:00:00Z'), wd = dt.getUTCDay(), first = dt.getUTCDate() === 1 && i > 0;
       var name = i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][wd];
-      h += '<button type="button" data-d="' + d + '" aria-pressed="' + (d === day) + '"><span>' + name + '</span><b>' + dt.getUTCDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][dt.getUTCMonth()] + '</b></button>';
+      h += '<button type="button" data-d="' + d + '"' + (first ? ' class="m1"' : '') + ' aria-pressed="' + (d === day) + '">' + (first ? '<small>' + MON[dt.getUTCMonth()] + '</small>' : '') + '<span>' + name + '</span><b>' + dt.getUTCDate() + ' ' + MON[dt.getUTCMonth()] + '</b></button>';
     }
-    $('days').innerHTML = h;
+    var sc = $('days').scrollLeft; $('days').innerHTML = h; $('days').scrollLeft = sc;
+    $('monthNow').textContent = day ? MON[+day.slice(5, 7) - 1] + ' ' + day.slice(0, 4) : '';
   }
   function dayLabel(d) { var dt = new Date(d + 'T12:00:00Z'); return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dt.getUTCDay()] + ' ' + dt.getUTCDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][dt.getUTCMonth()]; }
 
@@ -367,6 +393,31 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
   });
   $('pLens').addEventListener('click', function (e) { var b = e.target.closest('button[data-i]'); if (!b || b.disabled) return; cur.len = +b.getAttribute('data-i'); markLen(); summary(); });
 
+  /* celebration message for the TV (the same wording defaults as the guest message page) */
+  var CEL = { birthday: ['Happy birthday', 'From all of us at Round2: have an epic birthday session. Here’s to another year of good games!'],
+    anniversary: ['Happy anniversary', 'Thank you for celebrating with us. From all of us at Round2, have a wonderful night together.'],
+    celebrate: ['Congratulations', 'Something worth celebrating! Enjoy every round tonight, from all of us at Round2.'], note: ['A message for you', ''] };
+  var cKind = 'birthday', cTitleEdited = false, cTextEdited = false;
+  function celFill() {
+    var c = CEL[cKind], to = $('cTo').value.trim();
+    if (!cTitleEdited) $('cTitle').value = c[0] + (to ? ', ' + to : '') + (cKind === 'note' ? '' : '!');
+    if (!cTextEdited) $('cText').value = c[1];
+    if (!$('cFrom').value) $('cFrom').value = $('fName').value.trim();
+  }
+  $('cOn').addEventListener('change', function () { $('cBox').hidden = !this.checked; if (this.checked) celFill(); });
+  $('cKind').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-k]'); if (!b) return; cKind = b.getAttribute('data-k');
+    Array.prototype.forEach.call(this.querySelectorAll('button'), function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+    celFill();
+  });
+  $('cTo').addEventListener('input', celFill);
+  $('cTitle').addEventListener('input', function () { cTitleEdited = true; });
+  $('cText').addEventListener('input', function () { cTextEdited = true; });
+  function celMsg() {
+    if (!$('cOn').checked) return null;
+    return { kind: cKind, to: $('cTo').value.trim(), title: $('cTitle').value.trim(), text: $('cText').value.trim(), from: $('cFrom').value.trim(), after: +$('cAfter').value };
+  }
+
   /* details: remembered on this phone for next time */
   $('pGo').addEventListener('click', function () {
     var o = startObj();
@@ -377,7 +428,7 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
   });
   $('dGo').addEventListener('click', function () {
     var o = startObj(), b = $('dGo');
-    var body = { unit: cur.uid, date: day, time: hhmm(o.m).slice(0, 5), hours: cur.len, name: $('fName').value, phone: $('fPhone').value, email: $('fEmail').value, pax: $('fPax').value, ret: location.href.split(/[?#]/)[0] };
+    var body = { unit: cur.uid, date: day, time: hhmm(o.m).slice(0, 5), hours: cur.len, name: $('fName').value, phone: $('fPhone').value, email: $('fEmail').value, pax: $('fPax').value, msg: celMsg(), ret: location.href.split(/[?#]/)[0] };
     try { localStorage.setItem('r2.me', JSON.stringify({ Name: body.name, Phone: body.phone, Email: body.email })); } catch (e) {}
     b.disabled = true; b.textContent = 'HOLDING…'; $('dErr').textContent = '';
     post('/checkout', body).then(function (j) {
