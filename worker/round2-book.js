@@ -10,7 +10,8 @@ const ICS = 'https://calendar.google.com/calendar/ical/en.singapore%23holiday%40
 const EXTRA_PH = [];                       // in-lieu days Google hasn't listed yet, e.g. '2027-02-08'
 const ROOMS = { 5: ['Vale', 'netflix'], 7: ['Kaeden', 'netflix'], 8: ['Scarlett', 'netflix'], 9: ['Kai', 'deluxe'], 10: ['Bella', 'deluxe'], 12: ['Atlas', 'deluxe'], 11: ['Max', 'vip'] };
 const SVC = { netflix: { off: 28, peak: 29, eb: 32 }, deluxe: { off: 35, peak: 37, eb: 33 }, vip: { off: 36, peak: 38, eb: 34 } };
-const MIRROR = { 5: 12, 12: 5 };          // Vale sits under Atlas
+const MIRROR = { 5: 12, 12: 5 };
+const MAX_PAX = { 5: 3, 7: 3, 8: 3, 9: 4, 10: 4, 12: 5, 11: 6 };   // most guests per room          // Vale sits under Atlas
 /* ===== PRICES – edit here. base = 3 hours; ext = extra price for +1h / +2h / +3h. =====
    Early Bird = 11:00 start only. Its extensions default to the day's rate ÷ 3 per hour (no discount). */
 const PRICES = {
@@ -230,7 +231,7 @@ async function checkout(env, b, origin) {
   const q = await quote(env, b);
   const ret = RET_OK.test(String(b.ret || '')) ? String(b.ret).split(/[?#]/)[0] : '';
   let name = String(b.name || '').trim().slice(0, 80), email = String(b.email || '').trim().toLowerCase().slice(0, 120), phone = String(b.phone || '').replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '').slice(0, 16);
-  const pax = Math.max(1, Math.min(q.type === 'vip' ? 6 : 4, +b.pax || 1));
+  const pax = Math.max(1, Math.min(MAX_PAX[q.unit] || 3, +b.pax || 1));
   if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('Please fill in name, email and phone');
   /* mobile with country code (+65 by default on the page; overseas guests change it). Staff may WhatsApp this number. */
   if (/^\d{8}$/.test(phone)) phone = '+65' + phone;

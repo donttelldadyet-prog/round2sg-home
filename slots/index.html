@@ -87,6 +87,11 @@ h3.nm, .nm { color: var(--rc); }
 /* Early bird: its own chip, easy to see, and clearly marked when taken */
 .ebchip { display: inline-flex; align-items: center; gap: 8px; margin: 8px 8px 0 0; padding: 7px 10px; font-size: 12px; white-space: nowrap; border: 1px solid var(--eb); color: var(--ink); background: rgba(102,199,255,.12); cursor: pointer; font-family: inherit; }
 .ebchip b { font: 8px 'Press Start 2P', monospace; letter-spacing: .1em; color: var(--eb); }
+.ebnote { margin: 4px 0 10px; padding: 10px 12px; font-size: 13px; border: 1px solid var(--eb); background: rgba(102,199,255,.1); color: var(--ink); }
+.ebnote b, .ebtag { font: 8px 'Press Start 2P', monospace; letter-spacing: .08em; color: var(--eb); }
+.ebnote b { display: block; margin-bottom: 6px; }
+.ebtag { display: block; margin-bottom: 5px; }
+.row.ebrow { border-color: var(--eb); border-left-color: var(--rc); background: rgba(102,199,255,.07); }
 .ebchip.gone { border-color: var(--line); background: transparent; color: var(--mute); cursor: default; text-decoration: line-through; text-decoration-color: rgba(244,241,251,.35); }
 .ebchip.gone b { color: var(--mute); }
 .room .free { color: var(--rc, var(--tc)); }
@@ -227,8 +232,8 @@ h3.nm, .nm { color: var(--rc); }
   'use strict';
   var ENGINE = 'https://round2-book.donttelldadyet.workers.dev';   /* Round2 booking engine (Cloudflare) – prices, holds, HitPay */
   var ROOMS = {   /* SimplyBook provider id → name, colour, type, max guests */
-    5: ['Vale', '#E8436A', 'Netflix room', 4], 7: ['Kaeden', '#4DB848', 'Netflix room', 4], 8: ['Scarlett', '#F2C21B', 'Netflix room', 4],
-    9: ['Kai', '#24B49A', 'Deluxe room', 4], 10: ['Bella', '#7A5BE0', 'Deluxe room', 4], 12: ['Atlas', '#E9E7EF', 'Deluxe room', 4],
+    5: ['Vale', '#E8436A', 'Netflix room', 3], 7: ['Kaeden', '#4DB848', 'Netflix room', 3], 8: ['Scarlett', '#F2C21B', 'Netflix room', 3],
+    9: ['Kai', '#24B49A', 'Deluxe room', 4], 10: ['Bella', '#7A5BE0', 'Deluxe room', 4], 12: ['Atlas', '#E9E7EF', 'Deluxe room', 5],
     11: ['Maximillion', '#E0402F', 'VIP room', 6]
   };
   /* tiers: name, rooms, colour (the section's top line and title). Free-time bars use each room's own character colour. */
@@ -387,10 +392,13 @@ h3.nm, .nm { color: var(--rc); }
     var res = data, rows = [];
     Object.keys(res.rooms).forEach(function (uid) { var l = res.rooms[uid].list; if (l.length) rows.push([uid, l[0]]); });
     rows.sort(function (a, b) { return a[1].m - b[1].m || a[1].prices[3] - b[1].prices[3]; });
-    return rows.map(function (r) {
+    /* early bird hunters: say up front which rooms still have it, and flag those rows */
+    var ebs = rows.filter(function (r) { return r[1].eb; }).map(function (r) { return ROOMS[r[0]][0]; });
+    var top = ebs.length ? '<div class="ebnote"><b>EARLY BIRD AVAILABLE</b> 11am start · $35 for 3 h · ' + ebs.join(', ') + '</div>' : '';
+    return top + rows.map(function (r) {
       var uid = r[0], o = r[1], R = ROOMS[uid];
-      return '<div class="row" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm">' + R[0] + '</h3><div class="ty" style="color:' + R[1] + '">' + R[2] + '</div></div>' +
-        '<div class="when">' + clock(o.m) + (o.eb ? ' · Early bird' : '') + '<small>' + money(o.prices[3]) + ' for 3 h · up to ' + o.maxH + ' h</small></div>' +
+      return '<div class="row' + (o.eb ? ' ebrow' : '') + '" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm">' + R[0] + '</h3><div class="ty" style="color:' + R[1] + '">' + R[2] + '</div></div>' +
+        '<div class="when">' + (o.eb ? '<span class="ebtag">EARLY BIRD AVAILABLE</span>' : '') + clock(o.m) + '<small>' + money(o.prices[3]) + ' for 3 h · up to ' + o.maxH + ' h</small></div>' +
         '<button class="pickb" type="button" data-u="' + uid + '" data-m="' + o.m + '">START ' + clock(o.m).toUpperCase() + '</button></div>';
     }).join('');
   }
