@@ -229,9 +229,12 @@ const RET_OK = /^https:\/\/([a-z0-9-]+\.)*(round2\.sg|github\.io|githack\.com|wo
 async function checkout(env, b, origin) {
   const q = await quote(env, b);
   const ret = RET_OK.test(String(b.ret || '')) ? String(b.ret).split(/[?#]/)[0] : '';
-  const name = String(b.name || '').trim().slice(0, 80), email = String(b.email || '').trim().toLowerCase().slice(0, 120), phone = String(b.phone || '').replace(/[^\d+]/g, '').slice(0, 16);
+  let name = String(b.name || '').trim().slice(0, 80), email = String(b.email || '').trim().toLowerCase().slice(0, 120), phone = String(b.phone || '').replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '').slice(0, 16);
   const pax = Math.max(1, Math.min(q.type === 'vip' ? 6 : 4, +b.pax || 1));
-  if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || phone.length < 8) throw new Error('Please fill in name, email and phone');
+  if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('Please fill in name, email and phone');
+  /* mobile with country code (+65 by default on the page; overseas guests change it). Staff may WhatsApp this number. */
+  if (/^\d{8}$/.test(phone)) phone = '+65' + phone;
+  if (!/^\+\d{7,15}$/.test(phone) || (phone.startsWith('+65') && !/^\+65[3689]\d{7}$/.test(phone))) throw new Error('Please check your mobile number and country code');
   /* optional celebration message for the room TV, shown 0–60 min after the start */
   let msg = null;
   if (b.msg && GM_KINDS.includes(b.msg.kind)) {
@@ -275,14 +278,14 @@ async function finalize(env, ref, source) {
       result = { dryRun: true, would: ['book', q.eventId, q.unit, 'client(' + d.email + ')', q.date, q.time + ':00', q.endDate, q.end + ':00', 0, { [PAX_FIELD]: String(d.pax) }] };
     } else {
       const a = await admin(env);
-      /* the booking must carry the name the guest TYPED (staff check it at the door), so reuse a contact only when
-         its email AND name match; otherwise make a new contact with the typed name */
-      const norm = (x) => String(x || '').toLowerCase().replace(/\s+/g, ' ').trim();
-      const found = Object.values((await a('getClientList', [d.email, 50]).catch(() => null)) || {});
-      const same = found.find((c) => norm(c.email) === d.email && norm(c.name) === norm(d.name));
-      let cid = same && same.id;
-      if (!cid) cid = await a('addClient', [{ name: d.name, email: d.email, phone: d.phone }]).catch((e) => { if (!found[0]) throw e; return null; });
-      if (!cid) cid = found[0].id;          // SimplyBook refused a second contact for this email: use the old one (the note still has the typed name)
+      /* every booking gets its OWN contact with exactly the name typed on the page – guests use fun names or a
+         different name each time, and staff greet them by it at the door. Never reuse an old contact. */
+      let cid = await a('addClient', [{ name: d.name, email: d.email, phone: d.phone }]).catch(() => null);
+      if (!cid) {                            // only if SimplyBook refuses a second contact for this email
+        const found = Object.values((await a('getClientList', [d.email, 1]).catch(() => null)) || {});
+        if (!found[0]) throw new Error('could not create the SimplyBook contact');
+        cid = found[0].id;                   // the note below still carries the typed name
+      }
       const bk = await a('book', [q.eventId, q.unit, cid, q.date, q.time + ':00', q.endDate, q.end + ':00', 0, { [PAX_FIELD]: String(d.pax) }]);
       const b0 = bk && bk.bookings && bk.bookings[0];
       result = { bookingId: b0 && b0.id, code: b0 && b0.code };
