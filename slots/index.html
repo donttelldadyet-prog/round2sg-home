@@ -14,6 +14,9 @@
 html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 'Chakra Petch', system-ui, sans-serif; }
 [hidden] { display: none !important; }
 .wrap { max-width: 980px; margin: 0 auto; padding: 22px 16px 40px; }
+/* inside the website's Book screen (?embed=1): the website already has the heading, so start straight at the calendar */
+.embed .wrap { padding-top: 6px; }
+.embed .kick.top, .embed h1.top, .embed .sub.intro { display: none; }
 .px { font-family: 'Press Start 2P', monospace; letter-spacing: .12em; }
 .kick { font-size: 9px; color: var(--acc); }
 h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4; margin: 8px 0 6px; letter-spacing: .04em; }
@@ -174,9 +177,9 @@ h3.nm, .nm { color: var(--rc); }
 </head>
 <body>
 <div class="wrap">
-  <div class="px kick">SAVE MENU · FREE SLOTS</div>
-  <h1>WHAT'S FREE</h1>
-  <p class="sub">Pick a day, then look by room, by the time you'd like to start, or the earliest free. Coloured bars are times you can start; tap a room to choose your start and how long you'll stay.</p>
+  <div class="px kick top">SAVE MENU · FREE SLOTS</div>
+  <h1 class="top">WHAT'S FREE</h1>
+  <p class="sub intro">Pick a day, then look by room, by the time you'd like to start, or the earliest free. Coloured bars are times you can start; tap a room to choose your start and how long you'll stay.</p>
   <p class="sub" style="margin-top:-6px">Already booked? <a style="color:var(--acc)" href="https://round2-book.donttelldadyet.workers.dev/find">View your booking</a> or add a TV message.</p>
   <div class="banner" id="banner" hidden></div>
   <div class="lbl px dayhd"><i data-ic="cal"></i>1 · PICK A DAY <span id="monthNow"></span><button type="button" id="toToday" hidden>BACK TO TODAY</button></div>
@@ -252,7 +255,11 @@ h3.nm, .nm { color: var(--rc); }
 (function () {
   'use strict';
   var ENGINE = 'https://round2-book.donttelldadyet.workers.dev';   /* Round2 booking engine (Cloudflare) – prices, holds, HitPay */
-  var SB_BOOK = 'https://www.round2.sg/booknow';   /* the SimplyBook booking page (safe mode) */
+  var SB_BOOK = 'https://www.round2.sg/booknow';
+  /* EMBED: the website's Book screen loads this page inside itself (?embed=1). Payment then opens in a new tab (payment
+     pages can't run inside another site's frame), and the confirmation's "Back to Round2" goes to the website. */
+  var EMBED = /[?&]embed=1/.test(location.search);
+  if (EMBED) document.documentElement.classList.add('embed');   /* the SimplyBook booking page (safe mode) */
   /* TEST MODE: the control centre's Test bench opens this page with ?test=<test code>; checkout then uses the HitPay
      SANDBOX (no real money) even when guests pay live. Remembered for this tab only. */
   var TEST = (function () { var c = new URLSearchParams(location.search).get('test') || ''; try { if (c) sessionStorage.setItem('r2.test', c); else c = sessionStorage.getItem('r2.test') || ''; } catch (e) {} return c; }());
@@ -555,7 +562,7 @@ h3.nm, .nm { color: var(--rc); }
   });
   $('dGo').addEventListener('click', function () {
     var o = startObj(), b = $('dGo');
-    var body = { unit: cur.uid, date: day, time: hhmm(o.m).slice(0, 5), hours: cur.len, name: $('fName').value, phone: fullPhone(), email: $('fEmail').value, pax: $('fPax').value, msg: celMsg(), ret: location.href.split(/[?#]/)[0], test: TEST || undefined };
+    var body = { unit: cur.uid, date: day, time: hhmm(o.m).slice(0, 5), hours: cur.len, name: $('fName').value, phone: fullPhone(), email: $('fEmail').value, pax: $('fPax').value, msg: celMsg(), ret: EMBED ? 'https://www.round2.sg/' : location.href.split(/[?#]/)[0], test: TEST || undefined };
     try { localStorage.setItem('r2.me', JSON.stringify({ Name: body.name, Phone: $('fPhone').value, Cc: $('fCc').value, Email: body.email })); } catch (e) {}
     b.disabled = true; b.textContent = 'HOLDING…'; $('dErr').textContent = '';
     post('/checkout', body).then(function (j) {
@@ -579,6 +586,7 @@ h3.nm, .nm { color: var(--rc); }
     $('tTerms').checked = false; $('tCancel').checked = false; ticks();
     $('hWhat').innerHTML = '<b>' + esc(ROOMS[cur.uid][0]) + '</b> · ' + esc(when()) + '<br><b>' + money(j.total) + '</b>';
     $('hPay').href = j.url; $('hPay').textContent = 'PAY ' + money(j.total);
+    if (EMBED) $('hPay').setAttribute('target', '_blank');
     step('hold');
     clearInterval(timer);
     timer = setInterval(function () {
@@ -594,7 +602,8 @@ h3.nm, .nm { color: var(--rc); }
     if (!$('modal').hidden) closeBook();
     at('board'); load(day, true); show(day);
   }
-  $('hPay').addEventListener('click', function (e) { if ($('hPay').classList.contains('off')) { e.preventDefault(); return; } ss.set('r2.went', '1'); count('board_pay'); });
+  $('hPay').addEventListener('click', function (e) { if ($('hPay').classList.contains('off')) { e.preventDefault(); return; } if (!EMBED) ss.set('r2.went', '1'); count('board_pay');
+    if (EMBED) $('tNeed').hidden = false, $('tNeed').textContent = 'Payment opened in a new tab. Finish there and your confirmation shows up in that tab.'; });
   $('hChange').addEventListener('click', function () { release(''); });
   /* back button from HitPay (page restored) → free the slot straight away */
   addEventListener('pageshow', function () { if (ss.get('r2.ref') && ss.get('r2.went')) release('You left the payment page, so we released the slot. Pick a time again.'); });
