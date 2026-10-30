@@ -179,7 +179,6 @@ export class HoldBook extends DurableObject {
     this.arm();
     return { ok: true, released };
   }
-  recent() { return this.rows(`SELECT ref, status, data FROM holds ORDER BY created DESC LIMIT 4`).map((r) => { const d = JSON.parse(r.data || '{}'); return { ref: r.ref, status: r.status, name: d.name, done: d.done }; }); }
   list(date) { return this.rows(`SELECT unit, s, e FROM holds WHERE date = ? AND status = 'pending' AND exp > ?`, date, Date.now()); }
   setPr(ref, pr) { this.sql.exec(`UPDATE holds SET pr = ? WHERE ref = ?`, pr, ref); }
   get(ref) { const r = this.rows(`SELECT * FROM holds WHERE ref = ?`, ref)[0]; return r ? { ...r, data: JSON.parse(r.data || '{}') } : null; }
@@ -393,16 +392,6 @@ export default {
         const q = f.h.q;
         return H(PAGE(f.ok ? `<h1>You're booked 🎉</h1><p><b>${esc(q.room)}</b>, ${esc(q.date)}, ${esc(q.time)}–${esc(q.end)} (${q.hours}h) · $${q.total.toFixed(2)} paid.</p><p>Ref ${esc(ref)}${f.h.done && f.h.done.dryRun ? ' · <span class="tag">TEST – not put in calendar</span>' : ''}</p><p>A confirmation email is on its way.</p>${f.h.done && f.h.done.tv && f.h.done.tv.code ? `<p>Your message pops up on the TV ${f.h.msg.after ? f.h.msg.after + ' minutes after you start' : 'when you start'}. Want to change it? <a style="color:#F2C21B" href="https://cue.round2.sg/${esc(f.h.done.tv.code)}">cue.round2.sg/${esc(f.h.done.tv.code)}</a></p>` : ''}${f.h.ret ? `<a class="btn" href="${esc(f.h.ret)}">Back to Round2</a>` : ''}<script>try{sessionStorage.clear()}catch(e){}</script>`
           : `<h1>Payment received</h1><p class="err">${esc(f.err)}</p><p>We'll WhatsApp you shortly. Ref ${esc(ref)}.</p>`));
-      }
-      if (u.pathname === '/probe' && u.searchParams.get('k') === String(env.SB_PUBLIC_KEY).slice(0, 12)) {   /* TEMP: look at the last test booking */
-        const a = await admin(env), out = {};
-        const rows = await book(env).recent();
-        out.recent = rows;
-        const last = rows.find((r) => r.done && r.done.bookingId);
-        if (last) out.details = await a('getBookingDetails', [last.done.bookingId]).catch((e) => String(e));
-        for (const m of ['setBookingComment', 'editBookingComment', 'addBookingComment', 'setBookingAdditionalField']) out[m] = await a(m, [0, 'x']).then(() => 'exists').catch((e) => String(e.message || e).slice(0, 90));
-        out.user = await a('getCurrentUser', []).catch((e) => String(e).slice(0, 90));
-        return J(out);
       }
       if (u.pathname === '/test') return H(testForm());
       if (u.pathname === '/selftest') { const a = await admin(env); const units = await a('getUnitList', []); return J({ sbLogin: true, rooms: Object.values(units).map((x) => x.name), dryRun: env.DRY_RUN === '1' }); }
