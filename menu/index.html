@@ -173,7 +173,7 @@ textarea{display:block;width:100%;margin-top:8px;min-height:64px;resize:vertical
   <span class="badge" id="roomTag"></span>
 </header>
 <div class="wrap intro"><div class="eyebrow"><span>Food &amp; drinks</span><span class="count">by Madd Pizza</span></div><div class="divider" aria-hidden="true"><span></span><i></i><span></span></div></div>
-<div class="wrap" id="simBar" hidden><p class="noroom" style="border-color:var(--accent);color:var(--accent)">TEST MODE · orders are simulated, nothing is charged and nothing is made.</p><div class="simrooms" id="simRooms"></div></div>
+<div class="wrap" id="simBar" hidden><p class="noroom" style="border-color:var(--accent);color:var(--accent)" id="simTxt">TEST MODE · orders are simulated, nothing is charged and nothing is made.</p><div class="simrooms" id="simPay"></div><div class="simrooms" id="simRooms"></div></div>
 <div class="wrap" id="noRoom" hidden><p class="noroom">To order, scan the QR code in your room. You can still look through the menu.</p></div>
 <div class="tabs-shell"><nav class="wrap tabs" id="tabs" aria-label="Menu sections"></nav></div>
 <main class="wrap" id="menu"><p class="loading pix">Loading menu…</p></main>
@@ -256,6 +256,14 @@ function totals(lines){
 const SIM = (() => { let c = new URLSearchParams(location.search).get("sim") || "";
   try { if (c) sessionStorage.setItem("r2sim", c); else c = sessionStorage.getItem("r2sim") || ""; } catch {}
   return CONFIG.SIM_URL ? c : ""; })();
+// test mode, how to pay: "skip" = no HitPay (straight to the kitchen + TV alerts), "hitpay" = the full flow through the
+// HitPay SANDBOX (test card 4242 4242 4242 4242, no real money; the engine knows it's a test from the sim code)
+let SIMPAY = (() => { try { return sessionStorage.getItem("r2simpay") || "skip"; } catch { return "skip"; } })();
+function drawSimPay(){
+  if (!SIM) return;
+  $("#simPay").innerHTML = [["skip", "Skip HitPay (alerts only)"], ["hitpay", "Full flow: HitPay sandbox"]].map(x => `<button type="button" data-simpay="${x[0]}" style="--rc:var(--accent);--ri:#111" aria-pressed="${SIMPAY === x[0]}">${x[1]}</button>`).join("");
+  $("#simTxt").textContent = SIMPAY === "hitpay" ? "TEST MODE · full flow through the HitPay sandbox: pay with test card 4242 4242 4242 4242 (any future date, any CVC). No real money; the kitchen slip is marked TEST." : "TEST MODE · orders skip payment and go straight to the kitchen group and the TV. Nothing is charged and nothing is made.";
+}
 
 // ===== Room =====
 const roomByName = n => CONFIG.ROOMS.find(r => r.name.toLowerCase() === String(n||"").trim().toLowerCase() || (r.alias||[]).includes(String(n||"").trim().toLowerCase()));
@@ -271,6 +279,7 @@ function paintRoom(){
   $("#noRoom").hidden = !!room;
   $("#simBar").hidden = !SIM;
   // test mode only: switch rooms here instead of changing the link (guests' menus stay locked to their QR code)
+  drawSimPay();
   if (SIM) $("#simRooms").innerHTML = CONFIG.ROOMS.map(r => `<button type="button" data-simroom="${esc(r.name)}" style="--rc:${r.color};--ri:${r.ink}" aria-pressed="${room && room.name === r.name}">${esc(r.name)}</button>`).join("");
 }
 
@@ -360,8 +369,8 @@ function renderCart(state){
      <textarea id="note" maxlength="300" placeholder="e.g. no chilli on the wings">${esc(note)}</textarea>
      <dl class="sum"><dt>Subtotal</dt><dd>${money(t.sub)}</dd><dt>GST 9%</dt><dd>${money(t.gst)}</dd><dt class="tot">Total</dt><dd class="tot">${money(t.total)}</dd></dl>
      <div class="for-room">${room ? `<span>Order for <b>${esc(room.name)}</b> · collect at the entrance</span>` : `<span>Scan the QR code in your room to order.</span>`}</div>
-     <button class="hlbar pay" id="pay" type="button" ${belowMin || !room || state === "busy" ? "disabled" : ""}><svg width="14" height="16" viewBox="0 0 14 16" aria-hidden="true"><path d="M1 1l12 7-12 7z" fill="currentColor"/></svg><span class="lbl">${!room ? "Scan your room's QR code" : belowMin ? `Minimum order ${money(cents(S.minOrder))}` : state === "busy" ? (SIM ? "Sending test order…" : "Opening payment…") : SIM ? "Simulate order" : "Pay"}</span><span>${belowMin || !room || state === "busy" ? "" : money(t.total)}</span></button>
-     <div class="go">${SIM ? `<span>Test mode</span><span class="gbar"></span><span>No payment</span>` : `<span>Secure payment</span><span class="gbar"></span><span>HitPay</span>`}</div>
+     <button class="hlbar pay" id="pay" type="button" ${belowMin || !room || state === "busy" ? "disabled" : ""}><svg width="14" height="16" viewBox="0 0 14 16" aria-hidden="true"><path d="M1 1l12 7-12 7z" fill="currentColor"/></svg><span class="lbl">${!room ? "Scan your room's QR code" : belowMin ? `Minimum order ${money(cents(S.minOrder))}` : state === "busy" ? (SIM && SIMPAY !== "hitpay" ? "Sending test order…" : "Opening payment…") : SIM ? (SIMPAY === "hitpay" ? "Pay (sandbox)" : "Simulate order") : "Pay"}</span><span>${belowMin || !room || state === "busy" ? "" : money(t.total)}</span></button>
+     <div class="go">${SIM ? `<span>Test mode</span><span class="gbar"></span><span>${SIMPAY === "hitpay" ? "HitPay sandbox" : "No payment"}</span>` : `<span>Secure payment</span><span class="gbar"></span><span>HitPay</span>`}</div>
      <div id="payMsg"></div>`;
 }
 
@@ -376,7 +385,7 @@ async function checkout(){
     shown_total: (t.total / 100).toFixed(2),
     prev: (store.get("r2pending") || {}).request_id || ""
   };
-  if (SIM) return simulate(note, t);
+  if (SIM && SIMPAY !== "hitpay") return simulate(note, t);
   if (!CONFIG.CHECKOUT_URL) {
     $("#payMsg").innerHTML = `<div class="preview"><b>Preview mode.</b> Payment isn't connected yet. Make.com will receive this order, re-check the prices and create the HitPay payment.
       <pre>${esc(JSON.stringify(order, null, 2))}</pre><pre>Madd Pizza ${money(t.madd)} (incl. GST ${money(t.gst)}) · Round2 ${money(t.round2)}</pre></div>`;
@@ -387,13 +396,13 @@ async function checkout(){
   // Sent as a simple form post so the browser doesn't need a pre-flight check.
   const post = async (url, ms) => {
     const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), ms);
-    try { const res = await fetch(url, { method: "POST", body: new URLSearchParams({ order: JSON.stringify(order) }), signal: ctrl.signal });
+    try { const res = await fetch(url, { method: "POST", body: new URLSearchParams(Object.assign({ order: JSON.stringify(order) }, SIM ? { test: SIM } : {})), signal: ctrl.signal });
       return { res, data: await res.json().catch(() => ({})) }; } finally { clearTimeout(timer); }
   };
   try {
     const r = await post(CONFIG.CHECKOUT_URL, 20000), res = r.res, data = r.data;
     if (!res.ok || !data.url) throw new Error(data.error || "We couldn't start the payment.");
-    store.set("r2pending", { order: data.order, no: data.no, request_id: data.request_id, lines: cart, note, room: room.name, total: t.total, gst: t.gst, sub: t.sub, at: Date.now() });
+    store.set("r2pending", { test: !!data.test, order: data.order, no: data.no, request_id: data.request_id, lines: cart, note, room: room.name, total: t.total, gst: t.gst, sub: t.sub, at: Date.now() });
     location.href = data.url;
   } catch (e) {
     renderCart();
@@ -432,6 +441,7 @@ document.addEventListener("click", e => {
   else if (b.dataset.tab) { const s = document.getElementById("s-" + b.dataset.tab); scrollTo({ top: s.getBoundingClientRect().top + scrollY - 60, behavior: "smooth" }); }
   else if (b.id === "barBtn") { renderCart(); show("cart"); }
   else if (b.id === "pay") checkout();
+  else if (b.dataset.simpay && SIM) { SIMPAY = b.dataset.simpay; try { sessionStorage.setItem("r2simpay", SIMPAY); } catch {} drawSimPay(); renderCart(); }
   else if (b.dataset.simroom && SIM) {
     room = roomByName(b.dataset.simroom); store.set("r2room", { room: room.name, t: Date.now() });
     history.replaceState(null, "", location.pathname + "?room=" + room.name.toLowerCase() + "&sim=" + encodeURIComponent(SIM));
@@ -486,7 +496,7 @@ function returnScreen(){
     // Backup to HitPay's own notification: the engine checks the payment with HitPay before sending anything to the kitchen.
     if (CONFIG.PAID_URL) try { navigator.sendBeacon(CONFIG.PAID_URL, new URLSearchParams({ reference_number: p.order || "", payment_request_id: q.get("reference") || "", status, source: "return" })); } catch {}
     cart = []; store.set("r2cart", []); store.set("r2note", ""); store.set("r2pending", null); refresh();
-    doneScreen(p, false);
+    doneScreen(p, !!p.test);
   } else if (status !== "completed") {
     renderCart(); show("cart");
     $("#payMsg").innerHTML = `<p class="msg err">Payment wasn't completed. Your order is still here. Tap Pay to try again.</p>`;
