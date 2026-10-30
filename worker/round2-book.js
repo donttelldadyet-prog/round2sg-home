@@ -2,7 +2,9 @@
    Secrets: HITPAY_KEY, HITPAY_SALT, HITPAY_API, SB_COMPANY, SB_USER, SB_PASS.  Vars: SB_PUBLIC_KEY, DRY_RUN ("1" = don't create SimplyBook bookings).
    Durable Object HOLDBOOK (class HoldBook): one place that holds unpaid slots, so two guests can't hold the same time,
    and whose alarm releases a hold after 10 min AND cancels its HitPay link (no paying for a released slot).
-   Routes: GET /ph, POST /quote, POST /checkout, POST /release, POST /hitpay (webhook), GET /done?ref=, GET /test, GET /selftest */
+   Routes: GET /ph, POST /quote, POST /checkout, POST /release, POST /hitpay (webhook), GET /done?ref=, GET /test, GET /selftest
+   TIMES: a SimplyBook booking's end = the guest's session end + 15 min cleaning (docs/booking-times.md). Guests, prices, TV
+   messages and "time's up" use the SESSION end; only SimplyBook (and its availability) uses the end with cleaning. */
 import { DurableObject } from 'cloudflare:workers';
 
 const SB = 'https://user-api.simplybook.asia';
@@ -298,6 +300,7 @@ async function finalize(env, ref, source) {
       /* the details SimplyBook doesn't show: the name typed on the page (SimplyBook keeps an existing contact's name),
          what was really paid (SimplyBook shows the base service price) */
       const note = `Online booking (round2.sg) · paid $${q.total.toFixed(2)} via HitPay · ref ${ref}\nBooked as: ${d.name} · ${d.phone} · ${d.email} · ${d.pax} guests` +
+        `\nGuest session ${q.time}–${q.end} (the SimplyBook end, ${hhmm(eB)}, includes 15 min cleaning)` +
         (q.hours > 3 ? `\nIncludes +${q.hours - 3}h extension (${q.time}–${q.end})` : '') + (d.msg ? `\nTV message: ${d.msg.kind}, ${d.msg.after} min after start` : '');
       if (b0 && b0.id) result.comment = await a('setBookingComment', [b0.id, note]).then(() => 'saved').catch((e) => 'not saved: ' + String(e.message || e).slice(0, 80));
     }

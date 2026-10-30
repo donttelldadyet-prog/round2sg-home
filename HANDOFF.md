@@ -33,6 +33,12 @@ Not done (in order):
 5. Board design changes the owner asked for (below).
 6. Go-live: live HitPay key/salt (owner pastes into Cloudflare), `HITPAY_API=https://api.hit-pay.com/v1`, `DRY_RUN=0`, put the board behind the menu's Book button, merge only on approval.
 
+## Booking times – read docs/booking-times.md (30 Oct)
+A SimplyBook booking's end = the guest's session end **+ 15 min cleaning** (that's how SimplyBook's own bookings look: 11:00–14:15 for 3 h).
+Since 30 Oct the engine books the same way and notes "Guest session HH:MM–HH:MM" in the booking comment. Anything guest-facing
+("10 minutes left", "That's a wrap", receipts) uses the SESSION end, before the cleaning time. The engine also confirms each booking
+(SimplyBook's own guest bookings are confirmed) and logs in as hello@round2.sg (set 30 Oct) – both to get staff push notifications; not yet re-tested.
+
 ## Owner's design feedback (30 Oct) – DONE 30 Oct afternoon (slots/index.html): tier boxes, Early Bird chip (and 'taken'), hour lines, BY ROOM / BY TIME / EARLIEST views
 - Early Bird bar is a thin sliver (it's one start time). Show it as its own clear block/chip ("Early bird 11am") that's easy to see.
 - Make the bars nicer in the Round2 theme and make different times easier to tell apart (tick marks, hour labels, tier colours).

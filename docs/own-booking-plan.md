@@ -1,5 +1,7 @@
 # Round2 own booking page – plan (test build)
 
+> **Booking times:** SimplyBook bookings end 15 min after the guest session (cleaning). Read [booking-times.md](booking-times.md) before anything time-based.
+
 Status 30 Oct 2026: planning. Nothing live changed. Branch: `own-booking` (round2sg-home).
 
 ## Why
