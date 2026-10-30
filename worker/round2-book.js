@@ -28,6 +28,7 @@ const BUF = 15, HOLD_SEC = 600, EB_START = 660;
 const CLOSE = 23 * 60 + 15;
 const bufTo = (t) => (t >= CLOSE ? 0 : BUF);
 /* guest messages (round2-tv-launcher docs/guest-messages.md): a celebration message written while booking */
+/* the Make webhook: secret GM_HOOK_URL once the webhook is swapped for a new one (the old address below is public in git history) */
 const GM_HOOK = 'https://hook.eu1.make.com/0vs25z4g3omjuvbdxwstdgofqhc3p2e4';
 const GM_ROOM = { 5: 'vale', 7: 'kaeden', 8: 'scarlett', 9: 'kai', 10: 'bella', 12: 'atlas', 11: 'max' };
 const GM_KINDS = ['birthday', 'anniversary', 'celebrate', 'note'];
@@ -164,6 +165,26 @@ export class HoldBook extends DurableObject {
       pr TEXT, phone TEXT, email TEXT, status TEXT, data TEXT, created INTEGER)`);
   }
   rows(q, ...a) { return [...this.sql.exec(q, ...a)]; }
+  /* guest messages front door (/gm): a short cache of each link, edit counts, and a per-visitor rate limit */
+  gmInit() {
+    if (this.gmReady) return; this.gmReady = true;
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS gm (code TEXT PRIMARY KEY, link TEXT, err TEXT, exp INTEGER, edits INTEGER DEFAULT 0)`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS gmrate (who TEXT, t INTEGER)`);
+  }
+  gmRate(who, max) {
+    this.gmInit(); const now = Date.now();
+    this.sql.exec(`DELETE FROM gmrate WHERE t < ?`, now - 600e3);
+    const n = this.rows(`SELECT COUNT(*) AS n FROM gmrate WHERE who = ?`, who)[0].n;
+    if (n >= max) return false;
+    this.sql.exec(`INSERT INTO gmrate VALUES (?, ?)`, who, now); return true;
+  }
+  gmGet(code) { this.gmInit(); const r = this.rows(`SELECT * FROM gm WHERE code = ?`, code)[0]; return r ? { link: r.link ? JSON.parse(r.link) : null, err: r.err, exp: r.exp, edits: r.edits } : null; }
+  gmPut(code, link, err, ttl) {
+    this.gmInit(); const o = this.gmGet(code);
+    this.sql.exec(`INSERT OR REPLACE INTO gm VALUES (?, ?, ?, ?, ?)`, code, link ? JSON.stringify(link) : null, err || null, Date.now() + ttl, o ? o.edits : 0);
+  }
+  gmEdit(code) { this.gmInit(); this.sql.exec(`UPDATE gm SET edits = edits + 1 WHERE code = ?`, code); }
+  gmDrop(code) { this.gmInit(); this.sql.exec(`UPDATE gm SET exp = 0 WHERE code = ?`, code); }
   /* any pending hold overlapping s–e (plus cleaning buffer) on these rooms? */
   clash(date, units, s, e, ignore = '') {
     const now = Date.now();
@@ -327,7 +348,7 @@ async function paidStat(q, d) {
 async function tvMessage(env, d, q, ref) {
   if (!env.GM_STAFF) return { problem: 'no staff code' };
   const call = async (body) => {
-    const r = await fetch(GM_HOOK, { method: 'POST', body: new URLSearchParams(body) });
+    const r = await fetch(env.GM_HOOK_URL || GM_HOOK, { method: 'POST', body: new URLSearchParams(body) });
     const t = await r.text(); let j; try { j = JSON.parse(t); } catch (e) { throw new Error('Make: ' + t.slice(0, 60)); }
     if (j.error) throw new Error(j.error); return j;
   };
@@ -336,6 +357,64 @@ async function tvMessage(env, d, q, ref) {
   const m = d.msg;
   await call({ action: 'submit', code: link.code, kind: m.kind, to: m.to, from: m.from, title: m.title, text: m.text, at: start + m.after * 60e3 });
   return { code: link.code, at: start + m.after * 60e3 };
+}
+
+/* ---------- guest messages front door: POST /gm (same form fields as the Make webhook) ----------
+   The cue page (round2-tv-launcher manager/msg/), the staff page and the control centre call this instead of Make, so the
+   Make webhook address isn't in any public page. It only passes on what Make would accept: real codes, real changes,
+   the right staff code; it caches each link for a minute (page reloads cost nothing), caps guest edits, and limits how
+   often one visitor can call. Saves Make operations (10,000 a month shared) – docs/guest-messages.md "Front door". */
+const GM_GUEST_EDITS = 8, GM_STAFF_ACTIONS = ['create', 'list', 'move', 'now', 'cancel', 'r2', 'push'];
+async function gmFwd(env, fields) {
+  const r = await fetch(env.GM_HOOK_URL || GM_HOOK, { method: 'POST', body: new URLSearchParams(fields) });
+  return r.text();
+}
+const gmJ = (o) => J(o);
+async function gm(env, req) {
+  const f = Object.fromEntries(new URLSearchParams(await req.text()));
+  const act = String(f.action || ''), who = req.headers.get('cf-connecting-ip') || 'x', hb = book(env);
+  const guest = act === 'get' || act === 'submit';
+  if (!guest && !GM_STAFF_ACTIONS.includes(act)) return gmJ({ error: 'Unknown action.' });
+  if (!(await hb.gmRate(who + (guest ? ':g' : ':s'), guest ? 30 : 200))) return gmJ({ error: 'Too many tries. Wait a few minutes and try again.' });
+  const code = String(f.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  /* staff: check the staff code here, so wrong guesses never reach Make; then pass straight through */
+  if (!guest) {
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const t = await gmFwd(env, f);
+    if (code) await hb.gmDrop(code);                                   // staff moved/cancelled it: guests see the change
+    return new Response(t, { headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' } });
+  }
+  if (!/^[A-Z0-9]{6,12}$/.test(code)) return gmJ({ error: 'That link isn’t right. Check the code with Round2.' });
+  /* the link, from the 1-minute cache or Make */
+  const fresh = async () => {
+    const t = await gmFwd(env, { action: 'get', code });
+    let j; try { j = JSON.parse(t); } catch (e) { throw new Error('Round2’s server didn’t answer properly. Try again in a minute.'); }
+    if (j.error) await hb.gmPut(code, null, j.error, 300e3); else if (j.link) await hb.gmPut(code, j.link, null, 60e3);
+    return j;
+  };
+  let c = await hb.gmGet(code);
+  if (act === 'get') {
+    if (c && c.exp > Date.now()) return gmJ(c.err ? { error: c.err } : { link: c.link });
+    return gmJ(await fresh());
+  }
+  /* submit: check it the way Make does, drop unchanged saves, cap the number of changes */
+  if (!c || c.exp <= Date.now() || c.err) { const j = await fresh(); if (j.error) return gmJ({ error: j.error }); c = await hb.gmGet(code); }
+  const L = c.link || {}, at = +f.at, start = +L.start;
+  const t = (x, n) => String(x || '').replace(/\s+/g, ' ').trim().slice(0, n);
+  const m = { kind: String(f.kind || ''), to: t(f.to, 40), from: t(f.from, 40), title: t(f.title, 120), text: String(f.text || '').trim() };
+  if (L.status === 'cancelled') return gmJ({ error: 'This link was cancelled. Message Round2 if that’s wrong.' });
+  if (!GM_KINDS.includes(m.kind)) return gmJ({ error: 'Pick an occasion.' });
+  if (!m.title) return gmJ({ error: 'Add a headline.' });
+  if (m.text.length > 600) return gmJ({ error: 'Keep the message under 600 characters.' });
+  if (!(at >= start && at <= start + 3600e3 && (at - start) % 900e3 === 0)) return gmJ({ error: 'Pick when it pops up: at the start or up to an hour after.' });
+  if (L.status === 'approved' && L.at && Date.now() >= L.at) return gmJ({ error: 'It’s already on the TV. To change it now, message Round2.' });
+  const same = L.status === 'approved' && L.kind === m.kind && (L.to || '') === m.to && (L.from || '') === m.from && (L.title || '') === m.title && (L.text || '') === m.text && +L.at === at;
+  if (same) return gmJ({ ok: true, unchanged: true });
+  if ((c.edits || 0) >= GM_GUEST_EDITS) return gmJ({ error: 'This message has been changed a lot already. Message Round2 if it still needs a change.' });
+  const out = await gmFwd(env, { action: 'submit', code, kind: m.kind, to: m.to, from: m.from, title: m.title, text: m.text, at });
+  let j; try { j = JSON.parse(out); } catch (e) { return gmJ({ error: 'Round2’s server didn’t answer properly. Try again in a minute.' }); }
+  if (!j.error) { await hb.gmEdit(code); await hb.gmPut(code, { ...L, ...m, at, status: 'approved' }, null, 60e3); }
+  return gmJ(j);
 }
 
 /* ---------- pages ---------- */
@@ -418,6 +497,7 @@ export default {
         return H(PAGE(f.ok ? `<h1>You're booked 🎉</h1><p><b>${esc(q.room)}</b>, ${esc(q.date)}, ${esc(q.time)}–${esc(q.end)} (${q.hours}h) · $${q.total.toFixed(2)} paid.</p><p>Ref ${esc(ref)}${f.h.done && f.h.done.dryRun ? ' · <span class="tag">TEST – not put in calendar</span>' : ''}</p><p>A confirmation email is on its way.</p>${f.h.done && f.h.done.tv && f.h.done.tv.code ? `<p>Your message pops up on the TV ${f.h.msg.after ? f.h.msg.after + ' minutes after you start' : 'when you start'}. Want to change it? <a style="color:#F2C21B" href="https://cue.round2.sg/${esc(f.h.done.tv.code)}">cue.round2.sg/${esc(f.h.done.tv.code)}</a></p>` : ''}${f.h.ret ? `<a class="btn" href="${esc(f.h.ret)}">Back to Round2</a>` : ''}<script>try{sessionStorage.clear()}catch(e){}</script>`
           : `<h1>Payment received</h1><p class="err">${esc(f.err)}</p><p>We'll WhatsApp you shortly. Ref ${esc(ref)}.</p>`));
       }
+      if (u.pathname === '/gm' && req.method === 'POST') return await gm(env, req);
       if (u.pathname === '/test') return H(testForm());
       if (u.pathname === '/selftest') { const a = await admin(env); const units = await a('getUnitList', []); return J({ sbLogin: true, rooms: Object.values(units).map((x) => x.name), dryRun: env.DRY_RUN === '1' }); }
       return J({ ok: true, svc: 'round2-book' });
