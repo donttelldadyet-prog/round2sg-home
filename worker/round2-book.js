@@ -338,7 +338,7 @@ async function checkout(env, b, origin) {
     pr = await hitpay(env, 'POST', '/payment-requests', {
       amount: q.total.toFixed(2), currency: 'SGD', name, email, phone,
       purpose: `Round2 ${q.room} · ${when} ${q.time}–${q.end} (${q.hours}h)`,
-      reference_number: ref, redirect_url: `${origin}/done?ref=${ref}`,
+      reference_number: ref, redirect_url: `${origin}/done?ref=${ref}`, webhook: `${origin}/booking/hitpay`,
     });
   } catch (err) { await hb.release(ref); throw err; }
   await hb.setPr(ref, pr.id);
@@ -346,6 +346,11 @@ async function checkout(env, b, origin) {
 }
 
 /* ---------- after payment: put the booking into SimplyBook (exactly once) ---------- */
+/* staff alerts (Telegram): secret STAFF_CHAT = the chat id of a staff-only group with the Round2 kitchen bot in it */
+async function staffAlert(env, text) {
+  if (!env.TG_BOT_TOKEN || !env.STAFF_CHAT) return;
+  await fetch('https://api.telegram.org/bot' + env.TG_BOT_TOKEN + '/sendMessage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: env.STAFF_CHAT, text }) });
+}
 async function finalize(env, ref, source) {
   const hb = book(env);
   let h = await hb.get(ref); if (!h) return { ok: false, err: 'unknown ref' };
@@ -384,6 +389,8 @@ async function finalize(env, ref, source) {
     if (d.msg && !result.dryRun) result.tv = await tvMessage(env, d, q, ref).catch((e) => ({ problem: String(e.message || e).slice(0, 120) }));
   } catch (err) { result = { problem: 'paid – booking not created: ' + String(err.message || err).slice(0, 150) }; }
   result.at = Date.now(); result.source = source;
+  /* paid but not in SimplyBook (slot gone, SimplyBook down…): tell staff straight away so they can call / refund */
+  if (result.problem) await staffAlert(env, `⚠️ ONLINE BOOKING NEEDS A HUMAN\n${result.problem}\n\nRef ${ref}\n${q.room} · ${q.date} ${q.time}–${q.end} (${q.hours}h) · paid $${q.total.toFixed(2)}\n${d.name} · ${d.phone} · ${d.email}`).catch(() => null);
   await hb.done(ref, result);
   if (!result.problem && !result.dryRun) await paidStat(q, d).catch(() => null);
   d.done = result;
@@ -670,7 +677,15 @@ export default {
         const f = new URLSearchParams(await req.text()), ref = String(f.get('reference_number') || f.get('order') || '').replace(/[^A-Za-z0-9-]/g, '');
         return J(ref ? await menuPaid(env, ref) : { ok: false });
       }
-      if (u.pathname === '/test') return H(testForm());
+      /* HitPay's per-payment webhook: never trusted – the payment is checked with HitPay before booking */
+      if (u.pathname === '/booking/hitpay' && req.method === 'POST') {
+        const ref = String(new URLSearchParams(await req.text()).get('reference_number') || '').replace(/[^A-Z0-9]/g, '');
+        const h = ref ? await book(env).get(ref) : null; if (!h || !h.pr) return J({ ok: false });
+        const pr = await hitpay(env, 'GET', '/payment-requests/' + h.pr).catch(() => ({}));
+        if (pr.status !== 'completed') return J({ ok: false, status: pr.status || '?' });
+        const f = await finalize(env, ref, 'webhook'); return J({ ok: f.ok });
+      }
+      if (u.pathname === '/test') return isSandbox(env) ? H(testForm()) : J({ error: 'test page is off while payments are live' }, 404);
       if (u.pathname === '/selftest') { const a = await admin(env); const units = await a('getUnitList', []); return J({ sbLogin: true, rooms: Object.values(units).map((x) => x.name), dryRun: env.DRY_RUN === '1' }); }
       return J({ ok: true, svc: 'round2-book' });
     } catch (e) { return J({ error: String(e.message || e) }, 400); }
