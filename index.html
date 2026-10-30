@@ -698,23 +698,18 @@ class Component extends DCLogic {
       if (!reduce) stop = startAlpha(c, R2A(a.src.slice(6)), function () { c.style.backgroundImage = 'none'; });
       return { u: function () {}, x: function () { if (stop) stop(); c.remove(); } };
     },
+    /* the Book screen: Round2's own booking page (slots/, live since 30 Oct 2026) in a new tab. If the control centre
+       switches booking to safe mode, that page shows the SimplyBook calendar instead – nothing to change here. */
     'r2-simplybook': function (d, scope, parent, before) {
+      var SLOTS = 'https://donttelldadyet-prog.github.io/round2sg-home/slots/';
       var box = document.createElement('div');
-      var id = 'r2sb' + (++sbN);
-      box.id = id;
-      box.style.cssText = 'position:relative;min-height:560px;background:#1f1e1e';
-      box.innerHTML = '<div class="r2sb-load" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:\'Press Start 2P\',monospace;font-size:9px;letter-spacing:.14em;color:#F2C21B">LOADING SAVE SLOTS…</div>';
+      box.style.cssText = 'padding:30px 22px;background:#0b0914;border:1px solid rgba(244,241,251,.14);color:#f4f1fb;font:16px/1.5 "Chakra Petch",system-ui,sans-serif';
+      box.innerHTML = '<div style="font:9px \'Press Start 2P\',monospace;letter-spacing:.14em;color:#F2C21B">FREE SLOTS · LIVE</div>' +
+        '<p style="margin:12px 0 18px">See every room’s free times at a glance, pick your start and how long you’ll stay, pay, and you’re booked.</p>' +
+        '<a href="' + SLOTS + '" target="_blank" rel="noopener" style="display:inline-block;padding:14px 18px;background:#F2C21B;color:#0b0914;text-decoration:none;font:10px \'Press Start 2P\',monospace;letter-spacing:.1em">SEE WHAT’S FREE &amp; BOOK</a>' +
+        '<p style="margin:14px 0 0;font-size:13px;color:#a79fbd">Opens in a new tab. Late night or a big group? <a href="https://wa.me/6591625767" target="_blank" rel="noopener" style="color:#f4f1fb">WhatsApp us</a>.</p>';
       parent.insertBefore(box, before);
-      var gone = false;
-      loadSB().then(function () {
-        if (gone) return;
-        var l = box.querySelector('.r2sb-load'); if (l) l.remove();
-        var cfg = JSON.parse(JSON.stringify(SB_CFG)); cfg.container_id = id;
-        new window.SimplybookWidget(cfg);
-      }).catch(function () {
-        box.innerHTML = '<p style="padding:24px;color:#f4f1fb">Booking calendar didn’t load. <a href="https://round2sg.simplybook.asia" target="_blank" rel="noopener" style="color:#F2C21B">Open it here</a>.</p>';
-      });
-      return { u: function () {}, x: function () { gone = true; box.remove(); } };
+      return { u: function () {}, x: function () { box.remove(); } };
     }
   };
 
