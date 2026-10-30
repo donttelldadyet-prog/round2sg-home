@@ -39,6 +39,8 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 .cal .g button[aria-pressed="true"]::after { background: #0b0914; }
 .cal .ft { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 11px; color: var(--mute); }
 .cal .ft i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--acc); margin-right: 5px; vertical-align: 1px; }
+.dayhd { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 0; max-width: 420px; }
+.dayhd #toToday { margin-left: auto; font: 8px 'Press Start 2P', monospace; letter-spacing: .06em; padding: 6px 8px; background: transparent; color: var(--acc); border: 1px solid var(--acc); cursor: pointer; white-space: nowrap; }
 .cal .ft button { font: 8px 'Press Start 2P', monospace; letter-spacing: .06em; padding: 7px 9px; background: transparent; color: var(--acc); border: 1px solid var(--acc); cursor: pointer; white-space: nowrap; }
 .tiers { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 12px 0 16px; font-size: 12px; color: var(--mute); }
 .tiers i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
@@ -155,7 +157,7 @@ h3.nm, .nm { color: var(--rc); font-family: var(--nf); font-size: 21px; line-hei
   <h1>WHAT'S FREE</h1>
   <p class="sub">Pick a day, then look by room, by the time you'd like to start, or the earliest free. Coloured bars are times you can start; tap a room to choose your start and how long you'll stay.</p>
   <div class="banner" id="banner" hidden></div>
-  <div class="lbl px">1 · PICK A DAY <span id="monthNow"></span></div>
+  <div class="lbl px dayhd">1 · PICK A DAY <span id="monthNow"></span><button type="button" id="toToday" hidden>BACK TO TODAY</button></div>
   <div class="cal" id="days" role="group" aria-label="Pick a day"></div>
   <div class="lbl px" style="margin-top:20px">2 · HOW DO YOU WANT TO LOOK?</div>
   <div class="views" id="views" role="group" aria-label="View">
@@ -289,6 +291,7 @@ h3.nm, .nm { color: var(--rc); font-family: var(--nf); font-size: 21px; line-hei
     h += '</div><div class="ft"><span><i></i>Peak day (Fri–Sun, public holidays)</span>' + '' + '</div>';
     $('days').innerHTML = h;
     $('monthNow').textContent = day ? (day === today ? 'Today · ' : '') + dayLabel(day) : '';
+    $('toToday').hidden = calM === first && day === today;
   }
   function dayLabel(d) { var dt = new Date(d + 'T12:00:00Z'); return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dt.getUTCDay()] + ' ' + dt.getUTCDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][dt.getUTCMonth()]; }
 
@@ -537,6 +540,7 @@ h3.nm, .nm { color: var(--rc); font-family: var(--nf); font-size: 21px; line-hei
     if (e.target.closest('[data-today]')) { calM = null; show(sgDate(0)); return; }
     var b = e.target.closest('button[data-d]'); if (b && !b.disabled) show(b.getAttribute('data-d'));
   });
+  $('toToday').addEventListener('click', function () { calM = null; show(sgDate(0)); });
   /* public holidays for the peak dots */
   fetch(ENGINE + '/ph').then(function (r) { return r.json(); }).then(function (l) { (l || []).forEach(function (d) { PH[d] = 1; }); drawDays(); }).catch(function () {});
   $('board').addEventListener('click', function (e) {
