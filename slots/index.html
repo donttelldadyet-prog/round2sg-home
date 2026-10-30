@@ -139,6 +139,9 @@ h3.nm, .nm { color: var(--rc); }
 .sum b { font-size: 18px; }
 .go { font: 10px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 13px 16px; background: var(--acc); color: var(--acc-ink); border: 0; cursor: pointer; }
 .go:disabled { opacity: .35; cursor: not-allowed; }
+.go.off { opacity: .35; pointer-events: none; }
+.cel.tc { margin: 12px 0 0; font-size: 14px; }
+.cel.tc a { color: var(--acc); }
 .hint { font-size: 13px; color: var(--mute); }
 .note { font-size: 13px; color: var(--mute); padding: 0 16px 14px; margin: 0; }
 /* booking popup */
@@ -170,7 +173,7 @@ h3.nm, .nm { color: var(--rc); }
   <div class="px kick">SAVE MENU · FREE SLOTS</div>
   <h1>WHAT'S FREE</h1>
   <p class="sub">Pick a day, then look by room, by the time you'd like to start, or the earliest free. Coloured bars are times you can start; tap a room to choose your start and how long you'll stay.</p>
-  <p class="sub" style="margin-top:-6px">Already booked? <a style="color:var(--acc)" href="https://round2-book.donttelldadyet.workers.dev/find">Manage your booking</a> or add a TV message.</p>
+  <p class="sub" style="margin-top:-6px">Already booked? <a style="color:var(--acc)" href="https://round2-book.donttelldadyet.workers.dev/find">View your booking</a> or add a TV message.</p>
   <div class="banner" id="banner" hidden></div>
   <div class="lbl px dayhd"><i data-ic="cal"></i>1 · PICK A DAY <span id="monthNow"></span><button type="button" id="toToday" hidden>BACK TO TODAY</button></div>
   <div class="cal" id="days" role="group" aria-label="Pick a day"></div>
@@ -224,7 +227,10 @@ h3.nm, .nm { color: var(--rc); }
         <p class="hint" id="hWhat"></p>
         <p class="hint">We're holding this for you for</p>
         <div class="cd px" id="hCd">10:00</div>
-        <a class="go wide" id="hPay" href="#">PAY</a>
+        <label class="cel tc"><input type="checkbox" id="tTerms"> <span>I agree to the Round2 <span id="tTermsTxt">Terms &amp; Conditions and Privacy Policy</span>.</span></label>
+        <label class="cel tc"><input type="checkbox" id="tCancel"> <span>I agree to the cancellation policy: <b>all bookings are non-cancellable and non-refundable.</b></span></label>
+        <a class="go wide off" id="hPay" href="#" aria-disabled="true">PAY</a>
+        <p class="hint" id="tNeed">Tick both boxes to pay.</p>
         <button class="x wide" id="hChange" type="button">CHANGE BOOKING</button>
         <p class="hint">Card, PayNow or Apple Pay on the next page. If you go back or the timer runs out, the slot is released for someone else.</p>
       </div>
@@ -552,7 +558,17 @@ h3.nm, .nm { color: var(--rc); }
       if (body.msg) count('board_cel'); if (!/^\+65/.test(body.phone)) count('board_intl');
     }, function () { b.disabled = false; b.innerHTML = 'HOLD &amp; PAY'; $('dErr').textContent = 'No connection – try again.'; });
   });
+  /* Terms & Conditions / Privacy Policy pages: put their links here and the tick box text becomes links */
+  var TERMS_URL = '', PRIVACY_URL = '';
+  if (TERMS_URL || PRIVACY_URL) $('tTermsTxt').innerHTML = (TERMS_URL ? '<a href="' + TERMS_URL + '" target="_blank" rel="noopener">Terms &amp; Conditions</a>' : 'Terms &amp; Conditions') + ' and ' + (PRIVACY_URL ? '<a href="' + PRIVACY_URL + '" target="_blank" rel="noopener">Privacy Policy</a>' : 'Privacy Policy');
+  function ticks() {
+    var ok = $('tTerms').checked && $('tCancel').checked;
+    $('hPay').classList.toggle('off', !ok); $('hPay').setAttribute('aria-disabled', String(!ok)); $('tNeed').hidden = ok;
+    if (ok && ss.get('r2.ref')) post('/agree', { ref: ss.get('r2.ref') }).catch(function () {});   /* the engine notes when they agreed */
+  }
+  $('tTerms').addEventListener('change', ticks); $('tCancel').addEventListener('change', ticks);
   function showHold(j) {
+    $('tTerms').checked = false; $('tCancel').checked = false; ticks();
     $('hWhat').innerHTML = '<b>' + esc(ROOMS[cur.uid][0]) + '</b> · ' + esc(when()) + '<br><b>' + money(j.total) + '</b>';
     $('hPay').href = j.url; $('hPay').textContent = 'PAY ' + money(j.total);
     step('hold');
@@ -570,7 +586,7 @@ h3.nm, .nm { color: var(--rc); }
     if (!$('modal').hidden) closeBook();
     at('board'); load(day, true); show(day);
   }
-  $('hPay').addEventListener('click', function () { ss.set('r2.went', '1'); count('board_pay'); });
+  $('hPay').addEventListener('click', function (e) { if ($('hPay').classList.contains('off')) { e.preventDefault(); return; } ss.set('r2.went', '1'); count('board_pay'); });
   $('hChange').addEventListener('click', function () { release(''); });
   /* back button from HitPay (page restored) → free the slot straight away */
   addEventListener('pageshow', function () { if (ss.get('r2.ref') && ss.get('r2.went')) release('You left the payment page, so we released the slot. Pick a time again.'); });

@@ -57,7 +57,9 @@ So: **guest end = SimplyBook `end_date` − 15 min** (or `end_date − event_buf
 6. **Late-night sessions (past 11:15 pm).** Online booking never goes past 11:15 pm (the engine clips SimplyBook's free
    time at `CLOSE`, even if SimplyBook's opening hours are extended). Late sessions are arranged on WhatsApp; staff then
    either stretch the booking's end time or add a calendar note that blocks the time. SimplyBook's JSON-RPC API has no
-   method to read calendar notes, but the time a note **blocks** does show up as unavailable
+   method to read calendar notes, **but the REST API v2 does** (checked 30 Oct 2026): `POST https://user-api-v2.simplybook.asia/admin/auth`
+   {company, login, password} → token; `GET /admin/calendar-notes?filter[date_from]=…&filter[date_to]=…` with headers
+   `X-Company-Login`, `X-Token` → each note with `provider_id` (room), times and text. The time a note blocks also shows up as unavailable
    (`getAvailableTimeIntervals` / `getReservedTimeIntervals` for that room). So for "time's up" use: the room is busy
    until X (booking end or blocked note, whichever is later) → guest end = X (a blocked late note has no cleaning
    buffer). Better still: staff stretch the booking's own end time, which is readable directly. Check this against a

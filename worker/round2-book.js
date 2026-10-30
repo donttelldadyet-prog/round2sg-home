@@ -257,6 +257,8 @@ export class HoldBook extends DurableObject {
   }
   /* "Find my booking": paid, not yet past, matching email + last 8 digits of the mobile */
   find(email, p8, today) { return this.rows(`SELECT ref, date FROM holds WHERE status = 'paid' AND email = ? AND phone = ? AND date >= ? ORDER BY date, s LIMIT 6`, email, p8, today); }
+  /* the guest ticked the terms + "non-cancellable, non-refundable" boxes on the hold step */
+  agree(ref) { const h = this.get(ref); if (!h || h.status !== 'pending' || h.data.agreed) return false; h.data.agreed = Date.now(); this.sql.exec(`UPDATE holds SET data = ? WHERE ref = ?`, JSON.stringify(h.data), ref); return true; }
   /* the link in SimplyBook's confirmation email: …/b/<SimplyBook booking code> */
   byCode(code) { return this.rows(`SELECT ref FROM holds WHERE status = 'paid' AND json_extract(data, '$.done.code') = ? LIMIT 1`, code)[0] || null; }
   setTv(ref, tv) { const h = this.get(ref); if (!h || !h.data.done) return; h.data.done.tv = tv; this.sql.exec(`UPDATE holds SET data = ? WHERE ref = ?`, JSON.stringify(h.data), ref); }
@@ -395,7 +397,8 @@ async function finalize(env, ref, source) {
          what was really paid (SimplyBook shows the base service price) */
       const note = `Online booking (round2.sg) · paid $${q.total.toFixed(2)} via HitPay · ref ${ref}\nBooked as: ${d.name} · ${d.phone} · ${d.email} · ${d.pax} guests` +
         `\nGuest session ${q.time}–${q.end} (the SimplyBook end, ${hhmm(eB)}, includes 15 min cleaning)` +
-        (q.hours > 3 ? `\nIncludes +${q.hours - 3}h extension (${q.time}–${q.end})` : '') + (d.msg ? `\nTV message: ${d.msg.kind}, ${d.msg.after} min after start` : '');
+        (q.hours > 3 ? `\nIncludes +${q.hours - 3}h extension (${q.time}–${q.end})` : '') + (d.msg ? `\nTV message: ${d.msg.kind}, ${d.msg.after} min after start` : '') +
+        (d.agreed ? `\nAgreed to T&C, privacy policy and "non-cancellable, non-refundable" at ${new Date(d.agreed + 8 * 3600e3).toISOString().slice(0, 16).replace('T', ' ')}` : '');
       if (b0 && b0.id) result.comment = await a('setBookingComment', [b0.id, note]).then(() => 'saved').catch((e) => 'not saved: ' + String(e.message || e).slice(0, 80));
     }
     if (d.msg && !result.dryRun) result.tv = await tvMessage(env, d, q, ref).catch((e) => ({ problem: String(e.message || e).slice(0, 120) }));
@@ -615,7 +618,7 @@ function bookedPage(env, ref, d, origin) {
   /* add-to-calendar file (session time only – the 15 min cleaning isn't the guest's) */
   const z = (t) => q.date.replace(/-/g, '') + 'T' + t.replace(':', '') + '00', endDay = q.endDate.replace(/-/g, '');
   const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Round2//Booking//EN', 'BEGIN:VEVENT', 'UID:' + ref + '@round2.sg', 'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z',
-    'DTSTART;TZID=Asia/Singapore:' + z(q.time), 'DTEND;TZID=Asia/Singapore:' + endDay + 'T' + q.end.replace(':', '') + '00', 'SUMMARY:Round2 · ' + room, 'DESCRIPTION:Booking ref ' + ref + '. Your booking and TV message: ' + origin + '/done?ref=' + ref + ' · Need to change something? WhatsApp +65 9162 5767.', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+    'DTSTART;TZID=Asia/Singapore:' + z(q.time), 'DTEND;TZID=Asia/Singapore:' + endDay + 'T' + q.end.replace(':', '') + '00', 'SUMMARY:Round2 · ' + room, 'DESCRIPTION:Booking ref ' + ref + '. Your booking and TV message: ' + origin + '/done?ref=' + ref + ' · Questions? WhatsApp +65 9162 5767.', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
   const msgBox = tv
     ? `<div class="card msg"><div class="k">TV MESSAGE</div><p>${msg ? `<b>${esc(msg.title)}</b> pops up on the TV ${msg.after ? msg.after + ' minutes after you start' : 'when you start'}.` : 'Your message link is ready.'}</p><a class="btn ghost" href="https://cue.round2.sg/${esc(tv.code)}">${msg ? 'Change the message' : 'Write the message'}</a><p class="fine">You can change it until it pops up: cue.round2.sg/${esc(tv.code)}</p></div>`
     : `<div class="card msg"><div class="k">CELEBRATING?</div><p>Put a birthday, anniversary or any message on the room’s TV. It pops up during your session.</p><a class="btn ghost" href="${origin}/done/message?ref=${esc(ref)}">Add a message for the TV</a></div>`;
@@ -705,6 +708,7 @@ export default {
       if (u.pathname === '/day') return J(await dayBoard(env, u.searchParams.get('date')));
       if (u.pathname === '/quote' && req.method === 'POST') { const b = await req.json(); const q = await quote(env, b); q.free = await isFree(env, q); return J(q); }
       if (u.pathname === '/checkout' && req.method === 'POST') return J(await checkout(env, await req.json(), u.origin));
+      if (u.pathname === '/agree' && req.method === 'POST') { const { ref } = await req.json(); return J({ ok: await book(env).agree(String(ref || '').replace(/[^A-Z0-9]/g, '')) }); }
       if (u.pathname === '/release' && req.method === 'POST') { const { ref } = await req.json(); const r = await book(env).release(String(ref || '')); if (r) await cancelLink(env, r.pr); return J({ released: !!r }); }
       if (u.pathname === '/hitpay' && req.method === 'POST') {
         const raw = await req.text(), sig = req.headers.get('Hitpay-Signature') || '';
@@ -731,11 +735,11 @@ export default {
       if (u.pathname.startsWith('/b/')) {
         const code = u.pathname.slice(3).replace(/[^a-z0-9]/gi, '').slice(0, 20), r = code ? await book(env).byCode(code) : null;
         if (r) return Response.redirect(u.origin + '/done?ref=' + r.ref, 302);
-        return H(PAGE(`<h1>Manage your booking</h1><p>This booking was made with us directly, so its details are with our team. Want a birthday or celebration message on your room’s TV, or need to change something? Message us on WhatsApp and we’ll sort it.</p><a class="btn" href="https://wa.me/6591625767?text=${encodeURIComponent('Hi Round2, about my booking ' + code)}">WhatsApp us</a>`));
+        return H(PAGE(`<h1>Your booking</h1><p>This booking was made with us directly, so its details are with our team. Want a birthday or celebration message on your room’s TV? Message us on WhatsApp and we’ll set it up.</p><a class="btn" href="https://wa.me/6591625767?text=${encodeURIComponent('Hi Round2, about my booking ' + code)}">WhatsApp us</a>`));
       }
       /* "Find my booking": email + mobile → the confirmation page again (to see it or add/change the TV message) */
       if (u.pathname === '/find') {
-        const form = (err, em = '') => H(PAGE(`<h1>Manage your booking</h1><p>Enter the email and mobile number you booked with to see your booking and add or change your TV message.</p>
+        const form = (err, em = '') => H(PAGE(`<h1>View your booking</h1><p>Enter the email and mobile number you booked with to see your booking and add or change your TV message.</p>
 <form method="post"><label>Email</label><input name="email" type="email" required value="${esc(em)}"><label>Mobile</label><input name="phone" type="tel" required placeholder="8123 4567"><button>Show my booking</button></form>${err ? `<p class="err">${err}</p>` : ''}
 <p style="color:#bababa;font-size:14px;margin-top:18px">Booked on WhatsApp or by phone? Message us on <a style="color:#F2C21B" href="https://wa.me/6591625767">WhatsApp</a>.</p>`));
         if (req.method !== 'POST') return form();
