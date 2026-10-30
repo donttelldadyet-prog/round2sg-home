@@ -345,10 +345,13 @@ h3.nm, .nm { color: var(--rc); }
         var day3 = info.list.filter(function (o) { return !o.eb; });
         info.ranges.forEach(function (r) { if (r[2]) return; segs += '<span class="seg" style="left:' + pos(r[0]) + ';width:calc(' + (100 * (r[1] - r[0] + STEP) / span).toFixed(2) + '% - 1px)"></span>'; });
         var from = day3.length ? Math.min.apply(null, day3.map(function (o) { return o.price; })) : 0;
-        var txt = info.ranges.filter(function (r) { return !r[2]; }).map(function (r) { return r[0] === r[1] ? clock(r[0]) : clock(r[0]) + '–' + clock(r[1]); }).join(', ');
-        inner += '<div class="room" style="--rc:' + R[1] + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': start ' + (txt || 'early bird')) + '"' : '') + '><div><h3 class="nm">' + R[0] + '</h3><div class="ty">' + R[2] + '</div>' + ebChip(uid) + '</div><div>' +
+        /* the times are START times, not when the session ends: "starting anytime from 2:15pm to 8:15pm" */
+        var rgs = info.ranges.filter(function (r) { return !r[2]; });
+        var txt = rgs.map(function (r) { return r[0] === r[1] ? clock(r[0]) : clock(r[0]) + ' to ' + clock(r[1]); }).join(', or ');
+        var lead = rgs.length === 1 && rgs[0][0] === rgs[0][1] ? 'Slot available starting at ' : 'Slots available starting anytime from ';
+        inner += '<div class="room" style="--rc:' + R[1] + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': ' + (txt ? lead + txt : 'early bird')) + '"' : '') + '><div><h3 class="nm">' + R[0] + '</h3><div class="ty">' + R[2] + '</div>' + ebChip(uid) + '</div><div>' +
           '<div class="track">' + lines + segs + '</div><div class="ticks">' + ticks + '</div>' +
-          (day3.length ? '<div class="free">Start ' + esc(txt) + ' · from ' + money(from) + '</div><button class="pickb" type="button" data-u="' + uid + '">PICK A TIME</button>'
+          (day3.length ? '<div class="free">' + lead + esc(txt) + ' · from ' + money(from) + '</div><button class="pickb" type="button" data-u="' + uid + '">PICK A TIME</button>'
             : info.list.length ? '<div class="free">Only the early bird is free</div>' : '<div class="free no">Fully booked</div>') + '</div></div>';
       });
       html += tierBox(g, inner);
