@@ -46,6 +46,24 @@ So: **guest end = SimplyBook `end_date` − 15 min** (or `end_date − event_buf
   birthday messages that pop up in the first hour, but **not** a basis for "time's up").
 - **Control centre "10 minutes left" / "Time's up"** (manager › Round2 messages): staff pick the time by hand today.
 
+## Extensions as calendar notes – how the owner does it (31 Oct 2026, from the owner)
+
+**Read this before building anything that works out when a session ends.**
+
+When a guest extends (usually on WhatsApp), staff often don't stretch the booking. They add a **calendar note** in the
+same room that **starts after the cleaning time** (= at the SimplyBook booking's `end_date`), in **1-hour chunks**,
+stacked one after another. Each 1-hour chunk **already includes the 15 min cleaning** at its end.
+
+| | Times |
+|---|---|
+| Booking (guest 16:00–19:00) | SimplyBook 16:00 – 19:15 |
+| + 1 h extension note | 19:15 – 20:15 |
+| + another 1 h note | 20:15 – 21:15 |
+| → guest really ends | **21:00** (last note end − 15 min); 21:00–21:15 is cleaning |
+
+So: **guest end = end of the last stacked note − 15 min**, exactly like a booking (each +1 h note moves the guest end
+by +1 h). Don't treat the gap 19:00–19:15 as a break; the guest plays straight through it.
+
 ## For a future automatic "That's a wrap"
 
 1. Read the booking (SimplyBook admin `getBookings` / `getBookingDetails`, or the mirror's webhook data).
@@ -61,6 +79,9 @@ So: **guest end = SimplyBook `end_date` − 15 min** (or `end_date − event_buf
    {company, login, password} → token; `GET /admin/calendar-notes?filter[date_from]=…&filter[date_to]=…` with headers
    `X-Company-Login`, `X-Token` → each note with `provider_id` (room), times and text. The time a note blocks also shows up as unavailable
    (`getAvailableTimeIntervals` / `getReservedTimeIntervals` for that room). So for "time's up" use: the room is busy
-   until X (booking end or blocked note, whichever is later) → guest end = X (a blocked late note has no cleaning
-   buffer). Better still: staff stretch the booking's own end time, which is readable directly. Check this against a
-   real late note before building.
+   until X (booking end or the last extension note, whichever is later) → guest end = X − 15 min (extension notes
+   include the cleaning, see "Extensions as calendar notes" below). Check this against a real late note before building.
+7. **Extension or something else?** A note next to a booking can't be told apart by timing (an extension and a
+   back-to-back late-night group look the same). Plan agreed 31 Oct: notes that ARE extensions start with `EXT`; if an
+   untagged note touches a booking, ask staff on Telegram (Extension / Separate). When unsure, never send "That's a
+   wrap" at the booking's own end – a late wrap is better than telling paying guests to leave.

@@ -18,6 +18,12 @@ and who's on it right now, and saves only numbers to the Round2 Firebase databas
 Full explanation, data layout and the one-time Firebase rule: `docs/site-stats.md` in **round2-tv-launcher**.
 Turn it off for one load with `?notrack`. It never blocks or changes the page.
 
+## ⚠️ Session end times (read before anything time-based)
+A guest's session ends **15 min before** SimplyBook's booking end (the cleaning time is stored inside the booking).
+Extensions are often **calendar notes**, not a longer booking: 1-hour chunks starting at the booking's SimplyBook end,
+stacked, each already including the 15 min cleaning → guest end = last note's end − 15 min. Full rules, and how to tell an
+extension note from another block: [docs/booking-times.md](docs/booking-times.md).
+
 ## How Round2's automation fits together (read first) – updated 30 Oct 2026
 
 **Rule: Cloudflare first, Make.com last.** Make has a hard monthly budget (10,000 operations, shared by everything), so
