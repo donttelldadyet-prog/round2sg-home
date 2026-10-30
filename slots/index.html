@@ -559,7 +559,7 @@ h3.nm, .nm { color: var(--rc); }
     }, function () { b.disabled = false; b.innerHTML = 'HOLD &amp; PAY'; $('dErr').textContent = 'No connection – try again.'; });
   });
   /* Terms & Conditions / Privacy Policy pages: put their links here and the tick box text becomes links */
-  var TERMS_URL = '', PRIVACY_URL = '';
+  var TERMS_URL = 'https://www.round2.sg/tnc', PRIVACY_URL = 'https://www.round2.sg/privacypolicy';
   if (TERMS_URL || PRIVACY_URL) $('tTermsTxt').innerHTML = (TERMS_URL ? '<a href="' + TERMS_URL + '" target="_blank" rel="noopener">Terms &amp; Conditions</a>' : 'Terms &amp; Conditions') + ' and ' + (PRIVACY_URL ? '<a href="' + PRIVACY_URL + '" target="_blank" rel="noopener">Privacy Policy</a>' : 'Privacy Policy');
   function ticks() {
     var ok = $('tTerms').checked && $('tCancel').checked;
