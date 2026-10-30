@@ -760,7 +760,7 @@ function bookedPage(env, ref, d, origin) {
     'DTSTART;TZID=Asia/Singapore:' + z(q.time), 'DTEND;TZID=Asia/Singapore:' + endDay + 'T' + q.end.replace(':', '') + '00', 'SUMMARY:Round2 · ' + room, 'DESCRIPTION:Booking ref ' + ref + '. Your booking and TV message: ' + origin + '/done?ref=' + ref + ' · Questions? WhatsApp +65 9162 5767.', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
   const msgBox = tv
     ? `<div class="card msg"><div class="k">TV MESSAGE</div><p>${msg ? `<b>${esc(msg.title)}</b> pops up on the TV ${msg.after ? msg.after + ' minutes after you start' : 'when you start'}.` : 'Your message link is ready.'}</p><a class="btn ghost" href="https://cue.round2.sg/${esc(tv.code)}">${msg ? 'Change the message' : 'Write the message'}</a><p class="fine">You can change it until it pops up: cue.round2.sg/${esc(tv.code)}</p></div>`
-    : `<div class="card msg"><div class="k">CELEBRATING?</div><p>Put a birthday, anniversary or any message on the room’s TV. It pops up during your session.</p><a class="btn ghost" href="${origin}/done/message?ref=${esc(ref)}">Add a message for the TV</a></div>`;
+    : `<div class="card msg"><div class="k">CELEBRATING?</div><p>We’ll put your birthday, anniversary or any message on the big screen in your Round2 room. It pops up during your session.</p><a class="btn ghost" href="${origin}/done/message?ref=${esc(ref)}">Add a message for the TV</a></div>`;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>You're booked · Round2</title>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>:root{--rc:${look[0]};--ri:${look[1]}}*{box-sizing:border-box}body{margin:0;background:#06050a;color:#f4f1fb;font:16px/1.5 'Chakra Petch',system-ui,sans-serif}
@@ -924,7 +924,7 @@ export default {
       if (u.pathname.startsWith('/b/')) {
         const code = u.pathname.slice(3).replace(/[^a-z0-9]/gi, '').slice(0, 20), r = code ? await book(env).byCode(code) : null;
         if (r) return Response.redirect(u.origin + '/done?ref=' + r.ref, 302);
-        return H(PAGE(`<h1>Your booking</h1><p>This booking was made with us directly, so its details are with our team. Want a birthday or celebration message on your room’s TV? Message us on WhatsApp and we’ll set it up.</p><a class="btn" href="https://wa.me/6591625767?text=${encodeURIComponent('Hi Round2, about my booking ' + code)}">WhatsApp us</a>`));
+        return H(PAGE(`<h1>Your booking</h1><p>This booking was made with us directly, so its details are with our team. Want a birthday or celebration message on the big screen in your Round2 room? Message us on WhatsApp and we’ll set it up.</p><a class="btn" href="https://wa.me/6591625767?text=${encodeURIComponent('Hi Round2, about my booking ' + code)}">WhatsApp us</a>`));
       }
       /* "Find my booking": email + mobile → the confirmation page again (to see it or add/change the TV message) */
       if (u.pathname === '/find') {
