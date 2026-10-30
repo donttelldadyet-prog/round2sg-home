@@ -705,6 +705,18 @@ export default {
     try {
       if (req.method === 'OPTIONS') return J({});
       if (u.pathname === '/ph') return J([...(await holidays())].sort());
+      /* control centre › Systems / Test bench: which mode the engine is in and what's switched on (yes/no only, never a secret) */
+      if (u.pathname === '/status') {
+        const st = { payments: isSandbox(env) ? 'test' : 'live', dryRun: env.DRY_RUN === '1', simplybook: !!(env.SB_COMPANY && env.SB_USER && env.SB_PASS),
+          sbSecret: !!env.SB_SECRET && !/paste/.test(env.SB_SECRET), kitchenBot: !!env.TG_BOT_TOKEN, staffAlerts: !!env.STAFF_CHAT, guestMessages: !!env.GM_STAFF,
+          menuSheet: !!env.MENU_MAKE_K, tvKey: !!env.TV_KEY, t: Date.now() };
+        if (u.searchParams.get('deep')) {
+          st.sbLogin = await admin(env).then(() => 'ok').catch((e) => 'failed: ' + String(e.message || e).slice(0, 80));
+          st.sbPublic = await pub(env).then(() => 'ok').catch((e) => 'failed: ' + String(e.message || e).slice(0, 80));
+          st.timerQueue = await book(env).qList().then((l) => l.length).catch(() => null);
+        }
+        return J(st);
+      }
       if (u.pathname === '/day') return J(await dayBoard(env, u.searchParams.get('date')));
       if (u.pathname === '/quote' && req.method === 'POST') { const b = await req.json(); const q = await quote(env, b); q.free = await isFree(env, q); return J(q); }
       if (u.pathname === '/checkout' && req.method === 'POST') return J(await checkout(env, await req.json(), u.origin));
