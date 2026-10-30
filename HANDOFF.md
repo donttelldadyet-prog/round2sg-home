@@ -88,3 +88,12 @@ To confirm in to-do #1 (real test booking): SimplyBook accepts the longer end ti
 - Guest TV messages + control centre (repo `round2-tv-launcher`, Make scenarios 8249444/8251356, `cue.round2.sg`), site stats in Firebase `/web`.
 - Hidden SimplyBook Early Bird services 39–44 + add-ons 38–55 exist but were NOT switched on (guest page ignored the 11:00 fixed time).
   Old Early Bird 32/33/34 are live as before. See `docs/simplybook-early-bird.md`.
+
+## SimplyBook callback goes through the engine (30 Oct 2026)
+SimplyBook's callback URL (Custom features › API) should be `https://round2-book.donttelldadyet.workers.dev/sb/notify/<SB_NOTIFY_KEY>`
+(the full address is with the owner; the key is a Cloudflare secret). The engine passes every callback on unchanged to Make's
+"[BACKEND] SYSTEM BLOCKS MIRROR ROOMS" (secret `MIRROR_HOOK_URL`), then: cancelled → the online booking drops off "View your
+booking" and its pages say "cancelled"; any create/change/cancel → guest messages follow their booking straight away.
+The engine's own SimplyBook check is now only a 6-hour backstop plus a check right before each message shows.
+"View your booking" also asks SimplyBook for cancellations when a guest searches, so bookings cancelled before this existed
+don't show either. To undo: put the Make address (hook.eu1.make.com/qqeq…) back as SimplyBook's callback URL.

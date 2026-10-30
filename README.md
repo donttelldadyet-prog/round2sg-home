@@ -30,7 +30,7 @@ go through the engine.
 `worker/round2-book.js` in **round2sg-home** . One Durable Object (`HoldBook`) holds its
 state (SQLite) and wakes itself with alarms. Deploy = upload that file through the Cloudflare API with `keep_bindings`
 (see round2sg-home `HANDOFF.md`). Secrets live only in Cloudflare (names: `HITPAY_KEY`, `HITPAY_SALT`, `HITPAY_API` (sandbox), `HITPAY_LIVE_KEY`, `HITPAY_LIVE_SALT`, `TEST_CODE`, `SWITCH_PASS`, `SWITCH_PIN`,
-`SB_COMPANY`, `SB_USER`, `SB_PASS`, `GM_STAFF`, `GM_HOOK_URL`, `MENU_MAKE_K`, `TV_KEY`, `TG_BOT_TOKEN`, `STAFF_CHAT`).
+`SB_COMPANY`, `SB_USER`, `SB_PASS`, `GM_STAFF`, `GM_HOOK_URL`, `MENU_MAKE_K`, `TV_KEY`, `TG_BOT_TOKEN`, `STAFF_CHAT`, `SB_NOTIFY_KEY` (the private part of SimplyBook's callback URL `/sb/notify/<key>`), `MIRROR_HOOK_URL` (Make mirror-rooms webhook the callback is passed on to)).
 
 | Job | Where it runs | Notes |
 |---|---|---|

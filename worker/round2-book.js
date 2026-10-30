@@ -30,7 +30,7 @@ const bufTo = (t) => (t >= CLOSE ? 0 : BUF);
 /* guest messages (round2-tv-launcher docs/guest-messages.md): a celebration message written while booking */
 /* the Make webhook: secret GM_HOOK_URL once the webhook is swapped for a new one (the old address below is public in git history) */
 const GM_HOOK = 'https://hook.eu1.make.com/0vs25z4g3omjuvbdxwstdgofqhc3p2e4';
-const FOLLOW_MS = 10 * 60e3;
+const FOLLOW_MS = 6 * 3600e3;   /* backstop only: SimplyBook tells the engine about changes straight away (/sb/notify) */
 const GM_ROOM = { 5: 'vale', 7: 'kaeden', 8: 'scarlett', 9: 'kai', 10: 'bella', 12: 'atlas', 11: 'max' };
 const GM_KINDS = ['birthday', 'anniversary', 'celebrate', 'note'];
 
@@ -340,12 +340,21 @@ export class HoldBook extends DurableObject {
   /* payment confirmed → only the FIRST caller (webhook or redirect) gets true, so we never book twice */
   claim(ref) {
     const r = this.rows(`SELECT status FROM holds WHERE ref = ?`, ref)[0];
-    if (!r || r.status === 'paid' || r.status === 'booking') return false;
+    if (!r || r.status === 'paid' || r.status === 'booking' || r.status === 'cancelled') return false;
     this.sql.exec(`UPDATE holds SET status = 'booking' WHERE ref = ?`, ref);
     return true;
   }
   /* "Find my booking": paid, not yet past, matching email + last 8 digits of the mobile */
-  find(email, p8, today) { return this.rows(`SELECT ref, date FROM holds WHERE status = 'paid' AND email = ? AND phone = ? AND date >= ? ORDER BY date, s LIMIT 6`, email, p8, today); }
+  find(email, p8, today) { return this.rows(`SELECT ref, date, CAST(json_extract(data, '$.done.bookingId') AS TEXT) AS bid FROM holds WHERE status = 'paid' AND email = ? AND phone = ? AND date >= ? ORDER BY date, s LIMIT 6`, email, p8, today); }
+  /* cancelled in SimplyBook → no longer shown in "View your booking", its /done and /b pages say so */
+  cancelBid(bid) { this.sql.exec(`UPDATE holds SET status = 'cancelled' WHERE status = 'paid' AND CAST(json_extract(data, '$.done.bookingId') AS TEXT) = ?`, String(bid)); }
+  /* SimplyBook told us a booking was made, changed or cancelled (/sb/notify): act now instead of waiting for a check */
+  async onSb(bid, type) {
+    if (type === 'cancel') this.cancelBid(bid);
+    this.lInit();
+    if (!this.rows(`SELECT 1 FROM gml WHERE endt > ?`, Date.now()).length) return { links: 0 };
+    return this.follow(false).catch((e) => this.fLog({ a: 'error', why: String(e.message || e).slice(0, 80) }));
+  }
   /* the guest ticked the terms + "non-cancellable, non-refundable" boxes on the hold step */
   agree(ref) { const h = this.get(ref); if (!h || h.status !== 'pending' || h.data.agreed) return false; h.data.agreed = Date.now(); this.sql.exec(`UPDATE holds SET data = ? WHERE ref = ?`, JSON.stringify(h.data), ref); return true; }
   /* the link in SimplyBook's confirmation email: …/b/<SimplyBook booking code> */
@@ -841,7 +850,7 @@ const back=new URLSearchParams(location.search).get('released');if(back)note('Pa
 }
 
 export default {
-  async fetch(req, env0) {
+  async fetch(req, env0, ctx) {
     const u = new URL(req.url);
     const env = envFor(env0, 'live');   /* default for anything not tied to a hold/order: live once the live key is in */
     try {
@@ -898,6 +907,7 @@ export default {
       if (u.pathname === '/done') {
         const ref = (u.searchParams.get('ref') || '').replace(/[^A-Z0-9]/g, '');
         const h = await book(env).get(ref); if (!h) return H(PAGE('<h1>Booking not found</h1>'));
+        if (h.status === 'cancelled') return H(PAGE('<h1>This booking was cancelled</h1><p>It’s no longer in our calendar. If that’s not right, message us on <a href="https://wa.me/6591625767">WhatsApp</a>.</p>'));
         const henv = envFor(env, h.data.pay);
         const pr = h.pr ? await hitpay(henv, 'GET', '/payment-requests/' + h.pr).catch(() => ({})) : {};
         if (pr.status !== 'completed' && h.status !== 'paid' && h.status !== 'booking') {
@@ -927,7 +937,16 @@ export default {
         const hb = book(env);
         if (!(await hb.gmRate('find:' + (req.headers.get('cf-connecting-ip') || '?'), 10))) return form('Too many tries. Please wait 10 minutes, or WhatsApp us.', em);
         const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
-        const list = await hb.find(em, p8, today);
+        let list = await hb.find(em, p8, today);
+        const bids = list.map((r) => r.bid).filter((x) => x && x !== 'null');
+        if (bids.length) {
+          try {
+            const a = await admin(env), to = list.reduce((m, r) => (r.date > m ? r.date : m), today);
+            const gone = new Set(Object.values((await a('getBookings', [{ booking_type: 'cancelled', date_from: today, date_to: to }])) || {}).map((b) => String(b.id)));
+            for (const b of bids) if (gone.has(b)) await hb.cancelBid(b);
+            list = list.filter((r) => !gone.has(r.bid));
+          } catch (e) {}
+        }
         if (!list.length) return form('We couldn’t find an upcoming online booking with that email and mobile. Check for typos, or WhatsApp us.', em);
         if (list.length === 1) return Response.redirect(u.origin + '/done?ref=' + list[0].ref, 303);
         const rows = [];
@@ -948,6 +967,19 @@ export default {
         return Response.redirect('https://cue.round2.sg/' + tv.code, 302);
       }
       if (u.pathname === '/gm' && req.method === 'POST') return await gm(env, req);
+      /* SimplyBook's callback (Custom features › API › callback URL) = /sb/notify/<SB_NOTIFY_KEY>. Passed on unchanged to
+         Make's mirror-rooms scenario (secret MIRROR_HOOK_URL), then: cancelled → off "View your booking"; any change →
+         guest messages follow at once. The key keeps strangers from triggering Make. */
+      if (u.pathname.startsWith('/sb/notify/') && req.method === 'POST') {
+        if (!env.SB_NOTIFY_KEY || u.pathname.slice(11) !== env.SB_NOTIFY_KEY) return J({ error: 'no' }, 404);
+        const raw = await req.text(), ct = req.headers.get('content-type') || 'application/json';
+        if (env.MIRROR_HOOK_URL) ctx.waitUntil(fetch(env.MIRROR_HOOK_URL, { method: 'POST', headers: { 'content-type': ct }, body: raw }).catch(() => null));
+        let j = {}; try { j = JSON.parse(raw); } catch (e) { j = Object.fromEntries(new URLSearchParams(raw)); }
+        const bid = String(j.booking_id || '').replace(/\D/g, ''), type = String(j.notification_type || '');
+        if (bid) ctx.waitUntil(book(env).onSb(bid, type).catch(() => null));
+        await book(env).gmDrop('__LIST__').catch(() => null);
+        return J({ ok: true });
+      }
       if (u.pathname === '/menu/checkout' && req.method === 'POST') return await menuCheckout(env, req, u.origin);
       if ((u.pathname === '/menu/hitpay' || u.pathname === '/menu/return') && req.method === 'POST') {
         const f = new URLSearchParams(await req.text()), ref = String(f.get('reference_number') || f.get('order') || '').replace(/[^A-Za-z0-9-]/g, '');
