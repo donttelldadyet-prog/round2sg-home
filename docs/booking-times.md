@@ -54,3 +54,11 @@ So: **guest end = SimplyBook `end_date` − 15 min** (or `end_date − event_buf
    docs/guest-messages.md). The 15 min after `guestEnd` is the cleaning time; nothing for guests is scheduled in it.
 4. Skip mirror bookings (client 2472 / the twin room) so one session doesn't get two sets of messages.
 5. If the booking is changed or cancelled, move or cancel the queued messages.
+6. **Late-night sessions (past 11:15 pm).** Online booking never goes past 11:15 pm (the engine clips SimplyBook's free
+   time at `CLOSE`, even if SimplyBook's opening hours are extended). Late sessions are arranged on WhatsApp; staff then
+   either stretch the booking's end time or add a calendar note that blocks the time. SimplyBook's JSON-RPC API has no
+   method to read calendar notes, but the time a note **blocks** does show up as unavailable
+   (`getAvailableTimeIntervals` / `getReservedTimeIntervals` for that room). So for "time's up" use: the room is busy
+   until X (booking end or blocked note, whichever is later) → guest end = X (a blocked late note has no cleaning
+   buffer). Better still: staff stretch the booking's own end time, which is readable directly. Check this against a
+   real late note before building.
