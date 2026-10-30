@@ -210,6 +210,8 @@ if (typeof module !== "undefined") module.exports = { r2Key, r2PriceTable };
 const CONFIG = {
   // Make.com webhook that checks the order, creates the HitPay payment and replies {"url": "..."}.
   // Leave empty for preview mode (no payment).
+  // Round2 booking engine (Cloudflare) makes the payment first; the Make webhook below is only the backup when it can't.
+  ENGINE_URL: "https://round2-book.donttelldadyet.workers.dev/menu/checkout",
   CHECKOUT_URL: "https://hook.eu1.make.com/3gdpop9ed64rk2slmzfq9ry73oajd9sk",
   PAID_URL: "https://hook.eu1.make.com/55nh6wniq1wftco8af9486noj4xugasl",
   SIM_URL: "https://hook.eu1.make.com/v8v3kyfg3ai41r0l21duy346vrucxequ",   // TEST ONLY: ?sim=<code> sends a fake order (no payment) to test Telegram and the TV alert
@@ -381,12 +383,18 @@ async function checkout(){
   }
   renderCart("busy");
   order.return_url = location.origin + location.pathname + "?room=" + encodeURIComponent(room.name.toLowerCase());
+  // Sent as a simple form post so the browser doesn't need a pre-flight check.
+  const post = async (url, ms) => {
+    const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), ms);
+    try { const res = await fetch(url, { method: "POST", body: new URLSearchParams({ order: JSON.stringify(order) }), signal: ctrl.signal });
+      return { res, data: await res.json().catch(() => ({})) }; } finally { clearTimeout(timer); }
+  };
   try {
-    const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 20000);
-    // Sent as a simple form post so the browser doesn't need a pre-flight check from Make.com.
-    const res = await fetch(CONFIG.CHECKOUT_URL, { method: "POST", body: new URLSearchParams({ order: JSON.stringify(order) }), signal: ctrl.signal });
-    clearTimeout(timer);
-    const data = await res.json().catch(() => ({}));
+    // Cloudflare first (free, fast). Only if it can't be reached or says so ({fallback}) does Make.com make the payment.
+    let r = null;
+    if (CONFIG.ENGINE_URL) { try { r = await post(CONFIG.ENGINE_URL, 12000); } catch (e) { r = null; } }
+    if (!r || r.data.fallback || (r.res.status >= 500 && !r.data.error)) r = await post(CONFIG.CHECKOUT_URL, 20000);
+    const res = r.res, data = r.data;
     if (!res.ok || !data.url) throw new Error(data.error || "We couldn't start the payment.");
     store.set("r2pending", { order: data.order, no: data.no, request_id: data.request_id, lines: cart, note, room: room.name, total: t.total, gst: t.gst, sub: t.sub, at: Date.now() });
     location.href = data.url;
