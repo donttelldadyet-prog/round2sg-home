@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
-:root { --bg: #06050a; --panel: #0b0914; --line: rgba(244,241,251,.14); --ink: #f4f1fb; --mute: #a79fbd; --acc: #F2C21B; --free: #5BE37D; --eb: #66C7FF; --tc: #5BE37D; }
+:root { --bg: #06050a; --panel: #0b0914; --line: rgba(244,241,251,.14); --ink: #f4f1fb; --mute: #a79fbd; --acc: #f4f1fb; --acc-ink: #0b0914; --dot: #b9b0cf; --free: #5BE37D; --eb: #66C7FF; --tc: #5BE37D; }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 'Chakra Petch', system-ui, sans-serif; }
 [hidden] { display: none !important; }
@@ -29,16 +29,16 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 .cal .g button { position: relative; font: inherit; font-size: 15px; height: 40px; background: transparent; color: var(--ink); border: 1px solid transparent; cursor: pointer; }
 .cal .g button:hover { border-color: var(--line); }
 .cal .g button:disabled { color: rgba(244,241,251,.2); cursor: default; border-color: transparent; }
-.cal .g button.pk::after { content: ''; position: absolute; left: 50%; bottom: 5px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--acc); }
+.cal .g button.pk::after { content: ''; position: absolute; left: 50%; bottom: 5px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--dot); }
 .cal .g button:disabled::after { display: none; }
 .cal .g button.td { border-color: var(--acc); color: var(--acc); font-weight: 700; padding-bottom: 10px; }
 .cal .g button.td small { position: absolute; left: 0; right: 0; bottom: 3px; font: 6px 'Press Start 2P', monospace; letter-spacing: .04em; }
 .cal .g button.td::after { display: none; }
-.cal .g button.td[aria-pressed="true"] { color: #0b0914; }
-.cal .g button[aria-pressed="true"] { background: var(--acc); color: #0b0914; border-color: var(--acc); }
-.cal .g button[aria-pressed="true"]::after { background: #0b0914; }
+.cal .g button.td[aria-pressed="true"] { color: var(--acc-ink); }
+.cal .g button[aria-pressed="true"] { background: var(--acc); color: var(--acc-ink); border-color: var(--acc); }
+.cal .g button[aria-pressed="true"]::after { background: var(--acc-ink); }
 .cal .ft { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 11px; color: var(--mute); }
-.cal .ft i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--acc); margin-right: 5px; vertical-align: 1px; }
+.cal .ft i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--dot); margin-right: 5px; vertical-align: 1px; }
 .dayhd { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 0; max-width: 420px; }
 .dayhd #toToday { margin-left: auto; font: 8px 'Press Start 2P', monospace; letter-spacing: .06em; padding: 6px 8px; background: transparent; color: var(--acc); border: 1px solid var(--acc); cursor: pointer; white-space: nowrap; }
 .cal .ft button { font: 8px 'Press Start 2P', monospace; letter-spacing: .06em; padding: 7px 9px; background: transparent; color: var(--acc); border: 1px solid var(--acc); cursor: pointer; white-space: nowrap; }
@@ -76,7 +76,7 @@ h3.nm, .nm { color: var(--rc); }
 .lbl { font-size: 9px; color: var(--mute); margin: 0 0 8px; }
 .lbl span { color: var(--acc); margin-left: 8px; }
 .views button { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 10px 12px; background: transparent; color: var(--ink); border: 1px solid var(--line); cursor: pointer; }
-.views button[aria-pressed="true"] { background: var(--acc); color: #0b0914; border-color: var(--acc); }
+.views button[aria-pressed="true"] { background: var(--acc); color: var(--acc-ink); border-color: var(--acc); }
 /* the timeline: hour lines, labels every 2 h, free time in the tier colour, booked time striped */
 .track { height: 34px; border-radius: 3px; overflow: hidden;
   background: repeating-linear-gradient(135deg, rgba(244,241,251,.06) 0 6px, rgba(244,241,251,.02) 6px 12px); }
@@ -107,15 +107,15 @@ h3.nm, .nm { color: var(--rc); }
 .room:hover { border-color: rgba(244,241,251,.3); }
 .room .free { font-size: 13px; color: var(--rc, var(--free)); margin-top: 6px; }
 .room .free.no { color: var(--mute); }
-.pickb { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 9px 12px; background: var(--acc); color: #0b0914; border: 0; cursor: pointer; margin-top: 8px; }
+.pickb { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 9px 12px; background: var(--acc); color: var(--acc-ink); border: 0; cursor: pointer; margin-top: 8px; }
 .step { padding: 14px 16px; border-bottom: 1px solid var(--line); }
 .step h4 { margin: 0 0 10px; font: 9px 'Press Start 2P', monospace; letter-spacing: .12em; color: var(--acc); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chips button { font: inherit; font-size: 14px; padding: 7px 11px; cursor: pointer; background: transparent; color: var(--ink); border: 1px solid var(--line); min-width: 74px; }
 .chips button small { display: block; font-size: 10px; color: var(--mute); text-transform: uppercase; letter-spacing: .06em; }
 .chips button.eb { border-color: rgba(102,199,255,.6); }
-.chips button[aria-pressed="true"] { background: var(--acc); color: #0b0914; border-color: var(--acc); }
-.chips button[aria-pressed="true"] small { color: #0b0914; }
+.chips button[aria-pressed="true"] { background: var(--acc); color: var(--acc-ink); border-color: var(--acc); }
+.chips button[aria-pressed="true"] small { color: var(--acc-ink); opacity: .8; }
 .chips button:disabled { opacity: .3; cursor: not-allowed; }
 /* longer stays cost less per hour: a "SAVE x%" flag on those lengths */
 .chips button { position: relative; }
@@ -123,7 +123,7 @@ h3.nm, .nm { color: var(--rc); }
 .saved { color: #3DDC84; font-size: 13px; margin-left: 8px; font-weight: 600; }
 .sum { padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
 .sum b { font-size: 18px; }
-.go { font: 10px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 13px 16px; background: var(--acc); color: #0b0914; border: 0; cursor: pointer; }
+.go { font: 10px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 13px 16px; background: var(--acc); color: var(--acc-ink); border: 0; cursor: pointer; }
 .go:disabled { opacity: .35; cursor: not-allowed; }
 .hint { font-size: 13px; color: var(--mute); }
 .note { font-size: 13px; color: var(--mute); padding: 0 16px 14px; margin: 0; }
@@ -401,6 +401,8 @@ h3.nm, .nm { color: var(--rc); }
     var info = data && data.rooms[uid]; if (!info || !info.list.length) return;
     cur = { uid: uid, start: m != null && info.starts[m] ? m : null, len: null };
     $('mTitle').innerHTML = '<span class="nm" style="--rc:' + ROOMS[uid][1] + '">' + ROOMS[uid][0] + '</span> · ' + ROOMS[uid][2];
+    /* like the TV launcher: once a room is picked, its character's colour leads (buttons, selections) */
+    $('modal').style.setProperty('--acc', ROOMS[uid][1]); $('modal').style.setProperty('--acc-ink', uid == 10 || uid == 11 ? '#ffffff' : '#0b0914');
     $('mSub').textContent = dayLabel(day);
     $('pTimes').innerHTML = info.list.map(function (o) {
       return '<button type="button" data-m="' + o.m + '" class="' + (o.eb ? 'eb' : '') + '" aria-pressed="' + (o.m === cur.start) + '">' + clock(o.m) + '<small>' + (o.eb ? 'Early bird' : 'from ' + money(o.price)) + '</small></button>';
