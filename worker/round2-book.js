@@ -276,7 +276,7 @@ async function finalize(env, ref, source) {
   try {
     if (h.status === 'released' && !(await isFree(env, q, ref))) throw new Error('slot was released and re-taken – refund needed');
     if (env.DRY_RUN === '1') {
-      result = { dryRun: true, would: ['book', q.eventId, q.unit, 'client(' + d.email + ')', q.date, q.time + ':00', q.endDate, q.end + ':00', 0, { [PAX_FIELD]: String(d.pax) }] };
+      result = { dryRun: true, would: ['book', q.eventId, q.unit, 'client(' + d.email + ')', q.date, q.time + ':00', '(end + 15 min cleaning)', 0, { [PAX_FIELD]: String(d.pax) }] };
     } else {
       const a = await admin(env);
       /* every booking gets its OWN contact with exactly the name typed on the page – guests use fun names or a
@@ -287,9 +287,14 @@ async function finalize(env, ref, source) {
         if (!found[0]) throw new Error('could not create the SimplyBook contact');
         cid = found[0].id;                   // the note below still carries the typed name
       }
-      const bk = await a('book', [q.eventId, q.unit, cid, q.date, q.time + ':00', q.endDate, q.end + ':00', 0, { [PAX_FIELD]: String(d.pax) }]);
+      /* SimplyBook's own bookings end 15 min after the session (its "buffer after" = cleaning time, e.g. 11:00–14:15 for 3 h),
+         so ours do too – the calendar then blocks the cleaning time and nobody can book into it */
+      const eB = mins(q.time) + q.hours * 60 + BUF, endDate = eB >= 1440 ? addDays(q.date, 1) : q.date;
+      const bk = await a('book', [q.eventId, q.unit, cid, q.date, q.time + ':00', endDate, hhmm(eB) + ':00', 0, { [PAX_FIELD]: String(d.pax) }]);
       const b0 = bk && bk.bookings && bk.bookings[0];
       result = { bookingId: b0 && b0.id, code: b0 && b0.code };
+      /* SimplyBook's own guest bookings are confirmed; ours came in unconfirmed, which may be why staff got no push */
+      if (b0 && b0.id) result.confirm = await a('confirmBooking', [b0.id]).then(() => 'ok').catch((e) => 'no: ' + String(e.message || e).slice(0, 60));
       /* the details SimplyBook doesn't show: the name typed on the page (SimplyBook keeps an existing contact's name),
          what was really paid (SimplyBook shows the base service price) */
       const note = `Online booking (round2.sg) · paid $${q.total.toFixed(2)} via HitPay · ref ${ref}\nBooked as: ${d.name} · ${d.phone} · ${d.email} · ${d.pax} guests` +
