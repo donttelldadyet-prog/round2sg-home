@@ -255,6 +255,8 @@ export class HoldBook extends DurableObject {
   }
   /* "Find my booking": paid, not yet past, matching email + last 8 digits of the mobile */
   find(email, p8, today) { return this.rows(`SELECT ref, date FROM holds WHERE status = 'paid' AND email = ? AND phone = ? AND date >= ? ORDER BY date, s LIMIT 6`, email, p8, today); }
+  /* the link in SimplyBook's confirmation email: …/b/<SimplyBook booking code> */
+  byCode(code) { return this.rows(`SELECT ref FROM holds WHERE status = 'paid' AND json_extract(data, '$.done.code') = ? LIMIT 1`, code)[0] || null; }
   setTv(ref, tv) { const h = this.get(ref); if (!h || !h.data.done) return; h.data.done.tv = tv; this.sql.exec(`UPDATE holds SET data = ? WHERE ref = ?`, JSON.stringify(h.data), ref); }
   done(ref, result) {
     const h = this.get(ref); if (!h) return;
@@ -638,7 +640,7 @@ ${msgBox}
 <div class="card"><div class="k">WHEN YOU ARRIVE</div><ul><li>Come in and take a seat in our lobby. We’ll know you’ve arrived and come to show you to ${esc(room)}.</li><li>Your booking is under <b>${esc(d.name)}</b>.</li><li>Please be on time: your session ends at ${esc(clock(q.end))}.</li><li>A confirmation email is on its way to ${esc(d.email)}.</li></ul></div>
 <div class="row"><a class="btn ghost" download="Round2-${esc(ref)}.ics" href="data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}">Add to calendar</a><a class="btn ghost" href="https://wa.me/6591625767?text=${encodeURIComponent('Hi Round2, about my booking ' + ref)}">WhatsApp us</a></div>
 ${d.ret ? `<a class="btn" href="${esc(d.ret)}">Back to Round2</a>` : '<a class="btn" href="https://www.round2.sg">Back to Round2</a>'}
-<p class="fine">Closed this page? Find it again any time at <a style="color:#f4f1fb" href="${origin}/find">${origin.replace('https://', '')}/find</a> with your email and mobile number. It’s also in your calendar entry.</p>
+<p class="fine">Closed this page? The link in your confirmation email brings you back here, and so does your calendar entry.</p>
 <script>try{sessionStorage.clear()}catch(e){}</script></main></body></html>`;
 }
 
@@ -723,10 +725,16 @@ export default {
         return H(PAGE(f.ok ? `<h1>You're booked 🎉</h1><p><b>${esc(q.room)}</b>, ${esc(q.date)}, ${esc(q.time)}–${esc(q.end)} (${q.hours}h) · $${q.total.toFixed(2)} paid.</p><p>Ref ${esc(ref)}${f.h.done && f.h.done.dryRun ? ' · <span class="tag">TEST – not put in calendar</span>' : ''}</p><p>A confirmation email is on its way.</p>${f.h.done && f.h.done.tv && f.h.done.tv.code ? `<p>Your message pops up on the TV ${f.h.msg.after ? f.h.msg.after + ' minutes after you start' : 'when you start'}. Want to change it? <a style="color:#F2C21B" href="https://cue.round2.sg/${esc(f.h.done.tv.code)}">cue.round2.sg/${esc(f.h.done.tv.code)}</a></p>` : ''}${f.h.ret ? `<a class="btn" href="${esc(f.h.ret)}">Back to Round2</a>` : ''}<script>try{sessionStorage.clear()}catch(e){}</script>`
           : `<h1>Payment received</h1><p class="err">${esc(f.err)}</p><p>We'll WhatsApp you shortly. Ref ${esc(ref)}.</p>`));
       }
+      /* SimplyBook's confirmation email links here with its booking code → that booking's page (see it, add/change the TV message) */
+      if (u.pathname.startsWith('/b/')) {
+        const code = u.pathname.slice(3).replace(/[^a-z0-9]/gi, '').slice(0, 20), r = code ? await book(env).byCode(code) : null;
+        if (r) return Response.redirect(u.origin + '/done?ref=' + r.ref, 302);
+        return H(PAGE(`<h1>Manage your booking</h1><p>This booking was made with us directly, so its details are with our team. Want a birthday or celebration message on your room’s TV, or need to change something? Message us on WhatsApp and we’ll sort it.</p><a class="btn" href="https://wa.me/6591625767?text=${encodeURIComponent('Hi Round2, about my booking ' + code)}">WhatsApp us</a>`));
+      }
       /* "Find my booking": email + mobile → the confirmation page again (to see it or add/change the TV message) */
       if (u.pathname === '/find') {
-        const form = (err, em = '') => H(PAGE(`<h1>Find my booking</h1><p>Enter the email and mobile number you booked with. You’ll get your booking page back, where you can add or change your TV message.</p>
-<form method="post"><label>Email</label><input name="email" type="email" required value="${esc(em)}"><label>Mobile</label><input name="phone" type="tel" required placeholder="8123 4567"><button>Find it</button></form>${err ? `<p class="err">${err}</p>` : ''}
+        const form = (err, em = '') => H(PAGE(`<h1>Manage your booking</h1><p>Enter the email and mobile number you booked with to see your booking and add or change your TV message.</p>
+<form method="post"><label>Email</label><input name="email" type="email" required value="${esc(em)}"><label>Mobile</label><input name="phone" type="tel" required placeholder="8123 4567"><button>Show my booking</button></form>${err ? `<p class="err">${err}</p>` : ''}
 <p style="color:#bababa;font-size:14px;margin-top:18px">Booked on WhatsApp or by phone? Message us on <a style="color:#F2C21B" href="https://wa.me/6591625767">WhatsApp</a>.</p>`));
         if (req.method !== 'POST') return form();
         const f = new URLSearchParams(await req.text()), em = String(f.get('email') || '').trim().toLowerCase(), p8 = String(f.get('phone') || '').replace(/\D/g, '').slice(-8);
