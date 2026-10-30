@@ -33,6 +33,13 @@ Not done (in order):
 5. Board design changes the owner asked for (below).
 6. Go-live: live HitPay key/salt (owner pastes into Cloudflare), `HITPAY_API=https://api.hit-pay.com/v1`, `DRY_RUN=0`, put the board behind the menu's Book button, merge only on approval.
 
+## Food menu payment via Cloudflare (30 Oct)
+`menu/index.html` (on main) now asks the engine first: POST `/menu/checkout` (worker `menuCheckout`). It re-prices from menu.json exactly
+like Make's ROOM MENU CHECKOUT, creates the LIVE HitPay payment (secret `MENU_HITPAY_KEY`) with Make's PAID ORDER webhook, and writes the
+pending order into Make data store 235217 via Make's API (secret `MAKE_API_TOKEN`, no operations used), so PAID ORDER (Telegram, TV alert,
+sheet, Drive) is unchanged. If either secret is missing or anything fails it answers `{fallback:true}` and the page uses the Make checkout.
+Guest messages: all pages go through `/gm` (front door) and the timer is the engine's alarm – see round2-tv-launcher docs/guest-messages.md.
+
 ## Booking times – read docs/booking-times.md (30 Oct)
 A SimplyBook booking's end = the guest's session end **+ 15 min cleaning** (that's how SimplyBook's own bookings look: 11:00–14:15 for 3 h).
 Since 30 Oct the engine books the same way and notes "Guest session HH:MM–HH:MM" in the booking comment. Anything guest-facing
