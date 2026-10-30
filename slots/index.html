@@ -286,7 +286,7 @@ h3.nm, .nm { color: var(--rc); font-family: var(--nf); font-size: 21px; line-hei
       var d = calM + '-' + ('0' + dd).slice(-2), wd = (start + dd - 1) % 7, past = d < today, peak = wd >= 4 || PH[d];
       h += '<button type="button" data-d="' + d + '" class="' + (peak ? 'pk' : '') + (d === today ? ' td' : '') + '" aria-pressed="' + (d === day) + '"' + (past ? ' disabled' : '') + ' aria-label="' + (d === today ? 'Today, ' : '') + dayLabel(d) + (PH[d] ? ', public holiday' : '') + '">' + dd + (d === today ? '<small>TODAY</small>' : '') + '</button>';
     }
-    h += '</div><div class="ft"><span><i></i>Peak day (Fri–Sun, public holidays)</span>' + (calM !== first || day !== today ? '<button type="button" data-today="1">BACK TO TODAY</button>' : '') + '</div>';
+    h += '</div><div class="ft"><span><i></i>Peak day (Fri–Sun, public holidays)</span>' + '' + '</div>';
     $('days').innerHTML = h;
     $('monthNow').textContent = day ? (day === today ? 'Today · ' : '') + dayLabel(day) : '';
   }
