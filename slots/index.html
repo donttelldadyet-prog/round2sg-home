@@ -158,6 +158,7 @@ h3.nm, .nm { color: var(--rc); }
 /* the celebration box in the room's character colour, so it stands out */
 .celstep { margin: 12px 16px; padding: 14px 14px; border: 1px solid var(--acc); border-left-width: 4px; background: color-mix(in srgb, var(--acc) 12%, transparent); }
 .celstep .cel b { color: var(--acc); }
+.beta { display: inline-block; font: 7px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 3px 5px; margin: 0 4px 0 2px; border: 1px solid var(--acc); color: var(--acc); vertical-align: 2px; }
 .celstep .cel .ic { color: var(--acc); }
 .cel { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
 .cel input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--acc); flex: none; }
@@ -213,7 +214,7 @@ h3.nm, .nm { color: var(--rc); }
         <p class="hint">Overseas number? Change +65 to your country code. We may WhatsApp you on this number. Confirmation and receipt go to this email.</p>
       </div>
       <div class="step celstep">
-        <label class="cel"><input type="checkbox" id="cOn"> <span><b>Celebrating?</b> Put a message on the room’s TV <i data-ic="cake"></i><br><small>Birthday, anniversary or anything. It pops up in the first hour, and you can change it later.</small></span></label>
+        <label class="cel"><input type="checkbox" id="cOn"> <span><b>Celebrating?</b> <span class="beta">BETA</span> Put a message on the room’s TV <i data-ic="cake"></i><br><small>Birthday, anniversary or anything. It pops up in the first hour, and you can change it later. This is new: if it doesn’t show up, just tell our staff and we’ll put it on for you.</small></span></label>
         <div id="cBox" hidden>
           <div class="chips" id="cKind" style="margin:10px 0">
             <button type="button" data-k="birthday" aria-pressed="true">Birthday</button><button type="button" data-k="anniversary" aria-pressed="false">Anniversary</button>

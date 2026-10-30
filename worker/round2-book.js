@@ -574,12 +574,15 @@ async function menuCheckout(env0, req, origin) {
   const P = menu.prices || {}, pc = P.pc || {}, pm = P.pm || {}, pn = P.pn || {}, g = +((menu.settings || {}).gst) || 0;
   const items = Array.isArray(o.items) ? o.items : [];
   const L = items.map((x) => { const k = String(x.k || ''), q = Math.round(+x.q || 0), c = k in pc ? +pc[k] : -1, m = k in pm ? +pm[k] : 0;
-    return { q, c, t: c * q, mt: m * q, l: q + ' x ' + (pn[k] || 'UNKNOWN ITEM') }; });
+    return { k, q, c, t: c * q, mt: m * q, l: q + ' x ' + (pn[k] || 'UNKNOWN ITEM') }; });
   const sub = L.reduce((a, x) => a + x.t, 0), base = L.reduce((a, x) => a + x.mt, 0), gst = Math.round(base * g), total = sub + gst;
   const room = String(o.room || '');
   if (!MENU_ROOMS.includes(room)) return no('Please choose your room first.');
   if (!L.length || L.length > 30 || L.some((x) => x.q < 1 || x.q > 20)) return no('Your order couldn’t be checked. Refresh the page and try again.');
   if (L.some((x) => x.c < 0)) return no('Something in your order is sold out or no longer on the menu. Refresh the page and check your order.');
+  /* test-only items (the 50-cent payment test) can only be ordered from the control centre's test mode */
+  const testIds = new Set(); (menu.sections || []).forEach((sec) => (sec.items || []).forEach((it) => { if (it.test) testIds.add(it.id); }));
+  if (pay !== 'test' && L.some((x) => testIds.has(String(x.k).split('--')[0]))) return no('Something in your order is sold out or no longer on the menu. Refresh the page and check your order.');
   if (total <= 0 || total !== Math.round(+o.shown_total * 100)) return no('The menu prices changed. Refresh the page and check your order.');
   const sg = new Date(Date.now() + 8 * 3600e3).toISOString(), ymd = sg.slice(2, 10).replace(/-/g, ''), hms = sg.slice(11, 19).replace(/:/g, '');
   const ref = 'R2-' + ymd + '-' + hms + '-' + room.toUpperCase(), orderNo = hms;
@@ -678,12 +681,23 @@ ${d.ret ? `<a class="btn" href="${esc(d.ret)}">Back to Round2</a>` : '<a class="
 }
 
 /* ---------- pages ---------- */
+/* small engine pages (View your booking, not found, errors, the old test form): same look as the booking page */
 const PAGE = (body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Round2 · Booking</title>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-<style>body{margin:0;background:#06050a;color:#f4f1fb;font:16px/1.5 'Chakra Petch',system-ui,sans-serif}h1{font-family:'Press Start 2P',monospace;letter-spacing:.04em;line-height:1.5}main{max-width:480px;margin:0 auto;padding:20px 16px}h1{font-size:20px}label{display:block;margin:12px 0 4px;color:#bababa;font-size:14px}
-select,input,button,.btn{display:block;width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid #444;background:#2a2929;color:#f4f1fb;font:inherit;text-align:center;text-decoration:none}button,.btn{background:#F2C21B;color:#111;border:0;font-weight:700;margin-top:18px}
-.q{margin-top:14px;padding:12px;border-radius:10px;background:#2a2929;color:#F2C21B}.err{color:#ff8080}.tag{display:inline-block;background:#F2C21B;color:#111;border-radius:6px;padding:0 6px;font-size:12px;margin-left:6px}
-.hold{display:none;margin-top:18px;padding:16px;border-radius:12px;border:1px solid #F2C21B}.big{font-size:28px;font-weight:700;color:#F2C21B}.ghost{background:none;border:1px solid #555;color:#bababa;margin-top:10px}</style></head><body><main>${body}</main></body></html>`;
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box}body{margin:0;background:#06050a;color:#f4f1fb;font:16px/1.5 'Chakra Petch',system-ui,sans-serif}
+main{max-width:520px;margin:0 auto;padding:28px 16px 40px}
+main::before{content:'ROUND2 · SAVE MENU';display:block;font:9px 'Press Start 2P',monospace;letter-spacing:.14em;color:#a79fbd;margin-bottom:10px}
+h1{font-family:'Press Start 2P',monospace;font-size:18px;line-height:1.5;letter-spacing:.04em;margin:0 0 14px;text-transform:uppercase}
+p{color:#c9c2dc}a{color:#f4f1fb}
+form,.card{margin-top:16px;border:1px solid rgba(244,241,251,.14);background:#0b0914;padding:16px 18px}
+label{display:block;margin:12px 0 4px;color:#a79fbd;font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+select,input{display:block;width:100%;padding:12px;border:1px solid rgba(244,241,251,.2);background:#06050a;color:#f4f1fb;font:16px 'Chakra Petch',sans-serif}
+input:focus,select:focus{outline:none;border-color:#f4f1fb}
+button,.btn{display:block;width:100%;text-align:center;margin-top:18px;padding:14px;border:0;background:#f4f1fb;color:#0b0914;font:10px 'Press Start 2P',monospace;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;cursor:pointer}
+.ghost{background:transparent;border:1px solid rgba(244,241,251,.3);color:#f4f1fb}
+.q{margin-top:14px;padding:12px;background:#0b0914;border:1px solid rgba(244,241,251,.14)}.err{color:#ff8a8a}
+.tag{display:inline-block;background:#F2C21B;color:#111;padding:0 6px;font-size:12px;margin-left:6px}
+.hold{display:none;margin-top:18px;padding:16px;border:1px solid #f4f1fb}.big{font-size:28px;font-weight:700}</style></head><body><main>${body}</main></body></html>`;
 
 function testForm() {
   const opts = Object.entries(ROOMS).map(([u, [n, t]]) => `<option value="${u}">${n} (${t})</option>`).join('');
@@ -805,7 +819,7 @@ export default {
       if (u.pathname === '/find') {
         const form = (err, em = '') => H(PAGE(`<h1>View your booking</h1><p>Enter the email and mobile number you booked with to see your booking and add or change your TV message.</p>
 <form method="post"><label>Email</label><input name="email" type="email" required value="${esc(em)}"><label>Mobile</label><input name="phone" type="tel" required placeholder="8123 4567"><button>Show my booking</button></form>${err ? `<p class="err">${err}</p>` : ''}
-<p style="color:#bababa;font-size:14px;margin-top:18px">Booked on WhatsApp or by phone? Message us on <a style="color:#F2C21B" href="https://wa.me/6591625767">WhatsApp</a>.</p>`));
+<p style="font-size:14px;margin-top:18px">Booked on WhatsApp or by phone? Message us on <a href="https://wa.me/6591625767">WhatsApp</a>.</p>`));
         if (req.method !== 'POST') return form();
         const f = new URLSearchParams(await req.text()), em = String(f.get('email') || '').trim().toLowerCase(), p8 = String(f.get('phone') || '').replace(/\D/g, '').slice(-8);
         if (!em || p8.length < 8) return form('Please enter your email and full mobile number.', em);
@@ -816,7 +830,7 @@ export default {
         if (!list.length) return form('We couldn’t find an upcoming online booking with that email and mobile. Check for typos, or WhatsApp us.', em);
         if (list.length === 1) return Response.redirect(u.origin + '/done?ref=' + list[0].ref, 303);
         const rows = [];
-        for (const r of list) { const h = await hb.get(r.ref), q = h.data.q; rows.push(`<a class="btn" style="margin-top:10px" href="/done?ref=${r.ref}">${esc(q.unit === 11 ? 'Maximillion' : q.room)} · ${esc(q.date)} · ${esc(q.time)}</a>`); }
+        for (const r of list) { const h = await hb.get(r.ref), q = h.data.q; rows.push(`<a class="btn ghost" style="margin-top:10px" href="/done?ref=${r.ref}">${esc(q.unit === 11 ? 'Maximillion' : q.room)} · ${esc(q.date)} · ${esc(q.time)}</a>`); }
         return H(PAGE(`<h1>Your bookings</h1><p>Pick one:</p>${rows.join('')}`));
       }
       /* "Add a message for the TV" on the confirmation page: make the guest-message link only when it's wanted */

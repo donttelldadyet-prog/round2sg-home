@@ -466,7 +466,8 @@ addEventListener("scroll", () => requestAnimationFrame(syncTabs), { passive: tru
 function boot(data){
   S = Object.assign(S, data.settings || {});
   PT = data.prices || r2PriceTable(data);
-  data.sections.forEach(s => { s.items = s.items.filter(it => !it.hidden); });
+  // test items (e.g. the 50-cent payment test) only show in test mode (?sim=code from the control centre), never to guests
+  data.sections.forEach(s => { s.items = s.items.filter(it => !it.hidden && (!it.test || SIM)); });
   data.sections = data.sections.filter(s => s.items.length);
   MENU = data; ITEMS = {};
   MENU.sections.forEach(s => s.items.forEach(it => { ITEMS[it.id] = it; }));
