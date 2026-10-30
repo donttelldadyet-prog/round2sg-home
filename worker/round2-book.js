@@ -380,7 +380,17 @@ async function gm(env, req) {
   /* staff: check the staff code here, so wrong guesses never reach Make; then pass straight through */
   if (!guest) {
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    /* list: the staff page and the control centre ask for it every minute or so. Answer from memory (15 min), and
+       ask Make again only after something changed through here. Saves thousands of Make operations a month. */
+    if (act === 'list') {
+      const L = await hb.gmGet('__LIST__');
+      if (L && L.exp > Date.now() && L.link && L.link.raw) return new Response(L.link.raw, { headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' } });
+      const raw = await gmFwd(env, f);
+      if (raw && raw.trim().charAt(0) === '{' && !/"error"/.test(raw.slice(0, 40))) await hb.gmPut('__LIST__', { raw }, null, 900e3);
+      return new Response(raw, { headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' } });
+    }
     const t = await gmFwd(env, f);
+    await hb.gmDrop('__LIST__');
     if (code) await hb.gmDrop(code);                                   // staff moved/cancelled it: guests see the change
     return new Response(t, { headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' } });
   }
@@ -413,7 +423,7 @@ async function gm(env, req) {
   if ((c.edits || 0) >= GM_GUEST_EDITS) return gmJ({ error: 'This message has been changed a lot already. Message Round2 if it still needs a change.' });
   const out = await gmFwd(env, { action: 'submit', code, kind: m.kind, to: m.to, from: m.from, title: m.title, text: m.text, at });
   let j; try { j = JSON.parse(out); } catch (e) { return gmJ({ error: 'Round2’s server didn’t answer properly. Try again in a minute.' }); }
-  if (!j.error) { await hb.gmEdit(code); await hb.gmPut(code, { ...L, ...m, at, status: 'approved' }, null, 60e3); }
+  if (!j.error) { await hb.gmEdit(code); await hb.gmPut(code, { ...L, ...m, at, status: 'approved' }, null, 60e3); await hb.gmDrop('__LIST__'); }
   return gmJ(j);
 }
 
