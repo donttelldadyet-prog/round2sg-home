@@ -175,7 +175,7 @@ export class HoldBook extends DurableObject {
   }
   gmRate(who, max) {
     this.gmInit(); const now = Date.now();
-    this.sql.exec(`DELETE FROM gmrate WHERE t < ?`, now - 600e3);
+    this.sql.exec(`DELETE FROM gmrate WHERE t < ? AND who NOT LIKE 'sw:%'`, now - 600e3);
     const n = this.rows(`SELECT COUNT(*) AS n FROM gmrate WHERE who = ?`, who)[0].n;
     if (n >= max) return false;
     this.sql.exec(`INSERT INTO gmrate VALUES (?, ?)`, who, now); return true;
@@ -214,6 +214,12 @@ export class HoldBook extends DurableObject {
     return this.rows(`SELECT COUNT(*) AS n FROM gmq`)[0].n;
   }
   qList() { this.qInit(); return this.rows(`SELECT * FROM gmq ORDER BY at`); }
+  /* booking switch (control centre › Systems): 'new' = this booking page, 'simplybook' = safe mode, guests book on SimplyBook */
+  getMode() { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = 'mode'`)[0]; return r ? JSON.parse(r.v) : { booking: 'new' }; }
+  setMode(m) { this.qInit(); this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('mode', ?)`, JSON.stringify(m)); return m; }
+  /* wrong-password lock for the booking switch: 5 wrong tries in 30 min → locked for 30 min */
+  lockOk(who) { this.gmInit(); this.sql.exec(`DELETE FROM gmrate WHERE t < ?`, Date.now() - 1800e3); return this.rows(`SELECT COUNT(*) AS n FROM gmrate WHERE who = ?`, who)[0].n < 5; }
+  lockFail(who) { this.gmInit(); this.sql.exec(`INSERT INTO gmrate VALUES (?, ?)`, who, Date.now()); }
   /* food menu orders waiting for payment (status pending → sending → paid) */
   mInit() { if (this.mReady) return; this.mReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS menu (ref TEXT PRIMARY KEY, data TEXT, status TEXT, t INTEGER)`); }
   menuPut(ref, rec) { this.mInit(); this.sql.exec(`INSERT OR REPLACE INTO menu VALUES (?, ?, 'pending', ?)`, ref, JSON.stringify(rec), Date.now()); this.sql.exec(`DELETE FROM menu WHERE t < ?`, Date.now() - 30 * 86400e3); }
@@ -316,6 +322,7 @@ async function isFree(env, q, ignoreRef) {
 /* ---------- checkout: hold the slot (atomic), then make the HitPay payment ---------- */
 const RET_OK = /^https:\/\/([a-z0-9-]+\.)*(round2\.sg|github\.io|githack\.com|workers\.dev)\//;
 async function checkout(env, b, origin) {
+  if ((await book(env).getMode()).booking === 'simplybook') throw new Error('Online booking is on our SimplyBook page right now: www.round2.sg/booknow');
   const q = await quote(env, b);
   const ret = RET_OK.test(String(b.ret || '')) ? String(b.ret).split(/[?#]/)[0] : '';
   let name = String(b.name || '').trim().slice(0, 80), email = String(b.email || '').trim().toLowerCase().slice(0, 120), phone = String(b.phone || '').replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '').slice(0, 16);
@@ -706,10 +713,28 @@ export default {
       if (req.method === 'OPTIONS') return J({});
       if (u.pathname === '/ph') return J([...(await holidays())].sort());
       /* control centre › Systems / Test bench: which mode the engine is in and what's switched on (yes/no only, never a secret) */
+      /* booking switch (control centre › Systems): GET /mode for the booking page; POST {pass, pin, booking, by} to switch.
+         Two separate secrets must both match (SWITCH_PASS + SWITCH_PIN, set in Cloudflare); 5 wrong tries locks it for 30 min. */
+      if (u.pathname === '/mode') {
+        const hb = book(env);
+        if (req.method !== 'POST') return J(await hb.getMode());
+        const f = await req.json().catch(() => ({}));
+        if (!env.SWITCH_PASS || !env.SWITCH_PIN || /paste/.test(env.SWITCH_PASS + env.SWITCH_PIN)) return J({ error: 'The switch passwords aren’t set up in Cloudflare yet' }, 403);
+        const ip = req.headers.get('cf-connecting-ip') || '?';
+        if (!(await hb.lockOk('sw:' + ip)) || !(await hb.lockOk('sw:all'))) return J({ error: 'Locked for 30 minutes after too many wrong tries' }, 429);
+        if (String(f.pass || '') !== env.SWITCH_PASS || String(f.pin || '') !== env.SWITCH_PIN) {
+          await hb.lockFail('sw:' + ip); await hb.lockFail('sw:all');
+          return J({ error: 'Password or PIN is wrong' }, 403);
+        }
+        if (!['new', 'simplybook'].includes(f.booking)) return J({ error: 'booking must be new or simplybook' }, 400);
+        const m = await hb.setMode({ booking: f.booking, t: Date.now(), by: String(f.by || '').slice(0, 30) });
+        await staffAlert(env, f.booking === 'simplybook' ? '🛟 Online booking switched to SAFE MODE (SimplyBook page)' + (m.by ? ' by ' + m.by : '') : '✅ Online booking switched back to the NEW booking page' + (m.by ? ' by ' + m.by : '')).catch(() => null);
+        return J(m);
+      }
       if (u.pathname === '/status') {
         const st = { payments: isSandbox(env) ? 'test' : 'live', dryRun: env.DRY_RUN === '1', simplybook: !!(env.SB_COMPANY && env.SB_USER && env.SB_PASS),
           sbSecret: !!env.SB_SECRET && !/paste/.test(env.SB_SECRET), kitchenBot: !!env.TG_BOT_TOKEN, staffAlerts: !!env.STAFF_CHAT, guestMessages: !!env.GM_STAFF,
-          menuSheet: !!env.MENU_MAKE_K, tvKey: !!env.TV_KEY, t: Date.now() };
+          menuSheet: !!env.MENU_MAKE_K, tvKey: !!env.TV_KEY, booking: (await book(env).getMode()).booking, t: Date.now() };
         if (u.searchParams.get('deep')) {
           st.sbLogin = await admin(env).then(() => 'ok').catch((e) => 'failed: ' + String(e.message || e).slice(0, 80));
           st.sbPublic = await pub(env).then(() => 'ok').catch((e) => 'failed: ' + String(e.message || e).slice(0, 80));

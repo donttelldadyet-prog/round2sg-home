@@ -152,6 +152,10 @@ h3.nm, .nm { color: var(--rc); }
 .sheet .hd p { margin: 2px 0 0; color: var(--mute); font-size: 13px; }
 .sheet .x { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; background: transparent; color: var(--ink); border: 1px solid var(--line); padding: 8px 10px; cursor: pointer; flex: none; }
 .fl { display: block; font-size: 12px; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; margin: 0 0 10px; }
+/* the celebration box in the room's character colour, so it stands out */
+.celstep { margin: 12px 16px; padding: 14px 14px; border: 1px solid var(--acc); border-left-width: 4px; background: color-mix(in srgb, var(--acc) 12%, transparent); }
+.celstep .cel b { color: var(--acc); }
+.celstep .cel .ic { color: var(--acc); }
 .cel { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
 .cel input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--acc); flex: none; }
 .cel small { color: var(--mute); }
@@ -205,7 +209,7 @@ h3.nm, .nm { color: var(--rc); }
         <label class="fl">Guests<select id="fPax"></select></label>
         <p class="hint">Overseas number? Change +65 to your country code. We may WhatsApp you on this number. Confirmation and receipt go to this email.</p>
       </div>
-      <div class="step">
+      <div class="step celstep">
         <label class="cel"><input type="checkbox" id="cOn"> <span><b>Celebrating?</b> Put a message on the room’s TV <i data-ic="cake"></i><br><small>Birthday, anniversary or anything. It pops up in the first hour, and you can change it later.</small></span></label>
         <div id="cBox" hidden>
           <div class="chips" id="cKind" style="margin:10px 0">
@@ -248,6 +252,7 @@ h3.nm, .nm { color: var(--rc); }
 (function () {
   'use strict';
   var ENGINE = 'https://round2-book.donttelldadyet.workers.dev';   /* Round2 booking engine (Cloudflare) – prices, holds, HitPay */
+  var SB_BOOK = 'https://www.round2.sg/booknow';   /* the SimplyBook booking page (safe mode) */
   var ROOMS = {   /* SimplyBook provider id → name, colour, type, max guests */
     5: ['Vale', '#E8436A', 'Netflix room', 3], 7: ['Kaeden', '#4DB848', 'Netflix room', 3], 8: ['Scarlett', '#F2C21B', 'Netflix room', 3],
     9: ['Kai', '#24B49A', 'Deluxe room', 4], 10: ['Bella', '#7A5BE0', 'Deluxe room', 4], 12: ['Atlas', '#E9E7EF', 'Deluxe room', 5],
@@ -654,6 +659,14 @@ h3.nm, .nm { color: var(--rc); }
   if (/[?&]released=1/.test(location.search)) { ss.set('r2.ref', null); banner('Payment not completed – the slot was released. Pick a time again.'); }
   day = sgDate(0);
   show(day);
+  /* booking switch (control centre › Systems › Booking switch): in safe mode this page only shows a button to the
+     SimplyBook booking page (the old way, still fully working) – the engine also refuses new holds then */
+  fetch(ENGINE + '/mode', { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (m) {
+    if (!m || m.booking !== 'simplybook') return;
+    document.querySelector('.wrap').innerHTML = '<div class="px kick">SAVE MENU</div><h1>BOOK A ROOM</h1>' +
+      '<p class="sub">Online booking is on our booking calendar for now.</p><a class="go wide" style="max-width:420px" href="' + SB_BOOK + '">BOOK NOW</a>' +
+      '<p class="sub" style="margin-top:18px">Questions? <a style="color:var(--acc)" href="https://wa.me/6591625767" target="_blank" rel="noopener">WhatsApp us</a>.</p>';
+  }).catch(function () {});
 }());
 </script>
 </body>
