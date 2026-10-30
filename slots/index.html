@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
-:root { --bg: #06050a; --panel: #0b0914; --line: rgba(244,241,251,.14); --ink: #f4f1fb; --mute: #a79fbd; --acc: #f4f1fb; --acc-ink: #0b0914; --dot: #b9b0cf; --free: #5BE37D; --eb: #66C7FF; --tc: #5BE37D; }
+:root { --bg: #06050a; --panel: #15121f; --line: rgba(244,241,251,.2); --cell: rgba(244,241,251,.06); --ink: #f4f1fb; --mute: #a79fbd; --acc: #f4f1fb; --acc-ink: #0b0914; --dot: #b9b0cf; --free: #5BE37D; --eb: #66C7FF; --tc: #5BE37D; }
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.45 'Chakra Petch', system-ui, sans-serif; }
 [hidden] { display: none !important; }
@@ -19,16 +19,16 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4
 h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4; margin: 8px 0 6px; letter-spacing: .04em; }
 .sub { color: var(--mute); margin: 0 0 18px; max-width: 640px; }
 /* month calendar (like SimplyBook's date picker): any date up to a year ahead */
-.cal { max-width: 420px; background: var(--panel); border: 1px solid var(--line); padding: 10px 10px 8px; }
+.cal { max-width: 420px; background: var(--panel); border: 1px solid var(--line); padding: 12px 12px 10px; }
 .cal .mh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .cal .mh b { font: 10px 'Press Start 2P', monospace; letter-spacing: .08em; }
 .cal .mh button { font: inherit; font-size: 18px; width: 40px; height: 34px; background: transparent; color: var(--ink); border: 1px solid var(--line); cursor: pointer; }
 .cal .mh button:disabled { opacity: .25; cursor: default; }
 .cal .g { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
 .cal .wd { font-size: 10px; color: var(--mute); text-align: center; text-transform: uppercase; letter-spacing: .06em; padding-bottom: 2px; }
-.cal .g button { position: relative; font: inherit; font-size: 15px; height: 40px; background: transparent; color: var(--ink); border: 1px solid transparent; cursor: pointer; }
-.cal .g button:hover { border-color: var(--line); }
-.cal .g button:disabled { color: rgba(244,241,251,.2); cursor: default; border-color: transparent; }
+.cal .g button { position: relative; font: inherit; font-size: 15px; height: 40px; background: var(--cell); color: var(--ink); border: 1px solid transparent; cursor: pointer; }
+.cal .g button:hover { border-color: rgba(244,241,251,.45); }
+.cal .g button:disabled { background: transparent; color: rgba(244,241,251,.16); cursor: default; border-color: transparent; }
 .cal .g button.pk::after { content: ''; position: absolute; left: 50%; bottom: 5px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--dot); }
 .cal .g button:disabled::after { display: none; }
 .cal .g button.td { border-color: var(--acc); color: var(--acc); font-weight: 700; padding-bottom: 10px; }
@@ -45,12 +45,12 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 .tiers { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 12px 0 16px; font-size: 12px; color: var(--mute); }
 .tiers i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
 .group { margin: 18px 0 6px; font-size: 9px; color: var(--mute); }
-.room { display: grid; grid-template-columns: 190px 1fr; gap: 14px; align-items: center; padding: 12px 14px; margin: 8px 0; background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--rc); }
+.room { display: grid; grid-template-columns: 190px 1fr; gap: 14px; align-items: center; padding: 14px 16px; margin: 12px 0; background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--rc); }
 .room h3 { margin: 0; font-size: 17px; }
 /* each character's name in their colour */
 h3.nm, .nm { color: var(--rc); }
 .room .ty { font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; }
-.track { position: relative; height: 26px; background: rgba(244,241,251,.05); }
+.track { position: relative; height: 26px; background: rgba(6,5,10,.55); }
 .track .seg { position: absolute; top: 0; bottom: 0; background: var(--free); opacity: .9; }
 .track .seg.eb { background: #66C7FF; }
 .track .seg:hover, .track .seg:focus-visible { opacity: 1; outline: 2px solid var(--ink); outline-offset: 1px; }
@@ -65,12 +65,12 @@ h3.nm, .nm { color: var(--rc); }
 .load { font-size: 9px; color: var(--acc); }
 @media (max-width: 640px) { .room { grid-template-columns: 1fr; gap: 8px; } h1 { font-size: 16px; } }
 /* tiers: boxed, colour-coded sections */
-.tier { position: relative; margin: 18px 0 8px; border: 1px solid var(--line); border-top: 0; background: rgba(244,241,251,.02); padding: 10px 12px 6px; }
+.tier { position: relative; margin: 30px 0 8px; }
 .tier > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 4px; }
-.tier::before { content: ''; display: block; height: 3px; margin: -10px -12px 10px; background: var(--tg); }
+.tier::before { content: ''; display: block; height: 3px; margin: 0 0 12px; background: var(--tg); }
 .tier > header .px { font-size: 10px; color: var(--ink); }
 .tier > header span { font-size: 13px; color: var(--mute); }
-.tier .room { margin: 8px 0; }
+.tier .room { margin: 12px 0; }
 /* views */
 .views { display: flex; gap: 6px; margin: 4px 0 6px; flex-wrap: wrap; }
 .lbl { font-size: 9px; color: var(--mute); margin: 0 0 8px; }
@@ -101,7 +101,7 @@ h3.nm, .nm { color: var(--rc); }
 .hours button small { display: block; font-size: 10px; color: var(--mute); }
 .hours button[aria-pressed="true"] { border-color: var(--acc); box-shadow: inset 0 0 0 1px var(--acc); }
 .hours button:disabled { opacity: .3; cursor: default; }
-.row { display: grid; grid-template-columns: minmax(120px, 1fr) 1.6fr auto; align-items: center; gap: 10px 14px; padding: 12px 14px; margin: 8px 0; background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--rc); cursor: pointer; }
+.row { display: grid; grid-template-columns: minmax(120px, 1fr) 1.6fr auto; align-items: center; gap: 10px 14px; padding: 14px 16px; margin: 12px 0; background: var(--panel); border: 1px solid var(--line); border-left: 4px solid var(--rc); cursor: pointer; }
 .row h3 { margin: 0; font-size: 17px; }
 .row .ty { font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; }
 .row .when { font-size: 15px; }
