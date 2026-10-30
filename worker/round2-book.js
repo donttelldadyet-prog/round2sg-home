@@ -185,6 +185,33 @@ export class HoldBook extends DurableObject {
   }
   gmEdit(code) { this.gmInit(); this.sql.exec(`UPDATE gm SET edits = edits + 1 WHERE code = ?`, code); }
   gmDrop(code) { this.gmInit(); this.sql.exec(`UPDATE gm SET exp = 0 WHERE code = ?`, code); }
+  /* ---- message timer (replaces Make's [BACKEND] GUEST MESSAGE TIMER): each queued message (guest or Round2) with its
+     show time; the alarm sends it to its TV ("push") a minute before. Rebuilt from Make's list whenever the engine reads
+     it, and at least once a day. docs/guest-messages.md "Timer". */
+  qInit() {
+    if (this.qReady) return; this.qReady = true;
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS gmq (code TEXT PRIMARY KEY, room TEXT, at INTEGER, endt INTEGER, pushed INTEGER DEFAULT 0)`);
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS kv (k TEXT PRIMARY KEY, v TEXT)`);
+  }
+  qSet(code, room, at, endt) {
+    this.qInit();
+    this.sql.exec(`INSERT OR REPLACE INTO gmq VALUES (?, ?, ?, ?, 0)`, code, room || '', +at, +endt || +at + 3 * 3600e3);
+    this.arm();
+  }
+  qDel(code) { this.qInit(); this.sql.exec(`DELETE FROM gmq WHERE code = ?`, code); }
+  /* the whole queue from Make's list: approved, not on the TV yet, not finished */
+  qSync(links) {
+    this.qInit(); const now = Date.now();
+    this.sql.exec(`DELETE FROM gmq`);
+    for (const x of links || []) {
+      const d = x.data || {};
+      if (d.status === 'approved' && d.onTv !== 'yes' && +d.end > now && +d.at) this.sql.exec(`INSERT OR REPLACE INTO gmq VALUES (?, ?, ?, ?, 0)`, x.key, d.room || '', +d.at, +d.end);
+    }
+    this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('synced', ?)`, String(now));
+    this.arm();
+    return this.rows(`SELECT COUNT(*) AS n FROM gmq`)[0].n;
+  }
+  qList() { this.qInit(); return this.rows(`SELECT * FROM gmq ORDER BY at`); }
   /* any pending hold overlapping s–e (plus cleaning buffer) on these rooms? */
   clash(date, units, s, e, ignore = '') {
     const now = Date.now();
@@ -226,15 +253,38 @@ export class HoldBook extends DurableObject {
     this.sql.exec(`UPDATE holds SET status = 'paid', data = ? WHERE ref = ?`, JSON.stringify(h.data), ref);
   }
   arm() {
+    this.qInit();
     const n = this.rows(`SELECT MIN(exp) AS t FROM holds WHERE status = 'pending'`)[0];
-    if (n && n.t) this.ctx.storage.setAlarm(n.t + 1000);
+    const q = this.rows(`SELECT MIN(at) AS t FROM gmq WHERE pushed = 0`)[0];
+    const syn = +((this.rows(`SELECT v FROM kv WHERE k = 'synced'`)[0] || {}).v || 0);
+    const ts = [n && n.t ? n.t + 1000 : 0, q && q.t ? q.t - 60e3 : 0, syn ? syn + 86400e3 : 0].filter((t) => t > 0);
+    if (ts.length) this.ctx.storage.setAlarm(Math.max(Date.now() + 1000, Math.min(...ts)));
   }
   /* timer ran out → release the hold and kill its HitPay link */
   async alarm() {
     const due = this.rows(`SELECT ref, pr FROM holds WHERE status = 'pending' AND exp <= ?`, Date.now());
     for (const d of due) { this.sql.exec(`UPDATE holds SET status = 'released' WHERE ref = ?`, d.ref); await cancelLink(this.env, d.pr); }
     this.sql.exec(`DELETE FROM holds WHERE status = 'released' AND created < ?`, Date.now() - 7 * 86400e3);
+    try { await this.qRun(); } catch (e) {}
     this.arm();
+  }
+  async qRun() {
+    this.qInit(); const now = Date.now(), env = this.env;
+    if (!env.GM_STAFF) return;
+    const call = (body) => fetch(env.GM_HOOK_URL || GM_HOOK, { method: 'POST', body: new URLSearchParams(body) }).then((r) => r.text()).catch(() => '');
+    /* once a day: rebuild the queue from Make (anything queued another way still goes out) */
+    const syn = +((this.rows(`SELECT v FROM kv WHERE k = 'synced'`)[0] || {}).v || 0);
+    if (now - syn > 86400e3) { try { const j = JSON.parse(await call({ action: 'list', staff: env.GM_STAFF })); if (j.links) this.qSync(j.links); } catch (e) { this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('synced', ?)`, String(now - 86400e3 + 3600e3)); } }
+    this.sql.exec(`DELETE FROM gmq WHERE endt < ?`, now);
+    for (const m of this.rows(`SELECT * FROM gmq WHERE pushed = 0 AND at - 60000 <= ? ORDER BY at`, now)) {
+      const t = await call({ action: 'push', staff: env.GM_STAFF, code: m.code });
+      this.sql.exec(`UPDATE gmq SET pushed = 1 WHERE code = ?`, m.code);
+      /* the TV keeps one message: a later one for the same room may have been put back in the queue by this push,
+         so let those go again at their own time (pushing one that's already on the TV changes nothing) */
+      this.sql.exec(`UPDATE gmq SET pushed = 0 WHERE room = ? AND at > ? AND code != ?`, m.room, m.at, m.code);
+      this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('last', ?)`, JSON.stringify({ code: m.code, t: now, r: String(t).slice(0, 80) }));
+    }
+    this.sql.exec(`DELETE FROM gmq WHERE pushed = 1 AND at < ?`, now - 3600e3);
   }
 }
 const book = (env) => env.HOLDBOOK.get(env.HOLDBOOK.idFromName('main'));
@@ -356,6 +406,8 @@ async function tvMessage(env, d, q, ref) {
   const link = await call({ action: 'create', staff: env.GM_STAFF, room: GM_ROOM[q.unit], start, label: 'Online · ' + d.name.slice(0, 30) });
   const m = d.msg;
   await call({ action: 'submit', code: link.code, kind: m.kind, to: m.to, from: m.from, title: m.title, text: m.text, at: start + m.after * 60e3 });
+  await book(env).qSet(link.code, GM_ROOM[q.unit], start + m.after * 60e3, start + q.hours * 3600e3).catch(() => null);
+  await book(env).gmDrop('__LIST__').catch(() => null);
   return { code: link.code, at: start + m.after * 60e3 };
 }
 
@@ -370,10 +422,24 @@ async function gmFwd(env, fields) {
   return r.text();
 }
 const gmJ = (o) => J(o);
+/* Make's full list (staff code), kept for 15 min and used to rebuild the timer's queue */
+async function gmList(env, hb) {
+  const raw = await gmFwd(env, { action: 'list', staff: env.GM_STAFF });
+  if (raw && raw.trim().charAt(0) === '{' && !/"error"/.test(raw.slice(0, 40))) {
+    await hb.gmPut('__LIST__', { raw }, null, 900e3);
+    try { await hb.qSync(JSON.parse(raw).links || []); } catch (e) {}
+  }
+  return raw;
+}
 async function gm(env, req) {
   const f = Object.fromEntries(new URLSearchParams(await req.text()));
   const act = String(f.action || ''), who = req.headers.get('cf-connecting-ip') || 'x', hb = book(env);
   const guest = act === 'get' || act === 'submit';
+  if (act === 'queue') {   /* staff: what the timer will send, and the last send */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    if (f.sync) await gmList(env, hb);
+    return gmJ({ ok: true, queue: await hb.qList(), now: Date.now() });
+  }
   if (!guest && !GM_STAFF_ACTIONS.includes(act)) return gmJ({ error: 'Unknown action.' });
   if (!(await hb.gmRate(who + (guest ? ':g' : ':s'), guest ? 30 : 200))) return gmJ({ error: 'Too many tries. Wait a few minutes and try again.' });
   const code = String(f.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -385,12 +451,11 @@ async function gm(env, req) {
     if (act === 'list') {
       const L = await hb.gmGet('__LIST__');
       if (L && L.exp > Date.now() && L.link && L.link.raw) return new Response(L.link.raw, { headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' } });
-      const raw = await gmFwd(env, f);
-      if (raw && raw.trim().charAt(0) === '{' && !/"error"/.test(raw.slice(0, 40))) await hb.gmPut('__LIST__', { raw }, null, 900e3);
-      return new Response(raw, { headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' } });
+      return new Response(await gmList(env, hb), { headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' } });
     }
     const t = await gmFwd(env, f);
     await hb.gmDrop('__LIST__');
+    if (act !== 'push') await gmList(env, hb).catch(() => null);         // something moved: the timer's queue follows
     if (code) await hb.gmDrop(code);                                   // staff moved/cancelled it: guests see the change
     return new Response(t, { headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' } });
   }
@@ -423,7 +488,7 @@ async function gm(env, req) {
   if ((c.edits || 0) >= GM_GUEST_EDITS) return gmJ({ error: 'This message has been changed a lot already. Message Round2 if it still needs a change.' });
   const out = await gmFwd(env, { action: 'submit', code, kind: m.kind, to: m.to, from: m.from, title: m.title, text: m.text, at });
   let j; try { j = JSON.parse(out); } catch (e) { return gmJ({ error: 'Round2’s server didn’t answer properly. Try again in a minute.' }); }
-  if (!j.error) { await hb.gmEdit(code); await hb.gmPut(code, { ...L, ...m, at, status: 'approved' }, null, 60e3); await hb.gmDrop('__LIST__'); }
+  if (!j.error) { await hb.gmEdit(code); await hb.gmPut(code, { ...L, ...m, at, status: 'approved' }, null, 60e3); await hb.gmDrop('__LIST__'); await hb.qSet(code, L.room, at, +L.end || at + 3 * 3600e3); }
   return gmJ(j);
 }
 
