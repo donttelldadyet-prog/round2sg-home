@@ -89,14 +89,17 @@ h3.nm, .nm { color: var(--rc); }
 .track .seg.eb { background: var(--eb); }
 .ticks span::before { content: ''; position: absolute; left: 50%; top: -4px; width: 1px; height: 4px; background: rgba(244,241,251,.35); }
 /* Early bird: its own chip, easy to see, and clearly marked when taken */
-.ebchip { display: inline-flex; align-items: center; gap: 8px; margin: 8px 8px 0 0; padding: 7px 10px; font-size: 12px; white-space: nowrap; border: 1px solid var(--eb); color: var(--ink); background: rgba(102,199,255,.12); cursor: pointer; font-family: inherit; }
-.ebchip b { font: 8px 'Press Start 2P', monospace; letter-spacing: .1em; color: var(--eb); }
+.ebchip { display: inline-flex; align-items: center; gap: 6px; margin: 8px 0 0; padding: 2px 0; font: 13px 'Chakra Petch', sans-serif; white-space: nowrap; border: 0; border-bottom: 1px dashed rgba(102,199,255,.5); color: var(--eb); background: transparent; cursor: pointer; }
+.ebchip:hover { border-bottom-style: solid; }
+.ebchip::before { content: ''; width: 6px; height: 6px; background: var(--eb); transform: rotate(45deg); flex: none; }
+.ebchip b { font-weight: 600; }
 .ebnote { margin: 4px 0 10px; padding: 10px 12px; font-size: 13px; border: 1px solid var(--eb); background: rgba(102,199,255,.1); color: var(--ink); }
 .ebnote b, .ebtag { font: 8px 'Press Start 2P', monospace; letter-spacing: .08em; color: var(--eb); }
 .ebnote b { display: block; margin-bottom: 6px; }
 .ebtag { display: block; margin-bottom: 5px; }
 .row.ebrow { border-color: var(--eb); border-left-color: var(--rc); background: rgba(102,199,255,.07); }
-.ebchip.gone { border-color: var(--line); background: transparent; color: var(--mute); cursor: default; text-decoration: line-through; text-decoration-color: rgba(244,241,251,.35); }
+.ebchip.gone { border-bottom: 0; color: var(--mute); cursor: default; text-decoration: line-through; text-decoration-color: rgba(244,241,251,.35); }
+.ebchip.gone::before { background: var(--mute); }
 .ebchip.gone b { color: var(--mute); }
 .room .free { color: var(--rc, var(--tc)); }
 /* by time / earliest */
@@ -116,6 +119,8 @@ h3.nm, .nm { color: var(--rc); }
 .room:hover { border-color: rgba(244,241,251,.3); }
 .room .free { font-size: 13px; color: var(--rc, var(--free)); margin-top: 6px; }
 .room .free.no { color: var(--mute); }
+.room .pickb { font: 600 13px 'Chakra Petch', sans-serif; letter-spacing: .02em; padding: 6px 12px; margin-top: 10px; background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.room:hover .pickb, .room .pickb:hover { border-color: var(--rc); color: var(--rc); }
 .pickb { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 9px 12px; background: var(--acc); color: var(--acc-ink); border: 0; cursor: pointer; margin-top: 8px; }
 .step { padding: 14px 16px; border-bottom: 1px solid var(--line); }
 .step h4 { margin: 0 0 10px; font: 9px 'Press Start 2P', monospace; letter-spacing: .12em; color: var(--acc); }
@@ -177,7 +182,7 @@ h3.nm, .nm { color: var(--rc); }
   </div>
   <div class="tiers" id="tiers"></div>
   <div id="board"><div class="state px load">LOADING SAVE SLOTS…</div></div>
-  <p class="sub" style="margin-top:18px"><i data-ic="moon"></i> Late night? Every online session must end by 11:15pm, so the latest start for 3 hours is 8:15pm. Want to start later or stay past 11:15pm? <a style="color:var(--acc)" href="https://wa.me/6591625767?text=Hi%20Round2%2C%20I%27d%20like%20a%20late-night%20session%20(past%2011%3A15pm)" target="_blank" rel="noopener">WhatsApp us</a> and we’ll arrange it.</p>
+  <p class="sub" style="margin-top:18px"><i data-ic="moon"></i> Late night? Every online session must end by 11:15pm, so the latest start for 3 hours is 8:15pm. Want to start later or stay past 11:15pm? <a style="color:var(--acc)" href="https://wa.me/6591625767?text=Hi%20Round2%2C%20I%27d%20like%20a%20late-night%20session%20(past%2011%3A15pm)" target="_blank" rel="noopener">WhatsApp us</a> and we’ll try to arrange it (subject to staff availability).</p>
 </div>
 
 <div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mTitle">
@@ -185,7 +190,7 @@ h3.nm, .nm { color: var(--rc); }
     <div class="hd"><div><b id="mTitle"></b><p id="mSub"></p></div><button class="x" id="mClose" type="button">× BACK</button></div>
     <div id="pick">
       <div class="step"><h4><i data-ic="clock"></i>1 · START TIME</h4><div class="chips" id="pTimes"></div></div>
-      <div class="step"><h4><i data-ic="glass"></i>2 · HOW LONG</h4><p class="hint" id="pSave" style="margin:-4px 0 12px"></p><div class="chips" id="pLens"></div><p class="hint" style="margin:12px 0 0"><i data-ic="moon"></i> Staying past 11:15pm? Late-night sessions are arranged on <a style="color:var(--acc)" href="https://wa.me/6591625767?text=Hi%20Round2%2C%20I%27d%20like%20a%20late-night%20session%20(past%2011%3A15pm)" target="_blank" rel="noopener">WhatsApp</a>.</p></div>
+      <div class="step"><h4><i data-ic="glass"></i>2 · HOW LONG</h4><p class="hint" id="pSave" style="margin:-4px 0 12px"></p><div class="chips" id="pLens"></div><p class="hint" style="margin:12px 0 0"><i data-ic="moon"></i> Staying past 11:15pm? Late-night sessions are arranged on <a style="color:var(--acc)" href="https://wa.me/6591625767?text=Hi%20Round2%2C%20I%27d%20like%20a%20late-night%20session%20(past%2011%3A15pm)" target="_blank" rel="noopener">WhatsApp</a>, subject to staff availability.</p></div>
       <div class="sum"><div><div id="pWhen" class="hint"></div><b id="pPrice"></b></div><button class="go" id="pGo" type="button" disabled>CONTINUE</button></div>
       <p class="note" id="pNote"></p>
     </div>
@@ -350,8 +355,8 @@ h3.nm, .nm { color: var(--rc); }
   function ebPossible() { var n = sgNow(); return day > sgDate(0) || (n.getUTCHours() * 60 + n.getUTCMinutes()) < EB - 15; }
   function ebChip(uid) {
     var info = data.rooms[uid], o = info && info.starts[EB];
-    if (o) return '<button type="button" class="ebchip" data-u="' + uid + '" data-m="' + EB + '"><b>EARLY BIRD</b> 11am · ' + money(o.prices[3]) + '</button>';
-    return ebPossible() ? '<span class="ebchip gone"><b>EARLY BIRD</b> 11am · taken</span>' : '';
+    if (o) return '<button type="button" class="ebchip" data-u="' + uid + '" data-m="' + EB + '"><b>Early bird</b> 11am · ' + money(o.prices[3]) + '</button>';
+    return ebPossible() ? '<span class="ebchip gone"><b>Early bird</b> 11am · taken</span>' : '';
   }
   function render() {
     var res = data, any = false;
@@ -390,7 +395,7 @@ h3.nm, .nm { color: var(--rc); }
         var lead = rgs.length === 1 && rgs[0][0] === rgs[0][1] ? 'Slot available starting at ' : 'Slots available starting anytime from ';
         inner += '<div class="room" style="--rc:' + R[1] + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': ' + (txt ? lead + txt : 'early bird')) + '"' : '') + '><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty">' + R[2] + '</div>' + ebChip(uid) + '</div><div>' +
           '<div class="track">' + lines + segs + '</div><div class="ticks">' + ticks + '</div>' +
-          (day3.length ? '<div class="free">' + lead + esc(txt) + ' · from ' + money(from) + '</div><button class="pickb" type="button" data-u="' + uid + '">PICK A TIME</button>'
+          (day3.length ? '<div class="free">' + lead + esc(txt) + ' · from ' + money(from) + '</div><button class="pickb" type="button" data-u="' + uid + '">Choose a time ›</button>'
             : info.list.length ? '<div class="free">Only the early bird is free</div>' : '<div class="free no">Fully booked</div>') + '</div></div>';
       });
       html += tierBox(g, inner);
