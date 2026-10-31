@@ -216,6 +216,11 @@ export class HoldBook extends DurableObject {
     return this.rows(`SELECT COUNT(*) AS n FROM gmq`)[0].n;
   }
   qList() { this.qInit(); return this.rows(`SELECT * FROM gmq ORDER BY at`); }
+  /* "Show again at…" (staff page): at that time the engine asks Make to send the message to the TV again ("now") */
+  laterInit() { this.qInit(); if (this.laterReady) return; this.laterReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS later (code TEXT PRIMARY KEY, at INTEGER)`); }
+  laterSet(code, at) { this.laterInit(); this.sql.exec(`INSERT OR REPLACE INTO later VALUES (?, ?)`, code, +at); this.arm(); }
+  laterDel(code) { this.laterInit(); this.sql.exec(`DELETE FROM later WHERE code = ?`, code); }
+  laterList() { this.laterInit(); return this.rows(`SELECT * FROM later ORDER BY at`); }
   /* ---- messages follow their booking (docs/guest-messages.md "Follows the booking"): every open guest link with its room
      and start, and the SimplyBook booking it belongs to (bid = the booking in that room starting at exactly that time).
      Every 10 min, and just before a message goes to its TV, the engine looks at SimplyBook: booking moved (time or room)
@@ -386,10 +391,11 @@ export class HoldBook extends DurableObject {
     const n = this.rows(`SELECT MIN(exp) AS t FROM holds WHERE status = 'pending'`)[0];
     const q = this.rows(`SELECT MIN(at) AS t FROM gmq WHERE pushed = 0`)[0];
     const syn = +((this.rows(`SELECT v FROM kv WHERE k = 'synced'`)[0] || {}).v || 0);
-    this.lInit();
+    this.lInit(); this.laterInit();
+    const lt = this.rows(`SELECT MIN(at) AS t FROM later`)[0];
     const fl = this.rows(`SELECT COUNT(*) AS n FROM gml WHERE endt > ?`, Date.now())[0].n, fol = +((this.rows(`SELECT v FROM kv WHERE k = 'followed'`)[0] || {}).v || 0);
     const lsy = this.rows(`SELECT 1 FROM kv WHERE k = 'lsynced'`).length;
-    const ts = [n && n.t ? n.t + 1000 : 0, q && q.t ? q.t - 60e3 : 0, syn ? syn + 86400e3 : 0, fl ? fol + FOLLOW_MS : 0, lsy ? 0 : Date.now() + 2000].filter((t) => t > 0);
+    const ts = [n && n.t ? n.t + 1000 : 0, q && q.t ? q.t - 60e3 : 0, syn ? syn + 86400e3 : 0, fl ? fol + FOLLOW_MS : 0, lsy ? 0 : Date.now() + 2000, lt && lt.t ? lt.t : 0].filter((t) => t > 0);
     if (ts.length) this.ctx.storage.setAlarm(Math.max(Date.now() + 1000, Math.min(...ts)));
   }
   /* timer ran out → release the hold and kill its HitPay link */
@@ -410,6 +416,13 @@ export class HoldBook extends DurableObject {
     if (!lsy) this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('lsynced', '1')`);   // only ever once, even if Make doesn't answer
     if (now - syn > 86400e3 || !lsy) { try { const j = JSON.parse(await call({ action: 'list', staff: env.GM_STAFF })); if (j.links) this.qSync(j.links); } catch (e) { this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('synced', ?)`, String(now - 86400e3 + 3600e3)); } }
     this.sql.exec(`DELETE FROM gmq WHERE endt < ?`, now);
+    this.laterInit();
+    for (const r of this.rows(`SELECT * FROM later WHERE at <= ?`, now + 5000)) {
+      this.sql.exec(`DELETE FROM later WHERE code = ?`, r.code);
+      const t = await call({ action: 'now', staff: env.GM_STAFF, code: r.code });
+      this.fLog({ a: 'shown again', why: String(t).slice(0, 60) });
+      this.gmDrop('__LIST__');
+    }
     /* messages follow their booking: every 10 min, and again right before one goes to its TV */
     this.lInit();
     const fol = +((this.rows(`SELECT v FROM kv WHERE k = 'followed'`)[0] || {}).v || 0);
@@ -606,6 +619,15 @@ async function gm(env, req) {
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     if (f.sync) await gmList(env, hb);
     return gmJ({ ok: true, queue: await hb.qList(), follow: await hb.lList(), followLog: await hb.fLogGet(), now: Date.now() });
+  }
+  if (act === 'later') {   /* staff: "Show again at…" – list, set (at) or clear (at=0) */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const code = String(f.code || '').toUpperCase().replace(/[^A-Z0-9]/g, ''), at = +f.at || 0, now = Date.now();
+    if (code && f.at !== undefined) {
+      if (at && (at < now + 30e3 || at > now + 6 * 3600e3)) return gmJ({ error: 'Pick a time later today.' });
+      if (at) await hb.laterSet(code, at); else await hb.laterDel(code);
+    }
+    return gmJ({ ok: true, later: await hb.laterList() });
   }
   if (act === 'follow') {   /* staff: run the "messages follow their booking" check now (dry=1: only show what it would do) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
