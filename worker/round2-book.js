@@ -224,11 +224,12 @@ export class HoldBook extends DurableObject {
      never fights a manual change; it binds again only if a booking starts exactly at the new room + time. */
   lInit() {
     this.qInit(); if (this.lReady) return; this.lReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS gml (code TEXT PRIMARY KEY, room TEXT, start INTEGER, endt INTEGER, bid TEXT, cid TEXT)`);
+    try { this.sql.exec(`ALTER TABLE gml ADD COLUMN cr INTEGER`); } catch (e) {}   /* when the link was made */
     if (!this.rows(`SELECT 1 FROM kv WHERE k = 'fv2'`).length) { this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('fv2', '1')`); this.fSoon(); }
   }
   /* run the follow check about a minute from now (new link learned) */
   fSoon() { this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('followed', ?)`, String(Date.now() - FOLLOW_MS + 60e3)); }
-  lSet(code, room, start, endt, bid) { this.lInit(); if (!this.rows(`SELECT 1 FROM gml WHERE code = ?`, code).length) this.sql.exec(`INSERT INTO gml VALUES (?, ?, ?, ?, ?, NULL)`, code, room || '', +start, +endt, bid ? String(bid) : null); this.arm(); }
+  lSet(code, room, start, endt, bid) { this.lInit(); if (!this.rows(`SELECT 1 FROM gml WHERE code = ?`, code).length) this.sql.exec(`INSERT INTO gml (code, room, start, endt, bid, cid, cr) VALUES (?, ?, ?, ?, ?, NULL, ?)`, code, room || '', +start, +endt, bid ? String(bid) : null, Date.now()); this.arm(); }
   lSync(links) {
     this.lInit(); const now = Date.now(), keep = new Set();
     for (const x of links || []) {
@@ -236,7 +237,7 @@ export class HoldBook extends DurableObject {
       if (!x.key || /^R2/.test(x.key) || d.status === 'cancelled' || !(+d.end > now) || !(+d.start)) continue;
       keep.add(x.key);
       const o = this.rows(`SELECT * FROM gml WHERE code = ?`, x.key)[0];
-      if (!o) { this.sql.exec(`INSERT INTO gml VALUES (?, ?, ?, ?, NULL, NULL)`, x.key, d.room || '', +d.start, +d.end); this.fSoon(); }
+      if (!o) { this.sql.exec(`INSERT INTO gml (code, room, start, endt, bid, cid, cr) VALUES (?, ?, ?, ?, NULL, NULL, ?)`, x.key, d.room || '', +d.start, +d.end, +d.created || Date.now()); this.fSoon(); }
       else if (o.room !== (d.room || '') || +o.start !== +d.start) this.sql.exec(`UPDATE gml SET room = ?, start = ?, endt = ?, bid = NULL, cid = NULL WHERE code = ?`, d.room || '', +d.start, +d.end, x.key);
     }
     for (const r of this.rows(`SELECT code FROM gml`)) if (!keep.has(r.code)) this.sql.exec(`DELETE FROM gml WHERE code = ?`, r.code);
@@ -255,11 +256,11 @@ export class HoldBook extends DurableObject {
     const L = this.rows(`SELECT * FROM gml WHERE start > ? ORDER BY start`, now - 30 * 60e3);
     if (!L.length || !env.SB_USER || !env.GM_STAFF) return { links: 0 };
     const a = await admin(env), UNIT = {}; for (const u in GM_ROOM) UNIT[GM_ROOM[u]] = +u;
-    const sgMs = (t) => { const m = String(t || '').match(/(\d{4})-(\d\d)-(\d\d)[ T](\d\d):(\d\d)/); return m ? Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5]) - 8 * 3600e3 : 0; };
+    const sgMs = (t) => { const m = String(t || '').match(/(\d{4})-(\d\d)-(\d\d)[ T](\d\d):(\d\d)(?::(\d\d))?/); return m ? Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)) - 8 * 3600e3 : 0; };
     const day = new Date(now + 8 * 3600e3).toISOString().slice(0, 10), rng = { date_from: addDays(day, -1), date_to: addDays(day, 120) };
     let raw0 = null;
     const get = async (type) => Object.values((await a('getBookings', [Object.assign({ booking_type: type }, rng)])) || {})
-      .map((b) => { if (!raw0) raw0 = b; return b; }).map((b) => ({ id: String(b.id), unit: +b.unit_id, start: sgMs(b.start_date || b.start_date_time), cid: String(b.client_id || '') })).filter((b) => b.id && b.start);
+      .map((b) => { if (!raw0) raw0 = b; return b; }).map((b) => ({ id: String(b.id), unit: +b.unit_id, start: sgMs(b.start_date || b.start_date_time), cid: String(b.client_id || ''), made: sgMs(b.record_date) })).filter((b) => b.id && b.start);
     const live = await get('non_cancelled');
     const seen = { n: live.length, fields: raw0 ? Object.keys(raw0).slice(0, 40) : [], sample: raw0 ? { start_date: raw0.start_date, unit_id: raw0.unit_id } : null };
     if (!live.length) return { links: L.length, seen, error: 'SimplyBook gave no bookings – nothing changed' };
@@ -267,6 +268,12 @@ export class HoldBook extends DurableObject {
     for (const l of L) {
       if (!l.bid) {
         const m = live.filter((b) => b.unit === UNIT[l.room] && b.start === +l.start);
+        /* a different guest took the same room + time: the link was made for a booking that is now cancelled (made before the
+           link), while the live one was made after the link → the message isn't theirs, cancel it instead of tying it */
+        if (m.length === 1 && l.cr && m[0].made > +l.cr) {
+          gone = gone || await get('cancelled').catch(() => []);
+          if (gone.some((x) => x.unit === UNIT[l.room] && x.start === +l.start && x.made && x.made <= +l.cr)) { acts.push({ code: l.code, a: 'cancel', why: 'its booking was cancelled; another guest has the slot now', room: l.room, from: +l.start }); continue; }
+        }
         if (m.length === 1) { acts.push({ code: l.code, a: 'bind', bid: m[0].id }); if (!dry) this.sql.exec(`UPDATE gml SET bid = ?, cid = ? WHERE code = ?`, m[0].id, m[0].cid, l.code); bound.add(m[0].id); }
         else if (!m.length) {   /* its booking was cancelled before the engine could tie them together */
           gone = gone || await get('cancelled').catch(() => []);
