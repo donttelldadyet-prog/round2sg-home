@@ -38,6 +38,26 @@ Goal: more people find Round2 on Google, Google Maps, AI answers (ChatGPT, Googl
 
 Rejected / don't redo: text sections on room pages; SEO landing pages; hiding text; keyword lists in code.
 
+## 4 · Serve the game homescreen as round2.sg itself – notes (31 Oct 2026)
+Owner's priority: **speed of the UI must never get worse**, including moving between menus.
+
+Measured on the owner's computer, 31 Oct 2026:
+| | Game screen starts loading | Game page fully loaded |
+|---|---|---|
+| Today: round2.sg (Wix) with the game in a frame | after ~1.9 s (Wix loads first) | ~2.0–2.5 s + the game's own loading |
+| Served directly | immediately | ~0.9 s |
+
+- Menus inside the game are the same code either way → no change. Room addresses (round2.sg/vale) must switch **inside**
+  the game with no page reload, so menus never become page loads.
+- Pros: ~1–1.5 s faster first load (also a Google ranking factor); Google reads rooms/prices/games/FAQ already in the game;
+  per-room addresses with their own titles; structured data on the real page; maybe no paid Wix plan needed later.
+- Cons: no Wix editor for the homepage (changes in code); other Wix pages (terms, privacy, FAQ, room QR links pages like
+  /valelinks – printed QR codes must keep working) need rebuilding or redirects; domain settings change (copy the
+  hello@round2.sg email records exactly); a few sessions of work; page text must be pre-built into the HTML so Google reads it.
+- Safe path: build on a hidden test address → measure speed vs the table above (not faster = not live) → check every menu,
+  room address, QR code and booking flow → switch on a quiet morning; switching back takes minutes.
+- Status: owner and co-owner thinking about it.
+
 ## 1 · Business details code – draft (check every fact with the owner before publishing)
 Where: Wix editor › homepage ("NEW HOME PAGE – MAIN") › Page settings › Advanced SEO › Structured data markup › add, paste, Publish.
 Keywords appear only as real descriptions (private movie room, gaming room, Bugis, Haji Lane, dates, birthdays).
