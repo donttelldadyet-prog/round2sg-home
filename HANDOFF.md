@@ -97,3 +97,13 @@ booking" and its pages say "cancelled"; any create/change/cancel → guest messa
 The engine's own SimplyBook check is now only a 6-hour backstop plus a check right before each message shows.
 "View your booking" also asks SimplyBook for cancellations when a guest searches, so bookings cancelled before this existed
 don't show either. To undo: put the Make address (hook.eu1.make.com/qqeq…) back as SimplyBook's callback URL.
+
+## Room food menu: how guests get to it (owner's plan, 31 Oct 2026)
+Each room has its own QR code. It opens that room's links page on Wix (e.g. **round2.sg/valelinks**), whose food-menu button
+must open the menu **already set to that room**: `https://donttelldadyet-prog.github.io/round2sg-home/menu/?room=vale`
+(`kaeden`, `scarlett`, `bella`, `kai`, `atlas`, `max`/`maximillion`). With `?room=` the menu shows in that room's
+character colour, is locked to that room (guests can't switch rooms; only test mode `?sim=` can), and the room goes with
+the order all the way through: the room TV's "order locked in" alert, the kitchen Telegram slip and the Drive slip that
+the kitchen phone prints. Madd Pizza staples that printed slip to the food bag, so the room name on the slip is how the
+order reaches the right room. Without `?room=` the menu can be browsed but not ordered from ("scan the QR code in your room").
+Check each room's Wix links page uses its own `?room=` before printing QR codes.
