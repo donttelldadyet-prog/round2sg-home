@@ -747,6 +747,31 @@ async function insess(env, hb, f) {
   }
   return { ok: true, day, now, rooms, recent: (await hb.extList()).slice(0, 10) };
 }
+/* 12-hour clock for note text: 12am, 11:30pm */
+function clock12(ms) { const d = new Date(ms + 8 * 3600e3), H = d.getUTCHours(), M = d.getUTCMinutes(); return ((H % 12) || 12) + (M ? ':' + String(M).padStart(2, '0') : '') + (H < 12 ? 'am' : 'pm'); }
+/* which note an extension stretches: the session's last EXT note (else a new one); in the twin, the EXT/SYSTEM BLOCK note
+   that ends where the session ends now (else a new one) */
+function extNotePlan(D, S, to) {
+  const last = S.ext.length ? S.ext[S.ext.length - 1] : null, tw = MIRROR[S.unit];
+  const main = { unit: S.unit, edit: last ? { id: String(last.id), s: last.s, e: last.e, note: last.note } : null };
+  let twin = null;
+  if (tw) {
+    const t = D.items.filter((x) => x.unit === tw && x.k === 'n' && !x.blk && x.ext && Math.abs(x.e - S.end) <= 5 * 60e3).sort((a, b) => b.e - a.e)[0];
+    twin = { unit: tw, twin: true, edit: t ? { id: t.id, s: t.s, e: t.e, note: t.name } : null };
+  }
+  return { main, twin };
+}
+/* put SimplyBook notes back: delete the ones made, restore the ones stretched */
+async function extRevert(s2, list) {
+  const probs = [];
+  for (const n of (list || []).slice().reverse()) {
+    try {
+      if (n.made || !n.was) await s2('DELETE', '/admin/calendar-notes/' + n.id);
+      else await s2('PUT', '/admin/calendar-notes/' + n.id, { provider_id: n.unit, service_id: null, start_date_time: sgStr(n.was.s), end_date_time: sgStr(n.was.e), note_type_id: 1, note: n.was.note, mode: 'provider', time_blocked: true });
+    } catch (e) { probs.push('note ' + n.id + ': ' + String(e.message || e).slice(0, 60)); }
+  }
+  return probs;
+}
 async function extend(env, hb, f) {
   const now = Date.now(), test = !!f.test, day = /^\d{4}-\d\d-\d\d$/.test(f.day || '') ? f.day : sgDay(now), today = day === sgDay(now);
   const h = +f.hours, ack = f.ack === 'yes';
@@ -765,7 +790,7 @@ async function extend(env, hb, f) {
   const links = today ? await makeLinks(env, hb) : [];
   const old = sessMsgs(links, S.room, S.guestEnd);
   const plan = { room: ROOMS[S.unit][0], twin: tw ? ROOMS[tw][0] : null, name: S.name, hours: h, guestEndWas: S.guestEnd, guestEnd: newGuest, sbEnd: to,
-    notes: Array.from({ length: h }, (_, i) => ({ s: from + i * 3600e3, e: from + (i + 1) * 3600e3 })),
+    notes: [{ s: from, e: to }], note: extNotePlan(D, S, to),
     wrapup: { at: newGuest - 10 * 60e3, was: old.wrapup && old.wrapup.at, make: !old.wrapup }, timeup: { at: newGuest, was: old.timeup && old.timeup.at, make: !old.timeup },
     banner: { title: '+' + h + ' CREDIT' + (h > 1 ? 'S' : '') + ' ADDED', text: 'Your session has been extended by ' + h + ' hour' + (h > 1 ? 's' : '') + '.', ack }, clash };
   if (test) {   /* test: nothing in SimplyBook or the message queue changes; only this room's TV shows the banner (marked TEST) */
@@ -774,18 +799,26 @@ async function extend(env, hb, f) {
   }
   if (f.dry) return { ok: true, dry: true, plan };
   if (clash.length && f.force !== 'yes') return { ok: false, clash: true, plan };
-  const s2 = await sb2(env), made = [], who = (S.name || 'guest').replace(/\s+/g, ' ').slice(0, 40);
+  /* ONE note per room (owner, 31 Oct: easy to read on the phone): the session's EXT note is stretched to the new end and
+     its text rewritten ("EXT till 12am · Amanda"); only if there's none yet is one made. Same for the Vale/Atlas twin. */
+  const s2 = await sb2(env), done = [], who = (S.name || 'guest').replace(/\s+/g, ' ').trim().split(' ')[0].slice(0, 14);
+  const body = (unit, st, en, text) => ({ provider_id: unit, service_id: null, start_date_time: sgStr(st), end_date_time: sgStr(en), note_type_id: 1, note: text, mode: 'provider', time_blocked: true });
   try {
-    for (let i = 0; i < h; i++) {
-      const n = plan.notes[i];
-      const r = await s2('POST', '/admin/calendar-notes', { provider_id: S.unit, service_id: null, start_date_time: sgStr(n.s), end_date_time: sgStr(n.e), note_type_id: 1, note: 'EXT +1h (' + (i + 1) + '/' + h + ') · ' + who + ' · guest until ' + sgStr(n.e - BUF * 60e3).slice(11, 16) + (i === h - 1 ? '' : ', more after') + ' · control centre', mode: 'provider', time_blocked: true });
-      made.push({ unit: S.unit, id: String(r.id) });
-      if (tw) { const r2 = await s2('POST', '/admin/calendar-notes', { provider_id: tw, service_id: null, start_date_time: sgStr(n.s), end_date_time: sgStr(n.e), note_type_id: 1, note: 'SYSTEM BLOCK · EXT +1h for ' + ROOMS[S.unit][0] + ' · ' + who + ' · until ' + sgStr(n.e).slice(11, 16) + ' incl. cleaning', mode: 'provider', time_blocked: true }); made.push({ unit: tw, id: String(r2.id) }); }
+    for (const N of [plan.note.main, plan.note.twin].filter(Boolean)) {
+      const text = N.twin ? 'SYSTEM BLOCK · EXT ' + ROOMS[S.unit][0] + ' till ' + clock12(to) : 'EXT till ' + clock12(newGuest) + ' · ' + who;
+      if (N.edit) {
+        await s2('PUT', '/admin/calendar-notes/' + N.edit.id, body(N.unit, N.edit.s, to, text));
+        done.push({ unit: N.unit, id: N.edit.id, was: { s: N.edit.s, e: N.edit.e, note: N.edit.note } });
+      } else {
+        const r = await s2('POST', '/admin/calendar-notes', body(N.unit, from, to, text));
+        done.push({ unit: N.unit, id: String(r.id), made: true });
+      }
     }
   } catch (e) {
-    for (const m of made) await s2('DELETE', '/admin/calendar-notes/' + m.id).catch(() => null);
+    await extRevert(s2, done);
     return { error: 'SimplyBook didn’t take the extension, nothing was changed: ' + String(e.message || e).slice(0, 120) };
   }
+  const made = done;
   const rec = { room: S.room, unit: S.unit, key: S.key, name: S.name, hours: h, notes: made, guestEndWas: S.guestEnd, guestEnd: newGuest, moved: [], created: [], problems: [] };
   if (today) {
     const call = async (body) => { const t = await gmFwd(env, Object.assign({ staff: env.GM_STAFF }, body)); let j = null; try { j = JSON.parse(t); } catch (e) {} if (!j || j.error) throw new Error((j && j.error) || 'Make didn’t answer'); return j; };
@@ -835,7 +868,7 @@ async function extUndo(env, hb, f) {
   if (d.undone) return { error: 'Already undone.' };
   if (Date.now() - d.t > 30 * 60e3) return { error: 'It’s been over 30 minutes. Change it in SimplyBook and the message calendar instead.' };
   const s2 = await sb2(env), probs = [];
-  for (const n of d.notes || []) await s2('DELETE', '/admin/calendar-notes/' + n.id).catch((e) => probs.push('note ' + n.id + ': ' + String(e.message || e).slice(0, 60)));
+  probs.push(...await extRevert(s2, d.notes));
   for (const m of d.moved || []) { const t = await gmFwd(env, { action: 'move', staff: env.GM_STAFF, code: m.code, start: m.from, room: d.room }); if (/"error"/.test(t)) probs.push('move back ' + m.code); }
   for (const m of d.created || []) if (m.code) { const t = await gmFwd(env, { action: 'cancel', staff: env.GM_STAFF, code: m.code }); if (/"error"/.test(t)) probs.push('cancel ' + m.code); }
   if (d.banner && d.banner.qid) await hb.bqDel(d.banner.qid);
