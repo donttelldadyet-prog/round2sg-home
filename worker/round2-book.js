@@ -778,9 +778,9 @@ async function extend(env, hb, f) {
   try {
     for (let i = 0; i < h; i++) {
       const n = plan.notes[i];
-      const r = await s2('POST', '/admin/calendar-notes', { provider_id: S.unit, service_id: null, start_date_time: sgStr(n.s), end_date_time: sgStr(n.e), note_type_id: 1, note: 'EXT +1h (' + (i + 1) + '/' + h + ') · ' + who + ' · control centre', mode: 'provider', time_blocked: true });
+      const r = await s2('POST', '/admin/calendar-notes', { provider_id: S.unit, service_id: null, start_date_time: sgStr(n.s), end_date_time: sgStr(n.e), note_type_id: 1, note: 'EXT +1h (' + (i + 1) + '/' + h + ') · ' + who + ' · guest until ' + sgStr(n.e - BUF * 60e3).slice(11, 16) + (i === h - 1 ? '' : ', more after') + ' · control centre', mode: 'provider', time_blocked: true });
       made.push({ unit: S.unit, id: String(r.id) });
-      if (tw) { const r2 = await s2('POST', '/admin/calendar-notes', { provider_id: tw, service_id: null, start_date_time: sgStr(n.s), end_date_time: sgStr(n.e), note_type_id: 1, note: 'SYSTEM BLOCK · EXT +1h for ' + ROOMS[S.unit][0] + ' · ' + who, mode: 'provider', time_blocked: true }); made.push({ unit: tw, id: String(r2.id) }); }
+      if (tw) { const r2 = await s2('POST', '/admin/calendar-notes', { provider_id: tw, service_id: null, start_date_time: sgStr(n.s), end_date_time: sgStr(n.e), note_type_id: 1, note: 'SYSTEM BLOCK · EXT +1h for ' + ROOMS[S.unit][0] + ' · ' + who + ' · until ' + sgStr(n.e).slice(11, 16) + ' incl. cleaning', mode: 'provider', time_blocked: true }); made.push({ unit: tw, id: String(r2.id) }); }
     }
   } catch (e) {
     for (const m of made) await s2('DELETE', '/admin/calendar-notes/' + m.id).catch(() => null);
