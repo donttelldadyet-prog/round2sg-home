@@ -402,6 +402,22 @@ export class HoldBook extends DurableObject {
     h.data.done = result;
     this.sql.exec(`UPDATE holds SET status = 'paid', data = ? WHERE ref = ?`, JSON.stringify(h.data), ref);
   }
+  /* credit banners waiting in line behind a message that hasn't been OK'd (sessBanner) */
+  bqInit() { this.qInit(); if (this.bqReady) return; this.bqReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS bq (id TEXT PRIMARY KEY, room TEXT, t INTEGER, data TEXT)`); }
+  bqAdd(id, room, d) { this.bqInit(); this.sql.exec(`DELETE FROM bq WHERE room = ?`, room); this.sql.exec(`INSERT INTO bq VALUES (?, ?, ?, ?)`, id, room, Date.now(), JSON.stringify(d)); this.arm(); }
+  bqDel(id) { this.bqInit(); this.sql.exec(`DELETE FROM bq WHERE id = ?`, id); }
+  async bqRun() {
+    this.bqInit(); const env = this.env, now = Date.now();
+    this.sql.exec(`DELETE FROM bq WHERE t < ?`, now - BANNER_WAIT_MS);
+    for (const r of this.rows(`SELECT * FROM bq`)) {
+      if (!env.TV_KEY) break;
+      const base = FB_BASE + env.TV_KEY + '/' + r.room;
+      const [c, k] = await Promise.all([fetch(base + '/msg.json').then((x) => x.json()).catch(() => null), fetch(base + '/msgAck.json').then((x) => x.json()).catch(() => null)]);
+      if (tvBusy(c, k, Date.now())) continue;
+      const d = JSON.parse(r.data), res = await sessBannerPut(env, r.room, d.b, d.test);
+      if (res.shown) { this.sql.exec(`DELETE FROM bq WHERE id = ?`, r.id); this.fLog({ a: 'credit banner shown', why: 'after waiting in line', room: r.room }); }
+    }
+  }
   /* "In session" extensions (control centre): what each +N hours did, so it can be undone for a while */
   extInit() { this.qInit(); if (this.extReady) return; this.extReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS ext (id TEXT PRIMARY KEY, t INTEGER, data TEXT)`); }
   extPut(id, d) { this.extInit(); this.sql.exec(`DELETE FROM ext WHERE t < ?`, Date.now() - 2 * 86400e3); this.sql.exec(`INSERT OR REPLACE INTO ext VALUES (?, ?, ?)`, id, Date.now(), JSON.stringify(d)); }
@@ -417,7 +433,8 @@ export class HoldBook extends DurableObject {
     const lt = this.rows(`SELECT MIN(at) AS t FROM later`)[0];
     const fl = this.rows(`SELECT COUNT(*) AS n FROM gml WHERE endt > ?`, Date.now())[0].n, fol = +((this.rows(`SELECT v FROM kv WHERE k = 'followed'`)[0] || {}).v || 0);
     const lsy = this.rows(`SELECT 1 FROM kv WHERE k = 'lsynced'`).length;
-    const ts = [n && n.t ? n.t + 1000 : 0, q && q.t ? q.t - 60e3 : 0, syn ? syn + 86400e3 : 0, fl ? fol + FOLLOW_MS : 0, lsy ? 0 : Date.now() + 2000, lt && lt.t ? lt.t : 0].filter((t) => t > 0);
+    this.bqInit(); const bqn = this.rows(`SELECT COUNT(*) AS n FROM bq`)[0].n;
+    const ts = [bqn ? Date.now() + 30e3 : 0, n && n.t ? n.t + 1000 : 0, q && q.t ? q.t - 60e3 : 0, syn ? syn + 86400e3 : 0, fl ? fol + FOLLOW_MS : 0, lsy ? 0 : Date.now() + 2000, lt && lt.t ? lt.t : 0].filter((t) => t > 0);
     if (ts.length) this.ctx.storage.setAlarm(Math.max(Date.now() + 1000, Math.min(...ts)));
   }
   /* timer ran out → release the hold and kill its HitPay link */
@@ -426,6 +443,7 @@ export class HoldBook extends DurableObject {
     for (const d of due) { this.sql.exec(`UPDATE holds SET status = 'released' WHERE ref = ?`, d.ref); let pay = ''; try { pay = JSON.parse(d.data || '{}').pay; } catch (e) {} await cancelLink(envFor(this.env, pay), d.pr); }
     this.sql.exec(`DELETE FROM holds WHERE status = 'released' AND created < ?`, Date.now() - 7 * 86400e3);
     try { await this.qRun(); } catch (e) {}
+    try { await this.bqRun(); } catch (e) {}
     this.arm();
   }
   async qRun() {
@@ -713,7 +731,7 @@ async function extend(env, hb, f) {
   if (test && !f.key) {
     const room = String(f.room || ''); if (!Object.values(GM_ROOM).includes(room)) return { error: 'Pick a room for the test.' };
     const banner = { title: '+' + h + ' CREDIT' + (h > 1 ? 'S' : '') + ' ADDED', text: 'Your session has been extended by ' + h + ' hour' + (h > 1 ? 's' : '') + '.', ack };
-    return { ok: true, test: true, banner: await sessBanner(env, room, banner, true) };
+    return { ok: true, test: true, banner: await sessBanner(env, room, banner, true, hb) };
   }
   const D = await sessDay(env, day), S = D.sessions.find((x) => x.key === String(f.key || ''));
   if (!S || S.sys) return { error: 'That session isn’t in SimplyBook any more. Refresh.' };
@@ -727,7 +745,7 @@ async function extend(env, hb, f) {
     wrapup: { at: newGuest - 10 * 60e3, was: old.wrapup && old.wrapup.at, make: !old.wrapup }, timeup: { at: newGuest, was: old.timeup && old.timeup.at, make: !old.timeup },
     banner: { title: '+' + h + ' CREDIT' + (h > 1 ? 'S' : '') + ' ADDED', text: 'Your session has been extended by ' + h + ' hour' + (h > 1 ? 's' : '') + '.', ack }, clash };
   if (test) {   /* test: nothing in SimplyBook or the message queue changes; only this room's TV shows the banner (marked TEST) */
-    const b = await sessBanner(env, S.room, plan.banner, true);
+    const b = await sessBanner(env, S.room, plan.banner, true, hb);
     return { ok: true, test: true, plan, banner: b };
   }
   if (f.dry) return { ok: true, dry: true, plan };
@@ -755,23 +773,37 @@ async function extend(env, hb, f) {
       } catch (e) { rec.problems.push(kind + ': ' + String(e.message || e).slice(0, 80)); }
     }
     await hb.gmDrop('__LIST__'); await gmList(env, hb).catch(() => null);
-    rec.banner = await sessBanner(env, S.room, plan.banner, false);
+    rec.banner = await sessBanner(env, S.room, plan.banner, false, hb);
   }
   const id = 'x' + now.toString(36);
   await hb.extPut(id, rec);
   return { ok: true, id, plan, done: rec };
 }
-/* the "+N CREDITS ADDED" banner on the room's TV (kind 'extend': coin-into-slot animation). It never covers a guest's own
-   message that hasn't been OK'd yet (same rule as Round2 messages); no OK needed unless staff ticked it. */
-async function sessBanner(env, room, b, test) {
+/* the "+N CREDITS ADDED" banner on the room's TV (kind 'extend': coin-into-slot animation). Last in line (owner, 31 Oct):
+   while another message is on the TV and not OK'd yet (a guest's message, or a Round2 one), the banner waits and goes up
+   right after that OK (the engine checks every 30 s, for up to an hour). It does replace "About 10 minutes to go" /
+   "That's a wrap!" (the extension has just moved those) and an older credit banner. No OK needed unless staff ticked it. */
+const BANNER_WAIT_MS = 3600e3;
+function tvBusy(c, k, now) {
+  return !!(c && c.id && c.ack !== false && +c.until > now && +c.at <= now + 60e3 && !(k && k.id === c.id) && !/^(wrapup|timeup|extend)$/.test(String(c.kind || '')));
+}
+async function sessBannerPut(env, room, b, test) {
+  const base = FB_BASE + env.TV_KEY + '/' + room, now = Date.now(), id = 'e' + now.toString(36);
+  const m = { id, kind: 'extend', n: +String(b.title).replace(/\D/g, '') || 1, title: b.title, text: b.text + (test ? ' (TEST)' : ''), from: 'The Round2 team', ack: !!b.ack, at: now, until: now + (b.ack ? 20 : 5) * 60e3, t: { '.sv': 'timestamp' } };
+  const r = await fetch(base + '/msg.json', { method: 'PUT', body: JSON.stringify(m) }).catch(() => null);
+  return r && r.ok ? { shown: true, id } : { shown: false, why: 'the TV database didn’t take it' };
+}
+async function sessBanner(env, room, b, test, hb) {
   if (!env.TV_KEY) return { shown: false, why: 'no TV key in the engine' };
   const base = FB_BASE + env.TV_KEY + '/' + room, now = Date.now();
   const [c, k] = await Promise.all([fetch(base + '/msg.json').then((r) => r.json()).catch(() => null), fetch(base + '/msgAck.json').then((r) => r.json()).catch(() => null)]);
-  if (c && /^g/.test(String(c.id || '')) && c.ack !== false && +c.until > now && +c.at <= now + 60e3 && !(k && k.id === c.id)) return { shown: false, why: 'a guest message is on the TV and not OK’d yet' };
-  const id = 'e' + now.toString(36);
-  const m = { id, kind: 'extend', n: +b.title.replace(/\D/g, '') || 1, title: b.title, text: b.text + (test ? ' (TEST)' : ''), from: 'The Round2 team', ack: !!b.ack, at: now, until: now + (b.ack ? 20 : 5) * 60e3, t: { '.sv': 'timestamp' } };
-  const r = await fetch(base + '/msg.json', { method: 'PUT', body: JSON.stringify(m) }).catch(() => null);
-  return r && r.ok ? { shown: true, id } : { shown: false, why: 'the TV database didn’t take it' };
+  if (tvBusy(c, k, now)) {
+    if (!hb) return { shown: false, why: 'another message is on the TV and not OK’d yet' };
+    const qid = 'b' + now.toString(36);
+    await hb.bqAdd(qid, room, { b, test: !!test });
+    return { shown: false, queued: true, qid, why: 'waiting in line: “' + String(c.title || 'a message').slice(0, 40) + '” is on the TV and not OK’d yet' };
+  }
+  return sessBannerPut(env, room, b, test);
 }
 async function extUndo(env, hb, f) {
   const d = await hb.extGet(String(f.id || ''));
@@ -782,6 +814,7 @@ async function extUndo(env, hb, f) {
   for (const n of d.notes || []) await s2('DELETE', '/admin/calendar-notes/' + n.id).catch((e) => probs.push('note ' + n.id + ': ' + String(e.message || e).slice(0, 60)));
   for (const m of d.moved || []) { const t = await gmFwd(env, { action: 'move', staff: env.GM_STAFF, code: m.code, start: m.from, room: d.room }); if (/"error"/.test(t)) probs.push('move back ' + m.code); }
   for (const m of d.created || []) if (m.code) { const t = await gmFwd(env, { action: 'cancel', staff: env.GM_STAFF, code: m.code }); if (/"error"/.test(t)) probs.push('cancel ' + m.code); }
+  if (d.banner && d.banner.qid) await hb.bqDel(d.banner.qid);
   if (d.banner && d.banner.id && env.TV_KEY) {
     const u = FB_BASE + env.TV_KEY + '/' + d.room + '/msg.json', c = await fetch(u).then((r) => r.json()).catch(() => null);
     if (c && c.id === d.banner.id) await fetch(u, { method: 'DELETE' }).catch(() => null);
