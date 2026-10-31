@@ -52,6 +52,22 @@ async function pub(env) {
   const tok = await rpc('/login', 'getToken', [env.SB_COMPANY, env.SB_PUBLIC_KEY]);
   return (m, p) => rpc('', m, p, { 'X-Company-Login': env.SB_COMPANY, 'X-Token': tok });
 }
+/* SimplyBook REST API v2 (calendar notes): token from /admin/auth, cached ~50 min */
+const SB2 = 'https://user-api-v2.simplybook.asia';
+let sb2tok = null;
+async function sb2(env) {
+  if (!sb2tok || sb2tok.t < Date.now()) {
+    const r = await fetch(SB2 + '/admin/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company: env.SB_COMPANY, login: env.SB_USER, password: env.SB_PASS }) });
+    const j = await r.json(); if (!j.token) throw new Error('SimplyBook REST login: ' + JSON.stringify(j).slice(0, 120));
+    sb2tok = { k: j.token, t: Date.now() + 50 * 60e3 };
+  }
+  return async (method, path, body) => {
+    const r = await fetch(SB2 + path, { method, headers: { 'Content-Type': 'application/json', 'X-Company-Login': env.SB_COMPANY, 'X-Token': sb2tok.k }, body: body ? JSON.stringify(body) : undefined });
+    const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch (e) {}
+    if (!r.ok) throw new Error('SimplyBook ' + method + ' ' + path.split('?')[0] + ' ' + r.status + ': ' + t.slice(0, 200));
+    return j;
+  };
+}
 async function admin(env) {
   const tok = await rpc('/login/', 'getUserToken', [env.SB_COMPANY, env.SB_USER, env.SB_PASS]);
   return (m, p) => rpc('/admin', m, p, { 'X-Company-Login': env.SB_COMPANY, 'X-User-Token': tok });
@@ -386,6 +402,12 @@ export class HoldBook extends DurableObject {
     h.data.done = result;
     this.sql.exec(`UPDATE holds SET status = 'paid', data = ? WHERE ref = ?`, JSON.stringify(h.data), ref);
   }
+  /* "In session" extensions (control centre): what each +N hours did, so it can be undone for a while */
+  extInit() { this.qInit(); if (this.extReady) return; this.extReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS ext (id TEXT PRIMARY KEY, t INTEGER, data TEXT)`); }
+  extPut(id, d) { this.extInit(); this.sql.exec(`DELETE FROM ext WHERE t < ?`, Date.now() - 2 * 86400e3); this.sql.exec(`INSERT OR REPLACE INTO ext VALUES (?, ?, ?)`, id, Date.now(), JSON.stringify(d)); }
+  extGet(id) { this.extInit(); const r = this.rows(`SELECT * FROM ext WHERE id = ?`, id)[0]; return r ? Object.assign(JSON.parse(r.data), { t: r.t }) : null; }
+  extList() { this.extInit(); return this.rows(`SELECT * FROM ext WHERE t > ? ORDER BY t DESC`, Date.now() - 86400e3).map((r) => Object.assign(JSON.parse(r.data), { id: r.id, t: r.t })); }
+  extDone(id, undone) { const d = this.extGet(id); if (!d) return; d.undone = undone; delete d.t; this.sql.exec(`UPDATE ext SET data = ? WHERE id = ?`, JSON.stringify(d), id); }
   arm() {
     this.qInit();
     const n = this.rows(`SELECT MIN(exp) AS t FROM holds WHERE status = 'pending'`)[0];
@@ -591,6 +613,184 @@ async function tvMessage(env, d, q, ref, bid) {
   return { code: link.code, at: start + m.after * 60e3 };
 }
 
+/* ---------- In session (control centre tab "In session"): today's sessions per room, and +1/+2/+3 hour extensions ----------
+   An extension is ALWAYS recorded the way staff do it by hand (docs/booking-times.md "Extensions as calendar notes"):
+   stacked 1-hour time-blocked SimplyBook notes tagged EXT, starting at the session's SimplyBook end (each hour already
+   holds the 15-min cleaning). Vale and Atlas are one space: the twin room gets the same notes (tagged SYSTEM BLOCK), the
+   same way the Make mirror blocks the twin with a SYSTEM BLOCK booking. Mirror blocks are never shown as sessions.
+   Then "About 10 minutes to go" and "That's a wrap!" move to the new end (or are made if there were none), and the TV
+   shows "+N CREDITS ADDED" (no OK needed unless staff tick it). Undo puts everything back. */
+const SYS_CLIENTS = ['2472', '2476'];          /* Make mirror's SYSTEM BLOCK clients (in Atlas for a Vale booking, in Vale for an Atlas one) */
+const SYS_RE = /SYSTEM\s*BLOCK/i, EXT_RE = /\bEXT\b/i;
+const sgMs0 = (t) => { const m = String(t || '').match(/(\d{4})-(\d\d)-(\d\d)[ T](\d\d):(\d\d)(?::(\d\d))?/); return m ? Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)) - 8 * 3600e3 : 0; };
+const sgStr = (ms) => new Date(ms + 8 * 3600e3).toISOString().replace('T', ' ').slice(0, 19);
+const sgDay = (ms) => new Date(ms + 8 * 3600e3).toISOString().slice(0, 10);
+const FB_BASE = 'https://round2-tv-default-rtdb.asia-southeast1.firebasedatabase.app/r2/';
+const R2_TXT = {
+  wrapup: { title: 'About 10 minutes to go', text: 'Just a heads-up: this session wraps up in about 10 minutes. A good time to save your game and gather your things. Thanks for playing with us!' },
+  timeup: { title: 'That’s a wrap!', text: 'This session has come to an end. We hope you had a great time! Please save your game and gather your things, so we can get the room ready for the next guests. See you again soon!' },
+};
+async function sessDay(env, day) {
+  const a = await admin(env), s2 = await sb2(env);
+  const [bk, nt] = await Promise.all([
+    a('getBookings', [{ booking_type: 'non_cancelled', date_from: addDays(day, -1), date_to: day }]),
+    s2('GET', '/admin/calendar-notes?filter[date_from]=' + addDays(day, -1) + '&filter[date_to]=' + day + '&on_page=200'),
+  ]);
+  const d0 = sgMs0(day + ' 00:00'), d1 = d0 + 86400e3 + 6 * 3600e3, items = [];
+  for (const b of Object.values(bk || {})) {
+    const s = sgMs0(b.start_date || b.start_date_time), e = sgMs0(b.end_date || b.end_date_time);
+    if (!s || !e || e <= d0 || s >= d1 || !ROOMS[+b.unit_id]) continue;
+    const name = String(b.client || b.client_name || ''), cid = String(b.client_id || '');
+    items.push({ k: 'b', id: String(b.id), unit: +b.unit_id, s, e, name, cid, phone: String(b.client_phone || ''), sys: SYS_CLIENTS.includes(cid) || SYS_RE.test(name), code: String(b.code || '') });
+  }
+  for (const n of ((nt && nt.data) || [])) {
+    const s = sgMs0(n.start_date_time), e = sgMs0(n.end_date_time), unit = +n.provider_id;
+    if (!n.time_blocked || !s || !e || e <= d0 || s >= d1 || !ROOMS[unit]) continue;
+    const txt = String(n.note || '');
+    items.push({ k: 'n', id: String(n.id), unit, s, e, name: txt, sys: SYS_RE.test(txt), ext: EXT_RE.test(txt), blk: e - s > 12 * 3600e3 });
+  }
+  /* sessions = a booking (or a WhatsApp note) + the EXT notes stacked straight after it */
+  const out = [];
+  for (const u of Object.keys(ROOMS).map(Number)) {
+    const its = items.filter((x) => x.unit === u && !x.blk).sort((x, y) => x.s - y.s), used = new Set();
+    for (const it of its) {
+      if (used.has(it) || (it.k === 'n' && it.ext)) continue;
+      used.add(it); const S = { key: it.k + it.id, unit: u, room: GM_ROOM[u], name: it.name, k: it.k, sys: it.sys, phone: it.phone || '', s: it.s, e0: it.e, end: it.e, ext: [] };
+      for (;;) { const nx = its.find((x) => !used.has(x) && x.k === 'n' && x.ext && Math.abs(x.s - S.end) <= 5 * 60e3); if (!nx) break; used.add(nx); S.ext.push({ id: nx.id, s: nx.s, e: nx.e, note: nx.name }); S.end = Math.max(S.end, nx.e); }
+      out.push(S);
+    }
+    for (const it of its) if (!used.has(it)) out.push({ key: 'n' + it.id, unit: u, room: GM_ROOM[u], name: it.name, k: 'n', sys: it.sys, orphanExt: true, s: it.s, e0: it.e, end: it.e, ext: [] });
+  }
+  for (const S of out) S.guestEnd = S.end - BUF * 60e3;
+  return { items, sessions: out.filter((S) => S.end > d0 && S.s < d0 + 86400e3) };
+}
+/* everything that would stand in the way of [from, to) in this room (and its twin), other than the session itself */
+function sessClash(day, S, from, to) {
+  const tw = MIRROR[S.unit], mine = new Set([S.key, ...S.ext.map((x) => 'n' + x.id)]), out = [];
+  const twinSame = (x) => x.unit === tw && Math.abs(x.s - S.s) <= 5 * 60e3;   /* the twin's copy of this session (mirror block) */
+  const twinChain = new Set(); if (tw) for (const T of day.sessions.filter((T) => twinSame(T))) { twinChain.add(T.key); T.ext.forEach((x) => twinChain.add('n' + x.id)); }
+  for (const x of day.items) {
+    if (x.unit !== S.unit && x.unit !== tw) continue;
+    const key = x.k + x.id; if (mine.has(key) || twinChain.has(key)) continue;
+    if (x.s < to && x.e > from) out.push({ room: ROOMS[x.unit][0], what: x.k === 'b' ? (x.sys ? 'twin room booking' : 'booking: ' + (x.name || 'guest')) : (x.blk ? 'room blocked: ' : 'note: ') + (x.name || '').slice(0, 40), s: x.s, e: x.e });
+  }
+  const closeT = sgMs0(sgDay(S.s) + ' ' + hhmm(CLOSE));
+  if (to > closeT + 60e3) out.push({ room: ROOMS[S.unit][0], what: 'past closing time (11:15pm)', s: closeT, e: to });
+  return out;
+}
+/* the Round2 end-of-session messages for this room around a guest end time */
+function sessMsgs(links, room, guestEnd) {
+  const L = (links || []).filter((x) => /^R2/.test(x.key) && x.data && x.data.room === room && x.data.status === 'approved');
+  const pick = (kind, at) => L.filter((x) => x.data.kind === kind && Math.abs(+x.data.at - at) <= 20 * 60e3).sort((a, b) => Math.abs(+a.data.at - at) - Math.abs(+b.data.at - at))[0] || null;
+  const w = pick('wrapup', guestEnd - 10 * 60e3), t = pick('timeup', guestEnd);
+  const one = (x) => x && { code: x.key, at: +x.data.at, kind: x.data.kind, onTv: x.data.onTv === 'yes' };
+  return { wrapup: one(w), timeup: one(t) };
+}
+async function makeLinks(env, hb) {
+  const L = await hb.gmGet('__LIST__');
+  let raw = L && L.exp > Date.now() && L.link && L.link.raw;
+  if (!raw) raw = await gmList(env, hb);
+  try { return JSON.parse(raw).links || []; } catch (e) { return []; }
+}
+async function insess(env, hb, f) {
+  const now = Date.now(), day = /^\d{4}-\d\d-\d\d$/.test(f.day || '') ? f.day : sgDay(now);
+  const [D, links] = await Promise.all([sessDay(env, day), makeLinks(env, hb)]);
+  const rooms = {};
+  for (const u of Object.keys(ROOMS)) rooms[GM_ROOM[u]] = { unit: +u, name: ROOMS[u][0], twin: MIRROR[u] ? GM_ROOM[MIRROR[u]] : null, sessions: [] };
+  for (const S of D.sessions) {
+    if (S.sys) continue;                        /* mirror blocks (SYSTEM BLOCK) aren't sessions: the booking shows in its own room */
+    const st = now < S.s ? 'next' : now < S.guestEnd ? 'now' : now < S.end ? 'cleaning' : 'done';
+    const after = D.items.filter((x) => (x.unit === S.unit || x.unit === MIRROR[S.unit]) && x.s >= S.end - 5 * 60e3 && !(x.k === 'n' && x.ext && x.unit === S.unit) && !(x.unit === MIRROR[S.unit] && x.sys)).sort((a, b) => a.s - b.s)[0];
+    rooms[S.room].sessions.push({ key: S.key, k: S.k, name: S.name, phone: S.phone, start: S.s, bookedEnd: S.e0 - BUF * 60e3, guestEnd: S.guestEnd, sbEnd: S.end, ext: S.ext, orphanExt: !!S.orphanExt, st, nextAt: after ? after.s : null, msgs: sessMsgs(links, S.room, S.guestEnd) });
+  }
+  return { ok: true, day, now, rooms, recent: (await hb.extList()).slice(0, 10) };
+}
+async function extend(env, hb, f) {
+  const now = Date.now(), test = !!f.test, day = /^\d{4}-\d\d-\d\d$/.test(f.day || '') ? f.day : sgDay(now), today = day === sgDay(now);
+  const h = +f.hours, ack = f.ack === 'yes';
+  if (![1, 2, 3].includes(h)) return { error: 'Pick +1, +2 or +3 hours.' };
+  /* the tab's Test button: just the banner, on the TV staff picked (use an empty room) – nothing else changes */
+  if (test && !f.key) {
+    const room = String(f.room || ''); if (!Object.values(GM_ROOM).includes(room)) return { error: 'Pick a room for the test.' };
+    const banner = { title: '+' + h + ' CREDIT' + (h > 1 ? 'S' : '') + ' ADDED', text: 'Your session has been extended by ' + h + ' hour' + (h > 1 ? 's' : '') + '.', ack };
+    return { ok: true, test: true, banner: await sessBanner(env, room, banner, true) };
+  }
+  const D = await sessDay(env, day), S = D.sessions.find((x) => x.key === String(f.key || ''));
+  if (!S || S.sys) return { error: 'That session isn’t in SimplyBook any more. Refresh.' };
+  if (f.end && +f.end !== S.end) return { error: 'This session changed since you looked (someone already extended it?). Refresh and check.' };
+  const from = S.end, to = S.end + h * 3600e3, newGuest = to - BUF * 60e3, tw = MIRROR[S.unit];
+  const clash = sessClash(D, S, from, to);
+  const links = today ? await makeLinks(env, hb) : [];
+  const old = sessMsgs(links, S.room, S.guestEnd);
+  const plan = { room: ROOMS[S.unit][0], twin: tw ? ROOMS[tw][0] : null, name: S.name, hours: h, guestEndWas: S.guestEnd, guestEnd: newGuest, sbEnd: to,
+    notes: Array.from({ length: h }, (_, i) => ({ s: from + i * 3600e3, e: from + (i + 1) * 3600e3 })),
+    wrapup: { at: newGuest - 10 * 60e3, was: old.wrapup && old.wrapup.at, make: !old.wrapup }, timeup: { at: newGuest, was: old.timeup && old.timeup.at, make: !old.timeup },
+    banner: { title: '+' + h + ' CREDIT' + (h > 1 ? 'S' : '') + ' ADDED', text: 'Your session has been extended by ' + h + ' hour' + (h > 1 ? 's' : '') + '.', ack }, clash };
+  if (test) {   /* test: nothing in SimplyBook or the message queue changes; only this room's TV shows the banner (marked TEST) */
+    const b = await sessBanner(env, S.room, plan.banner, true);
+    return { ok: true, test: true, plan, banner: b };
+  }
+  if (f.dry) return { ok: true, dry: true, plan };
+  if (clash.length && f.force !== 'yes') return { ok: false, clash: true, plan };
+  const s2 = await sb2(env), made = [], who = (S.name || 'guest').replace(/\s+/g, ' ').slice(0, 40);
+  try {
+    for (let i = 0; i < h; i++) {
+      const n = plan.notes[i];
+      const r = await s2('POST', '/admin/calendar-notes', { provider_id: S.unit, service_id: null, start_date_time: sgStr(n.s), end_date_time: sgStr(n.e), note_type_id: 1, note: 'EXT +1h (' + (i + 1) + '/' + h + ') · ' + who + ' · control centre', mode: 'provider', time_blocked: true });
+      made.push({ unit: S.unit, id: String(r.id) });
+      if (tw) { const r2 = await s2('POST', '/admin/calendar-notes', { provider_id: tw, service_id: null, start_date_time: sgStr(n.s), end_date_time: sgStr(n.e), note_type_id: 1, note: 'SYSTEM BLOCK · EXT +1h for ' + ROOMS[S.unit][0] + ' · ' + who, mode: 'provider', time_blocked: true }); made.push({ unit: tw, id: String(r2.id) }); }
+    }
+  } catch (e) {
+    for (const m of made) await s2('DELETE', '/admin/calendar-notes/' + m.id).catch(() => null);
+    return { error: 'SimplyBook didn’t take the extension, nothing was changed: ' + String(e.message || e).slice(0, 120) };
+  }
+  const rec = { room: S.room, unit: S.unit, key: S.key, name: S.name, hours: h, notes: made, guestEndWas: S.guestEnd, guestEnd: newGuest, moved: [], created: [], problems: [] };
+  if (today) {
+    const call = async (body) => { const t = await gmFwd(env, Object.assign({ staff: env.GM_STAFF }, body)); let j = null; try { j = JSON.parse(t); } catch (e) {} if (!j || j.error) throw new Error((j && j.error) || 'Make didn’t answer'); return j; };
+    for (const kind of ['wrapup', 'timeup']) {
+      const at = plan[kind].at, cur = old[kind];
+      try {
+        if (cur) { await call({ action: 'move', code: cur.code, start: at, room: S.room }); rec.moved.push({ code: cur.code, from: cur.at, to: at }); }
+        else { const j = await call({ action: 'r2', room: S.room, kind, to: '', from: 'The Round2 team', title: R2_TXT[kind].title, text: R2_TXT[kind].text, ack: 'yes', at }); rec.created.push({ code: j.code || j.key || '', at, kind }); }
+      } catch (e) { rec.problems.push(kind + ': ' + String(e.message || e).slice(0, 80)); }
+    }
+    await hb.gmDrop('__LIST__'); await gmList(env, hb).catch(() => null);
+    rec.banner = await sessBanner(env, S.room, plan.banner, false);
+  }
+  const id = 'x' + now.toString(36);
+  await hb.extPut(id, rec);
+  return { ok: true, id, plan, done: rec };
+}
+/* the "+N CREDITS ADDED" banner on the room's TV (kind 'extend': coin-into-slot animation). It never covers a guest's own
+   message that hasn't been OK'd yet (same rule as Round2 messages); no OK needed unless staff ticked it. */
+async function sessBanner(env, room, b, test) {
+  if (!env.TV_KEY) return { shown: false, why: 'no TV key in the engine' };
+  const base = FB_BASE + env.TV_KEY + '/' + room, now = Date.now();
+  const [c, k] = await Promise.all([fetch(base + '/msg.json').then((r) => r.json()).catch(() => null), fetch(base + '/msgAck.json').then((r) => r.json()).catch(() => null)]);
+  if (c && /^g/.test(String(c.id || '')) && c.ack !== false && +c.until > now && +c.at <= now + 60e3 && !(k && k.id === c.id)) return { shown: false, why: 'a guest message is on the TV and not OK’d yet' };
+  const id = 'e' + now.toString(36);
+  const m = { id, kind: 'extend', n: +b.title.replace(/\D/g, '') || 1, title: b.title, text: b.text + (test ? ' (TEST)' : ''), from: 'The Round2 team', ack: !!b.ack, at: now, until: now + (b.ack ? 20 : 5) * 60e3, t: { '.sv': 'timestamp' } };
+  const r = await fetch(base + '/msg.json', { method: 'PUT', body: JSON.stringify(m) }).catch(() => null);
+  return r && r.ok ? { shown: true, id } : { shown: false, why: 'the TV database didn’t take it' };
+}
+async function extUndo(env, hb, f) {
+  const d = await hb.extGet(String(f.id || ''));
+  if (!d) return { error: 'Nothing to undo.' };
+  if (d.undone) return { error: 'Already undone.' };
+  if (Date.now() - d.t > 30 * 60e3) return { error: 'It’s been over 30 minutes. Change it in SimplyBook and the message calendar instead.' };
+  const s2 = await sb2(env), probs = [];
+  for (const n of d.notes || []) await s2('DELETE', '/admin/calendar-notes/' + n.id).catch((e) => probs.push('note ' + n.id + ': ' + String(e.message || e).slice(0, 60)));
+  for (const m of d.moved || []) { const t = await gmFwd(env, { action: 'move', staff: env.GM_STAFF, code: m.code, start: m.from, room: d.room }); if (/"error"/.test(t)) probs.push('move back ' + m.code); }
+  for (const m of d.created || []) if (m.code) { const t = await gmFwd(env, { action: 'cancel', staff: env.GM_STAFF, code: m.code }); if (/"error"/.test(t)) probs.push('cancel ' + m.code); }
+  if (d.banner && d.banner.id && env.TV_KEY) {
+    const u = FB_BASE + env.TV_KEY + '/' + d.room + '/msg.json', c = await fetch(u).then((r) => r.json()).catch(() => null);
+    if (c && c.id === d.banner.id) await fetch(u, { method: 'DELETE' }).catch(() => null);
+  }
+  await hb.gmDrop('__LIST__'); await gmList(env, hb).catch(() => null);
+  await hb.extDone(String(f.id), Date.now());
+  return { ok: true, problems: probs };
+}
+
 /* ---------- guest messages front door: POST /gm (same form fields as the Make webhook) ----------
    The cue page (round2-tv-launcher manager/msg/), the staff page and the control centre call this instead of Make, so the
    Make webhook address isn't in any public page. It only passes on what Make would accept: real codes, real changes,
@@ -628,6 +828,10 @@ async function gm(env, req) {
       if (at) await hb.laterSet(code, at); else await hb.laterDel(code);
     }
     return gmJ({ ok: true, later: await hb.laterList() });
+  }
+  if (act === 'insess' || act === 'extend' || act === 'extundo') {   /* staff: "In session" tab */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    try { return gmJ(await (act === 'insess' ? insess : act === 'extend' ? extend : extUndo)(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
   if (act === 'follow') {   /* staff: run the "messages follow their booking" check now (dry=1: only show what it would do) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
