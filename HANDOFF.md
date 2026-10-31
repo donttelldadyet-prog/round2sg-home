@@ -1,26 +1,20 @@
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
 
-> ## ⚠️ TO DO (owner, 31 Oct 2026): guest links on round2.sg addresses – no "donttelldadyet" in anything guests see
-> Guests still see the GitHub/Cloudflare names in: the **room food menu** (QR → `donttelldadyet-prog.github.io/round2sg-home/menu/?room=…`),
-> the **booking confirmation page** after paying (`round2-book.donttelldadyet.workers.dev/done?ref=…`), **"View your booking"**
-> (`…workers.dev/find`, `/b/<code>`) and the **TV message pages** behind guest links. (`cue.round2.sg` message links are already done.)
-> Plan (not started; status in control centre › Systems, round2-tv-launcher `manager/systems.json`):
-> 1. **Pages on GitHub** (menu, and anything else guests open from round2sg-home) → a round2.sg subdomain, e.g. `menu.round2.sg`
->    or `go.round2.sg`, like `cue.round2.sg` (round2-tv-launcher `cue/README.md`): CNAME record in Wix › Domains › Manage DNS
->    → `donttelldadyet-prog.github.io`. A custom domain moves the WHOLE repo, so either give round2sg-home its own subdomain
->    (GitHub redirects the old github.io links, so printed QR codes keep working – but re-test the Wix-embedded homepage, the
->    Book screen iframe, the engine's `MENU_JSON` / `MENU_RETURN`, and anything the TVs load) or publish only the guest pages from
->    a small separate repo, as cue did.
-> 2. **Engine pages** (`/done`, `/find`, `/b/`, `/gm`, `/menu/return`) → e.g. `book.round2.sg` as a Cloudflare Workers custom domain.
->    That needs round2.sg's DNS on Cloudflare (free plan). Domain is registered at **Vodien**; DNS is currently managed in **Wix**.
->    Moving it = add round2.sg to Cloudflare, copy EVERY existing record from Wix (www/root for the Wix site, `cue`, and the
->    **MX/SPF/DKIM records for hello@round2.sg** – the only round2.sg email; SimplyBook's engine login also uses it), then change
->    the nameservers at Vodien. Check email still arrives before and after. Do it on a quiet morning with the owner.
->    Webhooks guests never see (HitPay `/hitpay`, SimplyBook `/sb/notify`) can stay on `workers.dev`.
-> 3. Then switch every guest-facing address to the new ones: `slots/index.html` (ENGINE, "View your booking"), `menu/index.html`
->    (CHECKOUT_URL, PAID_URL), the worker (`origin` used in HitPay `redirect_url`, `MENU_RETURN`, guest message links), the Wix room
->    links pages (valelinks etc.), the SimplyBook confirmation email line, and the control centre `PUBLIC`/`shareUrl`.
->    Keep the old addresses working (HitPay payments already in flight, old QR codes, old emails).
+> ## Guest links are on round2.sg (DONE 31 Oct 2026) – never put "donttelldadyet" in anything guests see
+> - **book.round2.sg** (repo `round2-book`, GitHub Pages): shows the engine's guest pages (`/done?ref=…`, `/find`, `/b/<code>`) inside a
+>   full-page frame. HitPay sends guests back to `book.round2.sg/done?ref=…` (worker `PUBLIC_BOOK`). The engine's pages post their path to
+>   the frame so the address bar follows, and open outside links (WhatsApp, cue.round2.sg, round2.sg) outside the frame.
+> - **menu.round2.sg** (repo `round2-menu`): loads `round2sg-home/menu/` and runs it as the whole page (no frame, HitPay opens normally).
+>   `menu.round2.sg/vale` = `?room=vale`. HitPay returns food orders there (worker `MENU_RETURN = PUBLIC_MENU`). The menu itself is still
+>   edited ONLY in round2sg-home `menu/` (and `menu/admin.html`).
+> - **cue.round2.sg** (repo `round2-cue`): TV message links (unchanged).
+> - DNS stays in **Wix** (Domains › round2.sg › Manage DNS): CNAMEs `book`, `menu`, `cue` → `donttelldadyet-prog.github.io`. Domain is
+>   registered at **Vodien**; the only round2.sg email is hello@round2.sg – don't touch its records. No Cloudflare DNS move needed.
+> - Engine API calls and webhooks (HitPay `/hitpay`, SimplyBook `/sb/notify`, `/gm`, `/day`…) stay on `workers.dev` – guests never see them.
+>   Old `workers.dev` / `github.io` links keep working.
+> - **Still to do:** owner points each room's Wix links page (valelinks etc.) food button at `https://menu.round2.sg/<room>`;
+>   SimplyBook's confirmation-email line (control centre › Systems, "Confirmation email link") should use `https://book.round2.sg/b/<code>`;
+>   one real sandbox test booking + food order via the Test bench to see the return pages on the new addresses.
 
 # HANDOFF – Round2 own booking system (read this first)
 
@@ -122,7 +116,7 @@ don't show either. To undo: put the Make address (hook.eu1.make.com/qqeq…) bac
 
 ## Room food menu: how guests get to it (owner's plan, 31 Oct 2026)
 Each room has its own QR code. It opens that room's links page on Wix (e.g. **round2.sg/valelinks**), whose food-menu button
-must open the menu **already set to that room**: `https://donttelldadyet-prog.github.io/round2sg-home/menu/?room=vale`
+must open the menu **already set to that room**: `https://menu.round2.sg/vale` (same as `https://menu.round2.sg/?room=vale`)
 (`kaeden`, `scarlett`, `bella`, `kai`, `atlas`, `max`/`maximillion`). With `?room=` the menu shows in that room's
 character colour, is locked to that room (guests can't switch rooms; only test mode `?sim=` can), and the room goes with
 the order all the way through: the room TV's "order locked in" alert, the kitchen Telegram slip and the Drive slip that
