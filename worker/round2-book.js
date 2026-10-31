@@ -416,6 +416,17 @@ export class HoldBook extends DurableObject {
     const soon = this.rows(`SELECT 1 FROM gmq WHERE pushed = 0 AND at - 120000 <= ?`, now).length;
     if (now - fol >= FOLLOW_MS - 5000 || (soon && now - fol > 60e3)) await this.follow(false).catch((e) => this.fLog({ a: 'error', why: String(e.message || e).slice(0, 80) }));
     for (const m of this.rows(`SELECT * FROM gmq WHERE pushed = 0 AND at - 60000 <= ? ORDER BY at`, now)) {
+      /* a Round2 message (e.g. "That's a wrap") never pushes a guest's message off the TV before they've pressed OK:
+         it waits (checked every 2 min) until the guest message is acknowledged, or until its own cut-off drops it */
+      if (/^R2/.test(m.code) && env.TV_KEY) {
+        const base = 'https://round2-tv-default-rtdb.asia-southeast1.firebasedatabase.app/r2/' + env.TV_KEY + '/' + m.room;
+        const [c, k] = await Promise.all([fetch(base + '/msg.json').then((r) => r.json()).catch(() => null), fetch(base + '/msgAck.json').then((r) => r.json()).catch(() => null)]);
+        if (c && /^g/.test(String(c.id || '')) && c.ack !== false && +c.until > now && +c.at <= now + 60e3 && !(k && k.id === c.id)) {
+          this.sql.exec(`UPDATE gmq SET at = ? WHERE code = ?`, now + 120e3, m.code);
+          this.held = this.held || new Set(); if (!this.held.has(m.code)) { this.held.add(m.code); this.fLog({ a: 'held', why: 'guest message not seen yet', room: m.room }); }
+          continue;
+        }
+      }
       const t = await call({ action: 'push', staff: env.GM_STAFF, code: m.code });
       this.sql.exec(`UPDATE gmq SET pushed = 1 WHERE code = ?`, m.code);
       /* the TV keeps one message: a later one for the same room may have been put back in the queue by this push,
