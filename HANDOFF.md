@@ -22,6 +22,10 @@
 >   SimplyBook's confirmation-email line (control centre › Systems, "Confirmation email link") should use `https://book.round2.sg/b/<code>`;
 >   one real sandbox test booking + food order via the Test bench to see the return pages on the new addresses.
 
+> ## SEO optimisation (new department, 31 Oct 2026) – read docs/seo-optimisation.md first
+> Owner's rules: no visible SEO text on round2.sg, no hidden text, no keyword stuffing; the game homescreen look stays.
+> Next up: business details code (structured data) on the Wix homepage – drafted in that doc, owner to OK before publishing.
+
 # HANDOFF – Round2 own booking system (read this first)
 
 Last session: 30 Oct 2026, ~6:30am SGT (co-owner who handles WhatsApp bookings). Branch: **`own-booking`** in `round2sg-home`.
