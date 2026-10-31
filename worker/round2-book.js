@@ -402,6 +402,27 @@ export class HoldBook extends DurableObject {
     h.data.done = result;
     this.sql.exec(`UPDATE holds SET status = 'paid', data = ? WHERE ref = ?`, JSON.stringify(h.data), ref);
   }
+  /* "About 5 minutes to go" (owner, 31 Oct): 5 min after "About 10 minutes to go" shows, if nobody pressed OK on it
+     (watching a film, on the PlayStation) and it is still the TV's message, the TV gets a 5-minute reminder (needs OK,
+     gone before "That's a wrap!"). OK'd the 10-minute one → no 5-minute one. Every Round2 push leaves a check here; the
+     check only acts when the TV's message is that reminder. */
+  nudgeInit() { this.qInit(); if (this.nudgeReady) return; this.nudgeReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS nudge (room TEXT, base INTEGER, at INTEGER, PRIMARY KEY (room, base))`); }
+  nudgeAdd(room, base) { this.nudgeInit(); this.sql.exec(`INSERT OR REPLACE INTO nudge VALUES (?, ?, ?)`, room || '', +base, +base + 5 * 60e3); }
+  async nudgeRun() {
+    this.nudgeInit(); const env = this.env, now = Date.now();
+    for (const r of this.rows(`SELECT * FROM nudge WHERE at <= ?`, now)) {
+      this.sql.exec(`DELETE FROM nudge WHERE room = ? AND base = ?`, r.room, r.base);
+      if (!env.TV_KEY || now - r.at > 3 * 60e3) continue;   /* too late (engine was asleep): skip */
+      const base = FB_BASE + env.TV_KEY + '/' + r.room;
+      const [c, k] = await Promise.all([fetch(base + '/msg.json').then((x) => x.json()).catch(() => null), fetch(base + '/msgAck.json').then((x) => x.json()).catch(() => null)]);
+      if (!c || c.kind !== 'wrapup' || Math.abs(+c.at - r.base) > 90e3 || (k && k.id === c.id) || /^w5/.test(String(c.id))) continue;
+      const m = { id: 'w5' + now.toString(36), kind: 'wrapup', title: 'About 5 minutes to go', from: c.from || 'The Round2 team', to: '',
+        text: 'Just a heads-up: about 5 minutes left in this session. A good time to save your game and gather your things. Thanks for playing with us!',
+        ack: true, at: now, until: r.base + 9.5 * 60e3, t: { '.sv': 'timestamp' } };
+      const ok = await fetch(base + '/msg.json', { method: 'PUT', body: JSON.stringify(m) }).then((x) => x.ok).catch(() => false);
+      this.fLog({ a: ok ? '5-minute reminder' : '5-minute reminder failed', why: '10-minute one not OK’d', room: r.room });
+    }
+  }
   /* credit banners waiting in line behind a message that hasn't been OK'd (sessBanner) */
   bqInit() { this.qInit(); if (this.bqReady) return; this.bqReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS bq (id TEXT PRIMARY KEY, room TEXT, t INTEGER, data TEXT)`); }
   bqAdd(id, room, d) { this.bqInit(); this.sql.exec(`DELETE FROM bq WHERE room = ?`, room); this.sql.exec(`INSERT INTO bq VALUES (?, ?, ?, ?)`, id, room, Date.now(), JSON.stringify(d)); this.arm(); }
@@ -434,7 +455,8 @@ export class HoldBook extends DurableObject {
     const fl = this.rows(`SELECT COUNT(*) AS n FROM gml WHERE endt > ?`, Date.now())[0].n, fol = +((this.rows(`SELECT v FROM kv WHERE k = 'followed'`)[0] || {}).v || 0);
     const lsy = this.rows(`SELECT 1 FROM kv WHERE k = 'lsynced'`).length;
     this.bqInit(); const bqn = this.rows(`SELECT COUNT(*) AS n FROM bq`)[0].n;
-    const ts = [bqn ? Date.now() + 30e3 : 0, n && n.t ? n.t + 1000 : 0, q && q.t ? q.t - 60e3 : 0, syn ? syn + 86400e3 : 0, fl ? fol + FOLLOW_MS : 0, lsy ? 0 : Date.now() + 2000, lt && lt.t ? lt.t : 0].filter((t) => t > 0);
+    this.nudgeInit(); const nd = this.rows(`SELECT MIN(at) AS t FROM nudge`)[0];
+    const ts = [bqn ? Date.now() + 30e3 : 0, nd && nd.t ? nd.t : 0, n && n.t ? n.t + 1000 : 0, q && q.t ? q.t - 60e3 : 0, syn ? syn + 86400e3 : 0, fl ? fol + FOLLOW_MS : 0, lsy ? 0 : Date.now() + 2000, lt && lt.t ? lt.t : 0].filter((t) => t > 0);
     if (ts.length) this.ctx.storage.setAlarm(Math.max(Date.now() + 1000, Math.min(...ts)));
   }
   /* timer ran out → release the hold and kill its HitPay link */
@@ -444,6 +466,7 @@ export class HoldBook extends DurableObject {
     this.sql.exec(`DELETE FROM holds WHERE status = 'released' AND created < ?`, Date.now() - 7 * 86400e3);
     try { await this.qRun(); } catch (e) {}
     try { await this.bqRun(); } catch (e) {}
+    try { await this.nudgeRun(); } catch (e) {}
     this.arm();
   }
   async qRun() {
@@ -481,6 +504,7 @@ export class HoldBook extends DurableObject {
         }
       }
       const t = await call({ action: 'push', staff: env.GM_STAFF, code: m.code });
+      if (/^R2/.test(m.code)) this.nudgeAdd(m.room, m.at);   /* a 10-minute reminder nobody OK'd gets a 5-minute one */
       this.sql.exec(`UPDATE gmq SET pushed = 1 WHERE code = ?`, m.code);
       /* the TV keeps one message: a later one for the same room may have been put back in the queue by this push,
          so let those go again at their own time (pushing one that's already on the TV changes nothing) */
