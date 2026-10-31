@@ -49,6 +49,9 @@ button{cursor:pointer;border:0;background:none;padding:0}
 .wordmark{display:inline-block;font-weight:400;font-size:22px;letter-spacing:.14em;line-height:1;padding:2px 10px;border-left:2px solid var(--ink);border-right:2px solid var(--ink);white-space:nowrap}
 .pix{font-family:var(--f-pix);font-weight:400;font-size:9px;letter-spacing:.14em;line-height:1.6;text-transform:uppercase}
 .eyebrow{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-family:var(--f-pix);font-size:10px;letter-spacing:.2em;color:var(--soft);text-transform:uppercase}
+.r2logo{display:block;height:30px;width:auto}
+.partner{display:flex;align-items:center;gap:12px;margin-top:10px;font-family:var(--f-pix);font-size:8px;letter-spacing:.14em;color:var(--mute);text-transform:uppercase}
+.partner img{height:34px;width:auto;display:block}
 .eyebrow .count{font-size:8px;letter-spacing:.14em;color:var(--mute)}
 .divider{display:flex;align-items:center;gap:10px;margin:12px 0 16px}
 .divider span{width:70px;height:1px;background:var(--rule)}
@@ -170,10 +173,10 @@ textarea{display:block;width:100%;margin-top:8px;min-height:64px;resize:vertical
 </style>
 
 <header class="wrap hud">
-  <span class="wordmark">ROUND2</span>
+  <img class="r2logo" src="https://donttelldadyet-prog.github.io/round2sg-home/menu/img/round2-logo.png" alt="Round2" width="149" height="38">
   <span class="badge" id="roomTag"></span>
 </header>
-<div class="wrap intro"><div class="eyebrow"><span>Food &amp; drinks</span><span class="count">by Madd Pizza</span></div><div class="divider" aria-hidden="true"><span></span><i></i><span></span></div></div>
+<div class="wrap intro"><div class="eyebrow"><span>Food &amp; drinks</span></div><div class="partner"><span>In partnership with</span><img src="https://donttelldadyet-prog.github.io/round2sg-home/menu/img/madd-pizza-logo.png" alt="Madd Pizza" width="160" height="42"></div><div class="divider" aria-hidden="true"><span></span><i></i><span></span></div></div>
 <div class="wrap" id="simBar" hidden><p class="noroom" style="border-color:var(--accent);color:var(--accent)" id="simTxt">TEST MODE · orders are simulated, nothing is charged and nothing is made.</p><div class="simrooms" id="simPay"></div><div class="simrooms" id="simRooms"></div></div>
 <div class="wrap" id="noRoom" hidden><p class="noroom">To order, scan the QR code in your room. You can still look through the menu.</p></div>
 <div class="tabs-shell"><nav class="wrap tabs" id="tabs" aria-label="Menu sections"></nav></div>
