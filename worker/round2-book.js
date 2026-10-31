@@ -222,8 +222,13 @@ export class HoldBook extends DurableObject {
      → the link moves with it; booking cancelled → the link is cancelled (or, if the same guest has exactly one other
      upcoming booking, i.e. cancel-and-rebook, it moves there). Staff moving a link by hand unbinds it, so the engine
      never fights a manual change; it binds again only if a booking starts exactly at the new room + time. */
-  lInit() { this.qInit(); if (this.lReady) return; this.lReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS gml (code TEXT PRIMARY KEY, room TEXT, start INTEGER, endt INTEGER, bid TEXT, cid TEXT)`); }
-  lSet(code, room, start, endt) { this.lInit(); if (!this.rows(`SELECT 1 FROM gml WHERE code = ?`, code).length) this.sql.exec(`INSERT INTO gml VALUES (?, ?, ?, ?, NULL, NULL)`, code, room || '', +start, +endt); this.arm(); }
+  lInit() {
+    this.qInit(); if (this.lReady) return; this.lReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS gml (code TEXT PRIMARY KEY, room TEXT, start INTEGER, endt INTEGER, bid TEXT, cid TEXT)`);
+    if (!this.rows(`SELECT 1 FROM kv WHERE k = 'fv2'`).length) { this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('fv2', '1')`); this.fSoon(); }
+  }
+  /* run the follow check about a minute from now (new link learned) */
+  fSoon() { this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('followed', ?)`, String(Date.now() - FOLLOW_MS + 60e3)); }
+  lSet(code, room, start, endt, bid) { this.lInit(); if (!this.rows(`SELECT 1 FROM gml WHERE code = ?`, code).length) this.sql.exec(`INSERT INTO gml VALUES (?, ?, ?, ?, ?, NULL)`, code, room || '', +start, +endt, bid ? String(bid) : null); this.arm(); }
   lSync(links) {
     this.lInit(); const now = Date.now(), keep = new Set();
     for (const x of links || []) {
@@ -231,7 +236,7 @@ export class HoldBook extends DurableObject {
       if (!x.key || /^R2/.test(x.key) || d.status === 'cancelled' || !(+d.end > now) || !(+d.start)) continue;
       keep.add(x.key);
       const o = this.rows(`SELECT * FROM gml WHERE code = ?`, x.key)[0];
-      if (!o) this.sql.exec(`INSERT INTO gml VALUES (?, ?, ?, ?, NULL, NULL)`, x.key, d.room || '', +d.start, +d.end);
+      if (!o) { this.sql.exec(`INSERT INTO gml VALUES (?, ?, ?, ?, NULL, NULL)`, x.key, d.room || '', +d.start, +d.end); this.fSoon(); }
       else if (o.room !== (d.room || '') || +o.start !== +d.start) this.sql.exec(`UPDATE gml SET room = ?, start = ?, endt = ?, bid = NULL, cid = NULL WHERE code = ?`, d.room || '', +d.start, +d.end, x.key);
     }
     for (const r of this.rows(`SELECT code FROM gml`)) if (!keep.has(r.code)) this.sql.exec(`DELETE FROM gml WHERE code = ?`, r.code);
@@ -263,6 +268,10 @@ export class HoldBook extends DurableObject {
       if (!l.bid) {
         const m = live.filter((b) => b.unit === UNIT[l.room] && b.start === +l.start);
         if (m.length === 1) { acts.push({ code: l.code, a: 'bind', bid: m[0].id }); if (!dry) this.sql.exec(`UPDATE gml SET bid = ?, cid = ? WHERE code = ?`, m[0].id, m[0].cid, l.code); bound.add(m[0].id); }
+        else if (!m.length) {   /* its booking was cancelled before the engine could tie them together */
+          gone = gone || await get('cancelled').catch(() => []);
+          if (gone.some((x) => x.unit === UNIT[l.room] && x.start === +l.start)) acts.push({ code: l.code, a: 'cancel', why: 'booking cancelled', room: l.room, from: +l.start });
+        }
         continue;
       }
       let b = live.find((x) => x.id === l.bid), how = 'move';
@@ -511,7 +520,7 @@ async function finalize(env, ref, source) {
         (d.agreed ? `\nAgreed to T&C, privacy policy and "non-cancellable, non-refundable" at ${new Date(d.agreed + 8 * 3600e3).toISOString().slice(0, 16).replace('T', ' ')}` : '');
       if (b0 && b0.id) result.comment = await a('setBookingComment', [b0.id, note]).then(() => 'saved').catch((e) => 'not saved: ' + String(e.message || e).slice(0, 80));
     }
-    if (d.msg && !result.dryRun) result.tv = await tvMessage(env, d, q, ref).catch((e) => ({ problem: String(e.message || e).slice(0, 120) }));
+    if (d.msg && !result.dryRun) result.tv = await tvMessage(env, d, q, ref, result.bookingId).catch((e) => ({ problem: String(e.message || e).slice(0, 120) }));
   } catch (err) { result = { problem: 'paid – booking not created: ' + String(err.message || err).slice(0, 150) }; }
   result.at = Date.now(); result.source = source;
   /* paid but not in SimplyBook (slot gone, SimplyBook down…): tell staff straight away so they can call / refund */
@@ -534,7 +543,7 @@ async function paidStat(q, d) {
 /* celebration message → the guest messages system (Make "GUEST MESSAGE LINKS"): a link for this booking, then the
    message on it. It then shows in the control centre's Guest messages like any other (staff can move or cancel it),
    and the guest can still change it at cue.round2.sg/CODE until it pops up. */
-async function tvMessage(env, d, q, ref) {
+async function tvMessage(env, d, q, ref, bid) {
   if (!env.GM_STAFF) return { problem: 'no staff code' };
   const call = async (body) => {
     const r = await fetch(env.GM_HOOK_URL || GM_HOOK, { method: 'POST', body: new URLSearchParams(body) });
@@ -546,7 +555,7 @@ async function tvMessage(env, d, q, ref) {
   const m = d.msg;
   await call({ action: 'submit', code: link.code, kind: m.kind, to: m.to, from: m.from, title: m.title, text: m.text, at: start + m.after * 60e3 });
   await book(env).qSet(link.code, GM_ROOM[q.unit], start + m.after * 60e3, start + q.hours * 3600e3).catch(() => null);
-  await book(env).lSet(link.code, GM_ROOM[q.unit], start, start + 3 * 3600e3).catch(() => null);
+  await book(env).lSet(link.code, GM_ROOM[q.unit], start, start + 3 * 3600e3, bid).catch(() => null);
   await book(env).gmDrop('__LIST__').catch(() => null);
   return { code: link.code, at: start + m.after * 60e3 };
 }
@@ -962,7 +971,7 @@ export default {
           const q = h.data.q, start = Date.UTC(+q.date.slice(0, 4), +q.date.slice(5, 7) - 1, +q.date.slice(8, 10), +q.time.slice(0, 2), +q.time.slice(3, 5)) - 8 * 3600e3;
           const r = await fetch(env.GM_HOOK_URL || GM_HOOK, { method: 'POST', body: new URLSearchParams({ action: 'create', staff: env.GM_STAFF, room: GM_ROOM[q.unit], start, label: 'Online · ' + h.data.name.slice(0, 30) }) }).then((x) => x.json()).catch(() => ({}));
           if (!r.code) return H(PAGE('<h1>Couldn’t open the message page</h1><p>Please try again in a minute, or WhatsApp us on +65 9162 5767.</p>'));
-          tv = { code: r.code }; await hb.setTv(ref, tv); await hb.gmDrop('__LIST__'); await hb.lSet(r.code, GM_ROOM[q.unit], start, start + 3 * 3600e3).catch(() => null);
+          tv = { code: r.code }; await hb.setTv(ref, tv); await hb.gmDrop('__LIST__'); await hb.lSet(r.code, GM_ROOM[q.unit], start, start + 3 * 3600e3, h.data.done.bookingId).catch(() => null);
         }
         return Response.redirect('https://cue.round2.sg/' + tv.code, 302);
       }
