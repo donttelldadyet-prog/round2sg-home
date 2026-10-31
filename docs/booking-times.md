@@ -93,3 +93,8 @@ SimplyBook end, tagged `EXT +1h (1/2) · <guest> · control centre`). Vale/Atlas
 `SYSTEM BLOCK · EXT …`, so both sides stay blocked (the Make mirror only copies bookings, not notes). Mirror blocks
 (SYSTEM BLOCK clients 2472/2476) are hidden from the tab. It also moves/adds "About 10 minutes to go" and "That's a
 wrap!" and shows "+N CREDITS ADDED" on the TV. Details: round2-tv-launcher docs/guest-messages.md "In session".
+
+**Update 31 Oct (owner):** In session no longer stacks 1-hour notes. Each room keeps ONE EXT note per session, stretched on
+every extension, text `EXT till 1:15am · Amanda` (short, readable on a phone). Twin: `SYSTEM BLOCK · EXT Vale till 1:30am`.
+SimplyBook accepts notes past 11:15pm (tested past midnight). Notes staff stack by hand still work: the system reads them
+as one chain and stretches the last one.
