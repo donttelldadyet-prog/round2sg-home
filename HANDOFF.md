@@ -1,5 +1,27 @@
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
 
+> ## ⚠️ TO DO (owner, 31 Oct 2026): guest links on round2.sg addresses – no "donttelldadyet" in anything guests see
+> Guests still see the GitHub/Cloudflare names in: the **room food menu** (QR → `donttelldadyet-prog.github.io/round2sg-home/menu/?room=…`),
+> the **booking confirmation page** after paying (`round2-book.donttelldadyet.workers.dev/done?ref=…`), **"View your booking"**
+> (`…workers.dev/find`, `/b/<code>`) and the **TV message pages** behind guest links. (`cue.round2.sg` message links are already done.)
+> Plan (not started; status in control centre › Systems, round2-tv-launcher `manager/systems.json`):
+> 1. **Pages on GitHub** (menu, and anything else guests open from round2sg-home) → a round2.sg subdomain, e.g. `menu.round2.sg`
+>    or `go.round2.sg`, like `cue.round2.sg` (round2-tv-launcher `cue/README.md`): CNAME record in Wix › Domains › Manage DNS
+>    → `donttelldadyet-prog.github.io`. A custom domain moves the WHOLE repo, so either give round2sg-home its own subdomain
+>    (GitHub redirects the old github.io links, so printed QR codes keep working – but re-test the Wix-embedded homepage, the
+>    Book screen iframe, the engine's `MENU_JSON` / `MENU_RETURN`, and anything the TVs load) or publish only the guest pages from
+>    a small separate repo, as cue did.
+> 2. **Engine pages** (`/done`, `/find`, `/b/`, `/gm`, `/menu/return`) → e.g. `book.round2.sg` as a Cloudflare Workers custom domain.
+>    That needs round2.sg's DNS on Cloudflare (free plan). Domain is registered at **Vodien**; DNS is currently managed in **Wix**.
+>    Moving it = add round2.sg to Cloudflare, copy EVERY existing record from Wix (www/root for the Wix site, `cue`, and the
+>    **MX/SPF/DKIM records for hello@round2.sg** – the only round2.sg email; SimplyBook's engine login also uses it), then change
+>    the nameservers at Vodien. Check email still arrives before and after. Do it on a quiet morning with the owner.
+>    Webhooks guests never see (HitPay `/hitpay`, SimplyBook `/sb/notify`) can stay on `workers.dev`.
+> 3. Then switch every guest-facing address to the new ones: `slots/index.html` (ENGINE, "View your booking"), `menu/index.html`
+>    (CHECKOUT_URL, PAID_URL), the worker (`origin` used in HitPay `redirect_url`, `MENU_RETURN`, guest message links), the Wix room
+>    links pages (valelinks etc.), the SimplyBook confirmation email line, and the control centre `PUBLIC`/`shareUrl`.
+>    Keep the old addresses working (HitPay payments already in flight, old QR codes, old emails).
+
 # HANDOFF – Round2 own booking system (read this first)
 
 Last session: 30 Oct 2026, ~6:30am SGT (co-owner who handles WhatsApp bookings). Branch: **`own-booking`** in `round2sg-home`.
@@ -104,6 +126,8 @@ must open the menu **already set to that room**: `https://donttelldadyet-prog.gi
 (`kaeden`, `scarlett`, `bella`, `kai`, `atlas`, `max`/`maximillion`). With `?room=` the menu shows in that room's
 character colour, is locked to that room (guests can't switch rooms; only test mode `?sim=` can), and the room goes with
 the order all the way through: the room TV's "order locked in" alert, the kitchen Telegram slip and the Drive slip that
-the kitchen phone prints. Madd Pizza staples that printed slip to the food bag, so the room name on the slip is how the
-order reaches the right room. Without `?room=` the menu can be browsed but not ordered from ("scan the QR code in your room").
+the kitchen phone prints. Madd Pizza staples that printed slip to the food bag and **drops the bag off on the rack outside
+the Round2 entrance** (the shoe rack) – nobody brings food to the room. The TV alert and the menu's thank-you page tell the
+guest to collect it there; the room name on the slip is how guests (and staff) find the right bag. Never describe Round2
+food as "delivered to your room" (website, blog, menu, TV). Without `?room=` the menu can be browsed but not ordered from ("scan the QR code in your room").
 Check each room's Wix links page uses its own `?room=` before printing QR codes.
