@@ -1210,8 +1210,10 @@ async function latecancel(env, hb, f) {
    before (on SimplyBook's 15-min grid: ending AT 12am spills down the whole next day, 11:59pm isn't drawn at all), same room: "↓ AFTER 12AM · karen 2 pax · 12:15am–3am Mon 2 Nov". It blocks nothing and the engine
    never reads it as a session (only time-blocked notes are sessions), so +1h, EXT notes, reminders and wrap-up messages
    keep using the real note. Kept in sync after Late session / +1h, and every 30 min for tonight and tomorrow night
-   (moved, extended, deleted → marker follows). Only notes starting "↓ AFTER 12AM" are ever touched. */
-const SHADOW_RE = /^↓ AFTER 12AM/, SHADOW_TILL = 11 * 60;   /* sessions starting 12am–11am belong to the night before */
+   (moved, extended, deleted → marker follows). Only notes starting "↓ AFTER 12AM" / "↓ TILL" are ever touched.
+   Also (owner, 1 Nov): a session that starts before midnight and runs past it (extended, late note) gets
+   "↓ TILL 1:15AM · Amanda" there, since SimplyBook's bar stops at 12am. */
+const SHADOW_RE = /^↓ (AFTER 12AM|TILL \d)/, SHADOW_TILL = 11 * 60;   /* sessions starting 12am–11am belong to the night before */
 async function shadowSync(env, nights) {
   const s2 = await sb2(env), log = { made: 0, gone: 0, kept: 0, nights: nights.length };
   for (const N of nights) {
@@ -1220,6 +1222,11 @@ async function shadowSync(env, nights) {
       if (S.sys || S.orphanExt || !ROOMS[S.unit] || S.s < d0 || S.s >= d0 + SHADOW_TILL * 60e3) continue;
       const who = String(S.name || 'guest').split(' · ')[0].replace(/\s+/g, ' ').trim().slice(0, 30);
       want.push({ unit: S.unit, text: '↓ AFTER 12AM · ' + who + ' · ' + clock12(S.s) + '–' + clock12(S.guestEnd) + ' ' + sgDayName(S.s).replace(/ \d{4}$/, '') });
+    }
+    for (const S of (await sessDay(env, N)).sessions) {   /* started tonight, runs past midnight */
+      if (S.sys || S.orphanExt || !ROOMS[S.unit] || S.s >= d0 || S.guestEnd <= d0) continue;
+      const who = String(S.name || 'guest').split(' · ')[0].replace(/\s+/g, ' ').trim().slice(0, 30);
+      want.push({ unit: S.unit, text: '↓ TILL ' + clock12(S.guestEnd).toUpperCase() + ' · ' + who });
     }
     const nt = await s2('GET', '/admin/calendar-notes?filter[date_from]=' + N + '&filter[date_to]=' + N + '&on_page=200');
     const have = ((nt && nt.data) || []).filter((n) => SHADOW_RE.test(String(n.note || '')) && sgDay(sgMs0(n.start_date_time)) === N);
@@ -1276,6 +1283,7 @@ async function extUndo(env, hb, f) {
   }
   await hb.gmDrop('__LIST__'); await gmList(env, hb).catch(() => null);
   await hb.extDone(String(f.id), Date.now());
+  { const n0 = sgDay(Date.now() - SHADOW_TILL * 60e3); await shadowSync(env, [n0]).catch(() => null); }   /* the TILL label follows */
   return { ok: true, problems: probs };
 }
 
