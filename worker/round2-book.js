@@ -1321,7 +1321,9 @@ async function bookingSample(env) {
 }
 /* "In 1 hour" – every 5 minutes (cron) the engine reads today's sessions the same way In session does: SimplyBook
    bookings AND calendar notes that block time (WhatsApp / walk-in sessions). Skipped: the twin room's SYSTEM BLOCKs and
-   EXT notes (an extension isn't a new arrival). Each session is sent once, when it's 50–62 minutes away. */
+   EXT notes (an extension isn't a new arrival). Each session is sent once, when it's 50–62 minutes away; a calendar note
+   added later than that is sent as soon as it's seen ("in 20 min"). Bookings made within the hour aren't repeated: their
+   "New booking" alert says "starts in N min" (owner, 1 Nov). */
 function soonMsg(S, now) {
   const mins = Math.round((S.s - now) / 60e3), unit = S.unit, room = unit === 11 ? 'Maximillion' : ROOMS[unit][0];
   const who = S.k === 'b' ? (S.name || 'No name') : 'Note: ' + String(S.name || '').replace(/\s+/g, ' ').slice(0, 60);
@@ -1343,7 +1345,10 @@ async function soonRun(env) {
   const hb = book(env); if (!(await hb.pushList('soon')).length) return { phones: 0 };
   const now = Date.now(), sent = [];
   for (const S of await soonSessions(env, 2)) {
-    const m = S.s - now; if (m <= 50 * 60e3 || m > 62 * 60e3) continue;
+    const m = S.s - now; if (m <= 0 || m > 62 * 60e3) continue;
+    /* under 50 min: only calendar notes (a WhatsApp / walk-in session keyed in late gets no booking alert);
+       a booking made that late already got its "New booking · starts in N min" alert */
+    if (m <= 50 * 60e3 && S.k === 'b') continue;
     if (!(await hb.soonMark(S.key + ':' + S.s))) continue;
     sent.push(Object.assign({ key: S.key }, await pushAll(env, 'soon', soonMsg(S, now))));
   }
@@ -1381,7 +1386,8 @@ async function bookingAlert(env, bid, type) {
   const line1 = (name || 'No name') + ' · ' + day.replace(/,/g, '') + ', ' + clock12(s) + '–' + clock12(e) + ' (' + hours + 'h)';
   const line2 = [rate, money, pax ? pax + ' pax' : '', room].filter(Boolean).join(' · ');
   const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10) === date;
-  return { msg: { title: (ROOM_DOT[unit] ? ROOM_DOT[unit] + ' ' : '') + room.toUpperCase() + ' · ' + (SB_ALERT[type] || 'Booking'), body: line1 + '\n' + line2, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/' }, b };
+  const soonMin = Math.round((s - Date.now()) / 60e3), soonTxt = type !== 'cancel' && soonMin > 0 && soonMin <= 60 ? ' · starts in ' + soonMin + ' min' : '';
+  return { msg: { title: (ROOM_DOT[unit] ? ROOM_DOT[unit] + ' ' : '') + room.toUpperCase() + ' · ' + (SB_ALERT[type] || 'Booking') + soonTxt, body: line1 + '\n' + line2, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/' }, b };
 }
 async function bookingPush(env, bid, type) {
   if (!SB_ALERT[type] || !env.VAPID_JWK) return null;
