@@ -895,6 +895,13 @@ async function makeLinks(env, hb) {
 async function insess(env, hb, f) {
   const now = Date.now(), day = /^\d{4}-\d\d-\d\d$/.test(f.day || '') ? f.day : sgDay(now);
   const [D, links] = await Promise.all([sessDay(env, day), makeLinks(env, hb)]);
+  /* the shop's day runs until we sleep (owner, 1 Nov): in the evening, tonight's list also shows sessions starting
+     12am–11am (late sessions after midnight), so they can be seen and extended before the date changes */
+  if (day !== sgDay(now) || new Date(now + 8 * 3600e3).getUTCHours() >= 17) {
+    const D2 = await sessDay(env, addDays(day, 1)), n0 = sgMs0(addDays(day, 1) + ' 00:00');
+    for (const S of D2.sessions) if (S.s >= n0 && S.s < n0 + SHADOW_TILL * 60e3 && !D.sessions.some((x) => x.key === S.key)) D.sessions.push(S);
+    for (const it of D2.items) if (!D.items.some((x) => x.k === it.k && x.id === it.id)) D.items.push(it);
+  }
   const rooms = {};
   for (const u of Object.keys(ROOMS)) rooms[GM_ROOM[u]] = { unit: +u, name: ROOMS[u][0], twin: MIRROR[u] ? GM_ROOM[MIRROR[u]] : null, sessions: [] };
   for (const S of D.sessions) {
@@ -940,7 +947,8 @@ async function extend(env, hb, f) {
     const banner = { title: '+' + h + ' CREDIT' + (h > 1 ? 'S' : '') + ' ADDED', text: 'Your session has been extended by ' + h + ' hour' + (h > 1 ? 's' : '') + '.', ack };
     return { ok: true, test: true, banner: await sessBanner(env, room, banner, true, hb) };
   }
-  const D = await sessDay(env, day), S = D.sessions.find((x) => x.key === String(f.key || ''));
+  let D = await sessDay(env, day), S = D.sessions.find((x) => x.key === String(f.key || ''));
+  if (!S) { const D2 = await sessDay(env, addDays(day, 1)), S2 = D2.sessions.find((x) => x.key === String(f.key || '')); if (S2) { D = D2; S = S2; } }   /* tonight's after-midnight session */
   if (!S || S.sys) return { error: 'That session isn’t in SimplyBook any more. Refresh.' };
   if (f.end && +f.end !== S.end) return { error: 'This session changed since you looked (someone already extended it?). Refresh and check.' };
   const from = S.end, to = S.end + h * 3600e3, newGuest = to - BUF * 60e3, tw = MIRROR[S.unit];
@@ -995,6 +1003,7 @@ async function extend(env, hb, f) {
   const id = 'x' + now.toString(36);
   await hb.extPut(id, rec);
   await autoRun(env, 'extended').catch(() => null);   /* Auto wrap-up follows the new end straight away */
+  { const n0 = sgDay(Date.now() - SHADOW_TILL * 60e3); await shadowSync(env, [n0]).catch(() => null); }   /* after-midnight marker shows the new end */
   return { ok: true, id, plan, done: rec };
 }
 /* In session › "+ Late session" (owner, 1 Nov): a WhatsApp / walk-in session keyed in by staff, including ones running
@@ -1082,7 +1091,12 @@ async function late(env, hb, f) {
   const days = [day]; if (sgDay(blockEnd - 1) !== day) days.push(sgDay(blockEnd - 1));
   const items = []; for (const d of days) for (const it of (await sessDay(env, d)).items) if (!items.some((x) => x.k === it.k && x.id === it.id)) items.push(it);
   const tw = MIRROR[unit], room = ROOMS[unit][0];
-  const clash = items.filter((it) => (it.unit === unit || it.unit === tw) && it.s < blockEnd && it.e > s && !it.blk)
+  /* change an existing session (Upcoming late sessions › Change): its own notes don't count as a clash, and they're
+     replaced by the new one (put back if SimplyBook refuses the new one) */
+  const old = f.replace ? await lateFind(env, String(f.replace), String(f.oldDay || '')) : null;
+  if (f.replace && !old) return { error: 'That session isn’t in SimplyBook any more. Refresh the list.' };
+  const skip = new Set(old ? old.notes.map((n) => n.id) : []);
+  const clash = items.filter((it) => (it.unit === unit || it.unit === tw) && it.s < blockEnd && it.e > s && !it.blk && !(it.k === 'n' && skip.has(it.id)))
     .map((it) => ({ room: ROOMS[it.unit][0], what: it.k === 'b' ? 'booking' : 'note', name: String(it.name || '').slice(0, 40), from: clock12(it.s), to: clock12(it.e) }));
   const text = name + ' ' + pax + ' pax · late till ' + clock12(guestEnd) + ' · control centre';
   /* "About 10 minutes to go" + "That's a wrap!" on the TV (toggle, default on): only for sessions starting within 24 h,
@@ -1095,12 +1109,18 @@ async function late(env, hb, f) {
   if (clash.length && f.force !== 'yes') return { ok: false, clash: true, plan };
   const s2 = await sb2(env), done = [];
   const body = (u, txt) => ({ provider_id: u, service_id: null, start_date_time: sgStr(s), end_date_time: sgStr(blockEnd), note_type_id: 1, note: txt, mode: 'provider', time_blocked: true });
+  if (old) {
+    const pr = await lateDel(s2, old.notes);
+    if (pr.length) { await lateRestore(s2, old.notes.filter((n) => !pr.some((x) => x.startsWith('note ' + n.id + ':')))).catch(() => null); return { error: 'SimplyBook didn’t let go of the old note, nothing was changed: ' + pr.join('; ').slice(0, 120) }; }
+    await lateMsgsCancel(env, hb, old.S).catch(() => null);
+  }
   try {
     const r = await s2('POST', '/admin/calendar-notes', body(unit, text)); done.push({ unit, id: String(r.id), made: true });
     if (tw) { const r2 = await s2('POST', '/admin/calendar-notes', body(tw, 'SYSTEM BLOCK · ' + room + ' late till ' + clock12(blockEnd))); done.push({ unit: tw, id: String(r2.id), made: true }); }
   } catch (e) {
     await extRevert(s2, done);
-    return { error: 'SimplyBook didn’t take the note, nothing was changed: ' + String(e.message || e).slice(0, 120) };
+    if (old) await lateRestore(s2, old.notes).catch(() => null);
+    return { error: 'SimplyBook didn’t take the note, nothing was changed: ' + String(e.message || e).slice(0, 120) + (old ? ' (the old session was put back; its TV messages were cancelled – re-add them in Round2 messages if needed)' : '') };
   }
   const msgs = [];
   if (wantMsgs && soonEnough) {
@@ -1115,7 +1135,104 @@ async function late(env, hb, f) {
     await hb.gmDrop('__LIST__'); await gmList(env, hb).catch(() => null);
   }
   await autoRun(env, 'late session').catch(() => null);
-  return { ok: true, plan, notes: done, msgs };
+  const nights = new Set(); for (const t of [s, old && old.S.s].filter(Boolean)) if (sgDay(t) !== sgDay(t - SHADOW_TILL * 60e3)) nights.add(sgDay(t - SHADOW_TILL * 60e3));
+  if (nights.size) await shadowSync(env, [...nights]).catch(() => null);
+  return { ok: true, plan, notes: done, msgs, replaced: !!old };
+}
+/* ===== Upcoming late sessions (owner, 1 Nov): list / change / cancel from the Late session page =====
+   A session starting after midnight is hidden in SimplyBook's calendar, so staff can't move or delete it there (the
+   "↓ AFTER 12AM" marker is only a label). Listed: control-centre late notes, and any time-blocked note that starts
+   12am–11am or runs past midnight, for the next 45 days. Only NOTES are ever touched, never bookings. */
+async function lateFind(env, id, day) {
+  if (!/^\d+$/.test(id) || !/^\d{4}-\d\d-\d\d$/.test(day)) return null;
+  const D = await sessDay(env, day), S = D.sessions.find((x) => x.key === 'n' + id && x.k === 'n' && !x.sys);
+  if (!S) return null;
+  const tw = MIRROR[S.unit], ids = new Set([id, ...S.ext.map((x) => x.id)]);
+  const notes = D.items.filter((x) => x.k === 'n' && (ids.has(x.id) || (tw && x.unit === tw && x.sys && x.s >= S.s - 5 * 60e3 && x.s < S.end)))
+    .map((x) => ({ id: x.id, unit: x.unit, s: x.s, e: x.e, note: x.name }));
+  return { S, notes };
+}
+async function lateDel(s2, notes) {
+  const probs = [];
+  for (const n of notes) { try { await s2('DELETE', '/admin/calendar-notes/' + n.id); } catch (e) { probs.push('note ' + n.id + ': ' + String(e.message || e).slice(0, 60)); } }
+  return probs;
+}
+async function lateRestore(s2, notes) {
+  for (const n of notes) await s2('POST', '/admin/calendar-notes', { provider_id: n.unit, service_id: null, start_date_time: sgStr(n.s), end_date_time: sgStr(n.e), note_type_id: 1, note: n.note, mode: 'provider', time_blocked: true });
+}
+/* the session's own "About 10 minutes to go" / "That's a wrap!" (Round2 messages at its end), still to come */
+async function lateMsgsCancel(env, hb, S) {
+  const now = Date.now(), room = GM_ROOM[S.unit]; let n = 0;
+  for (const m of await hb.qList()) {
+    if (!/^R2/.test(m.code) || m.room !== room || m.at <= now) continue;
+    if (Math.abs(m.at - S.guestEnd) > 5 * 60e3 && Math.abs(m.at - (S.guestEnd - 10 * 60e3)) > 5 * 60e3) continue;
+    try { await gmFwd(env, { staff: env.GM_STAFF, action: 'cancel', code: m.code }); n++; } catch (e) {}
+  }
+  if (n) { await hb.gmDrop('__LIST__'); await gmList(env, hb).catch(() => null); }
+  return n;
+}
+async function latelist(env, hb) {
+  const s2 = await sb2(env), now = Date.now(), today = sgDay(now);
+  const nt = await s2('GET', '/admin/calendar-notes?filter[date_from]=' + addDays(today, -1) + '&filter[date_to]=' + addDays(today, 45) + '&on_page=200');
+  const its = [];
+  for (const n of ((nt && nt.data) || [])) {
+    const s = sgMs0(n.start_date_time), e = sgMs0(n.end_date_time), unit = +n.provider_id, txt = String(n.note || '');
+    if (!n.time_blocked || !s || !e || !ROOMS[unit] || SYS_RE.test(txt) || e - s > 12 * 3600e3) continue;
+    its.push({ id: String(n.id), unit, s, e, txt, ext: EXT_RE.test(txt) });
+  }
+  its.sort((a, b) => a.s - b.s);
+  const out = [];
+  for (const it of its) {
+    if (it.ext) continue;
+    let end = it.e, nExt = 0;
+    for (;;) { const nx = its.find((x) => x.ext && x.unit === it.unit && Math.abs(x.s - end) <= 5 * 60e3); if (!nx) break; end = nx.e; nExt++; }
+    const guestEnd = end - BUF * 60e3, sgH = new Date(it.s + 8 * 3600e3).getUTCHours();
+    if (guestEnd <= now) continue;
+    if (!(/late till/i.test(it.txt) || sgH < 11 || sgDay(guestEnd - 1) !== sgDay(it.s))) continue;
+    const pm = it.txt.match(/(\d+)\s*(?:pax|ppl|pp)\b/i);
+    out.push({ id: it.id, unit: it.unit, room: ROOMS[it.unit][0], text: it.txt.slice(0, 80), name: it.txt.split(' · ')[0].replace(/\s*\d+\s*(?:pax|ppl|pp)\b.*$/i, '').trim().slice(0, 40), pax: pm ? +pm[1] : 0,
+      s: it.s, guestEnd, day: sgDay(it.s), night: sgDay(it.s - SHADOW_TILL * 60e3), ext: nExt, live: it.s <= now });
+  }
+  return { ok: true, now, sessions: out };
+}
+async function latecancel(env, hb, f) {
+  const old = await lateFind(env, String(f.id || ''), String(f.day || ''));
+  if (!old) return { error: 'That session isn’t in SimplyBook any more. Refresh the list.' };
+  const s2 = await sb2(env), probs = await lateDel(s2, old.notes);
+  const msgs = await lateMsgsCancel(env, hb, old.S).catch(() => 0);
+  await autoRun(env, 'late cancelled').catch(() => null);
+  const n0 = sgDay(old.S.s - SHADOW_TILL * 60e3); if (n0 !== sgDay(old.S.s)) await shadowSync(env, [n0]).catch(() => null);
+  return probs.length ? { error: 'Some notes didn’t delete: ' + probs.join('; ').slice(0, 160) } : { ok: true, removed: old.notes.length, msgs };
+}
+/* ===== After-midnight markers (owner, 1 Nov) =====
+   SimplyBook's calendar only shows 11am–12am, so a session STARTING after midnight (Late session, WhatsApp note) sits
+   off-screen on the next day's calendar. For each one the engine keeps a NON-blocking note at 11:45pm–11:59pm the night
+   before (ending AT 12am makes SimplyBook draw it down the whole next day), same room: "↓ AFTER 12AM · karen 2 pax · 12:15am–3am Mon 2 Nov". It blocks nothing and the engine
+   never reads it as a session (only time-blocked notes are sessions), so +1h, EXT notes, reminders and wrap-up messages
+   keep using the real note. Kept in sync after Late session / +1h, and every 30 min for tonight and tomorrow night
+   (moved, extended, deleted → marker follows). Only notes starting "↓ AFTER 12AM" are ever touched. */
+const SHADOW_RE = /^↓ AFTER 12AM/, SHADOW_TILL = 11 * 60;   /* sessions starting 12am–11am belong to the night before */
+async function shadowSync(env, nights) {
+  const s2 = await sb2(env), log = { made: 0, gone: 0, kept: 0, nights: nights.length };
+  for (const N of nights) {
+    const D = addDays(N, 1), d0 = sgMs0(D + ' 00:00'), want = [];
+    for (const S of (await sessDay(env, D)).sessions) {
+      if (S.sys || S.orphanExt || !ROOMS[S.unit] || S.s < d0 || S.s >= d0 + SHADOW_TILL * 60e3) continue;
+      const who = String(S.name || 'guest').split(' · ')[0].replace(/\s+/g, ' ').trim().slice(0, 30);
+      want.push({ unit: S.unit, text: '↓ AFTER 12AM · ' + who + ' · ' + clock12(S.s) + '–' + clock12(S.guestEnd) + ' ' + sgDayName(S.s).replace(/ \d{4}$/, '') });
+    }
+    const nt = await s2('GET', '/admin/calendar-notes?filter[date_from]=' + N + '&filter[date_to]=' + N + '&on_page=200');
+    const have = ((nt && nt.data) || []).filter((n) => SHADOW_RE.test(String(n.note || '')) && sgDay(sgMs0(n.start_date_time)) === N);
+    for (const n of have) {
+      const i = want.findIndex((w) => w.unit === +n.provider_id && w.text === String(n.note) && /23:59/.test(String(n.end_date_time)));   /* old 12am-ending markers get replaced */
+      if (i >= 0) { want.splice(i, 1); log.kept++; } else { await s2('DELETE', '/admin/calendar-notes/' + n.id); log.gone++; }
+    }
+    for (const w of want) {
+      await s2('POST', '/admin/calendar-notes', { provider_id: w.unit, service_id: null, start_date_time: N + ' 23:45:00', end_date_time: N + ' 23:59:00', note_type_id: 1, note: w.text, mode: 'provider', time_blocked: false });
+      log.made++;
+    }
+  }
+  return log;
 }
 /* the "+N CREDITS ADDED" banner on the room's TV (kind 'extend': coin-into-slot animation). Last in line (owner, 31 Oct):
    while another message is on the TV and not OK'd yet (a guest's message, or a Round2 one), the banner waits and goes up
@@ -1197,13 +1314,18 @@ async function gm(env, req) {
     }
     return gmJ({ ok: true, later: await hb.laterList() });
   }
+  if (act === 'shadow') {   /* staff: re-check the after-midnight markers for nights from..from+n (max 20) */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const from = /^\d{4}-\d\d-\d\d$/.test(f.from || '') ? f.from : sgDay(Date.now()), n = Math.max(1, Math.min(20, +f.n || 1));
+    try { return gmJ(Object.assign({ ok: true }, await shadowSync(env, Array.from({ length: n }, (_, i) => addDays(from, i))))); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
+  }
   if (act === 'auto') {   /* staff: TV messages › Auto end messages */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await autoApi(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
-  if (act === 'insess' || act === 'extend' || act === 'extundo' || act === 'late') {   /* staff: "In session" tab */
+  if (act === 'insess' || act === 'extend' || act === 'extundo' || act === 'late' || act === 'latelist' || act === 'latecancel') {   /* staff: "In session" tab */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
-    try { return gmJ(await (act === 'insess' ? insess : act === 'extend' ? extend : act === 'late' ? late : extUndo)(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
+    try { return gmJ(await (act === 'insess' ? insess : act === 'extend' ? extend : act === 'late' ? late : act === 'latelist' ? latelist : act === 'latecancel' ? latecancel : extUndo)(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
   if (act === 'msgimport' || act === 'msgmode' || act === 'msgtest') {   /* staff: move the message store off Make (copy records in; switch where messages live) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
@@ -1712,7 +1834,8 @@ async function bookingPush(env, bid, type) {
 
 export default {
   /* every 10 minutes (Cloudflare cron trigger, every-10-minutes schedule): staff "in 1 hour" alerts */
-  async scheduled(ev, env0, ctx) { const env = envFor(env0, 'live'); ctx.waitUntil(soonRun(env).catch(() => null)); ctx.waitUntil(autoRun(env, 'cron').catch(() => null)); },
+  async scheduled(ev, env0, ctx) { const env = envFor(env0, 'live'); ctx.waitUntil(soonRun(env).catch(() => null)); ctx.waitUntil(autoRun(env, 'cron').catch(() => null));
+    if (new Date().getUTCMinutes() < 10 || (new Date().getUTCMinutes() >= 30 && new Date().getUTCMinutes() < 40)) { const t = sgDay(Date.now()); ctx.waitUntil(shadowSync(env, [t, addDays(t, 1)]).catch(() => null)); } },
   async fetch(req, env0, ctx) {
     const u = new URL(req.url);
     const env = envFor(env0, 'live');   /* default for anything not tied to a hold/order: live once the live key is in */
