@@ -1389,7 +1389,7 @@ async function bookingPush(env, bid, type) {
 }
 
 export default {
-  /* every 5 minutes (Cloudflare cron "*/5 * * * *"): staff "in 1 hour" alerts */
+  /* every 5 minutes (Cloudflare cron trigger, every-5-minutes schedule): staff "in 1 hour" alerts */
   async scheduled(ev, env0, ctx) { ctx.waitUntil(soonRun(envFor(env0, 'live')).catch(() => null)); },
   async fetch(req, env0, ctx) {
     const u = new URL(req.url);
