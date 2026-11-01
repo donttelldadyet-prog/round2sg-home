@@ -908,15 +908,15 @@ async function makeLinks(env, hb) {
   try { return JSON.parse(raw).links || []; } catch (e) { return []; }
 }
 async function insess(env, hb, f) {
-  const now = Date.now(), day = /^\d{4}-\d\d-\d\d$/.test(f.day || '') ? f.day : sgDay(now);
+  const now = Date.now(), day = /^\d{4}-\d\d-\d\d$/.test(f.day || '') ? f.day : sgDay(now - SHADOW_TILL * 60e3);
   const [D, links] = await Promise.all([sessDay(env, day), makeLinks(env, hb)]);
-  /* the shop's day runs until we sleep (owner, 1 Nov): in the evening, tonight's list also shows sessions starting
-     12am–11am (late sessions after midnight), so they can be seen and extended before the date changes */
-  if (day !== sgDay(now) || new Date(now + 8 * 3600e3).getUTCHours() >= 17) {
+  /* the shop night (owner, 2 Nov): the list is one night – from 7am to 7am – so tonight's after-midnight sessions are on it
+     all evening, and it only switches to the next day at 7am. Sessions before 7am of this date belong to last night
+     (shown only while still running). */
+  { const d0 = sgMs0(day + ' 00:00'); D.sessions = D.sessions.filter((S) => S.s >= d0 + SHADOW_TILL * 60e3 || S.guestEnd > now);
     const D2 = await sessDay(env, addDays(day, 1)), n0 = sgMs0(addDays(day, 1) + ' 00:00');
     for (const S of D2.sessions) if (S.s >= n0 && S.s < n0 + SHADOW_TILL * 60e3 && !D.sessions.some((x) => x.key === S.key)) D.sessions.push(S);
-    for (const it of D2.items) if (!D.items.some((x) => x.k === it.k && x.id === it.id)) D.items.push(it);
-  }
+    for (const it of D2.items) if (!D.items.some((x) => x.k === it.k && x.id === it.id)) D.items.push(it); }
   const rooms = {};
   for (const u of Object.keys(ROOMS)) rooms[GM_ROOM[u]] = { unit: +u, name: ROOMS[u][0], twin: MIRROR[u] ? GM_ROOM[MIRROR[u]] : null, sessions: [] };
   for (const S of D.sessions) {
@@ -965,7 +965,7 @@ async function extRevert(s2, list) {
   return probs;
 }
 async function extend(env, hb, f) {
-  const now = Date.now(), test = !!f.test, day = /^\d{4}-\d\d-\d\d$/.test(f.day || '') ? f.day : sgDay(now), today = day === sgDay(now);
+  const now = Date.now(), test = !!f.test, day = /^\d{4}-\d\d-\d\d$/.test(f.day || '') ? f.day : sgDay(now - SHADOW_TILL * 60e3), today = day === sgDay(now - SHADOW_TILL * 60e3);
   const h = +f.hours, ack = f.ack === 'yes';
   if (![1, 2, 3].includes(h)) return { error: 'Pick +1, +2 or +3 hours.' };
   /* the tab's Test button: just the banner, on the TV staff picked (use an empty room) – nothing else changes */
@@ -1058,13 +1058,13 @@ async function autoRun(env, why) {
 }
 async function autoRun2(env, hb, mode, why) {
   const now = Date.now(), sg = new Date(now + 8 * 3600e3), hm = sg.getUTCHours() * 60 + sg.getUTCMinutes(), today = sgDay(now);
-  const days = hm < 6 * 60 ? [addDays(today, -1), today] : [today];   /* after midnight: last night's sessions too */
+  /* the shop night (owner, 2 Nov): tonight = this date from 7am + tomorrow's sessions before 7am; switches at 7am */
+  const N = sgDay(now - SHADOW_TILL * 60e3), days = [N];
   const sess = [];
-  for (const d of days) for (const S of (await sessDay(env, d)).sessions) if (!S.sys && !S.orphanExt && ROOMS[S.unit] && !sess.some((x) => x.key === S.key)) sess.push(S);
-  /* and tonight's sessions that start after midnight (before 11am tomorrow = still tonight) – time check 2 Nov */
-  { const tm = addDays(days[days.length - 1], 1), m0 = sgMs0(tm + ' 00:00');
-    for (const S of (await sessDay(env, tm)).sessions) if (S.s >= m0 && S.s < m0 + SHADOW_TILL * 60e3 && !S.sys && !S.orphanExt && ROOMS[S.unit] && !sess.some((x) => x.key === S.key)) sess.push(S);
-    days.push(tm); }
+  for (const S of (await sessDay(env, N)).sessions) if (!S.sys && !S.orphanExt && ROOMS[S.unit] && !sess.some((x) => x.key === S.key)) sess.push(S);
+  const tm = addDays(N, 1), m0 = sgMs0(tm + ' 00:00'), allTm = new Set();
+  for (const S of (await sessDay(env, tm)).sessions) { allTm.add(S.key); if (S.s >= m0 && S.s < m0 + SHADOW_TILL * 60e3 && !S.sys && !S.orphanExt && ROOMS[S.unit] && !sess.some((x) => x.key === S.key)) sess.push(S); }
+  days.push(tm);
   const off = new Set(mode.autoOff || []), rows = await hb.autoAll(), q = await hb.qList(), log = { t: now, why, made: 0, moved: 0, cancelled: 0, adopted: 0, problems: [] };
   const own = new Set(rows.filter((r) => r.code).map((r) => r.code)), pending = (r) => !r.sent || (r.code && r.at > now);
   const call = async (body) => { const t = await gmFwd(env, Object.assign({ staff: env.GM_STAFF }, body)); let j = null; try { j = JSON.parse(t); } catch (e) {} if (!j || j.error) throw new Error((j && j.error) || 'no answer'); return j; };
@@ -1090,7 +1090,7 @@ async function autoRun2(env, hb, mode, why) {
     }
   }
   /* sessions that are gone (cancelled / deleted) – only for the days just read */
-  const keys = [...new Set(rows.filter((r) => days.includes(r.day) && pending(r) && r.gend > now && !sess.some((S) => S.key === r.key)).map((r) => r.key))];
+  const keys = [...new Set(rows.filter((r) => days.includes(r.day) && pending(r) && r.gend > now && !sess.some((S) => S.key === r.key) && !(r.day === tm && allTm.has(r.key))).map((r) => r.key))];   /* tomorrow's daytime sessions aren't "gone", just not tonight */
   if (keys.length > 4) log.problems.push(keys.length + ' sessions vanished at once – nothing cancelled, check SimplyBook');
   else for (const k of keys) { await hb.autoDel(k); log.cancelled++; }
   if (log.made || log.moved || log.cancelled) { await hb.gmDrop('__LIST__'); await gmList(env, hb).catch(() => null); }
@@ -1103,9 +1103,9 @@ async function autoApi(env, hb, f) {
   if (f.set === 'on' || f.set === 'off') { mode.autoEnd = f.set === 'on'; mode.autoBy = String(f.by || '').slice(0, 30); mode.autoT = Date.now(); await hb.setMode(mode); if (mode.autoEnd) await autoRun(env, 'switched on'); else await hb.autoClear(); }
   if (f.key && (f.sess === 'on' || f.sess === 'off')) { const s2 = new Set(mode.autoOff || []); if (f.sess === 'off') s2.add(String(f.key)); else s2.delete(String(f.key)); mode.autoOff = [...s2].slice(-200); await hb.setMode(mode); if (f.sess === 'off') await hb.autoDel(String(f.key)); if (mode.autoEnd && f.sess === 'on') await autoRun(env, 'session on'); }
   if (f.run) await autoRun(env, 'run now');
-  const now = Date.now(), today = sgDay(now), hm = (now + 8 * 3600e3) % 86400e3 / 60e3, days = hm < 360 ? [addDays(today, -1), today] : [today], m2 = await hb.getMode();
+  const now = Date.now(), N = sgDay(now - SHADOW_TILL * 60e3), days = [N], m2 = await hb.getMode();   /* the shop night (7am to 7am) */
   const recs = await hb.autoAll(), off = new Set(m2.autoOff || []), list = [];
-  const tm = addDays(days[days.length - 1], 1), m0 = sgMs0(tm + ' 00:00'); days.push(tm);   /* tonight's after-midnight sessions too */
+  const tm = addDays(N, 1), m0 = sgMs0(tm + ' 00:00'); days.push(tm);   /* tonight's after-midnight sessions too */
   for (const d of days) for (const S of (await sessDay(env, d)).sessions) {
     if (S.sys || S.orphanExt || !ROOMS[S.unit] || list.some((x) => x.key === S.key)) continue;
     if (d === tm && !(S.s >= m0 && S.s < m0 + SHADOW_TILL * 60e3)) continue;
@@ -1246,7 +1246,7 @@ async function latelist(env, hb) {
     for (;;) { const nx = its.find((x) => x.ext && x.unit === it.unit && Math.abs(x.s - end) <= 5 * 60e3); if (!nx) break; end = nx.e; nExt++; }
     const guestEnd = end - BUF * 60e3, sgH = new Date(it.s + 8 * 3600e3).getUTCHours();
     if (guestEnd <= now) continue;
-    if (!(/late till/i.test(it.txt) || sgH < 11 || sgDay(guestEnd - 1) !== sgDay(it.s))) continue;
+    if (!(/late till/i.test(it.txt) || sgH * 60 < SHADOW_TILL || sgDay(guestEnd - 1) !== sgDay(it.s))) continue;
     const pm = it.txt.match(/(\d+)\s*(?:pax|ppl|pp)\b/i);
     out.push({ id: it.id, unit: it.unit, room: ROOMS[it.unit][0], text: it.txt.slice(0, 80), name: it.txt.split(' · ')[0].replace(/\s*\d+\s*(?:pax|ppl|pp)\b.*$/i, '').trim().slice(0, 40), pax: pm ? +pm[1] : 0,
       s: it.s, guestEnd, day: sgDay(it.s), night: sgDay(it.s - SHADOW_TILL * 60e3), ext: nExt, live: it.s <= now });
@@ -1302,7 +1302,9 @@ async function latecancel(env, hb, f) {
    (moved, extended, deleted → marker follows). Only notes starting "↓ AFTER 12AM" / "↓ TILL" are ever touched.
    Also (owner, 1 Nov): a session that starts before midnight and runs past it (extended, late note) gets
    "↓ TILL 1:15AM · Amanda" there, since SimplyBook's bar stops at 12am. */
-const SHADOW_RE = /^↓ (AFTER 12AM|TILL \d)/, SHADOW_TILL = 11 * 60;   /* sessions starting 12am–11am belong to the night before */
+/* THE SHOP NIGHT (owner, 2 Nov): a session starting before 7am belongs to the night before, and every screen switches to
+   the new day at 7am (staff wake ~10am and want today's list on the way in). One constant for every module. */
+const SHADOW_RE = /^↓ (AFTER 12AM|TILL \d)/, SHADOW_TILL = 7 * 60;
 async function shadowSync(env, nights) {
   const s2 = await sb2(env), log = { made: 0, gone: 0, kept: 0, nights: nights.length };
   for (const N of nights) {
@@ -1860,9 +1862,10 @@ async function soonSessions(env, days) {
 async function soonSample(env, k) { const now = Date.now(), S = (await soonSessions(env, 7)).find((x) => x.s > now && (!k || x.k === k)); return S ? soonMsg(S, S.s - 60 * 60e3, await soonPax(env, S)) : null; }
 async function soonRun(env) {
   if (!env.VAPID_JWK) return null;
-  /* lean (owner, 1 Nov): cron every 10 min, but SimplyBook is only asked 9:45am–2am Singapore time */
+  /* lean (owner, 1 Nov): cron every 10 min, but SimplyBook isn't asked between 7am (the shop night ends) and 9:45am –
+     until 7am late guests (up to a 6:45am arrival) still get their 1-hour reminder (owner, 2 Nov) */
   const now = Date.now(), sg = new Date(now + 8 * 3600e3), hm = sg.getUTCHours() * 60 + sg.getUTCMinutes();
-  if (hm < 9 * 60 + 45 && hm >= 2 * 60) return { asleep: true };
+  if (hm >= SHADOW_TILL && hm < 9 * 60 + 45) return { asleep: true };
   const hb = book(env); if (!(await hb.pushList('soon')).length) return { phones: 0 };
   const sent = [], sgDay = (t) => new Date(t + 8 * 3600e3).toISOString().slice(0, 10);
   /* only the day the 50–62 min window falls on (today; tomorrow only around midnight) – one SimplyBook read each */
