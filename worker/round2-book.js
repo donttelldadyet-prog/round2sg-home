@@ -1130,8 +1130,21 @@ async function late(env, hb, f) {
   const old = f.replace ? await lateFind(env, String(f.replace), String(f.oldDay || '')) : null;
   if (f.replace && !old) return { error: 'That session isn’t in SimplyBook any more. Refresh the list.' };
   const skip = new Set(old ? old.notes.map((n) => n.id) : []);
-  const clash = items.filter((it) => (it.unit === unit || it.unit === tw) && it.s < blockEnd && it.e > s && !it.blk && !(it.k === 'n' && skip.has(it.id)))
-    .map((it) => ({ room: ROOMS[it.unit][0], what: it.k === 'b' ? 'booking' : 'note', name: String(it.name || '').slice(0, 40), from: clock12(it.s), to: clock12(it.e) }));
+  const clash = items.filter((it) => (it.unit === unit || it.unit === tw) && it.s < blockEnd && it.e > s && !(it.k === 'n' && skip.has(it.id)))
+    .map((it) => ({ room: ROOMS[it.unit][0], what: it.k === 'b' ? 'booking' : it.blk ? 'room blocked' : 'note', name: String(it.name || '').slice(0, 40), from: clock12(it.s), to: clock12(it.e) }));
+  /* the room must also be open in SimplyBook (day off, break, closed): the booking page asks SimplyBook the same thing
+     (system check 2 Nov: Kaeden had no free slots online but Late session saw nothing). Only the part inside opening
+     hours can be checked; past closing is staff's call. Not for Change (its own old note would count). */
+  if (!f.replace && !clash.some((c) => c.room === room)) {
+    const d0 = sgMs0(day + ' 00:00'), sM = (s - d0) / 60e3, eM = Math.min((blockEnd - d0) / 60e3, CLOSE);
+    if (sM >= 11 * 60 && sM < CLOSE && eM > sM) {
+      try {
+        const ph = await holidays(), dow = new Date(day + 'T00:00:00Z').getUTCDay(), dt = dow === 0 || dow === 5 || dow === 6 || ph.has(day) ? 'peak' : 'off';
+        const gaps = await gapsFor(await pub(env), day, unit, dt);
+        if (!gaps.some(([a, b]) => a <= sM && b >= eM)) clash.push({ room, what: 'SimplyBook', name: 'shows ' + room + ' closed or unavailable then (day off, break or block)', from: clock12(s), to: clock12(d0 + eM * 60e3) });
+      } catch (e) {}
+    }
+  }
   const text = name + ' ' + pax + ' pax · late till ' + clock12(guestEnd) + ' · control centre';
   /* "About 10 minutes to go" + "That's a wrap!" on the TV (toggle, default on): only for sessions starting within 24 h,
      so a session cancelled days later doesn't leave messages behind on an empty room's TV */
