@@ -887,8 +887,10 @@ function sessClash(day, S, from, to) {
     const key = x.k + x.id; if (mine.has(key) || twinChain.has(key)) continue;
     if (x.s < to && x.e > from) out.push({ room: ROOMS[x.unit][0], what: x.k === 'b' ? (x.sys ? 'twin room booking' : 'booking: ' + (x.name || 'guest')) : (x.blk ? 'room blocked: ' : 'note: ') + (x.name || '').slice(0, 40), s: x.s, e: x.e });
   }
-  const closeT = sgMs0(sgDay(S.s) + ' ' + hhmm(CLOSE));
-  if (to > closeT + 60e3) out.push({ room: ROOMS[S.unit][0], what: 'past closing time (11:15pm)', s: closeT, e: to });
+  /* closing = 11:15pm of the shop night the session belongs to (12am–11am starts count as the night before), checked on
+     the GUEST end like the booking page (a guest may end exactly at 11:15pm; the cleaning after it is fine) – time check 2 Nov */
+  const closeT = sgMs0(sgDay(S.s - SHADOW_TILL * 60e3) + ' ' + hhmm(CLOSE));
+  if (to - BUF * 60e3 > closeT + 60e3) out.push({ room: ROOMS[S.unit][0], what: 'past closing time (11:15pm)', s: closeT, e: to });
   return out;
 }
 /* the Round2 end-of-session messages for this room around a guest end time */
@@ -976,6 +978,7 @@ async function extend(env, hb, f) {
   if (!S) { const D2 = await sessDay(env, addDays(day, 1)), S2 = D2.sessions.find((x) => x.key === String(f.key || '')); if (S2) { D = D2; S = S2; } }   /* tonight's after-midnight session */
   if (!S || S.sys) return { error: 'That session isn’t in SimplyBook any more. Refresh.' };
   if (f.end && +f.end !== S.end) return { error: 'This session changed since you looked (someone already extended it?). Refresh and check.' };
+  { const nd = sgDay(S.end + h * 3600e3); if (nd !== sgDay(S.s)) { const Dx = await sessDay(env, nd); for (const it of Dx.items) if (!D.items.some((x) => x.k === it.k && x.id === it.id)) D.items.push(it); } }   /* an extension past midnight sees the next day's notes/bookings too */
   const from = S.end, to = S.end + h * 3600e3, newGuest = to - BUF * 60e3, tw = MIRROR[S.unit];
   const clash = sessClash(D, S, from, to);
   const links = today ? await makeLinks(env, hb) : [];
@@ -1058,6 +1061,10 @@ async function autoRun2(env, hb, mode, why) {
   const days = hm < 6 * 60 ? [addDays(today, -1), today] : [today];   /* after midnight: last night's sessions too */
   const sess = [];
   for (const d of days) for (const S of (await sessDay(env, d)).sessions) if (!S.sys && !S.orphanExt && ROOMS[S.unit] && !sess.some((x) => x.key === S.key)) sess.push(S);
+  /* and tonight's sessions that start after midnight (before 11am tomorrow = still tonight) – time check 2 Nov */
+  { const tm = addDays(days[days.length - 1], 1), m0 = sgMs0(tm + ' 00:00');
+    for (const S of (await sessDay(env, tm)).sessions) if (S.s >= m0 && S.s < m0 + SHADOW_TILL * 60e3 && !S.sys && !S.orphanExt && ROOMS[S.unit] && !sess.some((x) => x.key === S.key)) sess.push(S);
+    days.push(tm); }
   const off = new Set(mode.autoOff || []), rows = await hb.autoAll(), q = await hb.qList(), log = { t: now, why, made: 0, moved: 0, cancelled: 0, adopted: 0, problems: [] };
   const own = new Set(rows.filter((r) => r.code).map((r) => r.code)), pending = (r) => !r.sent || (r.code && r.at > now);
   const call = async (body) => { const t = await gmFwd(env, Object.assign({ staff: env.GM_STAFF }, body)); let j = null; try { j = JSON.parse(t); } catch (e) {} if (!j || j.error) throw new Error((j && j.error) || 'no answer'); return j; };
@@ -1098,8 +1105,10 @@ async function autoApi(env, hb, f) {
   if (f.run) await autoRun(env, 'run now');
   const now = Date.now(), today = sgDay(now), hm = (now + 8 * 3600e3) % 86400e3 / 60e3, days = hm < 360 ? [addDays(today, -1), today] : [today], m2 = await hb.getMode();
   const recs = await hb.autoAll(), off = new Set(m2.autoOff || []), list = [];
+  const tm = addDays(days[days.length - 1], 1), m0 = sgMs0(tm + ' 00:00'); days.push(tm);   /* tonight's after-midnight sessions too */
   for (const d of days) for (const S of (await sessDay(env, d)).sessions) {
     if (S.sys || S.orphanExt || !ROOMS[S.unit] || list.some((x) => x.key === S.key)) continue;
+    if (d === tm && !(S.s >= m0 && S.s < m0 + SHADOW_TILL * 60e3)) continue;
     const mine = recs.filter((x) => x.key === S.key), w = mine.find((x) => x.kind === 'wrapup'), t = mine.find((x) => x.kind === 'timeup');
     list.push({ key: S.key, room: S.room, unit: S.unit, name: String(S.name || '').slice(0, 40), k: S.k, s: S.s, guestEnd: S.guestEnd, done: S.guestEnd <= now, off: off.has(S.key),
       msgs: mine.length ? { w: !!w, t: !!t, wAt: w && w.at, tAt: t && t.at, wSent: !!w && (w.code ? w.at <= now : w.sent === 1), tSent: !!t && (t.code ? t.at <= now : t.sent === 1), wCode: w && w.code, tCode: t && t.code, own: true, synced: !!t && t.gend === S.guestEnd } : null });
@@ -1949,7 +1958,7 @@ async function ghProxy(env, req) {
 export default {
   /* every 10 minutes (Cloudflare cron trigger, every-10-minutes schedule): staff "in 1 hour" alerts */
   async scheduled(ev, env0, ctx) { const env = envFor(env0, 'live'); ctx.waitUntil(book(env).kvSet('cronLast', Date.now()).catch(() => null)); ctx.waitUntil(soonRun(env).catch(() => null)); ctx.waitUntil(autoRun(env, 'cron').catch(() => null)); ctx.waitUntil(msgOrphans(env, 'cron').catch(() => null));
-    if (new Date().getUTCMinutes() < 10 || (new Date().getUTCMinutes() >= 30 && new Date().getUTCMinutes() < 40)) { const t = sgDay(Date.now()); ctx.waitUntil(shadowSync(env, [t, addDays(t, 1)]).catch(() => null)); } },
+    if (new Date().getUTCMinutes() < 10 || (new Date().getUTCMinutes() >= 30 && new Date().getUTCMinutes() < 40)) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); ctx.waitUntil(shadowSync(env, [t, addDays(t, 1)]).catch(() => null)); } },
   async fetch(req, env0, ctx) {
     const u = new URL(req.url);
     const env = envFor(env0, 'live');   /* default for anything not tied to a hold/order: live once the live key is in */
