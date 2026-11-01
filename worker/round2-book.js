@@ -837,6 +837,7 @@ async function extend(env, hb, f) {
       const at = plan[kind].at, cur = old[kind];
       try {
         if (cur) { await call({ action: 'move', code: cur.code, start: at, room: S.room }); rec.moved.push({ code: cur.code, from: cur.at, to: at }); }
+        else if (f.msgs === 'no') continue;   /* toggle off (owner, 1 Nov): don't add new ones – existing ones still move, never left at the old end */
         else { const j = await call({ action: 'r2', room: S.room, kind, to: '', from: 'The Round2 team', title: R2_TXT[kind].title, text: R2_TXT[kind].text, ack: 'yes', at }); rec.created.push({ code: j.code || j.key || '', at, kind }); }
       } catch (e) { rec.problems.push(kind + ': ' + String(e.message || e).slice(0, 80)); }
     }
@@ -870,8 +871,11 @@ async function late(env, hb, f) {
   const clash = items.filter((it) => (it.unit === unit || it.unit === tw) && it.s < blockEnd && it.e > s && !it.blk)
     .map((it) => ({ room: ROOMS[it.unit][0], what: it.k === 'b' ? 'booking' : 'note', name: String(it.name || '').slice(0, 40), from: clock12(it.s), to: clock12(it.e) }));
   const text = name + ' ' + pax + ' pax · late till ' + clock12(guestEnd) + ' · control centre';
+  /* "About 10 minutes to go" + "That's a wrap!" on the TV (toggle, default on): only for sessions starting within 24 h,
+     so a session cancelled days later doesn't leave messages behind on an empty room's TV */
+  const wantMsgs = f.msgs !== 'no', soonEnough = s - Date.now() < 24 * 3600e3 && guestEnd > Date.now() + 10 * 60e3;
   const plan = { room, twin: tw ? ROOMS[tw][0] : null, name, pax, arrives: clock12(s), guestEnd: clock12(guestEnd), blockEnd: clock12(blockEnd), hours: Math.round(hrs * 100) / 100,
-    nextDay: sgDay(guestEnd) !== day, text, clash };
+    nextDay: sgDay(guestEnd) !== day, text, clash, msgs: wantMsgs ? (soonEnough ? { wrapup: clock12(guestEnd - 10 * 60e3), timeup: clock12(guestEnd) } : 'later') : 'off' };
   if (f.dry) return { ok: true, dry: true, plan };
   if (clash.length && f.force !== 'yes') return { ok: false, clash: true, plan };
   const s2 = await sb2(env), done = [];
@@ -883,7 +887,19 @@ async function late(env, hb, f) {
     await extRevert(s2, done);
     return { error: 'SimplyBook didn’t take the note, nothing was changed: ' + String(e.message || e).slice(0, 120) };
   }
-  return { ok: true, plan, notes: done };
+  const msgs = [];
+  if (wantMsgs && soonEnough) {
+    for (const kind of ['wrapup', 'timeup']) {
+      const at = kind === 'wrapup' ? guestEnd - 10 * 60e3 : guestEnd;
+      try {
+        const t = await gmFwd(env, { staff: env.GM_STAFF, action: 'r2', room: GM_ROOM[unit], kind, to: '', from: 'The Round2 team', title: R2_TXT[kind].title, text: R2_TXT[kind].text, ack: 'yes', at });
+        let j = null; try { j = JSON.parse(t); } catch (e) {}
+        msgs.push(j && !j.error ? { kind, at, ok: true } : { kind, at, problem: (j && j.error) || 'Make didn’t answer' });
+      } catch (e) { msgs.push({ kind, at, problem: String(e.message || e).slice(0, 80) }); }
+    }
+    await hb.gmDrop('__LIST__'); await gmList(env, hb).catch(() => null);
+  }
+  return { ok: true, plan, notes: done, msgs };
 }
 /* the "+N CREDITS ADDED" banner on the room's TV (kind 'extend': coin-into-slot animation). Last in line (owner, 31 Oct):
    while another message is on the TV and not OK'd yet (a guest's message, or a Round2 one), the banner waits and goes up
