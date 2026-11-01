@@ -197,6 +197,119 @@ export class HoldBook extends DurableObject {
     if (n >= max) return false;
     this.sql.exec(`INSERT INTO gmrate VALUES (?, ?)`, who, now); return true;
   }
+  /* ===== Guest + Round2 TV messages, kept HERE (owner, 1 Nov: off Make) =====
+     Same actions, checks and answers as Make's old [BACKEND] GUEST MESSAGE LINKS (scenario 8249444, data store 237603),
+     so every page works unchanged: create / get / submit (guest) / list / cancel / move / now / push / r2.
+     Records keep Make's shape ({key, data:{room,start,end,status,kind,title,text,from,to,ack,at,until,id,onTv,…}}) and
+     codes (guest 8 chars, R2xxxxxx) so cue.round2.sg links keep working. "push" writes the record to the room's TV in
+     Firebase. Switch: mode.msgLocal (true = here, false = still Make) – msgRoute picks. */
+  msgInit() { if (this.msgReady) return; this.msgReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS msgs (key TEXT PRIMARY KEY, data TEXT, start INTEGER, endt INTEGER)`); }
+  msgCount() { this.msgInit(); return this.rows(`SELECT COUNT(*) AS n FROM msgs`)[0].n; }
+  msgGet(key) { this.msgInit(); const r = this.rows(`SELECT data FROM msgs WHERE key = ?`, key)[0]; return r ? JSON.parse(r.data) : null; }
+  msgPut(key, d) { this.msgInit(); this.sql.exec(`INSERT OR REPLACE INTO msgs VALUES (?, ?, ?, ?)`, key, JSON.stringify(d), +d.start || 0, +d.end || 0); }
+  msgImport(list) {   /* copy from Make: keeps whichever copy changed last */
+    this.msgInit(); let n = 0;
+    for (const x of list || []) { if (!x || !x.key || !x.data) continue; const cur = this.msgGet(x.key); if (cur && +cur.t > +x.data.t) continue; this.msgPut(x.key, x.data); n++; }
+    return n;
+  }
+  async msgRoute(f) {
+    if (this.getMode().msgLocal) return JSON.stringify(await this.msgAct(f));
+    const r = await fetch(this.env.GM_HOOK_URL || GM_HOOK, { method: 'POST', body: new URLSearchParams(f) }).catch(() => null);
+    return r ? r.text() : '{"error":"Make didn’t answer"}';
+  }
+  async msgAct(f) {
+    this.msgInit();
+    const env = this.env, now = Date.now(), act = String(f.action || '').trim().toLowerCase(), staffOk = !!env.GM_STAFF && f.staff === env.GM_STAFF;
+    const room = String(f.room || '').trim().toLowerCase().replace('maximillion', 'max'), roomOk = ['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max'].includes(room);
+    const start = +f.start || 0, at = +f.at || 0, code = String(f.code || '').trim().toUpperCase();
+    const one = (x) => String(x == null ? '' : x).replace(/[\r\n]+/g, ' ').trim();
+    const stamp = () => { const d = new Date(now + 8 * 3600e3).toISOString(); return d.slice(5, 7) + d.slice(8, 10) + d.slice(11, 13) + d.slice(14, 16) + d.slice(17, 19); };
+    const hex = (n) => [...crypto.getRandomValues(new Uint8Array(n))].map((b) => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+    const life = (kind) => kind === 'timeup' ? 900e3 : kind === 'wrapup' ? 240e3 : 10800e3;
+    const tv = env.TV_KEY ? FB_BASE + env.TV_KEY + '/' : null;
+    const offTv = async (d) => {   /* it was sent: take it off the TV if it's still the one showing */
+      if (!tv || d.onTv !== 'yes') return;
+      const c = await fetch(tv + d.room + '/msg.json').then((x) => x.json()).catch(() => null);
+      if (c && c.id === d.id) await fetch(tv + d.room + '/msg.json', { method: 'DELETE' }).catch(() => null);
+    };
+    if (act === 'create') {
+      const err = !staffOk ? 'Wrong staff code.' : !roomOk ? 'Pick a room.' : start <= 0 ? 'Set the booking start.' : start + 10800e3 < now ? 'That booking has already finished.' : 'ok';
+      if (err !== 'ok') return { error: err };
+      let k; do { k = hex(4); } while (this.msgGet(k));
+      this.msgPut(k, { t: now, id: 'g' + k.toLowerCase(), ack: true, end: start + 10800e3, kind: 'birthday', onTv: 'no', room, label: one(f.label).slice(0, 60), start, until: start + 10800e3, status: 'open', created: now });
+      return { ok: true, code: k };
+    }
+    if (act === 'get' || act === 'submit') {
+      const d = this.msgGet(code || 'NONE') || {};
+      const guestErr = !d.room ? 'This link isn’t valid. Check you copied all of it, or message us.' : d.status === 'cancelled' ? 'This link was cancelled. Please message us.' : +d.end < now ? 'This booking has finished, so the link has closed.' : 'ok';
+      if (act === 'get') return guestErr === 'ok' ? { ok: true, now, link: d } : { error: guestErr };
+      const locked = d.status === 'approved' && now >= (+d.at || 0);
+      const kind = String(f.kind || ''), title = one(f.title), text = one(f.text), to = one(f.to), from = one(f.from);
+      const err = guestErr !== 'ok' ? guestErr : locked ? 'Your message is already on the TV. Message us if you need a change.'
+        : !GM_KINDS.includes(kind) ? 'Pick an occasion.' : !title ? 'Add a headline.' : title.length > 80 ? 'Keep the headline under 80 characters.' : text.length > 600 ? 'Keep the message under 600 characters.'
+        : to.length > 40 || from.length > 40 ? 'Keep the names short.' : at < +d.start || at > +d.start + 3600e3 ? 'Pick a time within the first hour of your booking.' : 'ok';
+      if (err !== 'ok') return { error: err };
+      this.msgPut(code, Object.assign(d, { t: now, at, id: 'g' + code.toLowerCase() + '-' + stamp(), to, from, kind, onTv: 'no', text, title, status: 'approved', approved: now, submitted: now }));
+      this.qSet(code, d.room, at, +d.end || at + 10800e3);
+      return { ok: true, at };
+    }
+    if (act === 'r2') {
+      const kind = String(f.kind || ''), title = one(f.title), text = one(f.text);
+      const err = !staffOk ? 'Wrong staff code.' : !roomOk ? 'Pick a room.' : !['birthday', 'anniversary', 'celebrate', 'note', 'volume', 'wrapup', 'timeup'].includes(kind) ? 'Pick an occasion.'
+        : !title ? 'Add a headline.' : title.length > 80 ? 'Keep the headline under 80 characters.' : text.length > 600 ? 'Keep the message under 600 characters.' : at < now - 120e3 ? 'That time has already passed.' : 'ok';
+      if (err !== 'ok') return { error: err };
+      let k; do { k = 'R2' + hex(3); } while (this.msgGet(k));
+      const end = at + life(kind);
+      this.msgPut(k, { t: now, at, id: 'q' + k.toLowerCase() + '-' + stamp(), to: one(f.to), ack: f.ack !== 'no', end, from: one(f.from), kind, onTv: 'no', room, text, label: 'Round2', start: at, title, until: end, status: 'approved', created: now, approved: now, submitted: now });
+      this.qSet(k, room, at, end);
+      return { ok: true, code: k };
+    }
+    if (!staffOk) return { error: 'Wrong staff code.' };
+    if (act === 'list') {
+      this.msgInit();
+      const links = this.rows(`SELECT key, data FROM msgs WHERE endt > ? ORDER BY start`, now - 172800e3).map((r) => ({ key: r.key, data: JSON.parse(r.data) }));
+      return { ok: true, now, links };
+    }
+    if (!['cancel', 'move', 'now', 'push'].includes(act)) return { error: 'Unknown action.' };
+    const d = this.msgGet(code || 'NONE');
+    const err = !d || !d.room ? 'No such link.' : act === 'cancel' ? (d.status === 'cancelled' ? 'Already cancelled.' : 'ok') : d.status === 'cancelled' ? 'That link was cancelled.'
+      : act === 'move' ? (start <= 0 ? 'Pick the new start time.' : start + 10800e3 < now ? 'That time has already passed.' : !roomOk ? 'Pick a room.' : 'ok')
+      : d.status !== 'approved' ? 'The guest hasn’t sent a message yet.' : +d.end < now ? 'That booking has finished.' : 'ok';
+    if (err !== 'ok') return { error: err };
+    if (act === 'cancel') {
+      await offTv(d); this.msgPut(code, Object.assign(d, { t: now, status: 'cancelled' })); this.qDel(code);
+      return { ok: true };
+    }
+    if (act === 'move') {
+      const newAt = (+d.at || 0) > 0 ? +d.at + start - +d.start : 0, L = life(d.kind);
+      await offTv(d);
+      this.msgPut(code, Object.assign(d, { t: now, at: newAt, id: (/^R2/.test(code) ? 'q' : 'g') + code.toLowerCase() + '-' + stamp(), end: start + L, onTv: 'no', room, start, until: start + L }));
+      if (d.status === 'approved' && newAt) this.qSet(code, room, newAt, start + L); else this.qDel(code);
+      return { ok: true };
+    }
+    if (act === 'now') {
+      this.msgPut(code, Object.assign(d, { t: now, at: now, id: (/^R2/.test(code) ? 'q' : 'g') + code.toLowerCase() + '-' + stamp(), onTv: 'no' }));
+      return this.msgPush(code);
+    }
+    return this.msgPush(code);
+  }
+  /* send one message to its room's TV. A message already on the TV with an earlier time goes first (answer "after":
+     the queue tries again then); one with a later time is put back in the queue (it goes again at its own time). */
+  async msgPush(code) {
+    const env = this.env, now = Date.now(), d = this.msgGet(code); if (!d || !env.TV_KEY) return { error: 'No such link.' };
+    const url = FB_BASE + env.TV_KEY + '/' + d.room + '/msg.json';
+    const c = await fetch(url).then((x) => x.json()).catch(() => null);
+    const wait = c && +c.until > now && c.id !== d.id && +c.at <= +d.at ? Math.max(+c.at + 60e3, +d.at - 60e3) - now : 0;
+    if (wait > 0) return { ok: true, after: +c.at, retry: now + wait };
+    const ok = await fetch(url, { method: 'PUT', body: JSON.stringify(d) }).then((x) => x.ok).catch(() => false);
+    if (!ok) return { error: 'The TV database didn’t take it.' };
+    this.msgPut(code, Object.assign(d, { onTv: 'yes', pushed: now }));
+    if (c && +c.at > now && c.id !== d.id && /^[gq]/.test(String(c.id || ''))) {   /* a later message was waiting on the TV: back in the queue */
+      const bk = String(c.id).slice(1, 9).toUpperCase(), b = this.msgGet(bk);   /* ids: g<code>-… / q<r2code>-… */
+      if (b) this.msgPut(bk, Object.assign(b, { onTv: 'no' }));
+    }
+    return { ok: true };
+  }
   /* staff phones signed up for push alerts (/push/*) */
   pushInit() { if (this.pushReady) return; this.pushReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS push (id TEXT PRIMARY KEY, sub TEXT, kinds TEXT, label TEXT, t INTEGER, last TEXT)`); }
   pushSet(id, sub, kinds, label) { this.pushInit(); this.sql.exec(`INSERT OR REPLACE INTO push VALUES (?, ?, ?, ?, ?, NULL)`, id, sub, kinds, label, Date.now()); }
@@ -357,7 +470,7 @@ export class HoldBook extends DurableObject {
     /* safety: SimplyBook hiccups shouldn't wipe the day's messages */
     if (acts.filter((x) => x.a === 'cancel').length > 3) { const e = { a: 'held', why: 'more than 3 cancels at once – nothing cancelled, check by hand' }; if (!dry) this.fLog(e); return { links: L.length, acts, held: true }; }
     if (dry) return { links: L.length, acts, seen };
-    const call = (body) => fetch(env.GM_HOOK_URL || GM_HOOK, { method: 'POST', body: new URLSearchParams(body) }).then((r) => r.text()).catch((e) => 'error ' + e);
+    const call = (body) => this.msgRoute(body).catch((e) => 'error ' + e);
     let changed = false;
     for (const x of acts) {
       if (x.a === 'move' || x.a === 'rebooked') {
@@ -516,7 +629,7 @@ export class HoldBook extends DurableObject {
   async qRun() {
     this.qInit(); const now = Date.now(), env = this.env;
     if (!env.GM_STAFF) return;
-    const call = (body) => fetch(env.GM_HOOK_URL || GM_HOOK, { method: 'POST', body: new URLSearchParams(body) }).then((r) => r.text()).catch(() => '');
+    const call = (body) => this.msgRoute(body).catch(() => '');
     /* once a day: rebuild the queue from Make (anything queued another way still goes out) */
     const syn = +((this.rows(`SELECT v FROM kv WHERE k = 'synced'`)[0] || {}).v || 0);
     const lsy = this.rows(`SELECT 1 FROM kv WHERE k = 'lsynced'`).length;   /* first run of "follows the booking": learn every open link once */
@@ -548,6 +661,8 @@ export class HoldBook extends DurableObject {
         }
       }
       const t = await call({ action: 'push', staff: env.GM_STAFF, code: m.code });
+      let pj = null; try { pj = JSON.parse(t); } catch (e) {}
+      if (pj && pj.retry) { this.sql.exec(`UPDATE gmq SET at = ? WHERE code = ?`, pj.retry + 60e3, m.code); continue; }   /* an earlier message is still on the TV: go right after it */
       if (/^R2/.test(m.code)) this.nudgeAdd(m.room, m.at);   /* a 10-minute reminder nobody OK'd gets a 5-minute one */
       this.sql.exec(`UPDATE gmq SET pushed = 1 WHERE code = ?`, m.code);
       /* the TV keeps one message: a later one for the same room may have been put back in the queue by this push,
@@ -685,8 +800,7 @@ async function paidStat(q, d) {
 async function tvMessage(env, d, q, ref, bid) {
   if (!env.GM_STAFF) return { problem: 'no staff code' };
   const call = async (body) => {
-    const r = await fetch(env.GM_HOOK_URL || GM_HOOK, { method: 'POST', body: new URLSearchParams(body) });
-    const t = await r.text(); let j; try { j = JSON.parse(t); } catch (e) { throw new Error('Make: ' + t.slice(0, 60)); }
+    const t = await gmFwd(env, body); let j; try { j = JSON.parse(t); } catch (e) { throw new Error('Messages: ' + String(t).slice(0, 60)); }
     if (j.error) throw new Error(j.error); return j;
   };
   const start = Date.UTC(+q.date.slice(0, 4), +q.date.slice(5, 7) - 1, +q.date.slice(8, 10), +q.time.slice(0, 2), +q.time.slice(3, 5)) - 8 * 3600e3;
@@ -1054,10 +1168,7 @@ async function extUndo(env, hb, f) {
    the right staff code; it caches each link for a minute (page reloads cost nothing), caps guest edits, and limits how
    often one visitor can call. Saves Make operations (10,000 a month shared) – docs/guest-messages.md "Front door". */
 const GM_GUEST_EDITS = 8, GM_STAFF_ACTIONS = ['create', 'list', 'move', 'now', 'cancel', 'r2', 'push'];
-async function gmFwd(env, fields) {
-  const r = await fetch(env.GM_HOOK_URL || GM_HOOK, { method: 'POST', body: new URLSearchParams(fields) });
-  return r.text();
-}
+async function gmFwd(env, fields) { return book(env).msgRoute(fields); }   /* the engine's own store, or Make while mode.msgLocal is off */
 const gmJ = (o) => J(o);
 /* Make's full list (staff code), kept for 15 min and used to rebuild the timer's queue */
 async function gmList(env, hb) {
@@ -1093,6 +1204,12 @@ async function gm(env, req) {
   if (act === 'insess' || act === 'extend' || act === 'extundo' || act === 'late') {   /* staff: "In session" tab */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await (act === 'insess' ? insess : act === 'extend' ? extend : act === 'late' ? late : extUndo)(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
+  }
+  if (act === 'msgimport' || act === 'msgmode') {   /* staff: move the message store off Make (copy records in; switch where messages live) */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    if (act === 'msgimport') { let L = []; try { L = JSON.parse(f.records || '[]'); } catch (e) { return gmJ({ error: 'records must be JSON' }); } return gmJ({ ok: true, imported: await hb.msgImport(L) }); }
+    const m = await hb.getMode(); if (f.set === 'on' || f.set === 'off') { m.msgLocal = f.set === 'on'; m.msgT = Date.now(); await hb.setMode(m); await hb.gmDrop('__LIST__'); if (m.msgLocal) await gmList(env, hb).catch(() => null); }
+    return gmJ({ ok: true, local: !!m.msgLocal, count: await hb.msgCount() });
   }
   if (act === 'follow') {   /* staff: run the "messages follow their booking" check now (dry=1: only show what it would do) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
@@ -1705,7 +1822,7 @@ export default {
         let tv = h.data.done.tv;
         if (!tv || !tv.code) {
           const q = h.data.q, start = Date.UTC(+q.date.slice(0, 4), +q.date.slice(5, 7) - 1, +q.date.slice(8, 10), +q.time.slice(0, 2), +q.time.slice(3, 5)) - 8 * 3600e3;
-          const r = await fetch(env.GM_HOOK_URL || GM_HOOK, { method: 'POST', body: new URLSearchParams({ action: 'create', staff: env.GM_STAFF, room: GM_ROOM[q.unit], start, label: 'Online · ' + h.data.name.slice(0, 30) }) }).then((x) => x.json()).catch(() => ({}));
+          const r = await gmFwd(env, { action: 'create', staff: env.GM_STAFF, room: GM_ROOM[q.unit], start, label: 'Online · ' + h.data.name.slice(0, 30) }).then((x) => JSON.parse(x)).catch(() => ({}));
           if (!r.code) return H(PAGE('<h1>Couldn’t open the message page</h1><p>Please try again in a minute, or WhatsApp us on +65 9162 5767.</p>'));
           tv = { code: r.code }; await hb.setTv(ref, tv); await hb.gmDrop('__LIST__'); await hb.lSet(r.code, GM_ROOM[q.unit], start, start + 3 * 3600e3, h.data.done.bookingId).catch(() => null);
         }
