@@ -414,11 +414,27 @@ export class HoldBook extends DurableObject {
   lInit() {
     this.qInit(); if (this.lReady) return; this.lReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS gml (code TEXT PRIMARY KEY, room TEXT, start INTEGER, endt INTEGER, bid TEXT, cid TEXT)`);
     try { this.sql.exec(`ALTER TABLE gml ADD COLUMN cr INTEGER`); } catch (e) {}   /* when the link was made */
+    /* paired at creation (owner, 2 Nov): nid = the SimplyBook NOTE it belongs to (WhatsApp / late-session guests), pin = 1 →
+       never guessed from old cancelled bookings, miss = when its note was first found gone (cancelled on the 2nd look) */
+    for (const c of ['nid TEXT', 'pin INTEGER', 'miss INTEGER']) { try { this.sql.exec(`ALTER TABLE gml ADD COLUMN ` + c); } catch (e) {} }
     if (!this.rows(`SELECT 1 FROM kv WHERE k = 'fv2'`).length) { this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('fv2', '1')`); this.fSoon(); }
   }
   /* run the follow check about a minute from now (new link learned) */
   fSoon() { this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('followed', ?)`, String(Date.now() - FOLLOW_MS + 60e3)); }
-  lSet(code, room, start, endt, bid) { this.lInit(); if (!this.rows(`SELECT 1 FROM gml WHERE code = ?`, code).length) this.sql.exec(`INSERT INTO gml (code, room, start, endt, bid, cid, cr) VALUES (?, ?, ?, ?, ?, NULL, ?)`, code, room || '', +start, +endt, bid ? String(bid) : null, Date.now()); this.arm(); }
+  lSet(code, room, start, endt, bid) { this.lInit(); if (!this.rows(`SELECT 1 FROM gml WHERE code = ?`, code).length) this.sql.exec(`INSERT INTO gml (code, room, start, endt, bid, cid, cr, pin) VALUES (?, ?, ?, ?, ?, NULL, ?, 1)`, code, room || '', +start, +endt, bid ? String(bid) : null, Date.now()); this.arm(); }
+  /* Make a guest link: tie it to the booking or note staff picked (or nothing yet: it waits for one at that room + time) */
+  lPair(code, room, start, endt, p) {
+    this.lInit(); this.sql.exec(`INSERT OR REPLACE INTO gml (code, room, start, endt, bid, cid, cr, nid, pin, miss) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, NULL)`,
+      code, room || '', +start, +endt, p.bid || null, p.cid || null, Date.now(), p.nid || null); this.arm();
+  }
+  /* our own systems swapped a note for a new one (Late session › Change): its links go with it */
+  lRenote(oldId, newId) { this.lInit(); this.sql.exec(`UPDATE gml SET nid = ?, miss = NULL WHERE nid = ?`, String(newId), String(oldId)); }
+  /* every 10 min (cron): notes don't tell the engine when they change, so links tied to a note (or waiting) get looked at */
+  async fNotes() {
+    this.lInit(); const now = Date.now();
+    if (!this.rows(`SELECT 1 FROM gml WHERE endt > ? AND start > ? AND (nid IS NOT NULL OR (bid IS NULL AND pin = 1))`, now, now - 30 * 60e3).length) return { links: 0 };
+    return this.follow(false).catch((e) => this.fLog({ a: 'error', why: String(e.message || e).slice(0, 80) }));
+  }
   lSync(links) {
     this.lInit(); const now = Date.now(), keep = new Set();
     for (const x of links || []) {
@@ -427,7 +443,7 @@ export class HoldBook extends DurableObject {
       keep.add(x.key);
       const o = this.rows(`SELECT * FROM gml WHERE code = ?`, x.key)[0];
       if (!o) { this.sql.exec(`INSERT INTO gml (code, room, start, endt, bid, cid, cr) VALUES (?, ?, ?, ?, NULL, NULL, ?)`, x.key, d.room || '', +d.start, +d.end, +d.created || Date.now()); this.fSoon(); }
-      else if (o.room !== (d.room || '') || +o.start !== +d.start) this.sql.exec(`UPDATE gml SET room = ?, start = ?, endt = ?, bid = NULL, cid = NULL WHERE code = ?`, d.room || '', +d.start, +d.end, x.key);
+      else if (o.room !== (d.room || '') || +o.start !== +d.start) this.sql.exec(`UPDATE gml SET room = ?, start = ?, endt = ?, bid = NULL, cid = NULL, nid = NULL, miss = NULL WHERE code = ?`, d.room || '', +d.start, +d.end, x.key);
     }
     for (const r of this.rows(`SELECT code FROM gml`)) if (!keep.has(r.code)) this.sql.exec(`DELETE FROM gml WHERE code = ?`, r.code);
   }
@@ -453,10 +469,50 @@ export class HoldBook extends DurableObject {
     const live = await get('non_cancelled');
     const seen = { n: live.length, fields: raw0 ? Object.keys(raw0).slice(0, 40) : [], sample: raw0 ? { start_date: raw0.start_date, unit_id: raw0.unit_id } : null };
     if (!live.length) return { links: L.length, seen, error: 'SimplyBook gave no bookings – nothing changed' };
+    /* SimplyBook notes (paired by their id, which stays the same when a note is edited, stretched or dragged) */
+    let s2 = null; const nCache = new Map();
+    const nMap = (n) => ({ id: String(n.id), unit: +n.provider_id, s: sgMs(n.start_date_time), e: sgMs(n.end_date_time), tb: !!n.time_blocked, txt: String(n.note || '') });
+    const notesFor = async (d) => {
+      if (!nCache.has(d)) { s2 = s2 || await sb2(env); const nt = await s2('GET', '/admin/calendar-notes?filter[date_from]=' + addDays(d, -1) + '&filter[date_to]=' + addDays(d, 1) + '&on_page=200'); nCache.set(d, ((nt && nt.data) || []).map(nMap)); }
+      return nCache.get(d);
+    };
+    const noteById = async (id, d) => {   /* the note, null = gone, 'unknown' = couldn't tell (leave the link alone) */
+      const n = (await notesFor(d)).find((x) => x.id === id); if (n) return n;
+      try { const j = await s2('GET', '/admin/calendar-notes/' + id); const x = j && (j.data && j.data.id ? j.data : j); if (x && x.id) return nMap(x); }
+      catch (e) { if (/ 404:/.test(String(e.message || e))) return null; }
+      for (let p = 1; p <= 6; p++) {   /* moved to another date: look further ahead */
+        const nt = await s2('GET', '/admin/calendar-notes?filter[date_from]=' + addDays(day, -1) + '&filter[date_to]=' + addDays(day, 120) + '&on_page=200&page=' + p);
+        const P = (nt && nt.data) || [], f = P.find((x) => String(x.id) === id); if (f) return nMap(f);
+        if (P.length < 200) return null;
+      }
+      return 'unknown';
+    };
+    const slotNotes = async (l) => (await notesFor(sgDay(+l.start))).filter((n) => n.tb && n.unit === UNIT[l.room] && n.s === +l.start && !SYS_RE.test(n.txt) && !EXT_RE.test(n.txt) && n.e - n.s <= 12 * 3600e3);
     let gone = null; const acts = [], bound = new Set(L.map((l) => l.bid).filter(Boolean));
     for (const l of L) {
+      if (l.nid) {   /* tied to a note: follow it; deleted → cancelled, but only when it's still gone on a second look */
+        let n; try { n = await noteById(l.nid, sgDay(+l.start)); } catch (e) { n = 'unknown'; }
+        if (n === 'unknown') { acts.push({ code: l.code, a: 'lost', nid: l.nid }); continue; }
+        if (!n) {
+          if (!l.miss) acts.push({ code: l.code, a: 'miss', nid: l.nid });
+          else if (now - l.miss >= 45e3) acts.push({ code: l.code, a: 'cancel', why: 'its note was deleted', nid: l.nid, room: l.room, from: +l.start });
+          continue;
+        }
+        if (l.miss) acts.push({ code: l.code, a: 'found', nid: l.nid });
+        if (!GM_ROOM[n.unit]) { acts.push({ code: l.code, a: 'skip', why: 'room ' + n.unit }); continue; }
+        if (n.unit !== UNIT[l.room] || n.s !== +l.start) acts.push({ code: l.code, a: 'nmove', nid: n.id, room: GM_ROOM[n.unit], start: n.s, fromRoom: l.room, from: +l.start });
+        continue;
+      }
       if (!l.bid) {
         const m = live.filter((b) => b.unit === UNIT[l.room] && b.start === +l.start);
+        /* waiting (made with nothing in that slot): ties to whatever lands exactly there – a booking, else a note; never cancelled */
+        if (l.pin) {
+          if (m.length === 1) { acts.push({ code: l.code, a: 'bind', bid: m[0].id }); if (!dry) this.sql.exec(`UPDATE gml SET bid = ?, cid = ? WHERE code = ?`, m[0].id, m[0].cid, l.code); bound.add(m[0].id); }
+          else if (!m.length) { const ns = await slotNotes(l).catch(() => []); if (ns.length === 1) acts.push({ code: l.code, a: 'nbind', nid: ns[0].id }); }
+          continue;
+        }
+        /* older links: a guest on a note in that slot wins over an old cancelled booking (the WhatsApp catch, 2 Nov) */
+        if (!m.length) { const ns = await slotNotes(l).catch(() => null); if (ns && ns.length === 1) { acts.push({ code: l.code, a: 'nbind', nid: ns[0].id }); continue; } if (!ns) continue; }
         /* a different guest took the same room + time: the link was made for a booking that is now cancelled (made before the
            link), while the live one was made after the link → the message isn't theirs, cancel it instead of tying it */
         if (m.length === 1 && l.cr && m[0].made > +l.cr) {
@@ -486,6 +542,14 @@ export class HoldBook extends DurableObject {
     const call = (body) => this.msgRoute(body).catch((e) => 'error ' + e);
     let changed = false;
     for (const x of acts) {
+      if (x.a === 'nbind') { this.sql.exec(`UPDATE gml SET nid = ?, miss = NULL, pin = 1 WHERE code = ?`, x.nid, x.code); this.fLog({ code: x.code, a: 'tied to note', nid: x.nid }); continue; }
+      if (x.a === 'miss') { this.sql.exec(`UPDATE gml SET miss = ? WHERE code = ?`, now, x.code); this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('followed', ?)`, String(now - FOLLOW_MS + 60e3)); this.fLog({ code: x.code, a: 'note not found (looks again in a minute)', nid: x.nid }); continue; }
+      if (x.a === 'found') { this.sql.exec(`UPDATE gml SET miss = NULL WHERE code = ?`, x.code); continue; }
+      if (x.a === 'nmove') {
+        this.sql.exec(`UPDATE gml SET room = ?, start = ?, endt = ?, nid = ? WHERE code = ?`, x.room, x.start, x.start + 3 * 3600e3, x.nid, x.code);
+        const r = await call({ action: 'move', staff: env.GM_STAFF, code: x.code, start: x.start, room: x.room });
+        this.fLog({ code: x.code, a: 'move', with: 'note', room: x.room, start: x.start, fromRoom: x.fromRoom, from: x.from, r: String(r).slice(0, 60) }); changed = true; continue;
+      }
       if (x.a === 'move' || x.a === 'rebooked') {
         this.sql.exec(`UPDATE gml SET room = ?, start = ?, endt = ?, bid = ?, cid = ? WHERE code = ?`, x.room, x.start, x.start + 3 * 3600e3, x.bid, x.cid, x.code);
         const r = await call({ action: 'move', staff: env.GM_STAFF, code: x.code, start: x.start, room: x.room });
@@ -493,7 +557,7 @@ export class HoldBook extends DurableObject {
       } else if (x.a === 'cancel') {
         this.sql.exec(`DELETE FROM gml WHERE code = ?`, x.code); this.sql.exec(`DELETE FROM gmq WHERE code = ?`, x.code);
         const r = await call({ action: 'cancel', staff: env.GM_STAFF, code: x.code });
-        this.fLog({ code: x.code, a: 'cancel', room: x.room, from: x.from, r: String(r).slice(0, 60) }); changed = true;
+        this.fLog({ code: x.code, a: 'cancel', why: x.why, room: x.room, from: x.from, r: String(r).slice(0, 60) }); changed = true;
       }
     }
     if (changed) {   /* the timer's queue and the staff list follow */
@@ -1167,7 +1231,7 @@ async function late(env, hb, f) {
   const body = (u, txt) => ({ provider_id: u, service_id: null, start_date_time: sgStr(s), end_date_time: sgStr(blockEnd), note_type_id: 1, note: txt, mode: 'provider', time_blocked: true });
   if (old) {
     const pr = await lateDel(s2, old.notes);
-    if (pr.length) { await lateRestore(s2, old.notes.filter((n) => !pr.some((x) => x.startsWith('note ' + n.id + ':')))).catch(() => null); return { error: 'SimplyBook didn’t let go of the old note, nothing was changed: ' + pr.join('; ').slice(0, 120) }; }
+    if (pr.length) { await lateRestore(s2, old.notes.filter((n) => !pr.some((x) => x.startsWith('note ' + n.id + ':'))), hb).catch(() => null); return { error: 'SimplyBook didn’t let go of the old note, nothing was changed: ' + pr.join('; ').slice(0, 120) }; }
     await lateMsgsCancel(env, hb, old.S).catch(() => null);
   }
   try {
@@ -1175,9 +1239,10 @@ async function late(env, hb, f) {
     if (tw) { const r2 = await s2('POST', '/admin/calendar-notes', body(tw, 'SYSTEM BLOCK · ' + room + ' late till ' + clock12(blockEnd))); done.push({ unit: tw, id: String(r2.id), made: true }); }
   } catch (e) {
     await extRevert(s2, done);
-    if (old) await lateRestore(s2, old.notes).catch(() => null);
+    if (old) await lateRestore(s2, old.notes, hb).catch(() => null);
     return { error: 'SimplyBook didn’t take the note, nothing was changed: ' + String(e.message || e).slice(0, 120) + (old ? ' (the old session was put back; its TV messages were cancelled – re-add them in Round2 messages if needed)' : '') };
   }
+  if (old && done[0]) await hb.lRenote(old.S.key.slice(1), done[0].id).catch(() => null);   /* guest links follow the new note */
   /* box unticked = no wrap-up messages for this session at all: Auto wrap-up (now or if switched on later) skips it */
   if (f.msgs === 'no' && done[0]) { const m = await hb.getMode(), o = new Set(m.autoOff || []); o.add('n' + done[0].id); m.autoOff = [...o].slice(-200); await hb.setMode(m); }
   const msgs = [];
@@ -1215,8 +1280,11 @@ async function lateDel(s2, notes) {
   for (const n of notes) { try { await s2('DELETE', '/admin/calendar-notes/' + n.id); } catch (e) { probs.push('note ' + n.id + ': ' + String(e.message || e).slice(0, 60)); } }
   return probs;
 }
-async function lateRestore(s2, notes) {
-  for (const n of notes) await s2('POST', '/admin/calendar-notes', { provider_id: n.unit, service_id: null, start_date_time: sgStr(n.s), end_date_time: sgStr(n.e), note_type_id: 1, note: n.note, mode: 'provider', time_blocked: true });
+async function lateRestore(s2, notes, hb) {   /* put back = new note ids: guest links tied to the old ones go with them */
+  for (const n of notes) {
+    const r = await s2('POST', '/admin/calendar-notes', { provider_id: n.unit, service_id: null, start_date_time: sgStr(n.s), end_date_time: sgStr(n.e), note_type_id: 1, note: n.note, mode: 'provider', time_blocked: true });
+    if (hb && r && r.id) await hb.lRenote(n.id, r.id).catch(() => null);
+  }
 }
 /* the session's own "About 10 minutes to go" / "That's a wrap!" (Round2 messages at its end), still to come */
 async function lateMsgsCancel(env, hb, S) {
@@ -1395,6 +1463,28 @@ async function gmList(env, hb) {
   }
   return raw;
 }
+/* Make a guest link (owner, 2 Nov): what's in this room at this start time, so staff pick the guest the link is for.
+   exact = starts exactly then (a booking, or a note = WhatsApp / late-session guest); others = the rest of that day there. */
+async function gmSlot(env, room, start) {
+  room = String(room || '').trim().toLowerCase().replace('maximillion', 'max');
+  const unit = +(Object.keys(GM_ROOM).find((u) => GM_ROOM[u] === room) || 0);
+  if (!unit || !(start > 0)) return { error: 'Pick the room and start time.' };
+  const D = await sessDay(env, sgDay(start));
+  const its = D.sessions.filter((S) => S.unit === unit && !S.sys && !S.orphanExt).sort((a, b) => a.s - b.s).map((S) => {
+    const it = D.items.find((x) => x.k + x.id === S.key) || {};
+    return { key: S.key, kind: S.k === 'b' ? 'booking' : 'note', name: String(S.name || '').replace(/\s+/g, ' ').trim().slice(0, 60), s: S.s, guestEnd: S.guestEnd, cid: it.cid || '', exact: S.s === start };
+  });
+  return { ok: true, room, start, exact: its.filter((x) => x.exact), others: its.filter((x) => !x.exact) };
+}
+/* tie a new link to what staff picked (pair = b<id> / n<id>), or to the one thing starting exactly then; 'none' = wait */
+async function linkPair(env, hb, code, room, start, pair) {
+  let sl = null; try { sl = await gmSlot(env, room, start); } catch (e) {}
+  const ex = (sl && sl.exact) || [], want = String(pair || '');
+  const pick = want === 'none' ? null : /^[bn]\d+$/.test(want) ? ex.find((x) => x.key === want) : ex.length === 1 ? ex[0] : null;
+  const p = !pick ? {} : pick.kind === 'booking' ? { bid: pick.key.slice(1), cid: pick.cid } : { nid: pick.key.slice(1) };
+  await hb.lPair(code, String(room || '').toLowerCase().replace('maximillion', 'max'), start, start + 3 * 3600e3, p);
+  return pick ? pick.kind : 'waiting';
+}
 async function gm(env, req) {
   const f = Object.fromEntries(new URLSearchParams(await req.text()));
   const act = String(f.action || ''), who = req.headers.get('cf-connecting-ip') || 'x', hb = book(env);
@@ -1437,6 +1527,10 @@ async function gm(env, req) {
     const m = await hb.getMode(); if (f.set === 'on' || f.set === 'off') { m.msgLocal = f.set === 'on'; m.msgT = Date.now(); await hb.setMode(m); await hb.gmDrop('__LIST__'); if (m.msgLocal) await gmList(env, hb).catch(() => null); }
     return gmJ({ ok: true, local: !!m.msgLocal, count: await hb.msgCount() });
   }
+  if (act === 'slot') {   /* staff: Make a guest link › who's in that slot */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    try { return gmJ(await gmSlot(env, f.room, +f.start)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
+  }
   if (act === 'follow') {   /* staff: run the "messages follow their booking" check now (dry=1: only show what it would do) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     if (!f.dry) await gmList(env, hb).catch(() => null);
@@ -1456,6 +1550,10 @@ async function gm(env, req) {
       return new Response(await gmList(env, hb), { headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' } });
     }
     const t = await gmFwd(env, f);
+    if (act === 'create') {   /* paired now, before the list sync could learn it as an unpaired link */
+      let j = null; try { j = JSON.parse(t); } catch (e) {}
+      if (j && j.code && !j.error) { const pd = await linkPair(env, hb, j.code, f.room, +f.start, f.pair).catch(() => null); if (pd) { j.paired = pd; await hb.gmDrop('__LIST__'); await gmList(env, hb).catch(() => null); return gmJ(j); } }
+    }
     await hb.gmDrop('__LIST__');
     if (act !== 'push') await gmList(env, hb).catch(() => null);         // something moved: the timer's queue follows
     if (code) await hb.gmDrop(code);                                   // staff moved/cancelled it: guests see the change
@@ -1960,7 +2058,7 @@ async function ghProxy(env, req) {
 
 export default {
   /* every 10 minutes (Cloudflare cron trigger, every-10-minutes schedule): staff "in 1 hour" alerts */
-  async scheduled(ev, env0, ctx) { const env = envFor(env0, 'live'); ctx.waitUntil(book(env).kvSet('cronLast', Date.now()).catch(() => null)); ctx.waitUntil(soonRun(env).catch(() => null)); ctx.waitUntil(autoRun(env, 'cron').catch(() => null)); ctx.waitUntil(msgOrphans(env, 'cron').catch(() => null));
+  async scheduled(ev, env0, ctx) { const env = envFor(env0, 'live'); ctx.waitUntil(book(env).kvSet('cronLast', Date.now()).catch(() => null)); ctx.waitUntil(soonRun(env).catch(() => null)); ctx.waitUntil(autoRun(env, 'cron').catch(() => null)); ctx.waitUntil(msgOrphans(env, 'cron').catch(() => null)); ctx.waitUntil(book(env).fNotes().catch(() => null));
     if (new Date().getUTCMinutes() < 10 || (new Date().getUTCMinutes() >= 30 && new Date().getUTCMinutes() < 40)) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); ctx.waitUntil(shadowSync(env, [t, addDays(t, 1)]).catch(() => null)); } },
   async fetch(req, env0, ctx) {
     const u = new URL(req.url);
