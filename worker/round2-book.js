@@ -331,6 +331,7 @@ export class HoldBook extends DurableObject {
   autoAll() { this.autoInit(); this.sql.exec(`DELETE FROM autoq WHERE gend < ?`, Date.now() - 2 * 86400e3); return this.rows(`SELECT * FROM autoq`); }
   autoSet(key, kind, room, day, at, gend) { this.autoInit(); this.sql.exec(`INSERT INTO autoq VALUES (?, ?, ?, ?, ?, ?, 0) ON CONFLICT (key, kind) DO UPDATE SET room = excluded.room, day = excluded.day, at = excluded.at, gend = excluded.gend, sent = CASE WHEN autoq.at = excluded.at THEN autoq.sent ELSE 0 END`, key, kind, room, day, at, gend); this.arm(); }
   autoDel(key) { this.autoInit(); this.sql.exec(`DELETE FROM autoq WHERE key = ? AND sent = 0`, key); this.arm(); }
+  autoClear() { this.autoInit(); this.sql.exec(`DELETE FROM autoq WHERE sent = 0`); this.arm(); }   /* switch off: everything it scheduled goes */
   async autoSend() {
     this.autoInit(); const env = this.env, now = Date.now(); if (!env.TV_KEY) return;
     for (const r of this.rows(`SELECT * FROM autoq WHERE sent = 0 AND at <= ?`, now + 5000)) {
@@ -1072,8 +1073,8 @@ async function autoRun2(env, hb, mode, why) {
 /* the Auto end messages page: the switch, and today's sessions with their two messages */
 async function autoApi(env, hb, f) {
   const mode = await hb.getMode();
-  if (f.set === 'on' || f.set === 'off') { mode.autoEnd = f.set === 'on'; mode.autoBy = String(f.by || '').slice(0, 30); mode.autoT = Date.now(); await hb.setMode(mode); if (mode.autoEnd) await autoRun(env, 'switched on'); }
-  if (f.key && (f.sess === 'on' || f.sess === 'off')) { const s2 = new Set(mode.autoOff || []); if (f.sess === 'off') s2.add(String(f.key)); else s2.delete(String(f.key)); mode.autoOff = [...s2].slice(-200); await hb.setMode(mode); if (mode.autoEnd && f.sess === 'on') await autoRun(env, 'session on'); }
+  if (f.set === 'on' || f.set === 'off') { mode.autoEnd = f.set === 'on'; mode.autoBy = String(f.by || '').slice(0, 30); mode.autoT = Date.now(); await hb.setMode(mode); if (mode.autoEnd) await autoRun(env, 'switched on'); else await hb.autoClear(); }
+  if (f.key && (f.sess === 'on' || f.sess === 'off')) { const s2 = new Set(mode.autoOff || []); if (f.sess === 'off') s2.add(String(f.key)); else s2.delete(String(f.key)); mode.autoOff = [...s2].slice(-200); await hb.setMode(mode); if (f.sess === 'off') await hb.autoDel(String(f.key)); if (mode.autoEnd && f.sess === 'on') await autoRun(env, 'session on'); }
   if (f.run) await autoRun(env, 'run now');
   const now = Date.now(), today = sgDay(now), hm = (now + 8 * 3600e3) % 86400e3 / 60e3, days = hm < 360 ? [addDays(today, -1), today] : [today], m2 = await hb.getMode();
   const recs = await hb.autoAll(), off = new Set(m2.autoOff || []), list = [];
