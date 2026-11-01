@@ -1117,7 +1117,7 @@ async function late(env, hb, f) {
   const autoOn = !!(await hb.getMode()).autoEnd;
   const wantMsgs = f.msgs !== 'no' && !autoOn, soonEnough = s - Date.now() < 24 * 3600e3 && guestEnd > Date.now() + 10 * 60e3;
   const plan = { room, twin: tw ? ROOMS[tw][0] : null, name, pax, arrives: clock12(s), guestEnd: clock12(guestEnd), blockEnd: clock12(blockEnd), hours: Math.round(hrs * 100) / 100,
-    nextDay: sgDay(guestEnd) !== day, arrivesDay: sgDayName(s), leavesDay: sgDayName(guestEnd), text, clash, msgs: autoOn ? 'auto' : wantMsgs ? (soonEnough ? { wrapup: clock12(guestEnd - 10 * 60e3), timeup: clock12(guestEnd) } : 'later') : 'off' };
+    nextDay: sgDay(guestEnd) !== day, arrivesDay: sgDayName(s), leavesDay: sgDayName(guestEnd), text, clash, msgs: f.msgs === 'no' ? 'off' : autoOn ? 'auto' : wantMsgs ? (soonEnough ? { wrapup: clock12(guestEnd - 10 * 60e3), timeup: clock12(guestEnd) } : 'later') : 'off' };
   if (f.dry) return { ok: true, dry: true, plan };
   if (clash.length && f.force !== 'yes') return { ok: false, clash: true, plan };
   const s2 = await sb2(env), done = [];
@@ -1135,6 +1135,8 @@ async function late(env, hb, f) {
     if (old) await lateRestore(s2, old.notes).catch(() => null);
     return { error: 'SimplyBook didn’t take the note, nothing was changed: ' + String(e.message || e).slice(0, 120) + (old ? ' (the old session was put back; its TV messages were cancelled – re-add them in Round2 messages if needed)' : '') };
   }
+  /* box unticked = no wrap-up messages for this session at all: Auto wrap-up (now or if switched on later) skips it */
+  if (f.msgs === 'no' && done[0]) { const m = await hb.getMode(), o = new Set(m.autoOff || []); o.add('n' + done[0].id); m.autoOff = [...o].slice(-200); await hb.setMode(m); }
   const msgs = [];
   if (wantMsgs && soonEnough) {
     for (const kind of ['wrapup', 'timeup']) {
