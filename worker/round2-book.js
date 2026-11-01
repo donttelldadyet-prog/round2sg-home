@@ -1911,6 +1911,28 @@ async function bookingPush(env, bid, type) {
   return r && r.msg ? pushAll(env, 'booking', r.msg) : r;
 }
 
+/* ===== GitHub through the engine (owner, 2 Nov) =====
+   TV setup (Events, Rooms, Sounds, TV settings) and the menu editor used a personal GitHub key on each phone. Now they
+   send the staff code here and the engine uses ONE GitHub key kept in Cloudflare (secret GH_TOKEN: fine-grained, only
+   round2-tv-launcher + round2sg-home, Contents read & write). Locked down: staff code, rate limit, only these two
+   projects, only files (contents), releases and build runs, only GET / PUT / DELETE. */
+const GH_OK = /^\/repos\/donttelldadyet-prog\/(round2-tv-launcher|round2sg-home)(\/(contents(\/[^?#]*)?|releases(\/[^?#]*)?|actions\/runs))?(\?[^#]*)?$/;
+async function ghProxy(env, req) {
+  let b = null; try { b = await req.json(); } catch (e) {}
+  if (!b) return J({ message: 'Bad request.' }, 400);
+  const who = req.headers.get('cf-connecting-ip') || 'x';
+  if (!(await book(env).gmRate(who + ':gh', 300))) return J({ message: 'Too many tries. Wait a few minutes and try again.' }, 429);
+  if (!env.GM_STAFF || b.staff !== env.GM_STAFF) return J({ message: 'Wrong staff code.' }, 401);
+  if (!env.GH_TOKEN) return J({ message: 'The GitHub key isn’t in Cloudflare yet (GH_TOKEN).', noKey: true }, 503);
+  const m = String(b.method || 'GET').toUpperCase(), path = String(b.path || '');
+  if (!['GET', 'PUT', 'DELETE'].includes(m) || !GH_OK.test(path) || /\.\./.test(path)) return J({ message: 'Not allowed.' }, 403);
+  if (m !== 'GET' && !/\/contents\//.test(path)) return J({ message: 'Not allowed.' }, 403);   /* only files can be changed; releases and runs are read-only */
+  const h = { Authorization: 'Bearer ' + env.GH_TOKEN, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'round2-book' };
+  if (b.body) h['Content-Type'] = 'application/json';
+  const r = await fetch('https://api.github.com' + path, { method: m, headers: h, body: b.body ? JSON.stringify(b.body) : undefined });
+  return new Response(await r.text(), { status: r.status, headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' } });
+}
+
 export default {
   /* every 10 minutes (Cloudflare cron trigger, every-10-minutes schedule): staff "in 1 hour" alerts */
   async scheduled(ev, env0, ctx) { const env = envFor(env0, 'live'); ctx.waitUntil(soonRun(env).catch(() => null)); ctx.waitUntil(autoRun(env, 'cron').catch(() => null)); ctx.waitUntil(msgOrphans(env, 'cron').catch(() => null));
@@ -2032,6 +2054,7 @@ export default {
         return Response.redirect('https://cue.round2.sg/' + tv.code, 302);
       }
       if (u.pathname === '/gm' && req.method === 'POST') return await gm(env, req);
+      if (u.pathname === '/gh' && req.method === 'POST') return await ghProxy(env, req);
       if (u.pathname.startsWith('/push/')) return await pushApi(env, req, u.pathname);
       /* SimplyBook's callback (Custom features › API › callback URL) = /sb/notify/<SB_NOTIFY_KEY>. Passed on unchanged to
          Make's mirror-rooms scenario (secret MIRROR_HOOK_URL), then: cancelled → off "View your booking"; any change →
