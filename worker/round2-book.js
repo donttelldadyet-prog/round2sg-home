@@ -1368,7 +1368,7 @@ async function soonRun(env) {
 const SB_ALERT = { create: 'New booking', change: 'Booking changed', cancel: 'Booking cancelled' };
 /* each character's icon, like the booking page (cat, leaf, Saturn, mountain, book, sailboat, car), in the room's colour
    where an emoji in that colour exists (owner, 1 Nov) */
-const ROOM_DOT = { 5: '🐈', 7: '🍃', 8: '🪐', 9: '🏔️', 10: '🔮', 12: '⛵', 11: '🏎️' };
+const ROOM_DOT = { 5: '🎀', 7: '🍃', 8: '🪐', 9: '🏔️', 10: '🔮', 12: '⛵', 11: '🏎️' };
 const roomTitle = (unit) => (ROOM_DOT[unit] ? ROOM_DOT[unit] + ' ' : '') + (unit === 11 ? 'MAX' : ROOMS[unit] ? ROOMS[unit][0].toUpperCase() : 'ROOM');
 const notePax = (t) => { const m = String(t || '').match(/(\d+)\s*(pax|ppl|people|persons?|guests?|pp)\b/i); return m ? m[1] : ''; };
 async function bookingAlert(env, bid, type) {
