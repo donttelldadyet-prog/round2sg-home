@@ -416,7 +416,7 @@ export class HoldBook extends DurableObject {
     try { this.sql.exec(`ALTER TABLE gml ADD COLUMN cr INTEGER`); } catch (e) {}   /* when the link was made */
     /* paired at creation (owner, 2 Nov): nid = the SimplyBook NOTE it belongs to (WhatsApp / late-session guests), pin = 1 →
        never guessed from old cancelled bookings, miss = when its note was first found gone (cancelled on the 2nd look) */
-    for (const c of ['nid TEXT', 'pin INTEGER', 'miss INTEGER']) { try { this.sql.exec(`ALTER TABLE gml ADD COLUMN ` + c); } catch (e) {} }
+    for (const c of ['nid TEXT', 'pin INTEGER', 'miss INTEGER', 'warn INTEGER']) { try { this.sql.exec(`ALTER TABLE gml ADD COLUMN ` + c); } catch (e) {} }
     if (!this.rows(`SELECT 1 FROM kv WHERE k = 'fv2'`).length) { this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('fv2', '1')`); this.fSoon(); }
   }
   /* run the follow check about a minute from now (new link learned) */
@@ -426,6 +426,21 @@ export class HoldBook extends DurableObject {
   lPair(code, room, start, endt, p) {
     this.lInit(); this.sql.exec(`INSERT OR REPLACE INTO gml (code, room, start, endt, bid, cid, cr, nid, pin, miss) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, NULL)`,
       code, room || '', +start, +endt, p.bid || null, p.cid || null, Date.now(), p.nid || null); this.arm();
+  }
+  lGet(code) { this.lInit(); return this.rows(`SELECT * FROM gml WHERE code = ?`, code)[0] || null; }
+  /* Late session made a note: a waiting link for exactly that room + arrival is tied to it on the spot (no 10-min wait) */
+  lTieWaiting(room, start, nid) {
+    this.lInit(); const w = `room = ? AND start = ? AND bid IS NULL AND nid IS NULL AND pin = 1`;
+    const n = this.rows(`SELECT COUNT(*) AS n FROM gml WHERE ` + w, room, +start)[0].n;
+    if (n) { this.sql.exec(`UPDATE gml SET nid = ?, miss = NULL WHERE ` + w, String(nid), room, +start); this.fLog({ a: 'tied to note', nid: String(nid), room, start: +start, by: 'Late session' }); }
+    return n;
+  }
+  /* heads-up (owner, 2 Nov): still waiting 3 h before its start, made over 20 min ago, not warned yet → warn once */
+  lWarnDue() {
+    this.lInit(); const now = Date.now();
+    const R = this.rows(`SELECT * FROM gml WHERE bid IS NULL AND nid IS NULL AND pin = 1 AND warn IS NULL AND start > ? AND start <= ? AND cr <= ?`, now, now + 3 * 3600e3, now - 20 * 60e3);
+    for (const r of R) this.sql.exec(`UPDATE gml SET warn = ? WHERE code = ?`, now, r.code);
+    return R;
   }
   /* our own systems swapped a note for a new one (Late session › Change): its links go with it */
   lRenote(oldId, newId) { this.lInit(); this.sql.exec(`UPDATE gml SET nid = ?, miss = NULL WHERE nid = ?`, String(newId), String(oldId)); }
@@ -1243,6 +1258,7 @@ async function late(env, hb, f) {
     return { error: 'SimplyBook didn’t take the note, nothing was changed: ' + String(e.message || e).slice(0, 120) + (old ? ' (the old session was put back; its TV messages were cancelled – re-add them in Round2 messages if needed)' : '') };
   }
   if (old && done[0]) await hb.lRenote(old.S.key.slice(1), done[0].id).catch(() => null);   /* guest links follow the new note */
+  const tied = done[0] ? await hb.lTieWaiting(GM_ROOM[unit], s, done[0].id).catch(() => 0) : 0;   /* a guest link made first, waiting for this time */
   /* box unticked = no wrap-up messages for this session at all: Auto wrap-up (now or if switched on later) skips it */
   if (f.msgs === 'no' && done[0]) { const m = await hb.getMode(), o = new Set(m.autoOff || []); o.add('n' + done[0].id); m.autoOff = [...o].slice(-200); await hb.setMode(m); }
   const msgs = [];
@@ -1260,7 +1276,7 @@ async function late(env, hb, f) {
   await autoRun(env, 'late session').catch(() => null);
   const nights = new Set(); for (const t of [s, old && old.S.s].filter(Boolean)) nights.add(sgDay(t - SHADOW_TILL * 60e3));   /* AFTER 12AM and TILL labels */
   await shadowSync(env, [...nights]).catch(() => null);
-  return { ok: true, plan, notes: done, msgs, replaced: !!old };
+  return { ok: true, plan, notes: done, msgs, replaced: !!old, tied };
 }
 /* ===== Upcoming late sessions (owner, 1 Nov): list / change / cancel from the Late session page =====
    A session starting after midnight is hidden in SimplyBook's calendar, so staff can't move or delete it there (the
@@ -1476,6 +1492,45 @@ async function gmSlot(env, room, start) {
   });
   return { ok: true, room, start, exact: its.filter((x) => x.exact), others: its.filter((x) => !x.exact) };
 }
+/* Guest messages › Pair: everything in every room that day (the link's own day), to pick the guest a waiting link is for */
+async function gmDay(env, day) {
+  if (!/^\d{4}-\d\d-\d\d$/.test(day || '')) return { error: 'Pick the day.' };
+  const D = await sessDay(env, day);
+  const its = D.sessions.filter((S) => !S.sys && !S.orphanExt && GM_ROOM[S.unit]).sort((a, b) => a.s - b.s).map((S) => {
+    const it = D.items.find((x) => x.k + x.id === S.key) || {};
+    return { key: S.key, kind: S.k === 'b' ? 'booking' : 'note', room: GM_ROOM[S.unit], name: String(S.name || '').replace(/\s+/g, ' ').trim().slice(0, 60), s: S.s, guestEnd: S.guestEnd, cid: it.cid || '' };
+  });
+  return { ok: true, day, sessions: its };
+}
+async function linkPairTo(env, hb, f) {
+  const code = String(f.code || '').toUpperCase().replace(/[^A-Z0-9]/g, ''), key = String(f.key || ''), day = String(f.day || '');
+  if (!code || !/^[bn]\d+$/.test(key)) return { error: 'Pick the booking or note.' };
+  const D = await gmDay(env, day); if (D.error) return D;
+  const S = D.sessions.find((x) => x.key === key); if (!S) return { error: 'That booking or note isn’t in SimplyBook any more. Refresh.' };
+  const L = JSON.parse(await gmFwd(env, { action: 'list', staff: env.GM_STAFF }) || '{}').links || [], x = L.find((y) => y.key === code);
+  if (!x || !x.data || x.data.status === 'cancelled') return { error: 'That link was cancelled or isn’t there any more.' };
+  let moved = false;
+  if (x.data.room !== S.room || +x.data.start !== S.s) {
+    const j = JSON.parse(await gmFwd(env, { action: 'move', staff: env.GM_STAFF, code, start: S.s, room: S.room }) || '{}');
+    if (j.error) return { error: j.error }; moved = true;
+  }
+  await hb.lPair(code, S.room, S.s, S.s + 3 * 3600e3, S.kind === 'booking' ? { bid: key.slice(1), cid: S.cid } : { nid: key.slice(1) });
+  await hb.fLog({ code, a: 'tied by hand', to: key, room: S.room, start: S.s, moved });
+  await hb.gmDrop('__LIST__'); await hb.gmDrop(code); await gmList(env, hb).catch(() => null);
+  return { ok: true, paired: S.kind, moved, room: S.room, start: S.s };
+}
+/* every 10 min: notes and waiting links checked, then a heads-up for any link still not tied 3 h before its start */
+async function waitWarn(env) {
+  const hb = book(env); await hb.fNotes().catch(() => null);
+  const R = await hb.lWarnDue(); if (!R.length || !env.VAPID_JWK) return { warned: R.length };
+  const subs = (await hb.pushList()).filter((x) => x.kinds.includes('soon') || x.kinds.includes('booking'));
+  for (const r of R) {
+    const unit = +(Object.keys(GM_ROOM).find((u) => GM_ROOM[u] === r.room) || 0);
+    const msg = { kind: 'soon', title: '⏳ ' + roomTitle(unit) + ' · guest link not tied yet', body: 'Starts ' + clock12(+r.start) + ' ' + sgDayName(+r.start) + ', but nothing in SimplyBook starts then. Check the note or booking time, or tap Pair in Guest messages.', tag: 'wait' + r.code, url: '/?tab=guestmsgs' };
+    await Promise.all(subs.map(async (s) => hb.pushResult(s.id, await pushOne(env, s.sub, msg))));
+  }
+  return { warned: R.length, phones: subs.length };
+}
 /* tie a new link to what staff picked (pair = b<id> / n<id>), or to the one thing starting exactly then; 'none' = wait */
 async function linkPair(env, hb, code, room, start, pair) {
   let sl = null; try { sl = await gmSlot(env, room, start); } catch (e) {}
@@ -1526,6 +1581,11 @@ async function gm(env, req) {
     if (act === 'msgimport') { let L = []; try { L = JSON.parse(f.records || '[]'); } catch (e) { return gmJ({ error: 'records must be JSON' }); } return gmJ({ ok: true, imported: await hb.msgImport(L) }); }
     const m = await hb.getMode(); if (f.set === 'on' || f.set === 'off') { m.msgLocal = f.set === 'on'; m.msgT = Date.now(); await hb.setMode(m); await hb.gmDrop('__LIST__'); if (m.msgLocal) await gmList(env, hb).catch(() => null); }
     return gmJ({ ok: true, local: !!m.msgLocal, count: await hb.msgCount() });
+  }
+  if (act === 'pairs' || act === 'slotday' || act === 'pair') {   /* staff: Guest messages › tied / waiting, and Pair */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    try { return gmJ(act === 'pairs' ? { ok: true, links: (await hb.lList()).map((r) => ({ code: r.code, bid: r.bid, nid: r.nid, pin: r.pin, warn: r.warn })) } : act === 'slotday' ? await gmDay(env, f.day) : await linkPairTo(env, hb, f)); }
+    catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
   if (act === 'slot') {   /* staff: Make a guest link › who's in that slot */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
@@ -2058,7 +2118,7 @@ async function ghProxy(env, req) {
 
 export default {
   /* every 10 minutes (Cloudflare cron trigger, every-10-minutes schedule): staff "in 1 hour" alerts */
-  async scheduled(ev, env0, ctx) { const env = envFor(env0, 'live'); ctx.waitUntil(book(env).kvSet('cronLast', Date.now()).catch(() => null)); ctx.waitUntil(soonRun(env).catch(() => null)); ctx.waitUntil(autoRun(env, 'cron').catch(() => null)); ctx.waitUntil(msgOrphans(env, 'cron').catch(() => null)); ctx.waitUntil(book(env).fNotes().catch(() => null));
+  async scheduled(ev, env0, ctx) { const env = envFor(env0, 'live'); ctx.waitUntil(book(env).kvSet('cronLast', Date.now()).catch(() => null)); ctx.waitUntil(soonRun(env).catch(() => null)); ctx.waitUntil(autoRun(env, 'cron').catch(() => null)); ctx.waitUntil(msgOrphans(env, 'cron').catch(() => null)); ctx.waitUntil(waitWarn(env).catch(() => null));
     if (new Date().getUTCMinutes() < 10 || (new Date().getUTCMinutes() >= 30 && new Date().getUTCMinutes() < 40)) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); ctx.waitUntil(shadowSync(env, [t, addDays(t, 1)]).catch(() => null)); } },
   async fetch(req, env0, ctx) {
     const u = new URL(req.url);
