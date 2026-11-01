@@ -1319,7 +1319,7 @@ async function bookingSample(env) {
   const r = b ? await bookingAlert(env, String(b.id), 'create') : null;
   return r && r.msg;
 }
-/* "In 1 hour" – every 5 minutes (cron) the engine reads today's sessions the same way In session does: SimplyBook
+/* "In 1 hour" – every 10 minutes (cron, 9:45am–2am) the engine reads today's sessions the same way In session does: SimplyBook
    bookings AND calendar notes that block time (WhatsApp / walk-in sessions). Skipped: the twin room's SYSTEM BLOCKs and
    EXT notes (an extension isn't a new arrival). Each session is sent once, when it's 50–62 minutes away. Anything
    added later than that gets no reminder: a note was keyed in by staff themselves, and a booking's "New booking"
@@ -1342,8 +1342,11 @@ async function soonSessions(env, days) {
 async function soonSample(env) { const now = Date.now(), S = (await soonSessions(env, 2)).find((x) => x.s > now); return S ? soonMsg(S, S.s - 60 * 60e3) : null; }
 async function soonRun(env) {
   if (!env.VAPID_JWK) return null;
+  /* lean (owner, 1 Nov): cron every 10 min, but SimplyBook is only asked 9:45am–2am Singapore time */
+  const now = Date.now(), sg = new Date(now + 8 * 3600e3), hm = sg.getUTCHours() * 60 + sg.getUTCMinutes();
+  if (hm < 9 * 60 + 45 && hm >= 2 * 60) return { asleep: true };
   const hb = book(env); if (!(await hb.pushList('soon')).length) return { phones: 0 };
-  const now = Date.now(), sent = [], sgDay = (t) => new Date(t + 8 * 3600e3).toISOString().slice(0, 10);
+  const sent = [], sgDay = (t) => new Date(t + 8 * 3600e3).toISOString().slice(0, 10);
   /* only the day the 50–62 min window falls on (today; tomorrow only around midnight) – one SimplyBook read each */
   const days = sgDay(now + 62 * 60e3) === sgDay(now) ? 1 : 2;
   for (const S of await soonSessions(env, days)) {
@@ -1395,7 +1398,7 @@ async function bookingPush(env, bid, type) {
 }
 
 export default {
-  /* every 5 minutes (Cloudflare cron trigger, every-5-minutes schedule): staff "in 1 hour" alerts */
+  /* every 10 minutes (Cloudflare cron trigger, every-10-minutes schedule): staff "in 1 hour" alerts */
   async scheduled(ev, env0, ctx) { ctx.waitUntil(soonRun(envFor(env0, 'live')).catch(() => null)); },
   async fetch(req, env0, ctx) {
     const u = new URL(req.url);
