@@ -1050,7 +1050,7 @@ async function menuCheckout(env0, req, origin) {
   const testIds = new Set(); (menu.sections || []).forEach((sec) => (sec.items || []).forEach((it) => { if (it.test) testIds.add(it.id); }));
   if (pay !== 'test' && L.some((x) => testIds.has(String(x.k).split('--')[0]))) return no('Something in your order is sold out or no longer on the menu. Refresh the page and check your order.');
   if (total <= 0 || total !== Math.round(+o.shown_total * 100)) return no('The menu prices changed. Refresh the page and check your order.');
-  const sg = new Date(Date.now() + 8 * 3600e3).toISOString(), ymd = sg.slice(2, 10).replace(/-/g, ''), hms = sg.slice(11, 19).replace(/:/g, '');
+  const ref = 'R2-' + ymd + '-' + hms + '-' + room.toUpperCase(), orderNo = hms;
   const ref = 'R2-' + ymd + '-' + hms + '-' + (unit === 11 ? 'MAX' : room.toUpperCase()), orderNo = hms;
   const lines = L.map((x) => x.l), summary = lines.join(', ');
   let pr;
