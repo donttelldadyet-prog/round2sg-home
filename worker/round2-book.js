@@ -204,6 +204,7 @@ export class HoldBook extends DurableObject {
   pushGet(id) { this.pushInit(); const r = this.rows(`SELECT * FROM push WHERE id = ?`, id)[0]; return r ? { id: r.id, sub: JSON.parse(r.sub), kinds: JSON.parse(r.kinds), label: r.label, last: r.last } : null; }
   pushList(kind) { this.pushInit(); return this.rows(`SELECT * FROM push`).map((r) => ({ id: r.id, sub: JSON.parse(r.sub), kinds: JSON.parse(r.kinds) })).filter((r) => !kind || r.kinds.includes(kind)); }
   pushResult(id, res) { this.pushInit(); if (res === 'gone') this.sql.exec(`DELETE FROM push WHERE id = ?`, id); else this.sql.exec(`UPDATE push SET last = ? WHERE id = ?`, JSON.stringify({ t: Date.now(), r: res }), id); }
+  holdByBid(bid) { const r = this.rows(`SELECT data FROM holds WHERE status = 'paid' AND CAST(json_extract(data, '$.done.bookingId') AS TEXT) = ? LIMIT 1`, String(bid))[0]; if (!r) return null; const d = JSON.parse(r.data); return { total: d.q && d.q.total, pay: d.pay }; }
   pushCount() { this.pushInit(); return this.rows(`SELECT COUNT(*) AS n FROM push`)[0].n; }
   gmGet(code) { this.gmInit(); const r = this.rows(`SELECT * FROM gm WHERE code = ?`, code)[0]; return r ? { link: r.link ? JSON.parse(r.link) : null, err: r.err, exp: r.exp, edits: r.edits } : null; }
   gmPut(code, link, err, ttl) {
@@ -1272,6 +1273,12 @@ async function pushApi(env, req, path) {
     await hb.gmRate('pushbad:' + (req.headers.get('cf-connecting-ip') || '?'), 1000);
     return J({ error: 'Wrong staff code.' }, 403);
   }
+  if (path === '/push/preview') {   /* staff: what the booking alert would say (latest upcoming booking, or bid) – sends nothing */
+    let bid = String(f.bid || '').replace(/\D/g, '');
+    if (!bid) { const a = await admin(env), day = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10); const l = Object.values((await a('getBookings', [{ booking_type: 'non_cancelled', date_from: day, date_to: addDays(day, 14) }])) || {}); bid = String((l.find((x) => !SYS_CLIENTS.includes(String(x.client_id))) || {}).id || ''); }
+    const r = bid ? await bookingAlert(env, bid, f.type || 'create') : null;
+    return J(r ? { bid, msg: r.msg, skipped: r.skipped, fields: f.fields ? r.b : Object.keys(r.b || {}) } : { error: 'No booking found' });
+  }
   if (!env.VAPID_JWK) return J({ error: 'Alerts aren’t set up in Cloudflare yet' });
   const sub = f.sub || {}, endpoint = String(sub.endpoint || f.endpoint || '');
   if (!/^https:\/\/[a-z0-9.-]+\//i.test(endpoint)) return J({ error: 'No phone subscription sent' }, 400);
@@ -1292,23 +1299,48 @@ async function pushApi(env, req, path) {
   }
   return J({ error: 'unknown' }, 404);
 }
-/* SimplyBook callback → "New booking / Booking changed / Booking cancelled" on staff phones.
-   Skips the Make mirror's SYSTEM BLOCK bookings (the twin room) so one booking gives one alert. */
+/* SimplyBook callback → "New booking / Booking changed / Booking cancelled" on staff phones (owner's layout, 1 Nov):
+     🩷 VALE · New booking
+     Amanda Tan · Sat 2 Nov, 4–7pm (3h)
+     Peak · S$69 paid online · 3 pax · Vale
+   iPhone always shows the app icon, so the room colour is the heart at the start. Paid = our own booking page's record;
+   bookings keyed into SimplyBook show the room's price for that day and length ("price"). Skips the Make mirror's
+   SYSTEM BLOCK bookings (the twin room) so one booking gives one alert. */
 const SB_ALERT = { create: 'New booking', change: 'Booking changed', cancel: 'Booking cancelled' };
-async function bookingPush(env, bid, type) {
-  if (!SB_ALERT[type] || !env.VAPID_JWK) return null;
+const ROOM_DOT = { 5: '🩷', 7: '💚', 8: '💛', 9: '🩵', 10: '💜', 12: '🤍', 11: '❤️' };
+async function bookingAlert(env, bid, type) {
   const a = await admin(env), b = await a('getBookingDetails', [bid]).catch(() => null);
   if (!b) return null;
   const cid = String(b.client_id || ''), name = String(b.client_name || b.client || '').trim();
-  if (SYS_CLIENTS.includes(cid) || SYS_RE.test(name)) return { skipped: 'mirror' };
-  const room = ROOMS[+b.unit_id] ? (+b.unit_id === 11 ? 'Maximillion' : ROOMS[+b.unit_id][0]) : String(b.unit_name || 'Room');
+  if (SYS_CLIENTS.includes(cid) || SYS_RE.test(name)) return { skipped: 'mirror', b };
+  const unit = +b.unit_id, room = ROOMS[unit] ? (unit === 11 ? 'Maximillion' : ROOMS[unit][0]) : String(b.unit_name || 'Room');
   const s = sgMs0(b.start_date_time || b.start_date), buf = +(b.event_buffertime_after ?? BUF) || 0, e = sgMs0(b.end_date_time || b.end_date) - buf * 60e3;
+  const date = new Date(s + 8 * 3600e3).toISOString().slice(0, 10), hours = Math.round((e - s) / 360e3) / 10;
   const day = new Date(s + 8 * 3600e3).toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
   let pax = '';
   for (const x of [].concat(b.additional_fields || [])) if (x && (x.field_name === PAX_FIELD || /pax|guest|people/i.test(String(x.field_title || x.title || '')))) pax = String(x.value || '').replace(/\D/g, '');
-  const body = day + ', ' + clock12(s) + '–' + clock12(e) + (name ? ' · ' + name.split(/\s+/)[0] : '') + (pax ? ' · ' + pax + ' pax' : '');
-  const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10) === new Date(s + 8 * 3600e3).toISOString().slice(0, 10);
-  return pushAll(env, 'booking', { title: SB_ALERT[type] + ' · ' + room, body, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/' });
+  /* peak / off-peak / Early Bird from the service; Early Bird is its own service */
+  const type2 = ROOMS[unit] && ROOMS[unit][1], ids = SVC[type2] || {}, ev = +b.event_id;
+  let rate = ev === ids.eb ? 'Early Bird' : ev === ids.peak ? 'Peak' : ev === ids.off ? 'Off-peak' : '';
+  if (!rate && type2) { const dow = new Date(date + 'T00:00:00Z').getUTCDay(), ph = await holidays().catch(() => new Set()); rate = dow === 0 || dow === 5 || dow === 6 || ph.has(date) ? 'Peak' : 'Off-peak'; }
+  /* money: what was paid on our own booking page, else the price for this room/day/length */
+  let money = '';
+  const own = await book(env).holdByBid(String(bid)).catch(() => null);
+  if (own && own.total) money = 'S$' + (+own.total).toFixed(2).replace(/\.00$/, '') + ' paid online' + (own.pay === 'test' ? ' (TEST)' : '');
+  else if (type2 && hours >= 3 && hours <= 6 && hours % 1 === 0) {
+    const P = PRICES[type2], dt = rate === 'Peak' ? 'peak' : 'off', x = hours - 3;
+    const v = rate === 'Early Bird' ? P.eb.base + (x ? P.eb.ext[dt][x - 1] : 0) : P[dt].base + (x ? P[dt].ext[x - 1] : 0);
+    money = 'S$' + r2(v).toFixed(2).replace(/\.00$/, '') + ' price';
+  }
+  const line1 = (name || 'No name') + ' · ' + day + ', ' + clock12(s) + '–' + clock12(e) + ' (' + hours + 'h)';
+  const line2 = [rate, money, pax ? pax + ' pax' : '', room].filter(Boolean).join(' · ');
+  const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10) === date;
+  return { msg: { title: (ROOM_DOT[unit] ? ROOM_DOT[unit] + ' ' : '') + room.toUpperCase() + ' · ' + (SB_ALERT[type] || 'Booking'), body: line1 + '\n' + line2, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/' }, b };
+}
+async function bookingPush(env, bid, type) {
+  if (!SB_ALERT[type] || !env.VAPID_JWK) return null;
+  const r = await bookingAlert(env, bid, type);
+  return r && r.msg ? pushAll(env, 'booking', r.msg) : r;
 }
 
 export default {
