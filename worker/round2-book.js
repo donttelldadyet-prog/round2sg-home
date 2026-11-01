@@ -1106,7 +1106,7 @@ async function autoApi(env, hb, f) {
   }
   const q = await hb.qList(), own = new Set(recs.filter((r) => r.code).map((r) => r.code));
   for (const x of list) if (!x.msgs && q.some((m) => /^R2/.test(m.code) && !own.has(m.code) && m.room === x.room && (Math.abs(m.at - x.guestEnd) <= 5 * 60e3 || Math.abs(m.at - (x.guestEnd - 10 * 60e3)) <= 5 * 60e3))) x.msgs = { w: true, t: true, own: false, synced: true };
-  return { ok: true, on: !!m2.autoEnd, by: m2.autoBy || '', t: m2.autoT || 0, now, last: await hb.kvGet('autoLast'), sessions: list.sort((a, b) => a.guestEnd - b.guestEnd) };
+  return { ok: true, on: !!m2.autoEnd, by: m2.autoBy || '', t: m2.autoT || 0, now, last: await hb.kvGet('autoLast'), cronLast: await hb.kvGet('cronLast'), orphanLast: await hb.kvGet('orphanLast'), sessions: list.sort((a, b) => a.guestEnd - b.guestEnd) };
 }
 const sgDayName = (ms) => new Date(ms + 8 * 3600e3).toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).replace(/,/g, '');
 async function late(env, hb, f) {
@@ -1948,7 +1948,7 @@ async function ghProxy(env, req) {
 
 export default {
   /* every 10 minutes (Cloudflare cron trigger, every-10-minutes schedule): staff "in 1 hour" alerts */
-  async scheduled(ev, env0, ctx) { const env = envFor(env0, 'live'); ctx.waitUntil(soonRun(env).catch(() => null)); ctx.waitUntil(autoRun(env, 'cron').catch(() => null)); ctx.waitUntil(msgOrphans(env, 'cron').catch(() => null));
+  async scheduled(ev, env0, ctx) { const env = envFor(env0, 'live'); ctx.waitUntil(book(env).kvSet('cronLast', Date.now()).catch(() => null)); ctx.waitUntil(soonRun(env).catch(() => null)); ctx.waitUntil(autoRun(env, 'cron').catch(() => null)); ctx.waitUntil(msgOrphans(env, 'cron').catch(() => null));
     if (new Date().getUTCMinutes() < 10 || (new Date().getUTCMinutes() >= 30 && new Date().getUTCMinutes() < 40)) { const t = sgDay(Date.now()); ctx.waitUntil(shadowSync(env, [t, addDays(t, 1)]).catch(() => null)); } },
   async fetch(req, env0, ctx) {
     const u = new URL(req.url);
