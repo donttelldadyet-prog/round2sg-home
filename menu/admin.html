@@ -232,6 +232,13 @@ const fmtOut = d => JSON.stringify(Object.assign({}, d, { prices: r2PriceTable(d
 
 let data = null, published = "", view = "menu", openId = null, confirmDel = null, flash = null;
 let gh = Object.assign({}, CONFIG.GH_DEFAULT, store.get("r2gh") || {});
+// The control centre (now on staff.round2.sg, a different address) hands over its GitHub key when it opens this editor,
+// so the key is typed once there, not again here. Only accepted from the control centre's own addresses.
+window.addEventListener("message", e => {
+  if (!/^https:\/\/(staff\.round2\.sg|donttelldadyet-prog\.github\.io)$/.test(e.origin) || !e.data || typeof e.data.r2ghToken !== "string") return;
+  if (gh.token === e.data.r2ghToken) return;
+  gh.token = e.data.r2ghToken; store.set("r2gh", gh);
+});
 
 // ---------- model ----------
 const S = () => data.settings;
