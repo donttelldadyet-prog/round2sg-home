@@ -1321,9 +1321,9 @@ async function bookingSample(env) {
 }
 /* "In 1 hour" – every 5 minutes (cron) the engine reads today's sessions the same way In session does: SimplyBook
    bookings AND calendar notes that block time (WhatsApp / walk-in sessions). Skipped: the twin room's SYSTEM BLOCKs and
-   EXT notes (an extension isn't a new arrival). Each session is sent once, when it's 50–62 minutes away; a calendar note
-   added later than that is sent as soon as it's seen ("in 20 min"). Bookings made within the hour aren't repeated: their
-   "New booking" alert says "starts in N min" (owner, 1 Nov). */
+   EXT notes (an extension isn't a new arrival). Each session is sent once, when it's 50–62 minutes away. Anything
+   added later than that gets no reminder: a note was keyed in by staff themselves, and a booking's "New booking"
+   alert already says "starts in N min" (owner, 1 Nov). */
 function soonMsg(S, now) {
   const mins = Math.round((S.s - now) / 60e3), unit = S.unit, room = unit === 11 ? 'Maximillion' : ROOMS[unit][0];
   const who = S.k === 'b' ? (S.name || 'No name') : 'Note: ' + String(S.name || '').replace(/\s+/g, ' ').slice(0, 60);
@@ -1345,10 +1345,7 @@ async function soonRun(env) {
   const hb = book(env); if (!(await hb.pushList('soon')).length) return { phones: 0 };
   const now = Date.now(), sent = [];
   for (const S of await soonSessions(env, 2)) {
-    const m = S.s - now; if (m <= 0 || m > 62 * 60e3) continue;
-    /* under 50 min: only calendar notes (a WhatsApp / walk-in session keyed in late gets no booking alert);
-       a booking made that late already got its "New booking · starts in N min" alert */
-    if (m <= 50 * 60e3 && S.k === 'b') continue;
+    const m = S.s - now; if (m <= 50 * 60e3 || m > 62 * 60e3) continue;   /* keyed in within the hour → no reminder (staff just did it) */
     if (!(await hb.soonMark(S.key + ':' + S.s))) continue;
     sent.push(Object.assign({ key: S.key }, await pushAll(env, 'soon', soonMsg(S, now))));
   }
