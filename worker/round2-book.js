@@ -1277,7 +1277,7 @@ async function pushApi(env, req, path) {
   }
   if (path === '/push/preview') {   /* staff: what the booking alert would say (latest upcoming booking, or bid) – sends nothing */
     let bid = String(f.bid || '').replace(/\D/g, '');
-    if (f.kind === 'soon') return J({ msg: await soonSample(env) });
+    if (f.kind === 'soon' || f.kind === 'soonnote') return J({ msg: await soonSample(env, f.kind === 'soonnote' ? 'n' : 'b') });
     if (!bid) { const a = await admin(env), day = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10); const l = Object.values((await a('getBookings', [{ booking_type: 'non_cancelled', date_from: day, date_to: addDays(day, 14) }])) || {}); bid = String((l.find((x) => !SYS_CLIENTS.includes(String(x.client_id))) || {}).id || ''); }
     const r = bid ? await bookingAlert(env, bid, f.type || 'create') : null;
     return J(r ? { bid, msg: r.msg, skipped: r.skipped, fields: f.fields ? r.b : Object.keys(r.b || {}) } : { error: 'No booking found' });
@@ -1298,7 +1298,7 @@ async function pushApi(env, req, path) {
     const s = await hb.pushGet(id); if (!s) return J({ error: 'This phone isn’t signed up for alerts' });
     let m = { kind: 'test', title: 'Round2 alerts work ✓', body: 'This phone will get the alerts you switched on.', tag: 'test', url: '/' };
     if (f.kind === 'booking') { const p = await bookingSample(env); if (!p) return J({ error: 'No upcoming booking to show as a sample' }); m = Object.assign(p, { title: 'TEST · ' + p.title, tag: 'test-bk' }); }
-    if (f.kind === 'soon') { const p = await soonSample(env); if (!p) return J({ error: 'No session in the next 2 days to show as a sample' }); m = Object.assign(p, { title: 'TEST · ' + p.title, tag: 'test-soon' }); }
+    if (f.kind === 'soon' || f.kind === 'soonnote') { const p = await soonSample(env, f.kind === 'soonnote' ? 'n' : 'b'); if (!p) return J({ error: f.kind === 'soonnote' ? 'No calendar note in the next 7 days to show as a sample' : 'No booking in the next 7 days to show as a sample' }); m = Object.assign(p, { title: 'TEST · ' + p.title, tag: 'test-' + f.kind }); }
     const r = await pushOne(env, s.sub, m);
     await hb.pushResult(id, r);
     return J(r === 'ok' ? { ok: true } : { error: r === 'gone' ? 'The phone’s subscription expired. Turn alerts off and on again.' : r });
@@ -1327,11 +1327,12 @@ async function bookingSample(env) {
 /* owner's layout (1 Nov): what staff need to set up the room – who, when they arrive, how long, how many (pax decides
    the room set-up and how many controllers). Bold = icon ROOM · name · in 1 hour; below = arrives · length · pax. */
 function soonMsg(S, now, pax) {
-  const mins = Math.round((S.s - now) / 60e3), unit = S.unit;
-  const who = S.k === 'b' ? (S.name || 'No name') : String(S.name || 'Calendar note').replace(/\s+/g, ' ').slice(0, 40);
-  const len = Math.round((S.guestEnd - S.s) / 360e3) / 10;
-  return { title: roomTitle(unit) + ' · ' + who + ' · in ' + (mins >= 55 && mins <= 65 ? '1 hour' : mins + ' min'),
-    body: 'Arrives ' + clock12(S.s) + ' · ' + len + 'h (till ' + clock12(S.guestEnd) + ') · ' + (pax || '?') + ' pax' + (S.k === 'n' ? ' · from a note' : ''), tag: 'soon' + S.key, url: '/?tab=insession' };
+  const mins = Math.round((S.s - now) / 60e3), unit = S.unit, inT = ' · in ' + (mins >= 55 && mins <= 65 ? '1 hour' : mins + ' min');
+  const len = Math.round((S.guestEnd - S.s) / 360e3) / 10, when = 'Arrives ' + clock12(S.s) + ' · ' + len + 'h (till ' + clock12(S.guestEnd) + ') · ' + (pax || '?') + ' pax';
+  if (S.k === 'b') return { title: roomTitle(unit) + ' · ' + (S.name || 'No name') + inT, body: when, tag: 'soon' + S.key, url: '/?tab=insession' };
+  /* a calendar note: the whole note under the times, so nothing staff wrote is lost (owner, 1 Nov) */
+  const note = String(S.name || '').replace(/\s+/g, ' ').trim();
+  return { title: roomTitle(unit) + ' · Note' + inT, body: when + '\n' + (note ? '“' + note.slice(0, 200) + '”' : '(empty note)'), tag: 'soon' + S.key, url: '/?tab=insession' };
 }
 /* pax: a booking's own field; a note's text ("4 pax") */
 async function soonPax(env, S) {
@@ -1348,7 +1349,8 @@ async function soonSessions(env, days) {
   }
   return out.sort((a, b) => a.s - b.s);
 }
-async function soonSample(env) { const now = Date.now(), S = (await soonSessions(env, 2)).find((x) => x.s > now); return S ? soonMsg(S, S.s - 60 * 60e3, await soonPax(env, S)) : null; }
+/* sample for the Alerts page: the next booking (k='b') or the next calendar note (k='n') in the coming week */
+async function soonSample(env, k) { const now = Date.now(), S = (await soonSessions(env, 7)).find((x) => x.s > now && (!k || x.k === k)); return S ? soonMsg(S, S.s - 60 * 60e3, await soonPax(env, S)) : null; }
 async function soonRun(env) {
   if (!env.VAPID_JWK) return null;
   /* lean (owner, 1 Nov): cron every 10 min, but SimplyBook is only asked 9:45am–2am Singapore time */
@@ -1370,7 +1372,8 @@ const SB_ALERT = { create: 'New booking', change: 'Booking changed', cancel: 'Bo
    where an emoji in that colour exists (owner, 1 Nov) */
 const ROOM_DOT = { 5: '🎀', 7: '🍃', 8: '🪐', 9: '🏔️', 10: '🔮', 12: '⛵', 11: '🏎️' };
 const roomTitle = (unit) => (ROOM_DOT[unit] ? ROOM_DOT[unit] + ' ' : '') + (unit === 11 ? 'MAX' : ROOMS[unit] ? ROOMS[unit][0].toUpperCase() : 'ROOM');
-const notePax = (t) => { const m = String(t || '').match(/(\d+)\s*(pax|ppl|people|persons?|guests?|pp)\b/i); return m ? m[1] : ''; };
+/* pax from a note's text: "4 pax", "4pax", "4 ppl", "4 people", "4 guests", "4p" (not "4pm"/"4 p.m."), "pax: 4", "pax 4" */
+const notePax = (t) => { t = String(t || ''); const m = t.match(/(\d{1,2})\s*(pax|ppl|people|persons?|guests?|pp|p(?![.\s]*m\b))\b/i) || t.match(/\b(?:pax|ppl|people|guests?)\s*[:=-]?\s*(\d{1,2})\b/i); return m ? m[1] : ''; };
 async function bookingAlert(env, bid, type) {
   const a = await admin(env), b = await a('getBookingDetails', [bid]).catch(() => null);
   if (!b) return null;
