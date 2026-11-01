@@ -1206,8 +1206,8 @@ async function latecancel(env, hb, f) {
 }
 /* ===== After-midnight markers (owner, 1 Nov) =====
    SimplyBook's calendar only shows 11am–12am, so a session STARTING after midnight (Late session, WhatsApp note) sits
-   off-screen on the next day's calendar. For each one the engine keeps a NON-blocking note at 11:45pm–11:59pm the night
-   before (ending AT 12am makes SimplyBook draw it down the whole next day), same room: "↓ AFTER 12AM · karen 2 pax · 12:15am–3am Mon 2 Nov". It blocks nothing and the engine
+   off-screen on the next day's calendar. For each one the engine keeps a NON-blocking note at 11:30pm–11:45pm the night
+   before (on SimplyBook's 15-min grid: ending AT 12am spills down the whole next day, 11:59pm isn't drawn at all), same room: "↓ AFTER 12AM · karen 2 pax · 12:15am–3am Mon 2 Nov". It blocks nothing and the engine
    never reads it as a session (only time-blocked notes are sessions), so +1h, EXT notes, reminders and wrap-up messages
    keep using the real note. Kept in sync after Late session / +1h, and every 30 min for tonight and tomorrow night
    (moved, extended, deleted → marker follows). Only notes starting "↓ AFTER 12AM" are ever touched. */
@@ -1224,11 +1224,11 @@ async function shadowSync(env, nights) {
     const nt = await s2('GET', '/admin/calendar-notes?filter[date_from]=' + N + '&filter[date_to]=' + N + '&on_page=200');
     const have = ((nt && nt.data) || []).filter((n) => SHADOW_RE.test(String(n.note || '')) && sgDay(sgMs0(n.start_date_time)) === N);
     for (const n of have) {
-      const i = want.findIndex((w) => w.unit === +n.provider_id && w.text === String(n.note) && /23:59/.test(String(n.end_date_time)));   /* old 12am-ending markers get replaced */
+      const i = want.findIndex((w) => w.unit === +n.provider_id && w.text === String(n.note) && /23:45/.test(String(n.end_date_time)));   /* older markers (other times) get replaced */
       if (i >= 0) { want.splice(i, 1); log.kept++; } else { await s2('DELETE', '/admin/calendar-notes/' + n.id); log.gone++; }
     }
     for (const w of want) {
-      await s2('POST', '/admin/calendar-notes', { provider_id: w.unit, service_id: null, start_date_time: N + ' 23:45:00', end_date_time: N + ' 23:59:00', note_type_id: 1, note: w.text, mode: 'provider', time_blocked: false });
+      await s2('POST', '/admin/calendar-notes', { provider_id: w.unit, service_id: null, start_date_time: N + ' 23:30:00', end_date_time: N + ' 23:45:00', note_type_id: 1, note: w.text, mode: 'provider', time_blocked: false });
       log.made++;
     }
   }
