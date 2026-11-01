@@ -1208,6 +1208,37 @@ async function latelist(env, hb) {
   }
   return { ok: true, now, sessions: out };
 }
+/* ===== Wrap-up messages with no session left (owner, 2 Nov) =====
+   A booking cancelled or a note deleted straight in SimplyBook leaves its "About 10 minutes to go" / "That's a wrap!"
+   behind. Every 10 min and on every SimplyBook change: each such Round2 message due in the next 24 h needs a session in
+   that room ending then (wrapup = end − 10 min, ±5 min); none → cancelled. Left alone: messages under 15 min old (still
+   being set up), and everything if SimplyBook answers with an empty day or more than 4 would go at once (logged). */
+async function msgOrphans(env, why, dry) {
+  if (!env.GM_STAFF) return { off: true };
+  const hb = book(env), now = Date.now(), want = [];
+  for (const m of await hb.qList()) {
+    if (!/^R2/.test(m.code) || m.at <= now + 60e3 || m.at > now + 24 * 3600e3) continue;
+    const d = await hb.msgGet(m.code);
+    if (!d || d.status !== 'approved' || !['wrapup', 'timeup'].includes(d.kind) || now - (+d.created || 0) < 15 * 60e3) continue;
+    want.push({ code: m.code, room: m.room, kind: d.kind, at: m.at, end: d.kind === 'wrapup' ? m.at + 10 * 60e3 : m.at });
+  }
+  const log = { t: now, why, checked: want.length, cancelled: [], problems: [] };
+  if (!want.length) return log;
+  const sess = [];
+  for (const day of [...new Set(want.map((w) => sgDay(w.end - 1)))]) {
+    const D = await sessDay(env, day);
+    if (!D.items.length) { log.problems.push('SimplyBook gave an empty ' + day + ' – nothing cancelled'); return log; }
+    for (const S of D.sessions) if (!S.sys) sess.push(S);
+  }
+  const gone = want.filter((w) => !sess.some((S) => GM_ROOM[S.unit] === w.room && Math.abs(S.guestEnd - w.end) <= 5 * 60e3));
+  log.gone = gone.map((w) => ({ code: w.code, room: w.room, kind: w.kind, at: w.at }));
+  if (dry) return log;
+  if (gone.length > 4) log.problems.push(gone.length + ' at once – nothing cancelled, check SimplyBook');
+  else for (const w of gone) { try { await gmFwd(env, { staff: env.GM_STAFF, action: 'cancel', code: w.code }); log.cancelled.push(w.code); } catch (e) { log.problems.push(w.code + ': ' + String(e.message || e).slice(0, 60)); } }
+  if (log.cancelled.length) { await hb.gmDrop('__LIST__'); await gmList(env, hb).catch(() => null); }
+  if (log.cancelled.length || log.problems.length) await hb.kvSet('orphanLast', log);
+  return log;
+}
 async function latecancel(env, hb, f) {
   const old = await lateFind(env, String(f.id || ''), String(f.day || ''));
   if (!old) return { error: 'That session isn’t in SimplyBook any more. Refresh the list.' };
@@ -1334,6 +1365,10 @@ async function gm(env, req) {
       if (at) await hb.laterSet(code, at); else await hb.laterDel(code);
     }
     return gmJ({ ok: true, later: await hb.laterList() });
+  }
+  if (act === 'orphans') {   /* staff: wrap-up messages whose session is gone (dry=1: just list them) */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    try { return gmJ(Object.assign({ ok: true }, await msgOrphans(env, 'by hand', !!f.dry), { last: await hb.kvGet('orphanLast') })); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
   if (act === 'shadow') {   /* staff: re-check the after-midnight markers for nights from..from+n (max 20) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
@@ -1855,7 +1890,7 @@ async function bookingPush(env, bid, type) {
 
 export default {
   /* every 10 minutes (Cloudflare cron trigger, every-10-minutes schedule): staff "in 1 hour" alerts */
-  async scheduled(ev, env0, ctx) { const env = envFor(env0, 'live'); ctx.waitUntil(soonRun(env).catch(() => null)); ctx.waitUntil(autoRun(env, 'cron').catch(() => null));
+  async scheduled(ev, env0, ctx) { const env = envFor(env0, 'live'); ctx.waitUntil(soonRun(env).catch(() => null)); ctx.waitUntil(autoRun(env, 'cron').catch(() => null)); ctx.waitUntil(msgOrphans(env, 'cron').catch(() => null));
     if (new Date().getUTCMinutes() < 10 || (new Date().getUTCMinutes() >= 30 && new Date().getUTCMinutes() < 40)) { const t = sgDay(Date.now()); ctx.waitUntil(shadowSync(env, [t, addDays(t, 1)]).catch(() => null)); } },
   async fetch(req, env0, ctx) {
     const u = new URL(req.url);
@@ -1987,6 +2022,7 @@ export default {
         if (bid) ctx.waitUntil(book(env).onSb(bid, type).catch(() => null));
         if (bid) ctx.waitUntil(bookingPush(env, bid, type).catch(() => null));   /* staff phones: New booking / changed / cancelled */
         ctx.waitUntil(autoRun(env, 'simplybook ' + type).catch(() => null));   /* auto end messages follow straight away */
+        ctx.waitUntil(msgOrphans(env, 'simplybook ' + type).catch(() => null));   /* a cancelled booking's wrap-up messages go */
         await book(env).gmDrop('__LIST__').catch(() => null);
         return J({ ok: true });
       }
