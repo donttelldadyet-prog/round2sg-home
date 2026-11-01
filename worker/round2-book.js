@@ -887,7 +887,7 @@ function sessMsgs(links, room, guestEnd) {
   return { wrapup: one(w), timeup: one(t) };
 }
 async function makeLinks(env, hb) {
-  const L = await hb.gmGet('__LIST__');
+  const L = (await hb.getMode()).msgLocal ? null : await hb.gmGet('__LIST__');
   let raw = L && L.exp > Date.now() && L.link && L.link.raw;
   if (!raw) raw = await gmList(env, hb);
   try { return JSON.parse(raw).links || []; } catch (e) { return []; }
@@ -1226,7 +1226,7 @@ async function gm(env, req) {
     /* list: the staff page and the control centre ask for it every minute or so. Answer from memory (15 min), and
        ask Make again only after something changed through here. Saves thousands of Make operations a month. */
     if (act === 'list') {
-      const L = await hb.gmGet('__LIST__');
+      const L = (await hb.getMode()).msgLocal ? null : await hb.gmGet('__LIST__');   /* messages kept here: always fresh, nothing to save */
       if (L && L.exp > Date.now() && L.link && L.link.raw) return new Response(L.link.raw, { headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' } });
       return new Response(await gmList(env, hb), { headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' } });
     }
