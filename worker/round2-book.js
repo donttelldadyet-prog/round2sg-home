@@ -1482,7 +1482,7 @@ async function bookingAlert(env, bid, type, prev) {
     body = moved ? '🔁 MOVED\nwas ' + span(prev.unit, prev.s, prev.e) + '\nnow ' + span(unit, s, e).replace(/^/, prev.unit !== unit ? (unit === 11 ? 'Max' : ROOMS[unit] ? ROOMS[unit][0] : '') + ' ' : '') + ' · ' + hours + 'h · ' + (pax || '?') + ' pax'
       : '✏️ CHANGED\n' + details;   /* times the same (or not known from before): new details */
   } else body = (soonTxt ? soonTxt + '\n' : '') + details;
-  const what = '';
+  const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10) === date;
   return { msg: { title: roomTitle(unit) + ' · ' + (name || 'No name'), body, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/' }, b, now: { unit, s, e } };
 }
 async function bookingPush(env, bid, type) {
