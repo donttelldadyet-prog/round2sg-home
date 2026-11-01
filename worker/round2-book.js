@@ -1343,8 +1343,10 @@ async function soonSample(env) { const now = Date.now(), S = (await soonSessions
 async function soonRun(env) {
   if (!env.VAPID_JWK) return null;
   const hb = book(env); if (!(await hb.pushList('soon')).length) return { phones: 0 };
-  const now = Date.now(), sent = [];
-  for (const S of await soonSessions(env, 2)) {
+  const now = Date.now(), sent = [], sgDay = (t) => new Date(t + 8 * 3600e3).toISOString().slice(0, 10);
+  /* only the day the 50–62 min window falls on (today; tomorrow only around midnight) – one SimplyBook read each */
+  const days = sgDay(now + 62 * 60e3) === sgDay(now) ? 1 : 2;
+  for (const S of await soonSessions(env, days)) {
     const m = S.s - now; if (m <= 50 * 60e3 || m > 62 * 60e3) continue;   /* keyed in within the hour → no reminder (staff just did it) */
     if (!(await hb.soonMark(S.key + ':' + S.s))) continue;
     sent.push(Object.assign({ key: S.key }, await pushAll(env, 'soon', soonMsg(S, now))));
