@@ -212,11 +212,29 @@ export class HoldBook extends DurableObject {
   bkGet(bid) { this.bkInit(); const r = this.rows(`SELECT * FROM bkseen WHERE bid = ?`, bid)[0]; return r ? { unit: r.unit, s: r.s, e: r.e } : null; }
   bkPut(bid, x) { this.bkInit(); this.sql.exec(`DELETE FROM bkseen WHERE t < ?`, Date.now() - 200 * 86400e3); this.sql.exec(`INSERT OR REPLACE INTO bkseen VALUES (?, ?, ?, ?, ?)`, bid, x.unit, x.s, x.e, Date.now()); }
   bkDel(bid) { this.bkInit(); this.sql.exec(`DELETE FROM bkseen WHERE bid = ?`, bid); }
-  /* auto end-of-session messages: per session, the two Round2 messages that belong to it (own = made by the auto) */
-  autoInit() { if (this.autoReady) return; this.autoReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS auto (key TEXT PRIMARY KEY, room TEXT, day TEXT, gend INTEGER, w TEXT, t TEXT, own INTEGER, upd INTEGER)`); }
-  autoAll() { this.autoInit(); this.sql.exec(`DELETE FROM auto WHERE gend < ?`, Date.now() - 2 * 86400e3); return this.rows(`SELECT * FROM auto`); }
-  autoPut(r) { this.autoInit(); this.sql.exec(`INSERT OR REPLACE INTO auto VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, r.key, r.room, r.day, r.gend, r.w || '', r.t || '', r.own ? 1 : 0, Date.now()); }
-  autoDel(key) { this.autoInit(); this.sql.exec(`DELETE FROM auto WHERE key = ?`, key); }
+  /* auto wrap-up (no Make): the engine's own schedule of "About 10 minutes to go" / "That's a wrap!" per session,
+     written straight to the room's TV (Firebase) by the alarm, like the 5-minute reminder */
+  autoInit() { if (this.autoReady) return; this.autoReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS autoq (key TEXT, kind TEXT, room TEXT, day TEXT, at INTEGER, gend INTEGER, sent INTEGER DEFAULT 0, PRIMARY KEY (key, kind))`); }
+  autoAll() { this.autoInit(); this.sql.exec(`DELETE FROM autoq WHERE gend < ?`, Date.now() - 2 * 86400e3); return this.rows(`SELECT * FROM autoq`); }
+  autoSet(key, kind, room, day, at, gend) { this.autoInit(); this.sql.exec(`INSERT INTO autoq VALUES (?, ?, ?, ?, ?, ?, 0) ON CONFLICT (key, kind) DO UPDATE SET room = excluded.room, day = excluded.day, at = excluded.at, gend = excluded.gend, sent = CASE WHEN autoq.at = excluded.at THEN autoq.sent ELSE 0 END`, key, kind, room, day, at, gend); this.arm(); }
+  autoDel(key) { this.autoInit(); this.sql.exec(`DELETE FROM autoq WHERE key = ? AND sent = 0`, key); this.arm(); }
+  async autoSend() {
+    this.autoInit(); const env = this.env, now = Date.now(); if (!env.TV_KEY) return;
+    for (const r of this.rows(`SELECT * FROM autoq WHERE sent = 0 AND at <= ?`, now + 5000)) {
+      if (now - r.at > 10 * 60e3) { this.sql.exec(`UPDATE autoq SET sent = 2 WHERE key = ? AND kind = ?`, r.key, r.kind); continue; }   /* far too late (engine asleep): skip */
+      const base = FB_BASE + env.TV_KEY + '/' + r.room;
+      const [c, k] = await Promise.all([fetch(base + '/msg.json').then((x) => x.json()).catch(() => null), fetch(base + '/msgAck.json').then((x) => x.json()).catch(() => null)]);
+      /* never push a guest's message off the TV before they've pressed OK: wait, checked every minute */
+      if (c && /^g/.test(String(c.id || '')) && c.ack !== false && +c.until > now && +c.at <= now + 60e3 && !(k && k.id === c.id)) { this.sql.exec(`UPDATE autoq SET at = ? WHERE key = ? AND kind = ?`, now + 60e3, r.key, r.kind); continue; }
+      const T = R2_TXT[r.kind], m = { id: 'A' + r.kind[0] + now.toString(36), kind: r.kind, title: T.title, text: T.text, from: 'The Round2 team', to: '', ack: true, at: now,
+        until: r.kind === 'wrapup' ? now + 4 * 60e3 : r.gend + 15 * 60e3, t: { '.sv': 'timestamp' } };
+      const ok = await fetch(base + '/msg.json', { method: 'PUT', body: JSON.stringify(m) }).then((x) => x.ok).catch(() => false);
+      this.sql.exec(`UPDATE autoq SET sent = ? WHERE key = ? AND kind = ?`, ok ? 1 : 0, r.key, r.kind);
+      if (!ok) this.sql.exec(`UPDATE autoq SET at = ? WHERE key = ? AND kind = ?`, now + 60e3, r.key, r.kind);
+      else if (r.kind === 'wrapup') this.nudgeAdd(r.room, now);   /* the 5-minute reminder if nobody presses OK */
+      this.fLog({ a: ok ? 'auto ' + r.kind : 'auto ' + r.kind + ' failed', room: r.room });
+    }
+  }
   autoLock(on) { this.qInit(); const now = Date.now(), r = this.rows(`SELECT v FROM kv WHERE k = 'autoLock'`)[0]; if (on) { if (r && now - +JSON.parse(r.v) < 90e3) return false; this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('autoLock', ?)`, String(now)); return true; } this.sql.exec(`DELETE FROM kv WHERE k = 'autoLock'`); return true; }
   kvGet(k) { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = ?`, k)[0]; return r ? JSON.parse(r.v) : null; }
   kvSet(k, v) { this.qInit(); this.sql.exec(`INSERT OR REPLACE INTO kv VALUES (?, ?)`, k, JSON.stringify(v)); }
@@ -480,7 +498,8 @@ export class HoldBook extends DurableObject {
     const lsy = this.rows(`SELECT 1 FROM kv WHERE k = 'lsynced'`).length;
     this.bqInit(); const bqn = this.rows(`SELECT COUNT(*) AS n FROM bq`)[0].n;
     this.nudgeInit(); const nd = this.rows(`SELECT MIN(at) AS t FROM nudge`)[0];
-    const ts = [bqn ? Date.now() + 30e3 : 0, nd && nd.t ? nd.t : 0, n && n.t ? n.t + 1000 : 0, q && q.t ? q.t - 60e3 : 0, syn ? syn + 86400e3 : 0, fl ? fol + FOLLOW_MS : 0, lsy ? 0 : Date.now() + 2000, lt && lt.t ? lt.t : 0].filter((t) => t > 0);
+    this.autoInit(); const au = this.rows(`SELECT MIN(at) AS t FROM autoq WHERE sent = 0`)[0];
+    const ts = [bqn ? Date.now() + 30e3 : 0, nd && nd.t ? nd.t : 0, n && n.t ? n.t + 1000 : 0, q && q.t ? q.t - 60e3 : 0, syn ? syn + 86400e3 : 0, fl ? fol + FOLLOW_MS : 0, lsy ? 0 : Date.now() + 2000, lt && lt.t ? lt.t : 0, au && au.t ? au.t : 0].filter((t) => t > 0);
     if (ts.length) this.ctx.storage.setAlarm(Math.max(Date.now() + 1000, Math.min(...ts)));
   }
   /* timer ran out → release the hold and kill its HitPay link */
@@ -491,6 +510,7 @@ export class HoldBook extends DurableObject {
     try { await this.qRun(); } catch (e) {}
     try { await this.bqRun(); } catch (e) {}
     try { await this.nudgeRun(); } catch (e) {}
+    try { await this.autoSend(); } catch (e) {}
     this.arm();
   }
   async qRun() {
@@ -845,12 +865,13 @@ async function extend(env, hb, f) {
   const made = done;
   const rec = { room: S.room, unit: S.unit, key: S.key, name: S.name, hours: h, notes: made, guestEndWas: S.guestEnd, guestEnd: newGuest, moved: [], created: [], problems: [] };
   if (today) {
+    const md = await hb.getMode(), autoOn = !!md.autoEnd && !(md.autoOff || []).includes(S.key);
     const call = async (body) => { const t = await gmFwd(env, Object.assign({ staff: env.GM_STAFF }, body)); let j = null; try { j = JSON.parse(t); } catch (e) {} if (!j || j.error) throw new Error((j && j.error) || 'Make didn’t answer'); return j; };
     for (const kind of ['wrapup', 'timeup']) {
       const at = plan[kind].at, cur = old[kind];
       try {
         if (cur) { await call({ action: 'move', code: cur.code, start: at, room: S.room }); rec.moved.push({ code: cur.code, from: cur.at, to: at }); }
-        else if (f.msgs === 'no') continue;   /* toggle off (owner, 1 Nov): don't add new ones – existing ones still move, never left at the old end */
+        else if (f.msgs === 'no' || autoOn) continue;   /* toggle off, or Auto wrap-up handles it (no Make): don't add new ones – existing ones still move */
         else { const j = await call({ action: 'r2', room: S.room, kind, to: '', from: 'The Round2 team', title: R2_TXT[kind].title, text: R2_TXT[kind].text, ack: 'yes', at }); rec.created.push({ code: j.code || j.key || '', at, kind }); }
       } catch (e) { rec.problems.push(kind + ': ' + String(e.message || e).slice(0, 80)); }
     }
@@ -859,6 +880,7 @@ async function extend(env, hb, f) {
   }
   const id = 'x' + now.toString(36);
   await hb.extPut(id, rec);
+  await autoRun(env, 'extended').catch(() => null);   /* Auto wrap-up follows the new end straight away */
   return { ok: true, id, plan, done: rec };
 }
 /* In session › "+ Late session" (owner, 1 Nov): a WhatsApp / walk-in session keyed in by staff, including ones running
@@ -870,9 +892,12 @@ async function extend(env, hb, f) {
    Switch (TV messages › Auto end messages, staff code): when on, every session today – SimplyBook bookings and calendar
    notes, late sessions too – gets "About 10 minutes to go" (guest end − 10 min) and "That's a wrap!" (guest end) as
    soon as the engine sees it, and they're kept in sync every 10 minutes and on every SimplyBook change:
-   new session → added; moved / extended → moved; gone (cancelled, note deleted) → cancelled (only the ones it made).
-   Messages someone already set (+1h, Late session, Round2 messages) are adopted, never doubled. A session can be set to
-   "off". Skips SYSTEM BLOCKs (twin room) and stray EXT notes. More than 4 cancels at once → nothing cancelled, logged. */
+   new session → added; moved / extended → moved; gone (cancelled, note deleted) → cancelled.
+   NO MAKE (owner, 1 Nov: Make credits): the engine keeps its own schedule (Durable Object table autoq) and its alarm
+   writes the message straight to the room's TV in Firebase, like the 5-minute reminder; a guest message not OK'd yet
+   goes first. Messages someone already set (+1h, Late session, Round2 messages) are left alone, never doubled; while the
+   switch is on, +1h and Late session don't add new ones themselves. A session can be set to "off". Skips SYSTEM BLOCKs
+   and stray EXT notes. More than 4 sessions gone at once → nothing cancelled, logged. */
 async function autoRun(env, why) {
   const hb = book(env), mode = await hb.getMode();
   if (!mode.autoEnd || !env.GM_STAFF) return { off: true };
@@ -884,45 +909,28 @@ async function autoRun2(env, hb, mode, why) {
   const days = hm < 6 * 60 ? [addDays(today, -1), today] : [today];   /* after midnight: last night's sessions too */
   const sess = [];
   for (const d of days) for (const S of (await sessDay(env, d)).sessions) if (!S.sys && !S.orphanExt && ROOMS[S.unit] && !sess.some((x) => x.key === S.key)) sess.push(S);
-  const off = new Set(mode.autoOff || []), recs = await hb.autoAll(), log = { t: now, why, made: 0, moved: 0, cancelled: 0, adopted: 0, problems: [] };
-  const call = async (body) => { const t = await gmFwd(env, Object.assign({ staff: env.GM_STAFF }, body)); let j = null; try { j = JSON.parse(t); } catch (e) {} if (!j || j.error) throw new Error((j && j.error) || 'Make didn’t answer'); return j; };
-  let links = null, changed = false;
+  const off = new Set(mode.autoOff || []), rows = await hb.autoAll(), q = await hb.qList(), log = { t: now, why, made: 0, moved: 0, cancelled: 0, adopted: 0, problems: [] };
   for (const S of sess) {
-    if (S.guestEnd <= now + 60e3 || off.has(S.key)) continue;
-    const rec = recs.find((r) => r.key === S.key);
-    if (rec && rec.gend === S.guestEnd && rec.room === S.room) continue;   /* nothing changed */
-    if (rec) {   /* moved or extended: move its messages (if +1h already moved them, this is a no-op to the same time) */
-      for (const [kind, code] of [['wrapup', rec.w], ['timeup', rec.t]]) if (code) {
-        try { await call({ action: 'move', code, start: kind === 'wrapup' ? S.guestEnd - 10 * 60e3 : S.guestEnd, room: S.room }); log.moved++; changed = true; } catch (e) { log.problems.push(S.room + ' move: ' + String(e.message || e).slice(0, 60)); }
-      }
-      await hb.autoPut(Object.assign({}, rec, { room: S.room, gend: S.guestEnd }));
-      continue;
-    }
-    /* new to the auto: adopt messages someone already set for this end, make only what's missing */
-    if (!links) links = await makeLinks(env, hb);
-    const cur = sessMsgs(links, S.room, S.guestEnd), r = { key: S.key, room: S.room, day: sgDay(S.s), gend: S.guestEnd, w: cur.wrapup && cur.wrapup.code, t: cur.timeup && cur.timeup.code, own: 0 };
-    if (r.w || r.t) log.adopted++;
+    if (S.guestEnd <= now + 60e3) continue;
+    const mine = rows.filter((r) => r.key === S.key);
+    if (off.has(S.key)) { if (mine.some((r) => !r.sent)) { await hb.autoDel(S.key); log.cancelled++; } continue; }
+    /* someone already set Round2 messages for this end (+1h, Late session, Round2 messages): leave it to those */
+    const byHand = q.filter((m) => /^R2/.test(m.code) && m.room === S.room && (Math.abs(m.at - S.guestEnd) <= 5 * 60e3 || Math.abs(m.at - (S.guestEnd - 10 * 60e3)) <= 5 * 60e3));
+    if (byHand.length && !mine.length) { log.adopted++; continue; }
     for (const kind of ['wrapup', 'timeup']) {
-      if (r[kind === 'wrapup' ? 'w' : 't']) continue;
-      const at = kind === 'wrapup' ? S.guestEnd - 10 * 60e3 : S.guestEnd; if (at <= now) continue;
-      try {
-        const j = await call({ action: 'r2', room: S.room, kind, to: '', from: 'The Round2 team', title: R2_TXT[kind].title, text: R2_TXT[kind].text, ack: 'yes', at });
-        r[kind === 'wrapup' ? 'w' : 't'] = j.code || j.key || ''; r.own = 1; log.made++; changed = true;
-      } catch (e) { log.problems.push(S.room + ' add: ' + String(e.message || e).slice(0, 60)); }
+      const at = kind === 'wrapup' ? S.guestEnd - 10 * 60e3 : S.guestEnd, r = mine.find((x) => x.kind === kind);
+      if (r && r.at === at && r.room === S.room) continue;
+      if (r && r.sent === 1 && at <= now) continue;
+      if (!r && at <= now) continue;
+      await hb.autoSet(S.key, kind, S.room, sgDay(S.s), at, S.guestEnd);
+      if (r) log.moved++; else log.made++;
     }
-    await hb.autoPut(r);
   }
-  /* sessions that are gone (cancelled / deleted) – only for the days just read, only messages the auto made */
-  const gone = recs.filter((r) => days.includes(r.day) && r.gend > now && !sess.some((S) => S.key === r.key));
-  if (gone.length > 4) log.problems.push(gone.length + ' sessions vanished at once – nothing cancelled, check SimplyBook');
-  else for (const r of gone) {
-    if (r.own) for (const code of [r.w, r.t].filter(Boolean)) {
-      try { await call({ action: 'cancel', code }); log.cancelled++; changed = true; } catch (e) { log.problems.push(r.room + ' cancel: ' + String(e.message || e).slice(0, 60)); }
-    }
-    await hb.autoDel(r.key);
-  }
-  if (changed) { await hb.gmDrop('__LIST__'); await gmList(env, hb).catch(() => null); }
-  if (changed || log.problems.length || why !== 'cron') await hb.kvSet('autoLast', log);
+  /* sessions that are gone (cancelled / deleted) – only for the days just read */
+  const keys = [...new Set(rows.filter((r) => days.includes(r.day) && !r.sent && r.gend > now && !sess.some((S) => S.key === r.key)).map((r) => r.key))];
+  if (keys.length > 4) log.problems.push(keys.length + ' sessions vanished at once – nothing cancelled, check SimplyBook');
+  else for (const k of keys) { await hb.autoDel(k); log.cancelled++; }
+  if (log.made || log.moved || log.cancelled || log.problems.length || why !== 'cron') await hb.kvSet('autoLast', log);
   return log;
 }
 /* the Auto end messages page: the switch, and today's sessions with their two messages */
@@ -935,10 +943,12 @@ async function autoApi(env, hb, f) {
   const recs = await hb.autoAll(), off = new Set(m2.autoOff || []), list = [];
   for (const d of days) for (const S of (await sessDay(env, d)).sessions) {
     if (S.sys || S.orphanExt || !ROOMS[S.unit] || list.some((x) => x.key === S.key)) continue;
-    const r = recs.find((x) => x.key === S.key);
+    const mine = recs.filter((x) => x.key === S.key), w = mine.find((x) => x.kind === 'wrapup'), t = mine.find((x) => x.kind === 'timeup');
     list.push({ key: S.key, room: S.room, unit: S.unit, name: String(S.name || '').slice(0, 40), k: S.k, s: S.s, guestEnd: S.guestEnd, done: S.guestEnd <= now, off: off.has(S.key),
-      msgs: r ? { w: !!r.w, t: !!r.t, own: !!r.own, synced: r.gend === S.guestEnd } : null });
+      msgs: mine.length ? { w: !!w, t: !!t, wAt: w && w.at, tAt: t && t.at, wSent: w && w.sent === 1, tSent: t && t.sent === 1, own: true, synced: !!t && t.gend === S.guestEnd } : null });
   }
+  const q = await hb.qList();
+  for (const x of list) if (!x.msgs && q.some((m) => /^R2/.test(m.code) && m.room === x.room && (Math.abs(m.at - x.guestEnd) <= 5 * 60e3 || Math.abs(m.at - (x.guestEnd - 10 * 60e3)) <= 5 * 60e3))) x.msgs = { w: true, t: true, own: false, synced: true };
   return { ok: true, on: !!m2.autoEnd, by: m2.autoBy || '', t: m2.autoT || 0, now, last: await hb.kvGet('autoLast'), sessions: list.sort((a, b) => a.guestEnd - b.guestEnd) };
 }
 const sgDayName = (ms) => new Date(ms + 8 * 3600e3).toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).replace(/,/g, '');
@@ -963,9 +973,10 @@ async function late(env, hb, f) {
   const text = name + ' ' + pax + ' pax · late till ' + clock12(guestEnd) + ' · control centre';
   /* "About 10 minutes to go" + "That's a wrap!" on the TV (toggle, default on): only for sessions starting within 24 h,
      so a session cancelled days later doesn't leave messages behind on an empty room's TV */
-  const wantMsgs = f.msgs !== 'no', soonEnough = s - Date.now() < 24 * 3600e3 && guestEnd > Date.now() + 10 * 60e3;
+  const autoOn = !!(await hb.getMode()).autoEnd;
+  const wantMsgs = f.msgs !== 'no' && !autoOn, soonEnough = s - Date.now() < 24 * 3600e3 && guestEnd > Date.now() + 10 * 60e3;
   const plan = { room, twin: tw ? ROOMS[tw][0] : null, name, pax, arrives: clock12(s), guestEnd: clock12(guestEnd), blockEnd: clock12(blockEnd), hours: Math.round(hrs * 100) / 100,
-    nextDay: sgDay(guestEnd) !== day, arrivesDay: sgDayName(s), leavesDay: sgDayName(guestEnd), text, clash, msgs: wantMsgs ? (soonEnough ? { wrapup: clock12(guestEnd - 10 * 60e3), timeup: clock12(guestEnd) } : 'later') : 'off' };
+    nextDay: sgDay(guestEnd) !== day, arrivesDay: sgDayName(s), leavesDay: sgDayName(guestEnd), text, clash, msgs: autoOn ? 'auto' : wantMsgs ? (soonEnough ? { wrapup: clock12(guestEnd - 10 * 60e3), timeup: clock12(guestEnd) } : 'later') : 'off' };
   if (f.dry) return { ok: true, dry: true, plan };
   if (clash.length && f.force !== 'yes') return { ok: false, clash: true, plan };
   const s2 = await sb2(env), done = [];
@@ -989,6 +1000,7 @@ async function late(env, hb, f) {
     }
     await hb.gmDrop('__LIST__'); await gmList(env, hb).catch(() => null);
   }
+  await autoRun(env, 'late session').catch(() => null);
   return { ok: true, plan, notes: done, msgs };
 }
 /* the "+N CREDITS ADDED" banner on the room's TV (kind 'extend': coin-into-slot animation). Last in line (owner, 31 Oct):
