@@ -1324,12 +1324,21 @@ async function bookingSample(env) {
    EXT notes (an extension isn't a new arrival). Each session is sent once, when it's 50–62 minutes away. Anything
    added later than that gets no reminder: a note was keyed in by staff themselves, and a booking's "New booking"
    alert already says "starts in N min" (owner, 1 Nov). */
-function soonMsg(S, now) {
-  const mins = Math.round((S.s - now) / 60e3), unit = S.unit, room = unit === 11 ? 'Maximillion' : ROOMS[unit][0];
-  const who = S.k === 'b' ? (S.name || 'No name') : 'Note: ' + String(S.name || '').replace(/\s+/g, ' ').slice(0, 60);
+/* owner's layout (1 Nov): what staff need to set up the room – who, when they arrive, how long, how many (pax decides
+   the room set-up and how many controllers). Bold = icon ROOM · name · in 1 hour; below = arrives · length · pax. */
+function soonMsg(S, now, pax) {
+  const mins = Math.round((S.s - now) / 60e3), unit = S.unit;
+  const who = S.k === 'b' ? (S.name || 'No name') : String(S.name || 'Calendar note').replace(/\s+/g, ' ').slice(0, 40);
   const len = Math.round((S.guestEnd - S.s) / 360e3) / 10;
-  return { title: (ROOM_DOT[unit] ? ROOM_DOT[unit] + ' ' : '') + (unit === 11 ? 'MAX' : room.toUpperCase()) + ' · in ' + (mins >= 55 && mins <= 65 ? '1 hour' : mins + ' min') + ' · ' + clock12(S.s) + '–' + clock12(S.guestEnd),
-    body: who + (len !== 3 ? ' · ' + len + 'h' : '') + ' · ' + (S.k === 'b' ? 'booking' : 'calendar note'), tag: 'soon' + S.key, url: '/?tab=insession' };
+  return { title: roomTitle(unit) + ' · ' + who + ' · in ' + (mins >= 55 && mins <= 65 ? '1 hour' : mins + ' min'),
+    body: 'Arrives ' + clock12(S.s) + ' · ' + len + 'h (till ' + clock12(S.guestEnd) + ') · ' + (pax || '?') + ' pax' + (S.k === 'n' ? ' · from a note' : ''), tag: 'soon' + S.key, url: '/?tab=insession' };
+}
+/* pax: a booking's own field; a note's text ("4 pax") */
+async function soonPax(env, S) {
+  if (S.k !== 'b') return notePax(S.name);
+  const b = await (await admin(env))('getBookingDetails', [S.id]).catch(() => null); let pax = '';
+  for (const x of [].concat((b && b.additional_fields) || [])) if (x && (x.field_name === PAX_FIELD || /pax|guest|people/i.test(String(x.field_title || x.title || '')))) pax = String(x.value || '').replace(/\D/g, '');
+  return pax;
 }
 async function soonSessions(env, days) {
   const now = Date.now(), out = [];
@@ -1339,7 +1348,7 @@ async function soonSessions(env, days) {
   }
   return out.sort((a, b) => a.s - b.s);
 }
-async function soonSample(env) { const now = Date.now(), S = (await soonSessions(env, 2)).find((x) => x.s > now); return S ? soonMsg(S, S.s - 60 * 60e3) : null; }
+async function soonSample(env) { const now = Date.now(), S = (await soonSessions(env, 2)).find((x) => x.s > now); return S ? soonMsg(S, S.s - 60 * 60e3, await soonPax(env, S)) : null; }
 async function soonRun(env) {
   if (!env.VAPID_JWK) return null;
   /* lean (owner, 1 Nov): cron every 10 min, but SimplyBook is only asked 9:45am–2am Singapore time */
@@ -1352,12 +1361,16 @@ async function soonRun(env) {
   for (const S of await soonSessions(env, days)) {
     const m = S.s - now; if (m <= 50 * 60e3 || m > 62 * 60e3) continue;   /* keyed in within the hour → no reminder (staff just did it) */
     if (!(await hb.soonMark(S.key + ':' + S.s))) continue;
-    sent.push(Object.assign({ key: S.key }, await pushAll(env, 'soon', soonMsg(S, now))));
+    sent.push(Object.assign({ key: S.key }, await pushAll(env, 'soon', soonMsg(S, now, await soonPax(env, S)))));
   }
   return { sent };
 }
 const SB_ALERT = { create: 'New booking', change: 'Booking changed', cancel: 'Booking cancelled' };
-const ROOM_DOT = { 5: '🩷', 7: '💚', 8: '💛', 9: '🩵', 10: '💜', 12: '🤍', 11: '❤️' };
+/* each character's icon, like the booking page (cat, leaf, Saturn, mountain, book, sailboat, car), in the room's colour
+   where an emoji in that colour exists (owner, 1 Nov) */
+const ROOM_DOT = { 5: '🐈', 7: '🍃', 8: '🪐', 9: '🏔️', 10: '🔮', 12: '⛵', 11: '🏎️' };
+const roomTitle = (unit) => (ROOM_DOT[unit] ? ROOM_DOT[unit] + ' ' : '') + (unit === 11 ? 'MAX' : ROOMS[unit] ? ROOMS[unit][0].toUpperCase() : 'ROOM');
+const notePax = (t) => { const m = String(t || '').match(/(\d+)\s*(pax|ppl|people|persons?|guests?|pp)\b/i); return m ? m[1] : ''; };
 async function bookingAlert(env, bid, type) {
   const a = await admin(env), b = await a('getBookingDetails', [bid]).catch(() => null);
   if (!b) return null;
@@ -1378,21 +1391,21 @@ async function bookingAlert(env, bid, type) {
   let money = '';
   const own = await book(env).holdByBid(String(bid)).catch(() => null);
   const inv = b.invoice && typeof b.invoice === 'object' ? b.invoice : null, sgd = (v) => 'S$' + r2(+v).toFixed(2).replace(/\.00$/, '');
-  if (own && own.total) money = sgd(own.total) + ' paid online' + (own.pay === 'test' ? ' (TEST)' : '');
+  if (own && own.total) money = sgd(own.total) + ' paid' + (own.pay === 'test' ? ' (TEST)' : '');
   else if (inv && +inv.amount > 0) money = sgd(inv.amount) + (inv.status === 'paid' || inv.payment_received === '1' ? ' paid' : ' NOT PAID');   /* SimplyBook's own page (HitPay invoice) */
   else if (type2 && hours >= 3 && hours <= 6 && hours % 1 === 0) {
     const P = PRICES[type2], dt = peakDay ? 'peak' : 'off', x = hours - 3;
     const v = ev === ids.eb ? P.eb.base + (x ? P.eb.ext[dt][x - 1] : 0) : P[dt].base + (x ? P[dt].ext[x - 1] : 0);
     money = 'S$' + r2(v).toFixed(2).replace(/\.00$/, '') + ' price';
   }
-  /* compact for the iPhone banner (owner, 1 Nov): the bold title carries room + when, the body leads with what changed,
-     then who, pax, rate and money – most important first, so a cut-off banner still says enough */
-  const when = day.replace(/,/g, '') + ' ' + clock12(s) + '–' + clock12(e);
+  /* owner's layout (1 Nov): bold = room icon, ROOM, guest name (+ CHANGED / CANCELLED / in N min);
+     below = date and time · length · amount (EB / Peak / Off-peak / EB+peak) · pax */
+  const short = ev === ids.eb ? (peakDay ? 'EB+peak' : 'EB') : rate;
   const soonMin = Math.round((s - Date.now()) / 60e3), soonTxt = type !== 'cancel' && soonMin > 0 && soonMin <= 60 ? ' · in ' + soonMin + ' min' : '';
-  const what = { create: 'NEW', change: 'CHANGED', cancel: 'CANCELLED' }[type] || 'BOOKING';
-  const body = [what + soonTxt, name || 'No name', pax ? pax + ' pax' : '', rate.replace(' day)', ')'), money, hours !== 3 ? hours + 'h' : ''].filter(Boolean).join(' · ');
+  const what = { change: ' · CHANGED', cancel: ' · CANCELLED' }[type] || '';
+  const body = [day.replace(/,/g, '') + ', ' + clock12(s) + '–' + clock12(e), hours + 'h', (money || '') + (short ? (money ? ' (' + short + ')' : short) : ''), (pax || '?') + ' pax'].filter(Boolean).join(' · ');
   const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10) === date;
-  return { msg: { title: (ROOM_DOT[unit] ? ROOM_DOT[unit] + ' ' : '') + (unit === 11 ? 'MAX' : room.toUpperCase()) + ' · ' + when, body, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/' }, b };
+  return { msg: { title: roomTitle(unit) + ' · ' + (name || 'No name') + what + soonTxt, body, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/' }, b };
 }
 async function bookingPush(env, bid, type) {
   if (!SB_ALERT[type] || !env.VAPID_JWK) return null;
