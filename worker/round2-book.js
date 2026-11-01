@@ -847,6 +847,44 @@ async function extend(env, hb, f) {
   await hb.extPut(id, rec);
   return { ok: true, id, plan, done: rec };
 }
+/* In session › "+ Late session" (owner, 1 Nov): a WhatsApp / walk-in session keyed in by staff, including ones running
+   past midnight (SimplyBook's own calendar closes at midnight; its API takes notes past it). The engine writes ONE
+   calendar note from arrival to guest end + 15 min cleaning, text "<name> <pax> pax · late till 1am · control centre",
+   so In session, the 1-hour reminder, +1h and "That's a wrap!" read it like any session. Vale/Atlas: the twin gets a
+   SYSTEM BLOCK note too. dry=1 → the plan and any clash, nothing written. */
+async function late(env, hb, f) {
+  const unit = +f.unit, day = String(f.day || ''), st = String(f.start || ''), en = String(f.end || '');
+  if (!ROOMS[unit]) return { error: 'Pick a room.' };
+  if (!/^\d{4}-\d\d-\d\d$/.test(day) || !/^\d\d:\d\d$/.test(st) || !/^\d\d:\d\d$/.test(en)) return { error: 'Pick the date, arrival time and end time.' };
+  const name = String(f.name || '').replace(/\s+/g, ' ').trim().slice(0, 40), pax = Math.max(0, Math.min(20, parseInt(f.pax, 10) || 0));
+  if (!name) return { error: 'Type the guest’s name.' };
+  if (!pax) return { error: 'Type how many pax (it decides the room set-up and controllers).' };
+  const s = sgMs0(day + ' ' + st); let guestEnd = sgMs0(day + ' ' + en); if (guestEnd <= s) guestEnd += 86400e3;   /* end after midnight */
+  const blockEnd = guestEnd + BUF * 60e3, hrs = (guestEnd - s) / 3600e3;
+  if (hrs < 0.5 || hrs > 12) return { error: 'That’s ' + (Math.round(hrs * 10) / 10) + ' hours – check the times.' };
+  if (s < Date.now() - 12 * 3600e3 || s > Date.now() + 120 * 86400e3) return { error: 'That date is too far back or ahead.' };
+  /* clash: anything already in this room (or its twin) between arrival and the end of cleaning */
+  const days = [day]; if (sgDay(blockEnd - 1) !== day) days.push(sgDay(blockEnd - 1));
+  const items = []; for (const d of days) for (const it of (await sessDay(env, d)).items) if (!items.some((x) => x.k === it.k && x.id === it.id)) items.push(it);
+  const tw = MIRROR[unit], room = ROOMS[unit][0];
+  const clash = items.filter((it) => (it.unit === unit || it.unit === tw) && it.s < blockEnd && it.e > s && !it.blk)
+    .map((it) => ({ room: ROOMS[it.unit][0], what: it.k === 'b' ? 'booking' : 'note', name: String(it.name || '').slice(0, 40), from: clock12(it.s), to: clock12(it.e) }));
+  const text = name + ' ' + pax + ' pax · late till ' + clock12(guestEnd) + ' · control centre';
+  const plan = { room, twin: tw ? ROOMS[tw][0] : null, name, pax, arrives: clock12(s), guestEnd: clock12(guestEnd), blockEnd: clock12(blockEnd), hours: Math.round(hrs * 100) / 100,
+    nextDay: sgDay(guestEnd) !== day, text, clash };
+  if (f.dry) return { ok: true, dry: true, plan };
+  if (clash.length && f.force !== 'yes') return { ok: false, clash: true, plan };
+  const s2 = await sb2(env), done = [];
+  const body = (u, txt) => ({ provider_id: u, service_id: null, start_date_time: sgStr(s), end_date_time: sgStr(blockEnd), note_type_id: 1, note: txt, mode: 'provider', time_blocked: true });
+  try {
+    const r = await s2('POST', '/admin/calendar-notes', body(unit, text)); done.push({ unit, id: String(r.id), made: true });
+    if (tw) { const r2 = await s2('POST', '/admin/calendar-notes', body(tw, 'SYSTEM BLOCK · ' + room + ' late till ' + clock12(blockEnd))); done.push({ unit: tw, id: String(r2.id), made: true }); }
+  } catch (e) {
+    await extRevert(s2, done);
+    return { error: 'SimplyBook didn’t take the note, nothing was changed: ' + String(e.message || e).slice(0, 120) };
+  }
+  return { ok: true, plan, notes: done };
+}
 /* the "+N CREDITS ADDED" banner on the room's TV (kind 'extend': coin-into-slot animation). Last in line (owner, 31 Oct):
    while another message is on the TV and not OK'd yet (a guest's message, or a Round2 one), the banner waits and goes up
    right after that OK (the engine checks every 30 s, for up to an hour). It does replace "About 10 minutes to go" /
@@ -930,9 +968,9 @@ async function gm(env, req) {
     }
     return gmJ({ ok: true, later: await hb.laterList() });
   }
-  if (act === 'insess' || act === 'extend' || act === 'extundo') {   /* staff: "In session" tab */
+  if (act === 'insess' || act === 'extend' || act === 'extundo' || act === 'late') {   /* staff: "In session" tab */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
-    try { return gmJ(await (act === 'insess' ? insess : act === 'extend' ? extend : extUndo)(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
+    try { return gmJ(await (act === 'insess' ? insess : act === 'extend' ? extend : act === 'late' ? late : extUndo)(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
   if (act === 'follow') {   /* staff: run the "messages follow their booking" check now (dry=1: only show what it would do) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
