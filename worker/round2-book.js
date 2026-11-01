@@ -205,6 +205,8 @@ export class HoldBook extends DurableObject {
   pushList(kind) { this.pushInit(); return this.rows(`SELECT * FROM push`).map((r) => ({ id: r.id, sub: JSON.parse(r.sub), kinds: JSON.parse(r.kinds) })).filter((r) => !kind || r.kinds.includes(kind)); }
   pushResult(id, res) { this.pushInit(); if (res === 'gone') this.sql.exec(`DELETE FROM push WHERE id = ?`, id); else this.sql.exec(`UPDATE push SET last = ? WHERE id = ?`, JSON.stringify({ t: Date.now(), r: res }), id); }
   holdByBid(bid) { const r = this.rows(`SELECT data FROM holds WHERE status = 'paid' AND CAST(json_extract(data, '$.done.bookingId') AS TEXT) = ? LIMIT 1`, String(bid))[0]; if (!r) return null; const d = JSON.parse(r.data); return { total: d.q && d.q.total, pay: d.pay }; }
+  soonMark(k) { this.pushInit(); this.sql.exec(`CREATE TABLE IF NOT EXISTS soon (k TEXT PRIMARY KEY, t INTEGER)`); this.sql.exec(`DELETE FROM soon WHERE t < ?`, Date.now() - 3 * 86400e3);
+    if (this.rows(`SELECT 1 FROM soon WHERE k = ?`, k).length) return false; this.sql.exec(`INSERT INTO soon VALUES (?, ?)`, k, Date.now()); return true; }
   pushCount() { this.pushInit(); return this.rows(`SELECT COUNT(*) AS n FROM push`)[0].n; }
   gmGet(code) { this.gmInit(); const r = this.rows(`SELECT * FROM gm WHERE code = ?`, code)[0]; return r ? { link: r.link ? JSON.parse(r.link) : null, err: r.err, exp: r.exp, edits: r.edits } : null; }
   gmPut(code, link, err, ttl) {
@@ -1210,7 +1212,7 @@ const back=new URLSearchParams(location.search).get('released');if(back)note('Pa
    Secret VAPID_JWK = the engine's private signing key (P-256 JWK); the public half is served at GET /push/key.
    Phones sign up with the staff code (POST /push/sub); each phone picks its alert types. A phone the push service
    says is gone (404/410) is dropped. docs: round2-tv-launcher docs/staff-alerts.md */
-const PUSH_KINDS = ['booking'];
+const PUSH_KINDS = ['booking', 'soon'];
 const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 const unb64u = (s) => { s = String(s).replace(/-/g, '+').replace(/_/g, '/'); s += '='.repeat((4 - s.length % 4) % 4); return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); };
 const cat = (...a) => { const n = a.reduce((m, x) => m + x.length, 0), o = new Uint8Array(n); let i = 0; for (const x of a) { o.set(x, i); i += x.length; } return o; };
@@ -1275,6 +1277,7 @@ async function pushApi(env, req, path) {
   }
   if (path === '/push/preview') {   /* staff: what the booking alert would say (latest upcoming booking, or bid) – sends nothing */
     let bid = String(f.bid || '').replace(/\D/g, '');
+    if (f.kind === 'soon') return J({ msg: await soonSample(env) });
     if (!bid) { const a = await admin(env), day = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10); const l = Object.values((await a('getBookings', [{ booking_type: 'non_cancelled', date_from: day, date_to: addDays(day, 14) }])) || {}); bid = String((l.find((x) => !SYS_CLIENTS.includes(String(x.client_id))) || {}).id || ''); }
     const r = bid ? await bookingAlert(env, bid, f.type || 'create') : null;
     return J(r ? { bid, msg: r.msg, skipped: r.skipped, fields: f.fields ? r.b : Object.keys(r.b || {}) } : { error: 'No booking found' });
@@ -1293,7 +1296,10 @@ async function pushApi(env, req, path) {
   if (path === '/push/unsub') { await hb.pushDel(id); return J({ ok: true }); }
   if (path === '/push/test') {
     const s = await hb.pushGet(id); if (!s) return J({ error: 'This phone isn’t signed up for alerts' });
-    const r = await pushOne(env, s.sub, { kind: 'test', title: 'Round2 alerts work ✓', body: 'This phone will get the alerts you switched on.', tag: 'test', url: '/' });
+    let m = { kind: 'test', title: 'Round2 alerts work ✓', body: 'This phone will get the alerts you switched on.', tag: 'test', url: '/' };
+    if (f.kind === 'booking') { const p = await bookingSample(env); if (!p) return J({ error: 'No upcoming booking to show as a sample' }); m = Object.assign(p, { title: 'TEST · ' + p.title, tag: 'test-bk' }); }
+    if (f.kind === 'soon') { const p = await soonSample(env); if (!p) return J({ error: 'No session in the next 2 days to show as a sample' }); m = Object.assign(p, { title: 'TEST · ' + p.title, tag: 'test-soon' }); }
+    const r = await pushOne(env, s.sub, m);
     await hb.pushResult(id, r);
     return J(r === 'ok' ? { ok: true } : { error: r === 'gone' ? 'The phone’s subscription expired. Turn alerts off and on again.' : r });
   }
@@ -1306,6 +1312,43 @@ async function pushApi(env, req, path) {
    iPhone always shows the app icon, so the room colour is the heart at the start. Money: our own booking page's record
    ("paid online"), else SimplyBook's invoice ("paid" / "NOT PAID"), else the room's price for that day and length ("price"). Skips the Make mirror's
    SYSTEM BLOCK bookings (the twin room) so one booking gives one alert. */
+async function bookingSample(env) {
+  const a = await admin(env), day = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
+  const l = Object.values((await a('getBookings', [{ booking_type: 'non_cancelled', date_from: day, date_to: addDays(day, 14) }])) || {});
+  const b = l.find((x) => !SYS_CLIENTS.includes(String(x.client_id)) && !SYS_RE.test(String(x.client || x.client_name || '')));
+  const r = b ? await bookingAlert(env, String(b.id), 'create') : null;
+  return r && r.msg;
+}
+/* "In 1 hour" – every 5 minutes (cron) the engine reads today's sessions the same way In session does: SimplyBook
+   bookings AND calendar notes that block time (WhatsApp / walk-in sessions). Skipped: the twin room's SYSTEM BLOCKs and
+   EXT notes (an extension isn't a new arrival). Each session is sent once, when it's 50–62 minutes away. */
+function soonMsg(S, now) {
+  const mins = Math.round((S.s - now) / 60e3), unit = S.unit, room = unit === 11 ? 'Maximillion' : ROOMS[unit][0];
+  const who = S.k === 'b' ? (S.name || 'No name') : 'Note: ' + String(S.name || '').replace(/\s+/g, ' ').slice(0, 60);
+  const len = Math.round((S.guestEnd - S.s) / 360e3) / 10;
+  return { title: (ROOM_DOT[unit] ? ROOM_DOT[unit] + ' ' : '') + room.toUpperCase() + ' · in ' + (mins >= 55 && mins <= 65 ? '1 hour' : mins + ' min'),
+    body: who + '\n' + clock12(S.s) + '–' + clock12(S.guestEnd) + ' (' + len + 'h) · ' + (S.k === 'b' ? 'SimplyBook booking' : 'calendar note') + ' · ' + room, tag: 'soon' + S.key, url: '/?tab=insession' };
+}
+async function soonSessions(env, days) {
+  const now = Date.now(), out = [];
+  for (let i = 0; i < days; i++) {
+    const day = addDays(new Date(now + 8 * 3600e3).toISOString().slice(0, 10), i);
+    for (const S of (await sessDay(env, day)).sessions) if (!S.sys && !S.orphanExt && ROOMS[S.unit] && !out.some((x) => x.key === S.key)) out.push(S);
+  }
+  return out.sort((a, b) => a.s - b.s);
+}
+async function soonSample(env) { const now = Date.now(), S = (await soonSessions(env, 2)).find((x) => x.s > now); return S ? soonMsg(S, S.s - 60 * 60e3) : null; }
+async function soonRun(env) {
+  if (!env.VAPID_JWK) return null;
+  const hb = book(env); if (!(await hb.pushList('soon')).length) return { phones: 0 };
+  const now = Date.now(), sent = [];
+  for (const S of await soonSessions(env, 2)) {
+    const m = S.s - now; if (m <= 50 * 60e3 || m > 62 * 60e3) continue;
+    if (!(await hb.soonMark(S.key + ':' + S.s))) continue;
+    sent.push(Object.assign({ key: S.key }, await pushAll(env, 'soon', soonMsg(S, now))));
+  }
+  return { sent };
+}
 const SB_ALERT = { create: 'New booking', change: 'Booking changed', cancel: 'Booking cancelled' };
 const ROOM_DOT = { 5: '🩷', 7: '💚', 8: '💛', 9: '🩵', 10: '💜', 12: '🤍', 11: '❤️' };
 async function bookingAlert(env, bid, type) {
@@ -1346,6 +1389,8 @@ async function bookingPush(env, bid, type) {
 }
 
 export default {
+  /* every 5 minutes (Cloudflare cron "*/5 * * * *"): staff "in 1 hour" alerts */
+  async scheduled(ev, env0, ctx) { ctx.waitUntil(soonRun(envFor(env0, 'live')).catch(() => null)); },
   async fetch(req, env0, ctx) {
     const u = new URL(req.url);
     const env = envFor(env0, 'live');   /* default for anything not tied to a hold/order: live once the live key is in */
