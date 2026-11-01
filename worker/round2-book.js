@@ -1364,8 +1364,9 @@ async function bookingAlert(env, bid, type) {
   for (const x of [].concat(b.additional_fields || [])) if (x && (x.field_name === PAX_FIELD || /pax|guest|people/i.test(String(x.field_title || x.title || '')))) pax = String(x.value || '').replace(/\D/g, '');
   /* peak / off-peak / Early Bird from the service; Early Bird is its own service */
   const type2 = ROOMS[unit] && ROOMS[unit][1], ids = SVC[type2] || {}, ev = +b.event_id;
-  let rate = ev === ids.eb ? 'Early Bird' : ev === ids.peak ? 'Peak' : ev === ids.off ? 'Off-peak' : '';
-  if (!rate && type2) { const dow = new Date(date + 'T00:00:00Z').getUTCDay(), ph = await holidays().catch(() => new Set()); rate = dow === 0 || dow === 5 || dow === 6 || ph.has(date) ? 'Peak' : 'Off-peak'; }
+  const dow = new Date(date + 'T00:00:00Z').getUTCDay(), peakDay = dow === 0 || dow === 5 || dow === 6 || (await holidays().catch(() => new Set())).has(date);
+  let rate = ev === ids.eb ? 'Early Bird (' + (peakDay ? 'peak' : 'off-peak') + ' day)' : ev === ids.peak ? 'Peak' : ev === ids.off ? 'Off-peak' : '';
+  if (!rate && type2) rate = peakDay ? 'Peak' : 'Off-peak';
   /* money: what was paid on our own booking page, else the price for this room/day/length */
   let money = '';
   const own = await book(env).holdByBid(String(bid)).catch(() => null);
@@ -1373,8 +1374,8 @@ async function bookingAlert(env, bid, type) {
   if (own && own.total) money = sgd(own.total) + ' paid online' + (own.pay === 'test' ? ' (TEST)' : '');
   else if (inv && +inv.amount > 0) money = sgd(inv.amount) + (inv.status === 'paid' || inv.payment_received === '1' ? ' paid' : ' NOT PAID');   /* SimplyBook's own page (HitPay invoice) */
   else if (type2 && hours >= 3 && hours <= 6 && hours % 1 === 0) {
-    const P = PRICES[type2], dt = rate === 'Peak' ? 'peak' : 'off', x = hours - 3;
-    const v = rate === 'Early Bird' ? P.eb.base + (x ? P.eb.ext[dt][x - 1] : 0) : P[dt].base + (x ? P[dt].ext[x - 1] : 0);
+    const P = PRICES[type2], dt = peakDay ? 'peak' : 'off', x = hours - 3;
+    const v = ev === ids.eb ? P.eb.base + (x ? P.eb.ext[dt][x - 1] : 0) : P[dt].base + (x ? P[dt].ext[x - 1] : 0);
     money = 'S$' + r2(v).toFixed(2).replace(/\.00$/, '') + ' price';
   }
   const line1 = (name || 'No name') + ' · ' + day.replace(/,/g, '') + ', ' + clock12(s) + '–' + clock12(e) + ' (' + hours + 'h)';
