@@ -1303,8 +1303,8 @@ async function pushApi(env, req, path) {
      🩷 VALE · New booking
      Amanda Tan · Sat 2 Nov, 4–7pm (3h)
      Peak · S$69 paid online · 3 pax · Vale
-   iPhone always shows the app icon, so the room colour is the heart at the start. Paid = our own booking page's record;
-   bookings keyed into SimplyBook show the room's price for that day and length ("price"). Skips the Make mirror's
+   iPhone always shows the app icon, so the room colour is the heart at the start. Money: our own booking page's record
+   ("paid online"), else SimplyBook's invoice ("paid" / "NOT PAID"), else the room's price for that day and length ("price"). Skips the Make mirror's
    SYSTEM BLOCK bookings (the twin room) so one booking gives one alert. */
 const SB_ALERT = { create: 'New booking', change: 'Booking changed', cancel: 'Booking cancelled' };
 const ROOM_DOT = { 5: '🩷', 7: '💚', 8: '💛', 9: '🩵', 10: '💜', 12: '🤍', 11: '❤️' };
@@ -1326,13 +1326,15 @@ async function bookingAlert(env, bid, type) {
   /* money: what was paid on our own booking page, else the price for this room/day/length */
   let money = '';
   const own = await book(env).holdByBid(String(bid)).catch(() => null);
-  if (own && own.total) money = 'S$' + (+own.total).toFixed(2).replace(/\.00$/, '') + ' paid online' + (own.pay === 'test' ? ' (TEST)' : '');
+  const inv = b.invoice && typeof b.invoice === 'object' ? b.invoice : null, sgd = (v) => 'S$' + r2(+v).toFixed(2).replace(/\.00$/, '');
+  if (own && own.total) money = sgd(own.total) + ' paid online' + (own.pay === 'test' ? ' (TEST)' : '');
+  else if (inv && +inv.amount > 0) money = sgd(inv.amount) + (inv.status === 'paid' || inv.payment_received === '1' ? ' paid' : ' NOT PAID');   /* SimplyBook's own page (HitPay invoice) */
   else if (type2 && hours >= 3 && hours <= 6 && hours % 1 === 0) {
     const P = PRICES[type2], dt = rate === 'Peak' ? 'peak' : 'off', x = hours - 3;
     const v = rate === 'Early Bird' ? P.eb.base + (x ? P.eb.ext[dt][x - 1] : 0) : P[dt].base + (x ? P[dt].ext[x - 1] : 0);
     money = 'S$' + r2(v).toFixed(2).replace(/\.00$/, '') + ' price';
   }
-  const line1 = (name || 'No name') + ' · ' + day + ', ' + clock12(s) + '–' + clock12(e) + ' (' + hours + 'h)';
+  const line1 = (name || 'No name') + ' · ' + day.replace(/,/g, '') + ', ' + clock12(s) + '–' + clock12(e) + ' (' + hours + 'h)';
   const line2 = [rate, money, pax ? pax + ' pax' : '', room].filter(Boolean).join(' · ');
   const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10) === date;
   return { msg: { title: (ROOM_DOT[unit] ? ROOM_DOT[unit] + ' ' : '') + room.toUpperCase() + ' · ' + (SB_ALERT[type] || 'Booking'), body: line1 + '\n' + line2, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/' }, b };
