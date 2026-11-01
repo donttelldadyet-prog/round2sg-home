@@ -197,6 +197,14 @@ export class HoldBook extends DurableObject {
     if (n >= max) return false;
     this.sql.exec(`INSERT INTO gmrate VALUES (?, ?)`, who, now); return true;
   }
+  /* staff phones signed up for push alerts (/push/*) */
+  pushInit() { if (this.pushReady) return; this.pushReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS push (id TEXT PRIMARY KEY, sub TEXT, kinds TEXT, label TEXT, t INTEGER, last TEXT)`); }
+  pushSet(id, sub, kinds, label) { this.pushInit(); this.sql.exec(`INSERT OR REPLACE INTO push VALUES (?, ?, ?, ?, ?, NULL)`, id, sub, kinds, label, Date.now()); }
+  pushDel(id) { this.pushInit(); this.sql.exec(`DELETE FROM push WHERE id = ?`, id); }
+  pushGet(id) { this.pushInit(); const r = this.rows(`SELECT * FROM push WHERE id = ?`, id)[0]; return r ? { id: r.id, sub: JSON.parse(r.sub), kinds: JSON.parse(r.kinds), label: r.label, last: r.last } : null; }
+  pushList(kind) { this.pushInit(); return this.rows(`SELECT * FROM push`).map((r) => ({ id: r.id, sub: JSON.parse(r.sub), kinds: JSON.parse(r.kinds) })).filter((r) => !kind || r.kinds.includes(kind)); }
+  pushResult(id, res) { this.pushInit(); if (res === 'gone') this.sql.exec(`DELETE FROM push WHERE id = ?`, id); else this.sql.exec(`UPDATE push SET last = ? WHERE id = ?`, JSON.stringify({ t: Date.now(), r: res }), id); }
+  pushCount() { this.pushInit(); return this.rows(`SELECT COUNT(*) AS n FROM push`)[0].n; }
   gmGet(code) { this.gmInit(); const r = this.rows(`SELECT * FROM gm WHERE code = ?`, code)[0]; return r ? { link: r.link ? JSON.parse(r.link) : null, err: r.err, exp: r.exp, edits: r.edits } : null; }
   gmPut(code, link, err, ttl) {
     this.gmInit(); const o = this.gmGet(code);
@@ -1196,6 +1204,113 @@ const back=new URLSearchParams(location.search).get('released');if(back)note('Pa
 </script>`);
 }
 
+/* ---------- push alerts to staff phones (control centre at staff.round2.sg, saved to the home screen) ----------
+   Web Push, sent by the engine itself: RFC 8291 encryption (aes128gcm) + RFC 8292 VAPID signature, all WebCrypto.
+   Secret VAPID_JWK = the engine's private signing key (P-256 JWK); the public half is served at GET /push/key.
+   Phones sign up with the staff code (POST /push/sub); each phone picks its alert types. A phone the push service
+   says is gone (404/410) is dropped. docs: round2-tv-launcher docs/staff-alerts.md */
+const PUSH_KINDS = ['booking'];
+const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = (s) => { s = String(s).replace(/-/g, '+').replace(/_/g, '/'); s += '='.repeat((4 - s.length % 4) % 4); return Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); };
+const cat = (...a) => { const n = a.reduce((m, x) => m + x.length, 0), o = new Uint8Array(n); let i = 0; for (const x of a) { o.set(x, i); i += x.length; } return o; };
+const utf8 = (s) => new TextEncoder().encode(s);
+async function hkdf(salt, ikm, info, len) {
+  const k = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']);
+  return new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info }, k, len * 8));
+}
+function vapidPublic(env) { const j = JSON.parse(env.VAPID_JWK); return b64u(cat(new Uint8Array([4]), unb64u(j.x), unb64u(j.y))); }
+async function vapidAuth(env, endpoint) {
+  const j = JSON.parse(env.VAPID_JWK), aud = new URL(endpoint).origin;
+  const head = b64u(utf8(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));
+  const body = b64u(utf8(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'mailto:hello@round2.sg' })));
+  const key = await crypto.subtle.importKey('jwk', { kty: 'EC', crv: 'P-256', x: j.x, y: j.y, d: j.d }, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, utf8(head + '.' + body));   /* raw r||s, as JWT wants */
+  return 'vapid t=' + head + '.' + body + '.' + b64u(sig) + ', k=' + vapidPublic(env);
+}
+async function pushEncrypt(sub, payload) {
+  const uaPub = unb64u(sub.keys.p256dh), auth = unb64u(sub.keys.auth);
+  const as = await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']);
+  const asPub = new Uint8Array(await crypto.subtle.exportKey('raw', as.publicKey));
+  const ua = await crypto.subtle.importKey('raw', uaPub, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+  const shared = new Uint8Array(await crypto.subtle.deriveBits({ name: 'ECDH', public: ua }, as.privateKey, 256));
+  const ikm = await hkdf(auth, shared, cat(utf8('WebPush: info\0'), uaPub, asPub), 32);
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  const cek = await hkdf(salt, ikm, utf8('Content-Encoding: aes128gcm\0'), 16);
+  const nonce = await hkdf(salt, ikm, utf8('Content-Encoding: nonce\0'), 12);
+  const k = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt']);
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, k, cat(utf8(payload), new Uint8Array([2]))));
+  const rs = new Uint8Array([0, 0, 16, 0]);   /* record size 4096 */
+  return cat(salt, rs, new Uint8Array([asPub.length]), asPub, ct);
+}
+/* one phone → 'ok' | 'gone' (drop it) | 'failed …' */
+async function pushOne(env, sub, msg) {
+  try {
+    const r = await fetch(sub.endpoint, { method: 'POST', body: await pushEncrypt(sub, JSON.stringify(msg)),
+      headers: { Authorization: await vapidAuth(env, sub.endpoint), 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '86400', Urgency: 'high' } });
+    if (r.status === 404 || r.status === 410) return 'gone';
+    return r.ok ? 'ok' : 'failed ' + r.status + ' ' + (await r.text()).slice(0, 80);
+  } catch (e) { return 'failed ' + String(e.message || e).slice(0, 80); }
+}
+/* every phone that wants this kind of alert. msg = { title, body, tag, url } */
+async function pushAll(env, kind, msg) {
+  if (!env.VAPID_JWK) return { sent: 0, why: 'no VAPID_JWK' };
+  const hb = book(env), subs = await hb.pushList(kind); let sent = 0;
+  await Promise.all(subs.map(async (s) => {
+    const r = await pushOne(env, s.sub, Object.assign({ kind }, msg));
+    if (r === 'ok') sent++;
+    await hb.pushResult(s.id, r);
+  }));
+  return { sent, phones: subs.length };
+}
+async function pushId(endpoint) { return b64u(await crypto.subtle.digest('SHA-256', utf8(String(endpoint)))).slice(0, 22); }
+/* /push/* – the control centre's "Alerts on this phone". Body is JSON sent as text (no CORS preflight). */
+async function pushApi(env, req, path) {
+  if (path === '/push/key') return J(env.VAPID_JWK ? { key: vapidPublic(env), kinds: PUSH_KINDS } : { error: 'Alerts aren’t set up in Cloudflare yet' });
+  if (req.method !== 'POST') return J({ error: 'POST' }, 405);
+  const f = await req.json().catch(() => ({})), hb = book(env);
+  if (!env.GM_STAFF || f.staff !== env.GM_STAFF) {
+    await hb.gmRate('pushbad:' + (req.headers.get('cf-connecting-ip') || '?'), 1000);
+    return J({ error: 'Wrong staff code.' }, 403);
+  }
+  if (!env.VAPID_JWK) return J({ error: 'Alerts aren’t set up in Cloudflare yet' });
+  const sub = f.sub || {}, endpoint = String(sub.endpoint || f.endpoint || '');
+  if (!/^https:\/\/[a-z0-9.-]+\//i.test(endpoint)) return J({ error: 'No phone subscription sent' }, 400);
+  const id = await pushId(endpoint);
+  if (path === '/push/sub') {
+    if (!sub.keys || !sub.keys.p256dh || !sub.keys.auth) return J({ error: 'Incomplete phone subscription' }, 400);
+    const kinds = (Array.isArray(f.kinds) ? f.kinds : PUSH_KINDS).filter((k) => PUSH_KINDS.includes(k));
+    await hb.pushSet(id, JSON.stringify({ endpoint, keys: { p256dh: String(sub.keys.p256dh), auth: String(sub.keys.auth) } }), JSON.stringify(kinds), String(f.label || '').slice(0, 40));
+    return J({ ok: true, id, kinds });
+  }
+  if (path === '/push/state') { const s = await hb.pushGet(id); return J(s ? { ok: true, on: true, kinds: s.kinds, label: s.label, last: s.last } : { ok: true, on: false }); }
+  if (path === '/push/unsub') { await hb.pushDel(id); return J({ ok: true }); }
+  if (path === '/push/test') {
+    const s = await hb.pushGet(id); if (!s) return J({ error: 'This phone isn’t signed up for alerts' });
+    const r = await pushOne(env, s.sub, { kind: 'test', title: 'Round2 alerts work ✓', body: 'This phone will get the alerts you switched on.', tag: 'test', url: '/' });
+    await hb.pushResult(id, r);
+    return J(r === 'ok' ? { ok: true } : { error: r === 'gone' ? 'The phone’s subscription expired. Turn alerts off and on again.' : r });
+  }
+  return J({ error: 'unknown' }, 404);
+}
+/* SimplyBook callback → "New booking / Booking changed / Booking cancelled" on staff phones.
+   Skips the Make mirror's SYSTEM BLOCK bookings (the twin room) so one booking gives one alert. */
+const SB_ALERT = { create: 'New booking', change: 'Booking changed', cancel: 'Booking cancelled' };
+async function bookingPush(env, bid, type) {
+  if (!SB_ALERT[type] || !env.VAPID_JWK) return null;
+  const a = await admin(env), b = await a('getBookingDetails', [bid]).catch(() => null);
+  if (!b) return null;
+  const cid = String(b.client_id || ''), name = String(b.client_name || b.client || '').trim();
+  if (SYS_CLIENTS.includes(cid) || SYS_RE.test(name)) return { skipped: 'mirror' };
+  const room = ROOMS[+b.unit_id] ? (+b.unit_id === 11 ? 'Maximillion' : ROOMS[+b.unit_id][0]) : String(b.unit_name || 'Room');
+  const s = sgMs0(b.start_date_time || b.start_date), buf = +(b.event_buffertime_after ?? BUF) || 0, e = sgMs0(b.end_date_time || b.end_date) - buf * 60e3;
+  const day = new Date(s + 8 * 3600e3).toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+  let pax = '';
+  for (const x of [].concat(b.additional_fields || [])) if (x && (x.field_name === PAX_FIELD || /pax|guest|people/i.test(String(x.field_title || x.title || '')))) pax = String(x.value || '').replace(/\D/g, '');
+  const body = day + ', ' + clock12(s) + '–' + clock12(e) + (name ? ' · ' + name.split(/\s+/)[0] : '') + (pax ? ' · ' + pax + ' pax' : '');
+  const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10) === new Date(s + 8 * 3600e3).toISOString().slice(0, 10);
+  return pushAll(env, 'booking', { title: SB_ALERT[type] + ' · ' + room, body, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/' });
+}
+
 export default {
   async fetch(req, env0, ctx) {
     const u = new URL(req.url);
@@ -1229,7 +1344,7 @@ export default {
       if (u.pathname === '/status') {
         const st = { payments: liveReady(env0) ? 'live' : 'test', testCode: !!env0.TEST_CODE, dryRun: env.DRY_RUN === '1', simplybook: !!(env.SB_COMPANY && env.SB_USER && env.SB_PASS),
           sbSecret: !!env.SB_SECRET && !/paste/.test(env.SB_SECRET), kitchenBot: !!env.TG_BOT_TOKEN, staffAlerts: !!env.STAFF_CHAT, guestMessages: !!env.GM_STAFF,
-          menuSheet: !!env.MENU_MAKE_K, tvKey: !!env.TV_KEY, liveKeys: liveReady(env0), switchSet: !!env0.SWITCH_PASS && !/paste/.test(env0.SWITCH_PASS + env0.SWITCH_PIN), booking: (await book(env).getMode()).booking, t: Date.now() };
+          menuSheet: !!env.MENU_MAKE_K, tvKey: !!env.TV_KEY, pushAlerts: !!env.VAPID_JWK, liveKeys: liveReady(env0), switchSet: !!env0.SWITCH_PASS && !/paste/.test(env0.SWITCH_PASS + env0.SWITCH_PIN), booking: (await book(env).getMode()).booking, t: Date.now() };
         if (u.searchParams.get('deep')) {
           st.sbLogin = await admin(env).then(() => 'ok').catch((e) => 'failed: ' + String(e.message || e).slice(0, 80));
           st.sbPublic = await pub(env).then(() => 'ok').catch((e) => 'failed: ' + String(e.message || e).slice(0, 80));
@@ -1314,6 +1429,7 @@ export default {
         return Response.redirect('https://cue.round2.sg/' + tv.code, 302);
       }
       if (u.pathname === '/gm' && req.method === 'POST') return await gm(env, req);
+      if (u.pathname.startsWith('/push/')) return await pushApi(env, req, u.pathname);
       /* SimplyBook's callback (Custom features › API › callback URL) = /sb/notify/<SB_NOTIFY_KEY>. Passed on unchanged to
          Make's mirror-rooms scenario (secret MIRROR_HOOK_URL), then: cancelled → off "View your booking"; any change →
          guest messages follow at once. The key keeps strangers from triggering Make. */
@@ -1324,6 +1440,7 @@ export default {
         let j = {}; try { j = JSON.parse(raw); } catch (e) { j = Object.fromEntries(new URLSearchParams(raw)); }
         const bid = String(j.booking_id || '').replace(/\D/g, ''), type = String(j.notification_type || '');
         if (bid) ctx.waitUntil(book(env).onSb(bid, type).catch(() => null));
+        if (bid) ctx.waitUntil(bookingPush(env, bid, type).catch(() => null));   /* staff phones: New booking / changed / cancelled */
         await book(env).gmDrop('__LIST__').catch(() => null);
         return J({ ok: true });
       }
