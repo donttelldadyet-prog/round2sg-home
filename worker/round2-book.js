@@ -261,6 +261,7 @@ export class HoldBook extends DurableObject {
       let k; do { k = 'R2' + hex(3); } while (this.msgGet(k));
       const end = at + life(kind);
       this.msgPut(k, { t: now, at, id: 'q' + k.toLowerCase() + '-' + stamp(), to: one(f.to), ack: f.ack !== 'no', end, from: one(f.from), kind, onTv: 'no', room, text, label: 'Round2', start: at, title, until: end, status: 'approved', created: now, approved: now, submitted: now });
+      if (f.label === 'auto') { const d0 = this.msgGet(k); d0.label = 'Auto wrap-up'; this.msgPut(k, d0); }
       this.qSet(k, room, at, end);
       return { ok: true, code: k };
     }
@@ -327,11 +328,22 @@ export class HoldBook extends DurableObject {
   bkDel(bid) { this.bkInit(); this.sql.exec(`DELETE FROM bkseen WHERE bid = ?`, bid); }
   /* auto wrap-up (no Make): the engine's own schedule of "About 10 minutes to go" / "That's a wrap!" per session,
      written straight to the room's TV (Firebase) by the alarm, like the 5-minute reminder */
-  autoInit() { if (this.autoReady) return; this.autoReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS autoq (key TEXT, kind TEXT, room TEXT, day TEXT, at INTEGER, gend INTEGER, sent INTEGER DEFAULT 0, PRIMARY KEY (key, kind))`); }
+  autoInit() { if (this.autoReady) return; this.autoReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS autoq (key TEXT, kind TEXT, room TEXT, day TEXT, at INTEGER, gend INTEGER, sent INTEGER DEFAULT 0, PRIMARY KEY (key, kind))`);
+    try { this.sql.exec(`ALTER TABLE autoq ADD COLUMN code TEXT`); } catch (e) {} }
+  /* since 2 Nov (owner: "where can we see they acknowledge"): each auto message is a Round2 message (R2… code, label
+     "Auto wrap-up") sent by the normal message timer, so Round2 messages shows it coming up / on screen / OK'd / history.
+     sent = 3 marks those rows (the old direct-to-TV path below only sends sent = 0 rows). */
+  autoPut(key, kind, room, day, at, gend, code) { this.autoInit(); this.sql.exec(`INSERT OR REPLACE INTO autoq (key, kind, room, day, at, gend, sent, code) VALUES (?, ?, ?, ?, ?, ?, 3, ?)`, key, kind, room, day, at, gend, code); this.arm(); }
+  async autoUndo(where, ...args) {   /* cancel its Round2 messages still to come, then forget them */
+    this.autoInit(); const now = Date.now();
+    for (const r of this.rows(`SELECT * FROM autoq WHERE ` + where + ` AND code IS NOT NULL AND at > ?`, ...args, now)) await this.msgRoute({ staff: this.env.GM_STAFF, action: 'cancel', code: r.code }).catch(() => null);
+    this.sql.exec(`DELETE FROM autoq WHERE ` + where + ` AND (sent = 0 OR (code IS NOT NULL AND at > ?))`, ...args, now);
+    this.gmDrop('__LIST__'); this.arm();
+  }
   autoAll() { this.autoInit(); this.sql.exec(`DELETE FROM autoq WHERE gend < ?`, Date.now() - 2 * 86400e3); return this.rows(`SELECT * FROM autoq`); }
   autoSet(key, kind, room, day, at, gend) { this.autoInit(); this.sql.exec(`INSERT INTO autoq VALUES (?, ?, ?, ?, ?, ?, 0) ON CONFLICT (key, kind) DO UPDATE SET room = excluded.room, day = excluded.day, at = excluded.at, gend = excluded.gend, sent = CASE WHEN autoq.at = excluded.at THEN autoq.sent ELSE 0 END`, key, kind, room, day, at, gend); this.arm(); }
-  autoDel(key) { this.autoInit(); this.sql.exec(`DELETE FROM autoq WHERE key = ? AND sent = 0`, key); this.arm(); }
-  autoClear() { this.autoInit(); this.sql.exec(`DELETE FROM autoq WHERE sent = 0`); this.arm(); }   /* switch off: everything it scheduled goes */
+  async autoDel(key) { await this.autoUndo('key = ?', key); }
+  async autoClear() { await this.autoUndo('1 = 1'); }   /* switch off: everything it scheduled goes */
   async autoSend() {
     this.autoInit(); const env = this.env, now = Date.now(); if (!env.TV_KEY) return;
     for (const r of this.rows(`SELECT * FROM autoq WHERE sent = 0 AND at <= ?`, now + 5000)) {
@@ -1047,26 +1059,34 @@ async function autoRun2(env, hb, mode, why) {
   const sess = [];
   for (const d of days) for (const S of (await sessDay(env, d)).sessions) if (!S.sys && !S.orphanExt && ROOMS[S.unit] && !sess.some((x) => x.key === S.key)) sess.push(S);
   const off = new Set(mode.autoOff || []), rows = await hb.autoAll(), q = await hb.qList(), log = { t: now, why, made: 0, moved: 0, cancelled: 0, adopted: 0, problems: [] };
+  const own = new Set(rows.filter((r) => r.code).map((r) => r.code)), pending = (r) => !r.sent || (r.code && r.at > now);
+  const call = async (body) => { const t = await gmFwd(env, Object.assign({ staff: env.GM_STAFF }, body)); let j = null; try { j = JSON.parse(t); } catch (e) {} if (!j || j.error) throw new Error((j && j.error) || 'no answer'); return j; };
   for (const S of sess) {
     if (S.guestEnd <= now + 60e3) continue;
     const mine = rows.filter((r) => r.key === S.key);
-    if (off.has(S.key)) { if (mine.some((r) => !r.sent)) { await hb.autoDel(S.key); log.cancelled++; } continue; }
+    if (off.has(S.key)) { if (mine.some(pending)) { await hb.autoDel(S.key); log.cancelled++; } continue; }
     /* someone already set Round2 messages for this end (+1h, Late session, Round2 messages): leave it to those */
-    const byHand = q.filter((m) => /^R2/.test(m.code) && m.room === S.room && (Math.abs(m.at - S.guestEnd) <= 5 * 60e3 || Math.abs(m.at - (S.guestEnd - 10 * 60e3)) <= 5 * 60e3));
+    const byHand = q.filter((m) => /^R2/.test(m.code) && !own.has(m.code) && m.room === S.room && (Math.abs(m.at - S.guestEnd) <= 5 * 60e3 || Math.abs(m.at - (S.guestEnd - 10 * 60e3)) <= 5 * 60e3));
     if (byHand.length && !mine.length) { log.adopted++; continue; }
     for (const kind of ['wrapup', 'timeup']) {
       const at = kind === 'wrapup' ? S.guestEnd - 10 * 60e3 : S.guestEnd, r = mine.find((x) => x.kind === kind);
-      if (r && r.at === at && r.room === S.room) continue;
-      if (r && r.sent === 1 && at <= now) continue;
-      if (!r && at <= now) continue;
-      await hb.autoSet(S.key, kind, S.room, sgDay(S.s), at, S.guestEnd);
-      if (r) log.moved++; else log.made++;
+      if (r && r.code && r.at === at && r.room === S.room) continue;
+      if (r && (r.code ? r.at <= now : r.sent === 1) ) continue;   /* already on the TV */
+      if (at <= now) continue;
+      try {
+        if (r && r.code) { await call({ action: 'move', code: r.code, start: at, room: S.room }); await hb.autoPut(S.key, kind, S.room, sgDay(S.s), at, S.guestEnd, r.code); log.moved++; }
+        else {
+          const j = await call({ action: 'r2', room: S.room, kind, to: '', from: 'The Round2 team', title: R2_TXT[kind].title, text: R2_TXT[kind].text, ack: 'yes', at, label: 'auto' });
+          await hb.autoPut(S.key, kind, S.room, sgDay(S.s), at, S.guestEnd, j.code); log.made++;
+        }
+      } catch (e) { log.problems.push(S.room + ' ' + kind + ': ' + String(e.message || e).slice(0, 60)); }
     }
   }
   /* sessions that are gone (cancelled / deleted) – only for the days just read */
-  const keys = [...new Set(rows.filter((r) => days.includes(r.day) && !r.sent && r.gend > now && !sess.some((S) => S.key === r.key)).map((r) => r.key))];
+  const keys = [...new Set(rows.filter((r) => days.includes(r.day) && pending(r) && r.gend > now && !sess.some((S) => S.key === r.key)).map((r) => r.key))];
   if (keys.length > 4) log.problems.push(keys.length + ' sessions vanished at once – nothing cancelled, check SimplyBook');
   else for (const k of keys) { await hb.autoDel(k); log.cancelled++; }
+  if (log.made || log.moved || log.cancelled) { await hb.gmDrop('__LIST__'); await gmList(env, hb).catch(() => null); }
   if (log.made || log.moved || log.cancelled || log.problems.length || why !== 'cron') await hb.kvSet('autoLast', log);
   return log;
 }
@@ -1082,10 +1102,10 @@ async function autoApi(env, hb, f) {
     if (S.sys || S.orphanExt || !ROOMS[S.unit] || list.some((x) => x.key === S.key)) continue;
     const mine = recs.filter((x) => x.key === S.key), w = mine.find((x) => x.kind === 'wrapup'), t = mine.find((x) => x.kind === 'timeup');
     list.push({ key: S.key, room: S.room, unit: S.unit, name: String(S.name || '').slice(0, 40), k: S.k, s: S.s, guestEnd: S.guestEnd, done: S.guestEnd <= now, off: off.has(S.key),
-      msgs: mine.length ? { w: !!w, t: !!t, wAt: w && w.at, tAt: t && t.at, wSent: w && w.sent === 1, tSent: t && t.sent === 1, own: true, synced: !!t && t.gend === S.guestEnd } : null });
+      msgs: mine.length ? { w: !!w, t: !!t, wAt: w && w.at, tAt: t && t.at, wSent: !!w && (w.code ? w.at <= now : w.sent === 1), tSent: !!t && (t.code ? t.at <= now : t.sent === 1), wCode: w && w.code, tCode: t && t.code, own: true, synced: !!t && t.gend === S.guestEnd } : null });
   }
-  const q = await hb.qList();
-  for (const x of list) if (!x.msgs && q.some((m) => /^R2/.test(m.code) && m.room === x.room && (Math.abs(m.at - x.guestEnd) <= 5 * 60e3 || Math.abs(m.at - (x.guestEnd - 10 * 60e3)) <= 5 * 60e3))) x.msgs = { w: true, t: true, own: false, synced: true };
+  const q = await hb.qList(), own = new Set(recs.filter((r) => r.code).map((r) => r.code));
+  for (const x of list) if (!x.msgs && q.some((m) => /^R2/.test(m.code) && !own.has(m.code) && m.room === x.room && (Math.abs(m.at - x.guestEnd) <= 5 * 60e3 || Math.abs(m.at - (x.guestEnd - 10 * 60e3)) <= 5 * 60e3))) x.msgs = { w: true, t: true, own: false, synced: true };
   return { ok: true, on: !!m2.autoEnd, by: m2.autoBy || '', t: m2.autoT || 0, now, last: await hb.kvGet('autoLast'), sessions: list.sort((a, b) => a.guestEnd - b.guestEnd) };
 }
 const sgDayName = (ms) => new Date(ms + 8 * 3600e3).toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).replace(/,/g, '');
