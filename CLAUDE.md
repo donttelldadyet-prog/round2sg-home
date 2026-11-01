@@ -6,3 +6,5 @@
 - Read `HANDOFF.md` and `docs/booking-times.md` before touching anything time-based. Times are Singapore time; the shop's
   "day" runs until staff sleep (12am–11am belongs to the night before); guest end = SimplyBook end − 15 min cleaning.
 - `worker/round2-book.js` is the live Cloudflare engine `round2-book`. Deploy carefully (keep bindings), then run the check.
+- **Kaeden is under renovation (since ~30 Oct 2026, open-ended).** Its long "room blocked" note in SimplyBook stays – don't
+  remove it or "fix" Kaeden having no free slots. Its TV should still run and report in like the others, ready for reopening.
