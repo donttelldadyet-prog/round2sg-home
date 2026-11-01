@@ -821,7 +821,7 @@ async function tvMessage(env, d, q, ref, bid) {
    Then "About 10 minutes to go" and "That's a wrap!" move to the new end (or are made if there were none), and the TV
    shows "+N CREDITS ADDED" (no OK needed unless staff tick it). Undo puts everything back. */
 const SYS_CLIENTS = ['2472', '2476'];          /* Make mirror's SYSTEM BLOCK clients (in Atlas for a Vale booking, in Vale for an Atlas one) */
-const SYS_RE = /SYSTEM\s*BLOCK/i, EXT_RE = /\bEXT\b/i;
+const SYS_RE = /SYSTEM\s*BLOCK/i, EXT_RE = /\bEXT\b/i, LATE_RE = /late till [0-9:]+[ap]m/i;
 const sgMs0 = (t) => { const m = String(t || '').match(/(\d{4})-(\d\d)-(\d\d)[ T](\d\d):(\d\d)(?::(\d\d))?/); return m ? Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)) - 8 * 3600e3 : 0; };
 const sgStr = (ms) => new Date(ms + 8 * 3600e3).toISOString().replace('T', ' ').slice(0, 19);
 const sgDay = (ms) => new Date(ms + 8 * 3600e3).toISOString().slice(0, 10);
@@ -918,6 +918,18 @@ function clock12(ms) { const d = new Date(ms + 8 * 3600e3), H = d.getUTCHours(),
    that ends where the session ends now (else a new one) */
 function extNotePlan(D, S, to) {
   const last = S.ext.length ? S.ext[S.ext.length - 1] : null, tw = MIRROR[S.unit];
+  /* a Late session note (owner, 1 Nov): no EXT note – the note itself is stretched and its text rewritten
+     ("karen 2 pax · late till 1am"), so the part SimplyBook shows before 12am tells the new end. Bookings and
+     ordinary notes keep the EXT note. Same for its Vale/Atlas twin ("SYSTEM BLOCK · Vale late till …"). */
+  if (S.k === 'n' && !last && LATE_RE.test(S.name)) {
+    const main = { unit: S.unit, late: true, edit: { id: S.key.slice(1), s: S.s, e: S.e0, note: S.name } };
+    let twin = null;
+    if (tw) {
+      const t = D.items.filter((x) => x.unit === tw && x.k === 'n' && x.sys && LATE_RE.test(x.name) && Math.abs(x.s - S.s) <= 5 * 60e3 && Math.abs(x.e - S.end) <= 5 * 60e3)[0];
+      twin = t ? { unit: tw, twin: true, late: true, edit: { id: t.id, s: t.s, e: t.e, note: t.name } } : { unit: tw, twin: true, edit: null };
+    }
+    return { main, twin };
+  }
   const main = { unit: S.unit, edit: last ? { id: String(last.id), s: last.s, e: last.e, note: last.note } : null };
   let twin = null;
   if (tw) {
@@ -971,7 +983,8 @@ async function extend(env, hb, f) {
   const body = (unit, st, en, text) => ({ provider_id: unit, service_id: null, start_date_time: sgStr(st), end_date_time: sgStr(en), note_type_id: 1, note: text, mode: 'provider', time_blocked: true });
   try {
     for (const N of [plan.note.main, plan.note.twin].filter(Boolean)) {
-      const text = N.twin ? 'SYSTEM BLOCK · EXT ' + ROOMS[S.unit][0] + ' till ' + clock12(to) : 'EXT till ' + clock12(newGuest) + ' · ' + who;
+      const text = N.late ? String(N.edit.note).replace(LATE_RE, 'late till ' + clock12(N.twin ? to : newGuest))
+        : N.twin ? 'SYSTEM BLOCK · EXT ' + ROOMS[S.unit][0] + ' till ' + clock12(to) : 'EXT till ' + clock12(newGuest) + ' · ' + who;
       if (N.edit) {
         await s2('PUT', '/admin/calendar-notes/' + N.edit.id, body(N.unit, N.edit.s, to, text));
         done.push({ unit: N.unit, id: N.edit.id, was: { s: N.edit.s, e: N.edit.e, note: N.edit.note } });
@@ -1003,7 +1016,7 @@ async function extend(env, hb, f) {
   const id = 'x' + now.toString(36);
   await hb.extPut(id, rec);
   await autoRun(env, 'extended').catch(() => null);   /* Auto wrap-up follows the new end straight away */
-  { const n0 = sgDay(Date.now() - SHADOW_TILL * 60e3); await shadowSync(env, [n0]).catch(() => null); }   /* after-midnight marker shows the new end */
+  await shadowSync(env, [sgDay(S.s - SHADOW_TILL * 60e3)]).catch(() => null);   /* the 11:30pm label shows the new end */
   return { ok: true, id, plan, done: rec };
 }
 /* In session › "+ Late session" (owner, 1 Nov): a WhatsApp / walk-in session keyed in by staff, including ones running
@@ -1135,8 +1148,8 @@ async function late(env, hb, f) {
     await hb.gmDrop('__LIST__'); await gmList(env, hb).catch(() => null);
   }
   await autoRun(env, 'late session').catch(() => null);
-  const nights = new Set(); for (const t of [s, old && old.S.s].filter(Boolean)) if (sgDay(t) !== sgDay(t - SHADOW_TILL * 60e3)) nights.add(sgDay(t - SHADOW_TILL * 60e3));
-  if (nights.size) await shadowSync(env, [...nights]).catch(() => null);
+  const nights = new Set(); for (const t of [s, old && old.S.s].filter(Boolean)) nights.add(sgDay(t - SHADOW_TILL * 60e3));   /* AFTER 12AM and TILL labels */
+  await shadowSync(env, [...nights]).catch(() => null);
   return { ok: true, plan, notes: done, msgs, replaced: !!old };
 }
 /* ===== Upcoming late sessions (owner, 1 Nov): list / change / cancel from the Late session page =====
@@ -1201,7 +1214,7 @@ async function latecancel(env, hb, f) {
   const s2 = await sb2(env), probs = await lateDel(s2, old.notes);
   const msgs = await lateMsgsCancel(env, hb, old.S).catch(() => 0);
   await autoRun(env, 'late cancelled').catch(() => null);
-  const n0 = sgDay(old.S.s - SHADOW_TILL * 60e3); if (n0 !== sgDay(old.S.s)) await shadowSync(env, [n0]).catch(() => null);
+  await shadowSync(env, [sgDay(old.S.s - SHADOW_TILL * 60e3)]).catch(() => null);
   return probs.length ? { error: 'Some notes didn’t delete: ' + probs.join('; ').slice(0, 160) } : { ok: true, removed: old.notes.length, msgs };
 }
 /* ===== After-midnight markers (owner, 1 Nov) =====
@@ -1283,7 +1296,7 @@ async function extUndo(env, hb, f) {
   }
   await hb.gmDrop('__LIST__'); await gmList(env, hb).catch(() => null);
   await hb.extDone(String(f.id), Date.now());
-  { const n0 = sgDay(Date.now() - SHADOW_TILL * 60e3); await shadowSync(env, [n0]).catch(() => null); }   /* the TILL label follows */
+  await shadowSync(env, [sgDay((+d.guestEndWas || Date.now()) - SHADOW_TILL * 60e3)]).catch(() => null);   /* the 11:30pm label follows */
   return { ok: true, problems: probs };
 }
 
