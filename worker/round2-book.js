@@ -1051,7 +1051,7 @@ async function menuCheckout(env0, req, origin) {
   if (pay !== 'test' && L.some((x) => testIds.has(String(x.k).split('--')[0]))) return no('Something in your order is sold out or no longer on the menu. Refresh the page and check your order.');
   if (total <= 0 || total !== Math.round(+o.shown_total * 100)) return no('The menu prices changed. Refresh the page and check your order.');
   const sg = new Date(Date.now() + 8 * 3600e3).toISOString(), ymd = sg.slice(2, 10).replace(/-/g, ''), hms = sg.slice(11, 19).replace(/:/g, '');
-  const ref = 'R2-' + ymd + '-' + hms + '-' + room.toUpperCase(), orderNo = hms;
+  const ref = 'R2-' + ymd + '-' + hms + '-' + (unit === 11 ? 'MAX' : room.toUpperCase()), orderNo = hms;
   const lines = L.map((x) => x.l), summary = lines.join(', ');
   let pr;
   try {
@@ -1328,8 +1328,8 @@ function soonMsg(S, now) {
   const mins = Math.round((S.s - now) / 60e3), unit = S.unit, room = unit === 11 ? 'Maximillion' : ROOMS[unit][0];
   const who = S.k === 'b' ? (S.name || 'No name') : 'Note: ' + String(S.name || '').replace(/\s+/g, ' ').slice(0, 60);
   const len = Math.round((S.guestEnd - S.s) / 360e3) / 10;
-  return { title: (ROOM_DOT[unit] ? ROOM_DOT[unit] + ' ' : '') + room.toUpperCase() + ' · in ' + (mins >= 55 && mins <= 65 ? '1 hour' : mins + ' min'),
-    body: who + '\n' + clock12(S.s) + '–' + clock12(S.guestEnd) + ' (' + len + 'h) · ' + (S.k === 'b' ? 'SimplyBook booking' : 'calendar note') + ' · ' + room, tag: 'soon' + S.key, url: '/?tab=insession' };
+  return { title: (ROOM_DOT[unit] ? ROOM_DOT[unit] + ' ' : '') + (unit === 11 ? 'MAX' : room.toUpperCase()) + ' · in ' + (mins >= 55 && mins <= 65 ? '1 hour' : mins + ' min') + ' · ' + clock12(S.s) + '–' + clock12(S.guestEnd),
+    body: who + (len !== 3 ? ' · ' + len + 'h' : '') + ' · ' + (S.k === 'b' ? 'booking' : 'calendar note'), tag: 'soon' + S.key, url: '/?tab=insession' };
 }
 async function soonSessions(env, days) {
   const now = Date.now(), out = [];
@@ -1385,11 +1385,14 @@ async function bookingAlert(env, bid, type) {
     const v = ev === ids.eb ? P.eb.base + (x ? P.eb.ext[dt][x - 1] : 0) : P[dt].base + (x ? P[dt].ext[x - 1] : 0);
     money = 'S$' + r2(v).toFixed(2).replace(/\.00$/, '') + ' price';
   }
-  const line1 = (name || 'No name') + ' · ' + day.replace(/,/g, '') + ', ' + clock12(s) + '–' + clock12(e) + ' (' + hours + 'h)';
-  const line2 = [rate, money, pax ? pax + ' pax' : '', room].filter(Boolean).join(' · ');
+  /* compact for the iPhone banner (owner, 1 Nov): the bold title carries room + when, the body leads with what changed,
+     then who, pax, rate and money – most important first, so a cut-off banner still says enough */
+  const when = day.replace(/,/g, '') + ' ' + clock12(s) + '–' + clock12(e);
+  const soonMin = Math.round((s - Date.now()) / 60e3), soonTxt = type !== 'cancel' && soonMin > 0 && soonMin <= 60 ? ' · in ' + soonMin + ' min' : '';
+  const what = { create: 'NEW', change: 'CHANGED', cancel: 'CANCELLED' }[type] || 'BOOKING';
+  const body = [what + soonTxt, name || 'No name', pax ? pax + ' pax' : '', rate.replace(' day)', ')'), money, hours !== 3 ? hours + 'h' : ''].filter(Boolean).join(' · ');
   const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10) === date;
-  const soonMin = Math.round((s - Date.now()) / 60e3), soonTxt = type !== 'cancel' && soonMin > 0 && soonMin <= 60 ? ' · starts in ' + soonMin + ' min' : '';
-  return { msg: { title: (ROOM_DOT[unit] ? ROOM_DOT[unit] + ' ' : '') + room.toUpperCase() + ' · ' + (SB_ALERT[type] || 'Booking') + soonTxt, body: line1 + '\n' + line2, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/' }, b };
+  return { msg: { title: (ROOM_DOT[unit] ? ROOM_DOT[unit] + ' ' : '') + (unit === 11 ? 'MAX' : room.toUpperCase()) + ' · ' + when, body, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/' }, b };
 }
 async function bookingPush(env, bid, type) {
   if (!SB_ALERT[type] || !env.VAPID_JWK) return null;
