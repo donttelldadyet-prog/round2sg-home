@@ -212,6 +212,14 @@ export class HoldBook extends DurableObject {
   bkGet(bid) { this.bkInit(); const r = this.rows(`SELECT * FROM bkseen WHERE bid = ?`, bid)[0]; return r ? { unit: r.unit, s: r.s, e: r.e } : null; }
   bkPut(bid, x) { this.bkInit(); this.sql.exec(`DELETE FROM bkseen WHERE t < ?`, Date.now() - 200 * 86400e3); this.sql.exec(`INSERT OR REPLACE INTO bkseen VALUES (?, ?, ?, ?, ?)`, bid, x.unit, x.s, x.e, Date.now()); }
   bkDel(bid) { this.bkInit(); this.sql.exec(`DELETE FROM bkseen WHERE bid = ?`, bid); }
+  /* auto end-of-session messages: per session, the two Round2 messages that belong to it (own = made by the auto) */
+  autoInit() { if (this.autoReady) return; this.autoReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS auto (key TEXT PRIMARY KEY, room TEXT, day TEXT, gend INTEGER, w TEXT, t TEXT, own INTEGER, upd INTEGER)`); }
+  autoAll() { this.autoInit(); this.sql.exec(`DELETE FROM auto WHERE gend < ?`, Date.now() - 2 * 86400e3); return this.rows(`SELECT * FROM auto`); }
+  autoPut(r) { this.autoInit(); this.sql.exec(`INSERT OR REPLACE INTO auto VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, r.key, r.room, r.day, r.gend, r.w || '', r.t || '', r.own ? 1 : 0, Date.now()); }
+  autoDel(key) { this.autoInit(); this.sql.exec(`DELETE FROM auto WHERE key = ?`, key); }
+  autoLock(on) { this.qInit(); const now = Date.now(), r = this.rows(`SELECT v FROM kv WHERE k = 'autoLock'`)[0]; if (on) { if (r && now - +JSON.parse(r.v) < 90e3) return false; this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('autoLock', ?)`, String(now)); return true; } this.sql.exec(`DELETE FROM kv WHERE k = 'autoLock'`); return true; }
+  kvGet(k) { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = ?`, k)[0]; return r ? JSON.parse(r.v) : null; }
+  kvSet(k, v) { this.qInit(); this.sql.exec(`INSERT OR REPLACE INTO kv VALUES (?, ?)`, k, JSON.stringify(v)); }
   pushCount() { this.pushInit(); return this.rows(`SELECT COUNT(*) AS n FROM push`)[0].n; }
   gmGet(code) { this.gmInit(); const r = this.rows(`SELECT * FROM gm WHERE code = ?`, code)[0]; return r ? { link: r.link ? JSON.parse(r.link) : null, err: r.err, exp: r.exp, edits: r.edits } : null; }
   gmPut(code, link, err, ttl) {
@@ -858,6 +866,81 @@ async function extend(env, hb, f) {
    calendar note from arrival to guest end + 15 min cleaning, text "<name> <pax> pax · late till 1am · control centre",
    so In session, the 1-hour reminder, +1h and "That's a wrap!" read it like any session. Vale/Atlas: the twin gets a
    SYSTEM BLOCK note too. dry=1 → the plan and any clash, nothing written. */
+/* ===== Auto end-of-session messages (owner, 1 Nov) =====
+   Switch (TV messages › Auto end messages, staff code): when on, every session today – SimplyBook bookings and calendar
+   notes, late sessions too – gets "About 10 minutes to go" (guest end − 10 min) and "That's a wrap!" (guest end) as
+   soon as the engine sees it, and they're kept in sync every 10 minutes and on every SimplyBook change:
+   new session → added; moved / extended → moved; gone (cancelled, note deleted) → cancelled (only the ones it made).
+   Messages someone already set (+1h, Late session, Round2 messages) are adopted, never doubled. A session can be set to
+   "off". Skips SYSTEM BLOCKs (twin room) and stray EXT notes. More than 4 cancels at once → nothing cancelled, logged. */
+async function autoRun(env, why) {
+  const hb = book(env), mode = await hb.getMode();
+  if (!mode.autoEnd || !env.GM_STAFF) return { off: true };
+  if (!(await hb.autoLock(true))) return { busy: true };   /* one run at a time (cron + SimplyBook ping together) */
+  try { return await autoRun2(env, hb, mode, why); } finally { await hb.autoLock(false); }
+}
+async function autoRun2(env, hb, mode, why) {
+  const now = Date.now(), sg = new Date(now + 8 * 3600e3), hm = sg.getUTCHours() * 60 + sg.getUTCMinutes(), today = sgDay(now);
+  const days = hm < 6 * 60 ? [addDays(today, -1), today] : [today];   /* after midnight: last night's sessions too */
+  const sess = [];
+  for (const d of days) for (const S of (await sessDay(env, d)).sessions) if (!S.sys && !S.orphanExt && ROOMS[S.unit] && !sess.some((x) => x.key === S.key)) sess.push(S);
+  const off = new Set(mode.autoOff || []), recs = await hb.autoAll(), log = { t: now, why, made: 0, moved: 0, cancelled: 0, adopted: 0, problems: [] };
+  const call = async (body) => { const t = await gmFwd(env, Object.assign({ staff: env.GM_STAFF }, body)); let j = null; try { j = JSON.parse(t); } catch (e) {} if (!j || j.error) throw new Error((j && j.error) || 'Make didn’t answer'); return j; };
+  let links = null, changed = false;
+  for (const S of sess) {
+    if (S.guestEnd <= now + 60e3 || off.has(S.key)) continue;
+    const rec = recs.find((r) => r.key === S.key);
+    if (rec && rec.gend === S.guestEnd && rec.room === S.room) continue;   /* nothing changed */
+    if (rec) {   /* moved or extended: move its messages (if +1h already moved them, this is a no-op to the same time) */
+      for (const [kind, code] of [['wrapup', rec.w], ['timeup', rec.t]]) if (code) {
+        try { await call({ action: 'move', code, start: kind === 'wrapup' ? S.guestEnd - 10 * 60e3 : S.guestEnd, room: S.room }); log.moved++; changed = true; } catch (e) { log.problems.push(S.room + ' move: ' + String(e.message || e).slice(0, 60)); }
+      }
+      await hb.autoPut(Object.assign({}, rec, { room: S.room, gend: S.guestEnd }));
+      continue;
+    }
+    /* new to the auto: adopt messages someone already set for this end, make only what's missing */
+    if (!links) links = await makeLinks(env, hb);
+    const cur = sessMsgs(links, S.room, S.guestEnd), r = { key: S.key, room: S.room, day: sgDay(S.s), gend: S.guestEnd, w: cur.wrapup && cur.wrapup.code, t: cur.timeup && cur.timeup.code, own: 0 };
+    if (r.w || r.t) log.adopted++;
+    for (const kind of ['wrapup', 'timeup']) {
+      if (r[kind === 'wrapup' ? 'w' : 't']) continue;
+      const at = kind === 'wrapup' ? S.guestEnd - 10 * 60e3 : S.guestEnd; if (at <= now) continue;
+      try {
+        const j = await call({ action: 'r2', room: S.room, kind, to: '', from: 'The Round2 team', title: R2_TXT[kind].title, text: R2_TXT[kind].text, ack: 'yes', at });
+        r[kind === 'wrapup' ? 'w' : 't'] = j.code || j.key || ''; r.own = 1; log.made++; changed = true;
+      } catch (e) { log.problems.push(S.room + ' add: ' + String(e.message || e).slice(0, 60)); }
+    }
+    await hb.autoPut(r);
+  }
+  /* sessions that are gone (cancelled / deleted) – only for the days just read, only messages the auto made */
+  const gone = recs.filter((r) => days.includes(r.day) && r.gend > now && !sess.some((S) => S.key === r.key));
+  if (gone.length > 4) log.problems.push(gone.length + ' sessions vanished at once – nothing cancelled, check SimplyBook');
+  else for (const r of gone) {
+    if (r.own) for (const code of [r.w, r.t].filter(Boolean)) {
+      try { await call({ action: 'cancel', code }); log.cancelled++; changed = true; } catch (e) { log.problems.push(r.room + ' cancel: ' + String(e.message || e).slice(0, 60)); }
+    }
+    await hb.autoDel(r.key);
+  }
+  if (changed) { await hb.gmDrop('__LIST__'); await gmList(env, hb).catch(() => null); }
+  if (changed || log.problems.length || why !== 'cron') await hb.kvSet('autoLast', log);
+  return log;
+}
+/* the Auto end messages page: the switch, and today's sessions with their two messages */
+async function autoApi(env, hb, f) {
+  const mode = await hb.getMode();
+  if (f.set === 'on' || f.set === 'off') { mode.autoEnd = f.set === 'on'; mode.autoBy = String(f.by || '').slice(0, 30); mode.autoT = Date.now(); await hb.setMode(mode); if (mode.autoEnd) await autoRun(env, 'switched on'); }
+  if (f.key && (f.sess === 'on' || f.sess === 'off')) { const s2 = new Set(mode.autoOff || []); if (f.sess === 'off') s2.add(String(f.key)); else s2.delete(String(f.key)); mode.autoOff = [...s2].slice(-200); await hb.setMode(mode); if (mode.autoEnd && f.sess === 'on') await autoRun(env, 'session on'); }
+  if (f.run) await autoRun(env, 'run now');
+  const now = Date.now(), today = sgDay(now), hm = (now + 8 * 3600e3) % 86400e3 / 60e3, days = hm < 360 ? [addDays(today, -1), today] : [today], m2 = await hb.getMode();
+  const recs = await hb.autoAll(), off = new Set(m2.autoOff || []), list = [];
+  for (const d of days) for (const S of (await sessDay(env, d)).sessions) {
+    if (S.sys || S.orphanExt || !ROOMS[S.unit] || list.some((x) => x.key === S.key)) continue;
+    const r = recs.find((x) => x.key === S.key);
+    list.push({ key: S.key, room: S.room, unit: S.unit, name: String(S.name || '').slice(0, 40), k: S.k, s: S.s, guestEnd: S.guestEnd, done: S.guestEnd <= now, off: off.has(S.key),
+      msgs: r ? { w: !!r.w, t: !!r.t, own: !!r.own, synced: r.gend === S.guestEnd } : null });
+  }
+  return { ok: true, on: !!m2.autoEnd, by: m2.autoBy || '', t: m2.autoT || 0, now, last: await hb.kvGet('autoLast'), sessions: list.sort((a, b) => a.guestEnd - b.guestEnd) };
+}
 const sgDayName = (ms) => new Date(ms + 8 * 3600e3).toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).replace(/,/g, '');
 async function late(env, hb, f) {
   const unit = +f.unit, day = String(f.day || ''), st = String(f.start || ''), en = String(f.end || '');
@@ -990,6 +1073,10 @@ async function gm(env, req) {
       if (at) await hb.laterSet(code, at); else await hb.laterDel(code);
     }
     return gmJ({ ok: true, later: await hb.laterList() });
+  }
+  if (act === 'auto') {   /* staff: TV messages › Auto end messages */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    try { return gmJ(await autoApi(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
   if (act === 'insess' || act === 'extend' || act === 'extundo' || act === 'late') {   /* staff: "In session" tab */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
@@ -1495,7 +1582,7 @@ async function bookingPush(env, bid, type) {
 
 export default {
   /* every 10 minutes (Cloudflare cron trigger, every-10-minutes schedule): staff "in 1 hour" alerts */
-  async scheduled(ev, env0, ctx) { ctx.waitUntil(soonRun(envFor(env0, 'live')).catch(() => null)); },
+  async scheduled(ev, env0, ctx) { const env = envFor(env0, 'live'); ctx.waitUntil(soonRun(env).catch(() => null)); ctx.waitUntil(autoRun(env, 'cron').catch(() => null)); },
   async fetch(req, env0, ctx) {
     const u = new URL(req.url);
     const env = envFor(env0, 'live');   /* default for anything not tied to a hold/order: live once the live key is in */
@@ -1625,6 +1712,7 @@ export default {
         const bid = String(j.booking_id || '').replace(/\D/g, ''), type = String(j.notification_type || '');
         if (bid) ctx.waitUntil(book(env).onSb(bid, type).catch(() => null));
         if (bid) ctx.waitUntil(bookingPush(env, bid, type).catch(() => null));   /* staff phones: New booking / changed / cancelled */
+        ctx.waitUntil(autoRun(env, 'simplybook ' + type).catch(() => null));   /* auto end messages follow straight away */
         await book(env).gmDrop('__LIST__').catch(() => null);
         return J({ ok: true });
       }
