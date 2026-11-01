@@ -1205,8 +1205,9 @@ async function gm(env, req) {
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await (act === 'insess' ? insess : act === 'extend' ? extend : act === 'late' ? late : extUndo)(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
-  if (act === 'msgimport' || act === 'msgmode') {   /* staff: move the message store off Make (copy records in; switch where messages live) */
+  if (act === 'msgimport' || act === 'msgmode' || act === 'msgtest') {   /* staff: move the message store off Make (copy records in; switch where messages live) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    if (f.direct) return gmJ(await hb.msgAct(Object.assign({}, f, { action: f.direct })));   /* test the engine's store while Make is still live */
     if (act === 'msgimport') { let L = []; try { L = JSON.parse(f.records || '[]'); } catch (e) { return gmJ({ error: 'records must be JSON' }); } return gmJ({ ok: true, imported: await hb.msgImport(L) }); }
     const m = await hb.getMode(); if (f.set === 'on' || f.set === 'off') { m.msgLocal = f.set === 'on'; m.msgT = Date.now(); await hb.setMode(m); await hb.gmDrop('__LIST__'); if (m.msgLocal) await gmList(env, hb).catch(() => null); }
     return gmJ({ ok: true, local: !!m.msgLocal, count: await hb.msgCount() });
