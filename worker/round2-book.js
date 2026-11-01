@@ -207,6 +207,11 @@ export class HoldBook extends DurableObject {
   holdByBid(bid) { const r = this.rows(`SELECT data FROM holds WHERE status = 'paid' AND CAST(json_extract(data, '$.done.bookingId') AS TEXT) = ? LIMIT 1`, String(bid))[0]; if (!r) return null; const d = JSON.parse(r.data); return { total: d.q && d.q.total, pay: d.pay }; }
   soonMark(k) { this.pushInit(); this.sql.exec(`CREATE TABLE IF NOT EXISTS soon (k TEXT PRIMARY KEY, t INTEGER)`); this.sql.exec(`DELETE FROM soon WHERE t < ?`, Date.now() - 3 * 86400e3);
     if (this.rows(`SELECT 1 FROM soon WHERE k = ?`, k).length) return false; this.sql.exec(`INSERT INTO soon VALUES (?, ?)`, k, Date.now()); return true; }
+  /* each booking's last alerted room + times, so "Booking changed" can say "was … now …" */
+  bkInit() { if (this.bkReady) return; this.bkReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS bkseen (bid TEXT PRIMARY KEY, unit INTEGER, s INTEGER, e INTEGER, t INTEGER)`); }
+  bkGet(bid) { this.bkInit(); const r = this.rows(`SELECT * FROM bkseen WHERE bid = ?`, bid)[0]; return r ? { unit: r.unit, s: r.s, e: r.e } : null; }
+  bkPut(bid, x) { this.bkInit(); this.sql.exec(`DELETE FROM bkseen WHERE t < ?`, Date.now() - 200 * 86400e3); this.sql.exec(`INSERT OR REPLACE INTO bkseen VALUES (?, ?, ?, ?, ?)`, bid, x.unit, x.s, x.e, Date.now()); }
+  bkDel(bid) { this.bkInit(); this.sql.exec(`DELETE FROM bkseen WHERE bid = ?`, bid); }
   pushCount() { this.pushInit(); return this.rows(`SELECT COUNT(*) AS n FROM push`)[0].n; }
   gmGet(code) { this.gmInit(); const r = this.rows(`SELECT * FROM gm WHERE code = ?`, code)[0]; return r ? { link: r.link ? JSON.parse(r.link) : null, err: r.err, exp: r.exp, edits: r.edits } : null; }
   gmPut(code, link, err, ttl) {
@@ -1331,6 +1336,12 @@ async function pushApi(env, req, path) {
     await hb.gmRate('pushbad:' + (req.headers.get('cf-connecting-ip') || '?'), 1000);
     return J({ error: 'Wrong staff code.' }, 403);
   }
+  if (path === '/push/seed') {   /* staff: remember every upcoming booking's room + times now, so a later move can say "was … now …" */
+    const a2 = await admin(env), day = sgDay(Date.now()); let n = 0;
+    const l = Object.values((await a2('getBookings', [{ booking_type: 'non_cancelled', date_from: day, date_to: addDays(day, 180) }])) || {});
+    for (const x of l) { const st = sgMs0(x.start_date || x.start_date_time), en = sgMs0(x.end_date || x.end_date_time); if (!st || !ROOMS[+x.unit_id]) continue; await hb.bkPut(String(x.id), { unit: +x.unit_id, s: st, e: en - (+(x.event_buffertime_after ?? BUF) || 0) * 60e3 }); n++; }
+    return J({ ok: true, remembered: n });
+  }
   if (path === '/push/preview') {   /* staff: what the booking alert would say (latest upcoming booking, or bid) – sends nothing */
     let bid = String(f.bid || '').replace(/\D/g, '');
     if (f.kind === 'soon' || f.kind === 'soonnote') return J({ msg: await soonSample(env, f.kind === 'soonnote' ? 'n' : 'b') });
@@ -1430,7 +1441,7 @@ const ROOM_DOT = { 5: '🎀', 7: '🍃', 8: '🪐', 9: '🏔️', 10: '🔮', 12
 const roomTitle = (unit) => (ROOM_DOT[unit] ? ROOM_DOT[unit] + ' ' : '') + (unit === 11 ? 'MAX' : ROOMS[unit] ? ROOMS[unit][0].toUpperCase() : 'ROOM');
 /* pax from a note's text: "4 pax", "4pax", "4 ppl", "4 people", "4 guests", "4p" (not "4pm"/"4 p.m."), "pax: 4", "pax 4" */
 const notePax = (t) => { t = String(t || ''); const m = t.match(/(\d{1,2})\s*(pax|ppl|people|persons?|guests?|pp|p(?![.\s]*m\b))\b/i) || t.match(/\b(?:pax|ppl|people|guests?)\s*[:=-]?\s*(\d{1,2})\b/i); return m ? m[1] : ''; };
-async function bookingAlert(env, bid, type) {
+async function bookingAlert(env, bid, type, prev) {
   const a = await admin(env), b = await a('getBookingDetails', [bid]).catch(() => null);
   if (!b) return null;
   const cid = String(b.client_id || ''), name = String(b.client_name || b.client || '').trim();
@@ -1460,15 +1471,25 @@ async function bookingAlert(env, bid, type) {
   /* owner's layout (1 Nov): bold = room icon, ROOM, guest name (+ CHANGED / CANCELLED / in N min);
      below = date and time · length · amount (EB / Peak / Off-peak / EB+peak) · pax */
   const short = ev === ids.eb ? (peakDay ? 'EB+peak' : 'EB') : rate;
-  const soonMin = Math.round((s - Date.now()) / 60e3), soonTxt = type !== 'cancel' && soonMin > 0 && soonMin <= 60 ? ' · in ' + soonMin + ' min' : '';
-  const what = { change: ' · CHANGED', cancel: ' · CANCELLED' }[type] || '';
-  const body = [day.replace(/,/g, '') + ', ' + clock12(s) + '–' + clock12(e), hours + 'h', (money || '') + (short ? (money ? ' (' + short + ')' : short) : ''), (pax || '?') + ' pax'].filter(Boolean).join(' · ');
-  const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10) === date;
-  return { msg: { title: roomTitle(unit) + ' · ' + (name || 'No name') + what + soonTxt, body, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/' }, b };
+  /* the status goes on its own line under the name (owner, 1 Nov: beside the name it got cut off) */
+  const soonMin = Math.round((s - Date.now()) / 60e3), soonTxt = type !== 'cancel' && soonMin > 0 && soonMin <= 60 ? '⏰ Starts in ' + soonMin + ' min' : '';
+  const span = (u, a, b2) => (u !== unit ? (ROOMS[u] ? (u === 11 ? 'Max' : ROOMS[u][0]) + ' ' : '') : '') + new Date(a + 8 * 3600e3).toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).replace(/,/g, '') + ', ' + clock12(a) + '–' + clock12(b2);
+  const details = [day.replace(/,/g, '') + ', ' + clock12(s) + '–' + clock12(e), hours + 'h', (money || '') + (short ? (money ? ' (' + short + ')' : short) : ''), (pax || '?') + ' pax'].filter(Boolean).join(' · ');
+  let body;
+  if (type === 'cancel') body = '❌ CANCELLED\n' + day.replace(/,/g, '') + ', ' + clock12(s) + '–' + clock12(e);   /* just what was freed up */
+  else if (type === 'change') {
+    const moved = prev && (prev.s !== s || prev.e !== e || prev.unit !== unit);
+    body = moved ? '🔁 MOVED\nwas ' + span(prev.unit, prev.s, prev.e) + '\nnow ' + span(unit, s, e).replace(/^/, prev.unit !== unit ? (unit === 11 ? 'Max' : ROOMS[unit] ? ROOMS[unit][0] : '') + ' ' : '') + ' · ' + hours + 'h · ' + (pax || '?') + ' pax'
+      : '✏️ CHANGED\n' + details;   /* times the same (or not known from before): new details */
+  } else body = (soonTxt ? soonTxt + '\n' : '') + details;
+  const what = '';
+  return { msg: { title: roomTitle(unit) + ' · ' + (name || 'No name'), body, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/' }, b, now: { unit, s, e } };
 }
 async function bookingPush(env, bid, type) {
   if (!SB_ALERT[type] || !env.VAPID_JWK) return null;
-  const r = await bookingAlert(env, bid, type);
+  const hb = book(env), prev = await hb.bkGet(String(bid)).catch(() => null);
+  const r = await bookingAlert(env, bid, type, prev);
+  if (r && r.now) await (type === 'cancel' ? hb.bkDel(String(bid)) : hb.bkPut(String(bid), r.now)).catch(() => null);
   return r && r.msg ? pushAll(env, 'booking', r.msg) : r;
 }
 
