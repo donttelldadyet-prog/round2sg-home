@@ -1965,6 +1965,8 @@ export default {
     try {
       if (req.method === 'OPTIONS') return J({});
       if (u.pathname === '/ph') return J([...(await holidays())].sort());
+      /* one clock for everything (owner, 2 Nov): every TV and page sets its time from here, not from its own clock */
+      if (u.pathname === '/time') { const t = Date.now(); return J({ t, sg: sgStr(t), today: sgDay(t), night: sgDay(t - SHADOW_TILL * 60e3) }); }
       /* control centre › Systems / Test bench: which mode the engine is in and what's switched on (yes/no only, never a secret) */
       /* booking switch (control centre › Systems): GET /mode for the booking page; POST {pass, pin, booking, by} to switch.
          Two separate secrets must both match (SWITCH_PASS + SWITCH_PIN, set in Cloudflare); 5 wrong tries locks it for 30 min. */
