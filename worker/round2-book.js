@@ -853,10 +853,12 @@ async function extend(env, hb, f) {
    calendar note from arrival to guest end + 15 min cleaning, text "<name> <pax> pax · late till 1am · control centre",
    so In session, the 1-hour reminder, +1h and "That's a wrap!" read it like any session. Vale/Atlas: the twin gets a
    SYSTEM BLOCK note too. dry=1 → the plan and any clash, nothing written. */
+const sgDayName = (ms) => new Date(ms + 8 * 3600e3).toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).replace(/,/g, '');
 async function late(env, hb, f) {
   const unit = +f.unit, day = String(f.day || ''), st = String(f.start || ''), en = String(f.end || '');
   if (!ROOMS[unit]) return { error: 'Pick a room.' };
   if (!/^\d{4}-\d\d-\d\d$/.test(day) || !/^\d\d:\d\d$/.test(st) || !/^\d\d:\d\d$/.test(en)) return { error: 'Pick the date, arrival time and end time.' };
+  if (+st.slice(3) % 15 || +en.slice(3) % 15) return { error: 'Times go in 15-minute steps (like bookings).' };
   const name = String(f.name || '').replace(/\s+/g, ' ').trim().slice(0, 40), pax = Math.max(0, Math.min(20, parseInt(f.pax, 10) || 0));
   if (!name) return { error: 'Type the guest’s name.' };
   if (!pax) return { error: 'Type how many pax (it decides the room set-up and controllers).' };
@@ -875,7 +877,7 @@ async function late(env, hb, f) {
      so a session cancelled days later doesn't leave messages behind on an empty room's TV */
   const wantMsgs = f.msgs !== 'no', soonEnough = s - Date.now() < 24 * 3600e3 && guestEnd > Date.now() + 10 * 60e3;
   const plan = { room, twin: tw ? ROOMS[tw][0] : null, name, pax, arrives: clock12(s), guestEnd: clock12(guestEnd), blockEnd: clock12(blockEnd), hours: Math.round(hrs * 100) / 100,
-    nextDay: sgDay(guestEnd) !== day, text, clash, msgs: wantMsgs ? (soonEnough ? { wrapup: clock12(guestEnd - 10 * 60e3), timeup: clock12(guestEnd) } : 'later') : 'off' };
+    nextDay: sgDay(guestEnd) !== day, arrivesDay: sgDayName(s), leavesDay: sgDayName(guestEnd), text, clash, msgs: wantMsgs ? (soonEnough ? { wrapup: clock12(guestEnd - 10 * 60e3), timeup: clock12(guestEnd) } : 'later') : 'off' };
   if (f.dry) return { ok: true, dry: true, plan };
   if (clash.length && f.force !== 'yes') return { ok: false, clash: true, plan };
   const s2 = await sb2(env), done = [];
