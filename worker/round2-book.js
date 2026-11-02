@@ -1606,6 +1606,10 @@ async function gm(env, req) {
     const m = await hb.getMode(); if (f.set === 'on' || f.set === 'off') { m.msgLocal = f.set === 'on'; m.msgT = Date.now(); await hb.setMode(m); await hb.gmDrop('__LIST__'); if (m.msgLocal) await gmList(env, hb).catch(() => null); }
     return gmJ({ ok: true, local: !!m.msgLocal, count: await hb.msgCount() });
   }
+  if (act === 'tvupdate') {   /* staff: Round2 messages › On the TVs now › Update now */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    try { return gmJ(await tvUpdate(env, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
+  }
   if (act === 'keyexp') {   /* staff: Keys › expiry dates */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await keyApi(env, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
@@ -2175,6 +2179,29 @@ async function ghProxy(env, req) {
   return new Response(await r.text(), { status: r.status, headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' } });
 }
 
+/* ===== Remote TV updates (owner, 2 Nov) =====
+   Update now from the control centre: only when the TV is on (checked in within 12 min), its Staff tools allow it, and
+   its room has no session now or starting within 10 minutes (bookings and notes, the twin room's too). Then
+   /r2/<TV_KEY>/<room>/cmd = {id, do:'update', at}; the TV reports progress in /update. Nothing is queued for a TV that's
+   off. LG installs (Homebrew); Android only checks and shows "ready" – staff press Install in Staff tools. */
+async function tvUpdate(env, f) {
+  const room = String(f.room || '').toLowerCase().replace('maximillion', 'max'), unit = +(Object.keys(GM_ROOM).find((u) => GM_ROOM[u] === room) || 0);
+  if (!unit || !env.TV_KEY) return { error: 'Pick a room.' };
+  const base = FB_BASE + env.TV_KEY + '/' + room, now = Date.now();
+  const hb = await fetch(base + '/helper.json').then((r) => r.json()).catch(() => null);
+  if (!hb || !hb.t || now - hb.t > 12 * 60e3) return { error: 'The TV is off – switch it on first.', off: true };
+  if (hb.ru === false) return { error: 'Locked on the TV (Staff tools › Updates from the control centre: not allowed).', locked: true };
+  const night = sgDay(now - SHADOW_TILL * 60e3), tw = MIRROR[unit], busy = [];
+  for (const d of [night, addDays(night, 1)]) for (const S of (await sessDay(env, d)).sessions) {
+    if ((S.unit === unit || S.unit === tw) && S.s - 10 * 60e3 <= now && now < S.guestEnd) busy.push(S);
+  }
+  if (busy.length) { const S = busy[0]; return { error: (S.unit !== unit ? ROOMS[S.unit][0] + ' (its twin) ' : '') + 'has a session ' + (S.s > now ? 'starting at ' : 'until ') + clock12(S.s > now ? S.s : S.guestEnd) + ' – try after that.', busy: true }; }
+  const cmd = { id: 'u' + now.toString(36), do: 'update', at: now, by: String(f.by || 'control centre').slice(0, 40) };
+  const ok = await fetch(base + '/cmd.json', { method: 'PUT', body: JSON.stringify(cmd) }).then((r) => r.ok).catch(() => false);
+  if (!ok) return { error: 'Couldn’t reach the TV database.' };
+  await fetch(base + '/update.json', { method: 'PUT', body: JSON.stringify({ state: 'sent', v: hb.v || '', t: { '.sv': 'timestamp' } }) }).catch(() => null);
+  return { ok: true, tv: hb.tv, from: hb.v };
+}
 /* ===== Key expiry (owner, 2 Nov: "warning if keys are about to expire … a 2 week warning") =====
    kv keyExp = { NAME: { label, date: 'YYYY-MM-DD' (typed by the owner), auto: 'YYYY-MM-DD' (GitHub says), ok, checked } }.
    GitHub tells its own key's expiry on every answer (header github-authentication-token-expiration), so GH_TOKEN fills in
