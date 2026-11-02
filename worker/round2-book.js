@@ -1972,6 +1972,10 @@ async function pushApi(env, req, path) {
   }
   if (path === '/push/preview') {   /* staff: what the booking alert would say (latest upcoming booking, or bid) – sends nothing */
     let bid = String(f.bid || '').replace(/\D/g, '');
+    if (f.kind === 'soon' && f.key && /^\d{4}-\d\d-\d\d$/.test(f.day || '')) {   /* System check: the 1-hour reminder for one session, as it would read 1 h before */
+      const all = (await sessDay(env, f.day)).sessions.filter((S) => !S.sys && !S.orphanExt && ROOMS[S.unit]), S = all.find((x) => x.key === String(f.key));
+      return J(S ? { msg: soonMsg(S, S.s - 60 * 60e3, await soonPax(env, S), await soonExtra(env, S, all, S.s - 60 * 60e3)) } : { error: 'No such session' });
+    }
     if (f.kind === 'soon' || f.kind === 'soonnote') return J({ msg: await soonSample(env, f.kind === 'soonnote' ? 'n' : 'b') });
     if (!bid) { const a = await admin(env), day = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10); const l = Object.values((await a('getBookings', [{ booking_type: 'non_cancelled', date_from: day, date_to: addDays(day, 14) }])) || {}); bid = String((l.find((x) => !SYS_CLIENTS.includes(String(x.client_id))) || {}).id || ''); }
     const r = bid ? await bookingAlert(env, bid, f.type || 'create') : null;
@@ -2021,13 +2025,30 @@ async function bookingSample(env) {
    alert already says "starts in N min" (owner, 1 Nov). */
 /* owner's layout (1 Nov): what staff need to set up the room – who, when they arrive, how long, how many (pax decides
    the room set-up and how many controllers). Bold = icon ROOM · name · in 1 hour; below = arrives · length · pax. */
-function soonMsg(S, now, pax) {
+/* compact (owner, 2 Nov: little space in the banner): "7pm–10pm · 3h · 2 pax", then only what needs doing:
+   "🧹 prev out 6:45pm" when the room isn't free yet, "🎂 7:15pm" when a guest message is set / "🔗 msg not written" */
+function soonMsg(S, now, pax, extra) {
   const mins = Math.round((S.s - now) / 60e3), unit = S.unit, inT = ' · in ' + (mins >= 55 && mins <= 65 ? '1 hour' : mins + ' min');
-  const len = Math.round((S.guestEnd - S.s) / 360e3) / 10, when = 'Arrives ' + clock12(S.s) + ' · ' + len + 'h (till ' + clock12(S.guestEnd) + ') · ' + (pax || '?') + ' pax';
+  const len = Math.round((S.guestEnd - S.s) / 360e3) / 10, when = [clock12(S.s) + '–' + clock12(S.guestEnd), len + 'h', (pax || '?') + ' pax'].concat(extra || []).join(' · ');
   if (S.k === 'b') return { title: roomTitle(unit) + ' · ' + (S.name || 'No name') + inT, body: when, tag: 'soon' + S.key, url: '/?tab=insession' };
   /* a calendar note: the whole note under the times, so nothing staff wrote is lost (owner, 1 Nov) */
   const note = String(S.name || '').replace(/\s+/g, ' ').trim();
   return { title: roomTitle(unit) + ' · Note' + inT, body: when + '\n' + (note ? '“' + note.slice(0, 200) + '”' : '(empty note)'), tag: 'soon' + S.key, url: '/?tab=insession' };
+}
+/* what staff need to do before this group arrives (owner, 2 Nov): previous group still in (this room or its twin), and the
+   guest's own TV message (a link made for this room + start) */
+const KIND_ICON = { birthday: '🎂', anniversary: '💞', celebrate: '🎉', note: '💬' };
+async function soonExtra(env, S, all, now) {
+  const out = [], tw = MIRROR[S.unit];
+  const prev = all.filter((x) => x.key !== S.key && (x.unit === S.unit || x.unit === tw) && x.s < S.s && x.guestEnd > now).sort((a, b) => b.guestEnd - a.guestEnd)[0];
+  if (prev) out.push('🧹 prev out ' + clock12(prev.guestEnd));
+  try {
+    const L = (JSON.parse(await gmFwd(env, { action: 'list', staff: env.GM_STAFF }) || '{}').links || [])
+      .filter((x) => !/^R2/.test(x.key) && x.data && x.data.status !== 'cancelled' && x.data.room === GM_ROOM[S.unit] && +x.data.start === S.s);
+    const done = L.find((x) => x.data.status === 'approved' && +x.data.at);
+    if (done) out.push((KIND_ICON[done.data.kind] || '💬') + ' ' + clock12(+done.data.at)); else if (L.length) out.push('🔗 msg not written');
+  } catch (e) {}
+  return out;
 }
 /* pax: a booking's own field; a note's text ("4 pax") */
 async function soonPax(env, S) {
@@ -2045,7 +2066,7 @@ async function soonSessions(env, days) {
   return out.sort((a, b) => a.s - b.s);
 }
 /* sample for the Alerts page: the next booking (k='b') or the next calendar note (k='n') in the coming week */
-async function soonSample(env, k) { const now = Date.now(), S = (await soonSessions(env, 7)).find((x) => x.s > now && (!k || x.k === k)); return S ? soonMsg(S, S.s - 60 * 60e3, await soonPax(env, S)) : null; }
+async function soonSample(env, k) { const now = Date.now(), all = await soonSessions(env, 7), S = all.find((x) => x.s > now && (!k || x.k === k)); return S ? soonMsg(S, S.s - 60 * 60e3, await soonPax(env, S), await soonExtra(env, S, all, S.s - 60 * 60e3)) : null; }
 async function soonRun(env) {
   if (!env.VAPID_JWK) return null;
   /* lean (owner, 1 Nov): cron every 10 min, but SimplyBook isn't asked between 7am (the shop night ends) and 9:45am –
@@ -2056,10 +2077,11 @@ async function soonRun(env) {
   const sent = [], sgDay = (t) => new Date(t + 8 * 3600e3).toISOString().slice(0, 10);
   /* only the day the 55–61 min window falls on (today; tomorrow only around midnight) – one SimplyBook read each */
   const days = sgDay(now + 61 * 60e3) === sgDay(now) ? 1 : 2;   /* window 50–61 min: a quarter-hour start is hit on its exact tick; an odd-time note at most 5 min late */
-  for (const S of await soonSessions(env, days)) {
+  const all = await soonSessions(env, days);
+  for (const S of all) {
     const m = S.s - now; if (m <= 50 * 60e3 || m > 61 * 60e3) continue;   /* exactly 1 h before on the 5-min tick (owner, 2 Nov); keyed in within the hour → none */
     if (!(await hb.soonMark(S.key + ':' + S.s))) continue;
-    sent.push(Object.assign({ key: S.key }, await pushAll(env, 'soon', soonMsg(S, now, await soonPax(env, S)))));
+    sent.push(Object.assign({ key: S.key }, await pushAll(env, 'soon', soonMsg(S, now, await soonPax(env, S), await soonExtra(env, S, all, now)))));
   }
   return { sent };
 }
@@ -2110,7 +2132,11 @@ async function bookingAlert(env, bid, type, prev) {
     const moved = prev && (prev.s !== s || prev.e !== e || prev.unit !== unit);
     body = moved ? '🔁 MOVED\nwas ' + span(prev.unit, prev.s, prev.e) + '\nnow ' + span(unit, s, e).replace(/^/, prev.unit !== unit ? (unit === 11 ? 'Max' : ROOMS[unit] ? ROOMS[unit][0] : '') + ' ' : '') + ' · ' + hours + 'h · ' + (pax || '?') + ' pax'
       : '✏️ CHANGED\n' + details;   /* times the same (or not known from before): new details */
-  } else body = (soonTxt ? soonTxt + '\n' : '') + details;
+  } else {
+    /* how far ahead (owner, 2 Nov), compact at the end: "⚡ in 3h" same day, "9d ahead" otherwise */
+    const lead = s - Date.now(), lt = soonTxt || lead <= 0 ? '' : lead < 24 * 3600e3 ? '⚡ in ' + (lead < 3600e3 ? Math.round(lead / 60e3) + 'm' : Math.round(lead / 3600e3) + 'h') : Math.round(lead / 86400e3) + 'd ahead';
+    body = (soonTxt ? soonTxt + '\n' : '') + details + (lt ? ' · ' + lt : '');
+  }
   const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10) === date;
   return { msg: { title: roomTitle(unit) + ' · ' + (name || 'No name'), body, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/' }, b, now: { unit, s, e } };
 }
