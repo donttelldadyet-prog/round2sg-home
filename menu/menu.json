@@ -5,7 +5,7 @@
   "minOrder": 10,
   "minOrderEnabled": false
  },
- "updated": "2026-10-27",
+ "updated": "2026-11-03",
  "note": "Prices are Madd Pizza's own prices (before GST). Customers see price x 1.1 (Round2's 10%). GST 9% is charged on Madd Pizza's price only. Price source order: printed menu first, then maddpizza.sg. Items with hidden=true are drafts and don't show to customers.",
  "sections": [
   {
@@ -25,7 +25,7 @@
   {
    "id": "pizza",
    "name": "Roman Pizza",
-   "sub": "Slice approx 12 × 25 cm · Full approx 66 × 25 cm",
+   "sub": "Per slice · approx 12 × 25 cm",
    "items": [
     {
      "id": "margherita",
@@ -36,10 +36,6 @@
       {
        "name": "Slice",
        "price": 12
-      },
-      {
-       "name": "Full",
-       "price": 62
       }
      ]
     },
@@ -52,10 +48,6 @@
       {
        "name": "Slice",
        "price": 10
-      },
-      {
-       "name": "Full",
-       "price": 53
       }
      ]
     },
@@ -68,10 +60,6 @@
       {
        "name": "Slice",
        "price": 14
-      },
-      {
-       "name": "Full",
-       "price": 72
       }
      ]
     },
@@ -84,10 +72,6 @@
       {
        "name": "Slice",
        "price": 14
-      },
-      {
-       "name": "Full",
-       "price": 72
       }
      ]
     },
@@ -100,10 +84,6 @@
       {
        "name": "Slice",
        "price": 14
-      },
-      {
-       "name": "Full",
-       "price": 72
       }
      ]
     },
@@ -116,10 +96,6 @@
       {
        "name": "Slice",
        "price": 15
-      },
-      {
-       "name": "Full",
-       "price": 75
       }
      ]
     },
@@ -132,10 +108,6 @@
       {
        "name": "Slice",
        "price": 15
-      },
-      {
-       "name": "Full",
-       "price": 75
       }
      ]
     },
@@ -149,10 +121,6 @@
       {
        "name": "Slice",
        "price": 17
-      },
-      {
-       "name": "Full",
-       "price": 85
       }
      ]
     },
@@ -165,10 +133,6 @@
       {
        "name": "Slice",
        "price": 21
-      },
-      {
-       "name": "Full",
-       "price": 105
       }
      ]
     }
@@ -831,23 +795,14 @@
   "pc": {
    "test-item": 50,
    "margherita--slice": 1320,
-   "margherita--full": 6820,
    "marinara--slice": 1100,
-   "marinara--full": 5830,
    "salami--slice": 1540,
-   "salami--full": 7920,
    "zucchini-anchovies--slice": 1540,
-   "zucchini-anchovies--full": 7920,
    "eggplant-parmigiana--slice": 1540,
-   "eggplant-parmigiana--full": 7920,
    "tuna-pizza--slice": 1650,
-   "tuna-pizza--full": 8250,
    "quattro-formaggi--slice": 1650,
-   "quattro-formaggi--full": 8250,
    "parma-rocket-pizza--slice": 1870,
-   "parma-rocket-pizza--full": 9350,
    "burrata-parma-pizza--slice": 2310,
-   "burrata-parma-pizza--full": 11550,
    "french-fries": 869,
    "corn-tortilla": 1100,
    "truffle-fries": 1320,
@@ -937,23 +892,14 @@
   "pm": {
    "test-item": 0,
    "margherita--slice": 1200,
-   "margherita--full": 6200,
    "marinara--slice": 1000,
-   "marinara--full": 5300,
    "salami--slice": 1400,
-   "salami--full": 7200,
    "zucchini-anchovies--slice": 1400,
-   "zucchini-anchovies--full": 7200,
    "eggplant-parmigiana--slice": 1400,
-   "eggplant-parmigiana--full": 7200,
    "tuna-pizza--slice": 1500,
-   "tuna-pizza--full": 7500,
    "quattro-formaggi--slice": 1500,
-   "quattro-formaggi--full": 7500,
    "parma-rocket-pizza--slice": 1700,
-   "parma-rocket-pizza--full": 8500,
    "burrata-parma-pizza--slice": 2100,
-   "burrata-parma-pizza--full": 10500,
    "french-fries": 790,
    "corn-tortilla": 1000,
    "truffle-fries": 1200,
@@ -1043,23 +989,14 @@
   "pn": {
    "test-item": "Test item",
    "margherita--slice": "Margherita (Slice)",
-   "margherita--full": "Margherita (Full)",
    "marinara--slice": "Marinara (Slice)",
-   "marinara--full": "Marinara (Full)",
    "salami--slice": "Salami (Slice)",
-   "salami--full": "Salami (Full)",
    "zucchini-anchovies--slice": "Zucchini & Anchovies (Slice)",
-   "zucchini-anchovies--full": "Zucchini & Anchovies (Full)",
    "eggplant-parmigiana--slice": "Eggplant Parmigiana (Slice)",
-   "eggplant-parmigiana--full": "Eggplant Parmigiana (Full)",
    "tuna-pizza--slice": "Tuna (Slice)",
-   "tuna-pizza--full": "Tuna (Full)",
    "quattro-formaggi--slice": "Quattro Formaggi (Slice)",
-   "quattro-formaggi--full": "Quattro Formaggi (Full)",
    "parma-rocket-pizza--slice": "Parma Ham & Rocket (Slice)",
-   "parma-rocket-pizza--full": "Parma Ham & Rocket (Full)",
    "burrata-parma-pizza--slice": "Burrata, Parma Ham & Rocket (Slice)",
-   "burrata-parma-pizza--full": "Burrata, Parma Ham & Rocket (Full)",
    "french-fries": "French Fries",
    "corn-tortilla": "Corn Tortilla",
    "truffle-fries": "Truffle Fries",
