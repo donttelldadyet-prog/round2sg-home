@@ -1198,7 +1198,7 @@ async function autoApi(env, hb, f) {
   }
   const q = await hb.qList(), own = new Set(recs.filter((r) => r.code).map((r) => r.code));
   for (const x of list) if (!x.msgs && q.some((m) => /^R2/.test(m.code) && !own.has(m.code) && m.room === x.room && (Math.abs(m.at - x.guestEnd) <= 5 * 60e3 || Math.abs(m.at - (x.guestEnd - 10 * 60e3)) <= 5 * 60e3))) x.msgs = { w: true, t: true, own: false, synced: true };
-  return { ok: true, on: !!m2.autoEnd, by: m2.autoBy || '', t: m2.autoT || 0, now, last: await hb.kvGet('autoLast'), cronLast: await hb.kvGet('cronLast'), orphanLast: await hb.kvGet('orphanLast'), sessions: list.sort((a, b) => a.guestEnd - b.guestEnd) };
+  return { ok: true, on: !!m2.autoEnd, by: m2.autoBy || '', t: m2.autoT || 0, now, last: await hb.kvGet('autoLast'), cronLast: await hb.kvGet('cronLast'), cronPrev: await hb.kvGet('cronPrev'), orphanLast: await hb.kvGet('orphanLast'), sessions: list.sort((a, b) => a.guestEnd - b.guestEnd) };
 }
 const sgDayName = (ms) => new Date(ms + 8 * 3600e3).toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).replace(/,/g, '');
 async function late(env, hb, f) {
@@ -1996,7 +1996,7 @@ async function bookingSample(env) {
 }
 /* "In 1 hour" – every 10 minutes (cron, 9:45am–2am) the engine reads today's sessions the same way In session does: SimplyBook
    bookings AND calendar notes that block time (WhatsApp / walk-in sessions). Skipped: the twin room's SYSTEM BLOCKs and
-   EXT notes (an extension isn't a new arrival). Each session is sent once, when it's 50–62 minutes away. Anything
+   EXT notes (an extension isn't a new arrival). Each session is sent once, exactly 1 hour before (5-min tick, owner 2 Nov). Anything
    added later than that gets no reminder: a note was keyed in by staff themselves, and a booking's "New booking"
    alert already says "starts in N min" (owner, 1 Nov). */
 /* owner's layout (1 Nov): what staff need to set up the room – who, when they arrive, how long, how many (pax decides
@@ -2034,10 +2034,10 @@ async function soonRun(env) {
   if (hm >= SHADOW_TILL && hm < 9 * 60 + 45) return { asleep: true };
   const hb = book(env); if (!(await hb.pushList('soon')).length) return { phones: 0 };
   const sent = [], sgDay = (t) => new Date(t + 8 * 3600e3).toISOString().slice(0, 10);
-  /* only the day the 50–62 min window falls on (today; tomorrow only around midnight) – one SimplyBook read each */
-  const days = sgDay(now + 62 * 60e3) === sgDay(now) ? 1 : 2;
+  /* only the day the 55–61 min window falls on (today; tomorrow only around midnight) – one SimplyBook read each */
+  const days = sgDay(now + 61 * 60e3) === sgDay(now) ? 1 : 2;
   for (const S of await soonSessions(env, days)) {
-    const m = S.s - now; if (m <= 50 * 60e3 || m > 62 * 60e3) continue;   /* keyed in within the hour → no reminder (staff just did it) */
+    const m = S.s - now; if (m <= 55 * 60e3 || m > 61 * 60e3) continue;   /* exactly 1 h before on the 5-min tick (owner, 2 Nov); keyed in within the hour → none */
     if (!(await hb.soonMark(S.key + ':' + S.s))) continue;
     sent.push(Object.assign({ key: S.key }, await pushAll(env, 'soon', soonMsg(S, now, await soonPax(env, S)))));
   }
@@ -2126,8 +2126,16 @@ async function ghProxy(env, req) {
 
 export default {
   /* every 10 minutes (Cloudflare cron trigger, every-10-minutes schedule): staff "in 1 hour" alerts */
-  async scheduled(ev, env0, ctx) { const env = envFor(env0, 'live'); ctx.waitUntil(book(env).kvSet('cronLast', Date.now()).catch(() => null)); ctx.waitUntil(soonRun(env).catch(() => null)); ctx.waitUntil(autoRun(env, 'cron').catch(() => null)); ctx.waitUntil(msgOrphans(env, 'cron').catch(() => null)); ctx.waitUntil(waitWarn(env).catch(() => null));
-    if (new Date().getUTCMinutes() < 10 || (new Date().getUTCMinutes() >= 30 && new Date().getUTCMinutes() < 40)) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); ctx.waitUntil(shadowSync(env, [t, addDays(t, 1)]).catch(() => null)); } },
+  /* every 5 minutes (Cloudflare cron every 5 min, since 2 Nov): the "in 1 hour" reminder goes exactly 1 hour before a
+     booking (bookings start on the quarter hour, so a 5-minute tick always lands on it), at the same time as SimplyBook's
+     own 1-hour reminder email (owner, 2 Nov). Everything else still runs every 10 minutes. */
+  async scheduled(ev, env0, ctx) {
+    const env = envFor(env0, 'live'), hb = book(env), mm = new Date(ev.scheduledTime || Date.now()).getUTCMinutes(), ten = mm % 10 < 5;
+    ctx.waitUntil((async () => { const prev = await hb.kvGet('cronLast'); await hb.kvSet('cronPrev', prev || 0); await hb.kvSet('cronLast', Date.now()); })().catch(() => null));
+    ctx.waitUntil(soonRun(env).catch(() => null));
+    if (!ten) return;
+    ctx.waitUntil(autoRun(env, 'cron').catch(() => null)); ctx.waitUntil(msgOrphans(env, 'cron').catch(() => null)); ctx.waitUntil(waitWarn(env).catch(() => null));
+    if (mm < 10 || (mm >= 30 && mm < 40)) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); ctx.waitUntil(shadowSync(env, [t, addDays(t, 1)]).catch(() => null)); } },
   async fetch(req, env0, ctx) {
     const u = new URL(req.url);
     const env = envFor(env0, 'live');   /* default for anything not tied to a hold/order: live once the live key is in */
