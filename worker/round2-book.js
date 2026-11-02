@@ -688,9 +688,13 @@ export class HoldBook extends DurableObject {
   }
   /* "In session" extensions (control centre): what each +N hours did, so it can be undone for a while */
   extInit() { this.qInit(); if (this.extReady) return; this.extReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS ext (id TEXT PRIMARY KEY, t INTEGER, data TEXT)`); }
-  extPut(id, d) { this.extInit(); this.sql.exec(`DELETE FROM ext WHERE t < ?`, Date.now() - 2 * 86400e3); this.sql.exec(`INSERT OR REPLACE INTO ext VALUES (?, ?, ?)`, id, Date.now(), JSON.stringify(d)); }
+  extPut(id, d) { this.extInit(); this.sql.exec(`DELETE FROM ext WHERE t < ?`, Date.now() - 15 * 86400e3);   /* History keeps 14 nights (owner, 2 Nov) */ this.sql.exec(`INSERT OR REPLACE INTO ext VALUES (?, ?, ?)`, id, Date.now(), JSON.stringify(d)); }
   extGet(id) { this.extInit(); const r = this.rows(`SELECT * FROM ext WHERE id = ?`, id)[0]; return r ? Object.assign(JSON.parse(r.data), { t: r.t }) : null; }
-  extList() { this.extInit(); return this.rows(`SELECT * FROM ext WHERE t > ? ORDER BY t DESC`, Date.now() - 86400e3).map((r) => Object.assign(JSON.parse(r.data), { id: r.id, t: r.t })); }
+  extList() { this.extInit(); return this.rows(`SELECT * FROM ext WHERE t > ? ORDER BY t DESC LIMIT 200`, Date.now() - 15 * 86400e3).map((r) => Object.assign(JSON.parse(r.data), { id: r.id, t: r.t })); }
+  /* In session › Clear finished: off tonight's list (kept in History), only once the session's end has passed */
+  extClear(ids) { this.extInit(); const now = Date.now(); let n = 0;
+    for (const id of ids) { const d = this.extGet(id); if (!d || d.cleared || !(d.undone || +d.guestEnd < now)) continue; d.cleared = now; delete d.t; this.sql.exec(`UPDATE ext SET data = ? WHERE id = ?`, JSON.stringify(d), id); n++; }
+    return n; }
   extDone(id, undone) { const d = this.extGet(id); if (!d) return; d.undone = undone; delete d.t; this.sql.exec(`UPDATE ext SET data = ? WHERE id = ?`, JSON.stringify(d), id); }
   arm() {
     this.qInit();
@@ -1004,7 +1008,7 @@ async function insess(env, hb, f) {
     const after = D.items.filter((x) => (x.unit === S.unit || x.unit === MIRROR[S.unit]) && x.s >= S.end - 5 * 60e3 && !(x.k === 'n' && x.ext && x.unit === S.unit) && !(x.unit === MIRROR[S.unit] && x.sys)).sort((a, b) => a.s - b.s)[0];
     rooms[S.room].sessions.push({ key: S.key, k: S.k, name: S.name, phone: S.phone, start: S.s, bookedEnd: S.e0 - BUF * 60e3, guestEnd: S.guestEnd, sbEnd: S.end, ext: S.ext, orphanExt: !!S.orphanExt, st, nextAt: after ? after.s : null, msgs: sessMsgs(links, S.room, S.guestEnd) });
   }
-  return { ok: true, day, now, rooms, recent: (await hb.extList()).slice(0, 10) };
+  return { ok: true, day, now, rooms, recent: (await hb.extList()).filter((r) => !/^ZZTEST/.test(r.name || '')).slice(0, 60) };   /* tonight + History; System check tests left out */
 }
 /* 12-hour clock for note text: 12am, 11:30pm */
 function clock12(ms) { const d = new Date(ms + 8 * 3600e3), H = d.getUTCHours(), M = d.getUTCMinutes(); return ((H % 12) || 12) + (M ? ':' + String(M).padStart(2, '0') : '') + (H < 12 ? 'am' : 'pm'); }
@@ -1581,6 +1585,10 @@ async function gm(env, req) {
     if (act === 'msgimport') { let L = []; try { L = JSON.parse(f.records || '[]'); } catch (e) { return gmJ({ error: 'records must be JSON' }); } return gmJ({ ok: true, imported: await hb.msgImport(L) }); }
     const m = await hb.getMode(); if (f.set === 'on' || f.set === 'off') { m.msgLocal = f.set === 'on'; m.msgT = Date.now(); await hb.setMode(m); await hb.gmDrop('__LIST__'); if (m.msgLocal) await gmList(env, hb).catch(() => null); }
     return gmJ({ ok: true, local: !!m.msgLocal, count: await hb.msgCount() });
+  }
+  if (act === 'extclear') {   /* staff: In session › Clear finished */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    return gmJ({ ok: true, cleared: await hb.extClear(String(f.ids || '').split(',').filter(Boolean).slice(0, 50)) });
   }
   if (act === 'pairs' || act === 'slotday' || act === 'pair') {   /* staff: Guest messages › tied / waiting, and Pair */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
