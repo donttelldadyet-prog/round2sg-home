@@ -2025,11 +2025,11 @@ async function bookingSample(env) {
    alert already says "starts in N min" (owner, 1 Nov). */
 /* owner's layout (1 Nov): what staff need to set up the room – who, when they arrive, how long, how many (pax decides
    the room set-up and how many controllers). Bold = icon ROOM · name · in 1 hour; below = arrives · length · pax. */
-/* compact (owner, 2 Nov: little space in the banner): "7pm–10pm · 3h · 2 pax", then only what needs doing:
-   "🧹 prev out 6:45pm" when the room isn't free yet, "🎂 7:15pm" when a guest message is set / "🔗 msg not written" */
+/* compact (owner, 2 Nov: little space in the banner): line 1 "7pm–10pm · 3h · 2 pax"; line 2, only when there's something
+   to do: "🧹 Last group leaves 6:45pm" (room not free yet), "🎂 Message 7:15pm" / "🔗 Message not written yet" */
 function soonMsg(S, now, pax, extra) {
   const mins = Math.round((S.s - now) / 60e3), unit = S.unit, inT = ' · in ' + (mins >= 55 && mins <= 65 ? '1 hour' : mins + ' min');
-  const len = Math.round((S.guestEnd - S.s) / 360e3) / 10, when = [clock12(S.s) + '–' + clock12(S.guestEnd), len + 'h', (pax || '?') + ' pax'].concat(extra || []).join(' · ');
+  const len = Math.round((S.guestEnd - S.s) / 360e3) / 10, when = [clock12(S.s) + '–' + clock12(S.guestEnd), len + 'h', (pax || '?') + ' pax'].join(' · ') + (extra && extra.length ? '\n' + extra.join(' · ') : '');
   if (S.k === 'b') return { title: roomTitle(unit) + ' · ' + (S.name || 'No name') + inT, body: when, tag: 'soon' + S.key, url: '/?tab=insession' };
   /* a calendar note: the whole note under the times, so nothing staff wrote is lost (owner, 1 Nov) */
   const note = String(S.name || '').replace(/\s+/g, ' ').trim();
@@ -2041,12 +2041,12 @@ const KIND_ICON = { birthday: '🎂', anniversary: '💞', celebrate: '🎉', no
 async function soonExtra(env, S, all, now) {
   const out = [], tw = MIRROR[S.unit];
   const prev = all.filter((x) => x.key !== S.key && (x.unit === S.unit || x.unit === tw) && x.s < S.s && x.guestEnd > now).sort((a, b) => b.guestEnd - a.guestEnd)[0];
-  if (prev) out.push('🧹 prev out ' + clock12(prev.guestEnd));
+  if (prev) out.push('🧹 Last group leaves ' + clock12(prev.guestEnd));
   try {
     const L = (JSON.parse(await gmFwd(env, { action: 'list', staff: env.GM_STAFF }) || '{}').links || [])
       .filter((x) => !/^R2/.test(x.key) && x.data && x.data.status !== 'cancelled' && x.data.room === GM_ROOM[S.unit] && +x.data.start === S.s);
     const done = L.find((x) => x.data.status === 'approved' && +x.data.at);
-    if (done) out.push((KIND_ICON[done.data.kind] || '💬') + ' ' + clock12(+done.data.at)); else if (L.length) out.push('🔗 msg not written');
+    if (done) out.push((KIND_ICON[done.data.kind] || '💬') + ' Message ' + clock12(+done.data.at)); else if (L.length) out.push('🔗 Message not written yet');
   } catch (e) {}
   return out;
 }
