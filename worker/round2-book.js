@@ -42,35 +42,46 @@ const r2 = (x) => Math.round(x * 100) / 100;
 const addDays = (d, n) => { const x = new Date(d + 'T00:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+/* SimplyBook requests are counted (owner, 2 Nov: "is that too intensive?"): SimplyBook's shared servers allow about 5,000 API
+   requests a day. Each part adds to sbCalls; it's written to the engine's kv as sbn:<day> after each request / tick / alarm. */
+let sbCalls = 0;
+async function sbFlush(env) { if (!sbCalls) return; const n = sbCalls; sbCalls = 0; await book(env).sbAdd(n); }
 async function rpc(path, method, params, headers = {}) {
+  sbCalls++;
   const r = await fetch(SB + path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 }) });
   const j = await r.json();
   if (j.error) throw new Error(method + ': ' + (j.error.message || JSON.stringify(j.error)));
   return j.result;
 }
+/* logins are kept 20 min (not one per read) and redone once if SimplyBook says the token is no good */
+let pubTok = null, admTok = null;
+const tokBad = (e) => /token|denied|auth|login|expired|signature/i.test(String(e && e.message || e));
 async function pub(env) {
-  const tok = await rpc('/login', 'getToken', [env.SB_COMPANY, env.SB_PUBLIC_KEY]);
-  return (m, p) => rpc('', m, p, { 'X-Company-Login': env.SB_COMPANY, 'X-Token': tok });
+  const get = async () => { pubTok = { k: await rpc('/login', 'getToken', [env.SB_COMPANY, env.SB_PUBLIC_KEY]), t: Date.now() + 20 * 60e3 }; return pubTok.k; };
+  let tok = pubTok && pubTok.t > Date.now() ? pubTok.k : await get();
+  return async (m, p) => { try { return await rpc('', m, p, { 'X-Company-Login': env.SB_COMPANY, 'X-Token': tok }); } catch (e) { if (!tokBad(e)) throw e; tok = await get(); return rpc('', m, p, { 'X-Company-Login': env.SB_COMPANY, 'X-Token': tok }); } };
 }
 /* SimplyBook REST API v2 (calendar notes): token from /admin/auth, cached ~50 min */
 const SB2 = 'https://user-api-v2.simplybook.asia';
 let sb2tok = null;
 async function sb2(env) {
   if (!sb2tok || sb2tok.t < Date.now()) {
-    const r = await fetch(SB2 + '/admin/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company: env.SB_COMPANY, login: env.SB_USER, password: env.SB_PASS }) });
+    sbCalls++; const r = await fetch(SB2 + '/admin/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company: env.SB_COMPANY, login: env.SB_USER, password: env.SB_PASS }) });
     const j = await r.json(); if (!j.token) throw new Error('SimplyBook REST login: ' + JSON.stringify(j).slice(0, 120));
     sb2tok = { k: j.token, t: Date.now() + 50 * 60e3 };
   }
   return async (method, path, body) => {
-    const r = await fetch(SB2 + path, { method, headers: { 'Content-Type': 'application/json', 'X-Company-Login': env.SB_COMPANY, 'X-Token': sb2tok.k }, body: body ? JSON.stringify(body) : undefined });
+    sbCalls++; const r = await fetch(SB2 + path, { method, headers: { 'Content-Type': 'application/json', 'X-Company-Login': env.SB_COMPANY, 'X-Token': sb2tok.k }, body: body ? JSON.stringify(body) : undefined });
     const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch (e) {}
     if (!r.ok) throw new Error('SimplyBook ' + method + ' ' + path.split('?')[0] + ' ' + r.status + ': ' + t.slice(0, 200));
     return j;
   };
 }
-async function admin(env) {
-  const tok = await rpc('/login/', 'getUserToken', [env.SB_COMPANY, env.SB_USER, env.SB_PASS]);
-  return (m, p) => rpc('/admin', m, p, { 'X-Company-Login': env.SB_COMPANY, 'X-User-Token': tok });
+async function admin(env, fresh) {
+  const get = async () => { admTok = { k: await rpc('/login/', 'getUserToken', [env.SB_COMPANY, env.SB_USER, env.SB_PASS]), t: Date.now() + 20 * 60e3 }; return admTok.k; };
+  let tok = !fresh && admTok && admTok.t > Date.now() ? admTok.k : await get();
+  const h = () => ({ 'X-Company-Login': env.SB_COMPANY, 'X-User-Token': tok });
+  return async (m, p) => { try { return await rpc('/admin', m, p, h()); } catch (e) { if (!tokBad(e)) throw e; tok = await get(); return rpc('/admin', m, p, h()); } };
 }
 
 /* ---------- public holidays (Google calendar, cached a day) ---------- */
@@ -362,6 +373,7 @@ export class HoldBook extends DurableObject {
     }
   }
   autoLock(on) { this.qInit(); const now = Date.now(), r = this.rows(`SELECT v FROM kv WHERE k = 'autoLock'`)[0]; if (on) { if (r && now - +JSON.parse(r.v) < 90e3) return false; this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('autoLock', ?)`, String(now)); return true; } this.sql.exec(`DELETE FROM kv WHERE k = 'autoLock'`); return true; }
+  sbAdd(n) { this.qInit(); const k = 'sbn:' + new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10); this.kvSet(k, (this.kvGet(k) || 0) + n); }
   kvGet(k) { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = ?`, k)[0]; return r ? JSON.parse(r.v) : null; }
   kvSet(k, v) { this.qInit(); this.sql.exec(`INSERT OR REPLACE INTO kv VALUES (?, ?)`, k, JSON.stringify(v)); }
   pushCount() { this.pushInit(); return this.rows(`SELECT COUNT(*) AS n FROM push`)[0].n; }
@@ -712,7 +724,8 @@ export class HoldBook extends DurableObject {
     if (ts.length) this.ctx.storage.setAlarm(Math.max(Date.now() + 1000, Math.min(...ts)));
   }
   /* timer ran out → release the hold and kill its HitPay link */
-  async alarm() {
+  async alarm() { try { await this.alarm0(); } finally { if (sbCalls) { this.sbAdd(sbCalls); sbCalls = 0; } } }
+  async alarm0() {
     const due = this.rows(`SELECT ref, pr, data FROM holds WHERE status = 'pending' AND exp <= ?`, Date.now());
     for (const d of due) { this.sql.exec(`UPDATE holds SET status = 'released' WHERE ref = ?`, d.ref); let pay = ''; try { pay = JSON.parse(d.data || '{}').pay; } catch (e) {} await cancelLink(envFor(this.env, pay), d.pr); }
     this.sql.exec(`DELETE FROM holds WHERE status = 'released' AND created < ?`, Date.now() - 7 * 86400e3);
@@ -926,7 +939,14 @@ const R2_TXT = {
   wrapup: { title: 'About 10 minutes to go', text: 'Just a heads-up: this session wraps up in about 10 minutes. A good time to save your game and gather your things. Thanks for playing with us!' },
   timeup: { title: 'That’s a wrap!', text: 'This session has come to an end. We hope you had a great time! Please save your game and gather your things, so we can get the room ready for the next guests. See you again soon!' },
 };
-async function sessDay(env, day) {
+/* one timer tick reads each day from SimplyBook once, shared by the 1-hour reminder, Auto wrap-up and the clean-up
+   (env.__tick is only set on the timer's own env, so screens and buttons always read fresh) */
+function sessDay(env, day) {
+  const M = env.__tick; if (!M) return sessDay0(env, day);
+  if (!M.has(day)) M.set(day, sessDay0(env, day).catch((e) => { M.delete(day); throw e; }));
+  return M.get(day);
+}
+async function sessDay0(env, day) {
   const a = await admin(env), s2 = await sb2(env);
   const [bk, nt] = await Promise.all([
     a('getBookings', [{ booking_type: 'non_cancelled', date_from: addDays(day, -1), date_to: day }]),
@@ -1198,7 +1218,7 @@ async function autoApi(env, hb, f) {
   }
   const q = await hb.qList(), own = new Set(recs.filter((r) => r.code).map((r) => r.code));
   for (const x of list) if (!x.msgs && q.some((m) => /^R2/.test(m.code) && !own.has(m.code) && m.room === x.room && (Math.abs(m.at - x.guestEnd) <= 5 * 60e3 || Math.abs(m.at - (x.guestEnd - 10 * 60e3)) <= 5 * 60e3))) x.msgs = { w: true, t: true, own: false, synced: true };
-  return { ok: true, on: !!m2.autoEnd, by: m2.autoBy || '', t: m2.autoT || 0, now, last: await hb.kvGet('autoLast'), cronLast: await hb.kvGet('cronLast'), cronPrev: await hb.kvGet('cronPrev'), orphanLast: await hb.kvGet('orphanLast'), sessions: list.sort((a, b) => a.guestEnd - b.guestEnd) };
+  return { ok: true, on: !!m2.autoEnd, by: m2.autoBy || '', t: m2.autoT || 0, now, last: await hb.kvGet('autoLast'), cronLast: await hb.kvGet('cronLast'), cronPrev: await hb.kvGet('cronPrev'), sbToday: await hb.kvGet('sbn:' + sgDay(now)), sbYesterday: await hb.kvGet('sbn:' + addDays(sgDay(now), -1)), orphanLast: await hb.kvGet('orphanLast'), sessions: list.sort((a, b) => a.guestEnd - b.guestEnd) };
 }
 const sgDayName = (ms) => new Date(ms + 8 * 3600e3).toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).replace(/,/g, '');
 async function late(env, hb, f) {
@@ -2035,9 +2055,9 @@ async function soonRun(env) {
   const hb = book(env); if (!(await hb.pushList('soon')).length) return { phones: 0 };
   const sent = [], sgDay = (t) => new Date(t + 8 * 3600e3).toISOString().slice(0, 10);
   /* only the day the 55–61 min window falls on (today; tomorrow only around midnight) – one SimplyBook read each */
-  const days = sgDay(now + 61 * 60e3) === sgDay(now) ? 1 : 2;
+  const days = sgDay(now + 61 * 60e3) === sgDay(now) ? 1 : 2;   /* window 50–61 min: a quarter-hour start is hit on its exact tick; an odd-time note at most 5 min late */
   for (const S of await soonSessions(env, days)) {
-    const m = S.s - now; if (m <= 55 * 60e3 || m > 61 * 60e3) continue;   /* exactly 1 h before on the 5-min tick (owner, 2 Nov); keyed in within the hour → none */
+    const m = S.s - now; if (m <= 50 * 60e3 || m > 61 * 60e3) continue;   /* exactly 1 h before on the 5-min tick (owner, 2 Nov); keyed in within the hour → none */
     if (!(await hb.soonMark(S.key + ':' + S.s))) continue;
     sent.push(Object.assign({ key: S.key }, await pushAll(env, 'soon', soonMsg(S, now, await soonPax(env, S)))));
   }
@@ -2124,19 +2144,26 @@ async function ghProxy(env, req) {
   return new Response(await r.text(), { status: r.status, headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' } });
 }
 
-export default {
+const HANDLER = {
   /* every 10 minutes (Cloudflare cron trigger, every-10-minutes schedule): staff "in 1 hour" alerts */
   /* every 5 minutes (Cloudflare cron every 5 min, since 2 Nov): the "in 1 hour" reminder goes exactly 1 hour before a
      booking (bookings start on the quarter hour, so a 5-minute tick always lands on it), at the same time as SimplyBook's
      own 1-hour reminder email (owner, 2 Nov). Everything else still runs every 10 minutes. */
   async scheduled(ev, env0, ctx) {
-    const env = envFor(env0, 'live'), hb = book(env), mm = new Date(ev.scheduledTime || Date.now()).getUTCMinutes(), ten = mm % 10 < 5;
-    ctx.waitUntil((async () => { const prev = await hb.kvGet('cronLast'); await hb.kvSet('cronPrev', prev || 0); await hb.kvSet('cronLast', Date.now()); })().catch(() => null));
-    ctx.waitUntil(soonRun(env).catch(() => null));
-    if (!ten) return;
-    ctx.waitUntil(autoRun(env, 'cron').catch(() => null)); ctx.waitUntil(msgOrphans(env, 'cron').catch(() => null)); ctx.waitUntil(waitWarn(env).catch(() => null));
-    if (mm < 10 || (mm >= 30 && mm < 40)) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); ctx.waitUntil(shadowSync(env, [t, addDays(t, 1)]).catch(() => null)); } },
-  async fetch(req, env0, ctx) {
+    const base = envFor(env0, 'live'), env = Object.assign(Object.create(base), base, { __tick: new Map() }), hb = book(env);
+    const mm = new Date(ev.scheduledTime || Date.now()).getUTCMinutes(), ten = mm % 10 < 5, quarter = mm % 15 < 5, jobs = [];
+    const go = (p) => { const q = p.catch(() => null); jobs.push(q); ctx.waitUntil(q); };
+    go((async () => { const prev = await hb.kvGet('cronLast'); await hb.kvSet('cronPrev', prev || 0); await hb.kvSet('cronLast', Date.now()); })());
+    /* the reminder only needs the 10-min ticks plus :15 and :45 (bookings start on the quarter hour) */
+    if (ten || quarter) go(soonRun(env));
+    if (ten) {
+      go(autoRun(env, 'cron')); go(msgOrphans(env, 'cron')); go(waitWarn(env));
+      if (mm < 10 || (mm >= 30 && mm < 40)) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(shadowSync(env, [t, addDays(t, 1)])); }
+    }
+    ctx.waitUntil(Promise.all(jobs).then(() => sbFlush(env)).catch(() => null));
+  },
+  async fetch(req, env0, ctx) { try { return await HANDLER.fetch0(req, env0, ctx); } finally { ctx.waitUntil(sbFlush(rawEnv(env0)).catch(() => null)); } },
+  async fetch0(req, env0, ctx) {
     const u = new URL(req.url);
     const env = envFor(env0, 'live');   /* default for anything not tied to a hold/order: live once the live key is in */
     try {
@@ -2172,7 +2199,7 @@ export default {
           sbSecret: !!env.SB_SECRET && !/paste/.test(env.SB_SECRET), kitchenBot: !!env.TG_BOT_TOKEN, staffAlerts: !!env.STAFF_CHAT, guestMessages: !!env.GM_STAFF,
           menuSheet: !!env.MENU_MAKE_K, tvKey: !!env.TV_KEY, pushAlerts: !!env.VAPID_JWK, liveKeys: liveReady(env0), switchSet: !!env0.SWITCH_PASS && !/paste/.test(env0.SWITCH_PASS + env0.SWITCH_PIN), booking: (await book(env).getMode()).booking, t: Date.now() };
         if (u.searchParams.get('deep')) {
-          st.sbLogin = await admin(env).then(() => 'ok').catch((e) => 'failed: ' + String(e.message || e).slice(0, 80));
+          st.sbLogin = await admin(env, true).then(() => 'ok').catch((e) => 'failed: ' + String(e.message || e).slice(0, 80));
           st.sbPublic = await pub(env).then(() => 'ok').catch((e) => 'failed: ' + String(e.message || e).slice(0, 80));
           st.timerQueue = await book(env).qList().then((l) => l.length).catch(() => null);
           st.follow = await book(env).fStat().catch((e) => ({ error: String(e.message || e).slice(0, 80) }));
@@ -2287,8 +2314,9 @@ export default {
         const f = await finalize(env, ref, 'webhook'); return J({ ok: f.ok });
       }
       if (u.pathname === '/test') return !liveReady(env0) ? H(testForm()) : J({ error: 'test page is off while payments are live' }, 404);
-      if (u.pathname === '/selftest') { const a = await admin(env); const units = await a('getUnitList', []); return J({ sbLogin: true, rooms: Object.values(units).map((x) => x.name), dryRun: env.DRY_RUN === '1' }); }
+      if (u.pathname === '/selftest') { const a = await admin(env, true); const units = await a('getUnitList', []); return J({ sbLogin: true, rooms: Object.values(units).map((x) => x.name), dryRun: env.DRY_RUN === '1' }); }
       return J({ ok: true, svc: 'round2-book' });
     } catch (e) { return J({ error: String(e.message || e) }, 400); }
   },
 };
+export default HANDLER;
