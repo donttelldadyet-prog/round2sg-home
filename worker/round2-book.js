@@ -1606,6 +1606,10 @@ async function gm(env, req) {
     const m = await hb.getMode(); if (f.set === 'on' || f.set === 'off') { m.msgLocal = f.set === 'on'; m.msgT = Date.now(); await hb.setMode(m); await hb.gmDrop('__LIST__'); if (m.msgLocal) await gmList(env, hb).catch(() => null); }
     return gmJ({ ok: true, local: !!m.msgLocal, count: await hb.msgCount() });
   }
+  if (act === 'keyexp') {   /* staff: Keys › expiry dates */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    try { return gmJ(await keyApi(env, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
+  }
   if (act === 'extclear') {   /* staff: In session › Clear finished */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     return gmJ({ ok: true, cleared: await hb.extClear(String(f.ids || '').split(',').filter(Boolean).slice(0, 50)) });
@@ -2167,9 +2171,62 @@ async function ghProxy(env, req) {
   const h = { Authorization: 'Bearer ' + env.GH_TOKEN, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'round2-book' };
   if (b.body) h['Content-Type'] = 'application/json';
   const r = await fetch('https://api.github.com' + path, { method: m, headers: h, body: b.body ? JSON.stringify(b.body) : undefined });
+  await ghSeen(env, r).catch(() => null);
   return new Response(await r.text(), { status: r.status, headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' } });
 }
 
+/* ===== Key expiry (owner, 2 Nov: "warning if keys are about to expire … a 2 week warning") =====
+   kv keyExp = { NAME: { label, date: 'YYYY-MM-DD' (typed by the owner), auto: 'YYYY-MM-DD' (GitHub says), ok, checked } }.
+   GitHub tells its own key's expiry on every answer (header github-authentication-token-expiration), so GH_TOKEN fills in
+   by itself; a date the owner types wins. Once a day (after 10:30am) the engine checks GH_TOKEN still works and warns the
+   phones (booking / 1-hour alerts) 14, 7, 3 and 1 days before, on the day, and every 3 days after. */
+const KEY_WARN = [14, 7, 3, 1, 0];
+const keyDays = (date) => Math.round((Date.parse(date + 'T00:00:00+08:00') - Date.parse(sgDay(Date.now()) + 'T00:00:00+08:00')) / 86400e3);
+async function ghSeen(env, r) {
+  const x = r.headers.get('github-authentication-token-expiration'), hb = book(env), all = (await hb.kvGet('keyExp')) || {};
+  const k = all.GH_TOKEN || { label: 'GitHub key (in Cloudflare)' }, t = x ? Date.parse(x.replace(' UTC', 'Z').replace(/ ([+-]\d{2})(\d{2})$/, '$1:$2').replace(' ', 'T')) : 0;
+  const auto = t ? sgDay(t) : (x === null ? k.auto || null : null), ok = r.status !== 401;
+  if (k.auto === auto && k.ok === ok && Date.now() - (k.checked || 0) < 3600e3) return;
+  all.GH_TOKEN = Object.assign(k, { auto, ok, checked: Date.now() }); await hb.kvSet('keyExp', all);
+}
+async function ghCheck(env) {
+  if (!env.GH_TOKEN) return { noKey: true };
+  const r = await fetch('https://api.github.com/repos/donttelldadyet-prog/round2-tv-launcher', { headers: { Authorization: 'Bearer ' + env.GH_TOKEN, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'round2-book' } });
+  await ghSeen(env, r); const j = await r.json().catch(() => ({}));
+  return { status: r.status, push: !!(j.permissions && j.permissions.push) };
+}
+async function keyList(env) {
+  const all = (await book(env).kvGet('keyExp')) || {};
+  if (env.GH_TOKEN && !all.GH_TOKEN) all.GH_TOKEN = { label: 'GitHub key (in Cloudflare)' };
+  return Object.keys(all).map((name) => { const k = all[name], date = k.date || k.auto || null; return { name, label: k.label || name, date, typed: !!k.date, auto: k.auto || null, ok: k.ok !== false, days: date ? keyDays(date) : null, checked: k.checked || 0 }; })
+    .sort((a, b) => (a.days == null ? 1e9 : a.days) - (b.days == null ? 1e9 : b.days));
+}
+async function keyApi(env, f) {
+  const hb = book(env), all = (await hb.kvGet('keyExp')) || {}, name = String(f.name || '').trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_').slice(0, 40);
+  if (f.do === 'set') {
+    if (!name) return { error: 'Give the key a name.' };
+    if (f.date && !/^\d{4}-\d\d-\d\d$/.test(f.date)) return { error: 'Pick the expiry date.' };
+    all[name] = Object.assign(all[name] || {}, { label: String(f.label || all[name] && all[name].label || name).slice(0, 60), date: f.date || null }); await hb.kvSet('keyExp', all);
+  } else if (f.do === 'del') { if (name === 'GH_TOKEN') { if (all.GH_TOKEN) all.GH_TOKEN.date = null; } else delete all[name]; await hb.kvSet('keyExp', all); }
+  else if (f.do === 'check') await ghCheck(env).catch(() => null);
+  return { ok: true, keys: await keyList(env), today: sgDay(Date.now()) };
+}
+async function keyDaily(env) {
+  const hb = book(env), now = Date.now(), sg = new Date(now + 8 * 3600e3), hm = sg.getUTCHours() * 60 + sg.getUTCMinutes(), today = sgDay(now);
+  if (hm < 10 * 60 + 30 || (await hb.kvGet('keyDay')) === today) return null;
+  await hb.kvSet('keyDay', today);
+  const gh = await ghCheck(env).catch(() => null), sent = [];
+  const tell = async (title, body, tag) => { if (!env.VAPID_JWK) return; const subs = (await hb.pushList()).filter((x) => x.kinds.includes('booking') || x.kinds.includes('soon')); for (const s of subs) await hb.pushResult(s.id, await pushOne(env, s.sub, { kind: 'booking', title, body, tag, url: '/?tab=keys' })); sent.push(title); };
+  if (gh && gh.status === 401) await tell('🔑 GitHub key stopped working', 'TV setup and the menu editor can’t save. Make a new GitHub key and put it in Cloudflare (GH_TOKEN) – Keys page in the control centre.', 'key-gh-bad');
+  for (const k of await keyList(env)) {
+    if (k.days == null) continue;
+    if (KEY_WARN.includes(k.days) || (k.days < 0 && -k.days % 3 === 0)) {
+      const when = new Date(Date.parse(k.date + 'T12:00:00+08:00')).toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Asia/Singapore' }).replace(/,/g, '');
+      await tell('🔑 ' + k.label + (k.days > 1 ? ' expires in ' + k.days + ' days' : k.days === 1 ? ' expires tomorrow' : k.days === 0 ? ' expires today' : ' has expired'), (k.days >= 0 ? 'Expiry: ' + when + '. Make a new one and swap it in before then' : 'Expired ' + when + '. Make a new one and swap it in now') + ' – Keys page in the control centre.', 'key-' + k.name);
+    }
+  }
+  return { sent };
+}
 const HANDLER = {
   /* every 10 minutes (Cloudflare cron trigger, every-10-minutes schedule): staff "in 1 hour" alerts */
   /* every 5 minutes (Cloudflare cron every 5 min, since 2 Nov): the "in 1 hour" reminder goes exactly 1 hour before a
@@ -2183,7 +2240,7 @@ const HANDLER = {
     /* the reminder only needs the 10-min ticks plus :15 and :45 (bookings start on the quarter hour) */
     if (ten || quarter) go(soonRun(env));
     if (ten) {
-      go(autoRun(env, 'cron')); go(msgOrphans(env, 'cron')); go(waitWarn(env));
+      go(autoRun(env, 'cron')); go(msgOrphans(env, 'cron')); go(waitWarn(env)); go(keyDaily(env));
       if (mm < 10 || (mm >= 30 && mm < 40)) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(shadowSync(env, [t, addDays(t, 1)])); }
     }
     ctx.waitUntil(Promise.all(jobs).then(() => sbFlush(env)).catch(() => null));
