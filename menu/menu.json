@@ -147,50 +147,58 @@
      "name": "French Fries",
      "desc": "Crispy golden fries with tartare sauce",
      "price": 7.9,
-     "featured": true
+     "featured": true,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/french-fries.jpg"
     },
     {
      "id": "corn-tortilla",
      "name": "Corn Tortilla",
      "desc": "With spicy salsa",
-     "price": 10
+     "price": 10,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/corn-tortilla.jpg"
     },
     {
      "id": "truffle-fries",
      "name": "Truffle Fries",
      "desc": "With truffle sauce & grated parmesan",
-     "price": 12
+     "price": 12,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/truffle-fries.jpg"
     },
     {
      "id": "chicken-tender",
      "name": "Chicken Tenders",
      "desc": "Crispy, with Thai chili sauce",
      "price": 13,
-     "featured": true
+     "featured": true,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/chicken-tender.jpg"
     },
     {
      "id": "cheese-sticks",
      "name": "Mozzarella Cheese Sticks",
      "desc": "Deep-fried breaded cheese sticks with salsa",
-     "price": 13
+     "price": 13,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/cheese-sticks.jpg"
     },
     {
      "id": "buffalo-wings",
      "name": "Buffalo Wings",
      "desc": "Chicken wings in chef's special sauce",
-     "price": 13
+     "price": 13,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/buffalo-wings.jpg"
     },
     {
      "id": "chicken-wings",
      "name": "Chicken Wings",
      "desc": "Crispy, with Thai chili sauce",
-     "price": 15
+     "price": 15,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/chicken-wings.jpg"
     },
     {
      "id": "calamari-prawns",
      "name": "Calamari & Prawns",
      "desc": "Deep-fried semolina-crusted squid and prawns",
-     "price": 16
+     "price": 16,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/calamari-prawns.jpg"
     }
    ]
   },
@@ -202,74 +210,86 @@
      "id": "seafood-mee-goreng",
      "name": "Seafood Mee Goreng",
      "desc": "Stir-fried yellow noodles with seafood in spicy sambal",
-     "price": 12
+     "price": 12,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/seafood-mee-goreng.jpg"
     },
     {
      "id": "sambal-fried-rice",
      "name": "Sambal Fried Rice",
      "desc": "With prawns, squid, egg & special spicy sambal",
-     "price": 12
+     "price": 12,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/sambal-fried-rice.jpg"
     },
     {
      "id": "kung-pao-chicken",
      "name": "Kung Pao Chicken",
      "desc": "Chicken, cashews & vegetables in kung pao sauce, with rice",
-     "price": 15
+     "price": 15,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/kung-pao-chicken.jpg"
     },
     {
      "id": "hotdog",
      "name": "Hotdog",
      "desc": "Grilled sausage with French liver pâté, tomato concassé & fries",
-     "price": 16
+     "price": 16,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/hotdog.jpg"
     },
     {
      "id": "chicken-parmigiana",
      "name": "Chicken Parmigiana",
      "desc": "Breaded chicken, tomato concassé & melted cheese, with fries & mesclun",
-     "price": 16
+     "price": 16,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/chicken-parmigiana.jpg"
     },
     {
      "id": "grilled-chicken-chop",
      "name": "Grilled Chicken Chop",
      "desc": "With potatoes, vegetables & black pepper sauce",
-     "price": 16
+     "price": 16,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/grilled-chicken-chop.jpg"
     },
     {
      "id": "salted-egg-prawn",
      "name": "Golden Sand Salted Egg Prawn",
      "desc": "Prawns stir-fried in salted egg & butter, with rice",
-     "price": 16
+     "price": 16,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/salted-egg-prawn.jpg"
     },
     {
      "id": "sweet-sour-fish",
      "name": "Sweet & Sour Fish",
      "desc": "Deep-fried fish fillet in sweet & sour sauce, with rice",
-     "price": 16
+     "price": 16,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/sweet-sour-fish.jpg"
     },
     {
      "id": "roast-chicken",
      "name": "Roast Chicken",
      "desc": "Roasted spring chicken with vegetables & gremolata",
-     "price": 17
+     "price": 17,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/roast-chicken.jpg"
     },
     {
      "id": "red-shrimp-pasta",
      "name": "Red Shrimp Pasta",
      "desc": "Spaghetti with shrimp & sun-dried tomatoes in cream sauce",
-     "price": 17
+     "price": 17,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/red-shrimp-pasta.jpg"
     },
     {
      "id": "black-pepper-beef",
      "name": "Black Pepper Beef",
      "desc": "Stir-fried ribeye with onions & peppers, with rice",
-     "price": 17
+     "price": 17,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/black-pepper-beef.jpg"
     },
     {
      "id": "fish-chips",
      "name": "Fish & Chips",
      "desc": "Beer-battered fish fillet with fries & tartare",
      "price": 18,
-     "featured": true
+     "featured": true,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/fish-chips.jpg"
     },
     {
      "id": "burger",
@@ -285,13 +305,15 @@
        "name": "With egg sunny side up",
        "price": 19
       }
-     ]
+     ],
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/burger.jpg"
     },
     {
      "id": "norwegian-salmon",
      "name": "Norwegian Salmon",
      "desc": "Pan-fried fillet with spring vegetables",
-     "price": 19
+     "price": 19,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/norwegian-salmon.jpg"
     }
    ]
   },
@@ -303,31 +325,36 @@
      "id": "aglio-olio",
      "name": "Spaghetti Aglio e Olio",
      "desc": "White wine sauce with prawns, mussels, clams, garlic & chili",
-     "price": 17
+     "price": 17,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/aglio-olio.jpg"
     },
     {
      "id": "carbonara",
      "name": "Carbonara",
      "desc": "Guanciale DOP & pecorino in a creamy yolk sauce",
-     "price": 17
+     "price": 17,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/carbonara.jpg"
     },
     {
      "id": "ravioli",
      "name": "Ravioli Ricotta & Spinach",
      "desc": "In light cherry tomato sauce with basil",
-     "price": 17
+     "price": 17,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/ravioli.jpg"
     },
     {
      "id": "tagliatelle-bolognese",
      "name": "Tagliatelle Bolognese",
      "desc": "Minced beef & tomato bolognese",
-     "price": 18
+     "price": 18,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/tagliatelle-bolognese.jpg"
     },
     {
      "id": "beef-lasagne",
      "name": "Beef Lasagne",
      "desc": "Homemade bolognese baked between pasta & béchamel",
-     "price": 18
+     "price": 18,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/beef-lasagne.jpg"
     }
    ]
   },
@@ -495,7 +522,8 @@
        "name": "Full",
        "price": 22
       }
-     ]
+     ],
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/focaccia-pugliese.jpg"
     }
    ]
   },
@@ -680,7 +708,8 @@
      "id": "lime-soda",
      "name": "Lime Soda",
      "desc": "Fresh lime, sugar syrup & soda",
-     "price": 5
+     "price": 5,
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/lime-soda.jpg"
     },
     {
      "id": "fresh-juices",
@@ -699,7 +728,8 @@
        "name": "Apple",
        "price": 6
       }
-     ]
+     ],
+     "img": "https://donttelldadyet-prog.github.io/round2sg-home/menu/img/food/fresh-juices.jpg"
     },
     {
      "id": "hot-chocolate",
