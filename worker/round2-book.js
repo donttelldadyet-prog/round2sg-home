@@ -810,7 +810,8 @@ async function checkout(env0, b, origin) {
   const ret = RET_OK.test(String(b.ret || '')) ? String(b.ret).split(/[?#]/)[0] : '';
   let name = String(b.name || '').trim().slice(0, 80), email = String(b.email || '').trim().toLowerCase().slice(0, 120), phone = String(b.phone || '').replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '').slice(0, 16);
   const pax = Math.max(1, Math.min(MAX_PAX[q.unit] || 3, +b.pax || 1));
-  if (!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('Please fill in name, email and phone');
+  if (!name) throw new Error('Please fill in your name');
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw new Error('Please check your email address – it looks incomplete (it should look like name@gmail.com)');
   /* mobile with country code (+65 by default on the page; overseas guests change it). Staff may WhatsApp this number. */
   if (/^\d{8}$/.test(phone)) phone = '+65' + phone;
   if (!/^\+\d{7,15}$/.test(phone) || (phone.startsWith('+65') && !/^\+65[3689]\d{7}$/.test(phone))) throw new Error('Please check your mobile number and country code');
@@ -924,7 +925,9 @@ async function finalize(env, ref, source) {
     if (env.DRY_RUN === '1') {
       result = { dryRun: true, would: ['book', q.eventId, q.unit, 'client(' + d.email + ')', q.date, q.time + ':00', '(end + 15 min cleaning)', 0, { [PAX_FIELD]: String(d.pax) }] };
     } else {
-      const a = await admin(env);
+      const a0 = await admin(env), F = d.pay === 'test' && Array.isArray(env.__fail) ? env.__fail : [];
+      /* test bench only (gm testbook, sandbox holds): SimplyBook "refuses" on purpose, to walk every fallback */
+      const a = !F.length ? a0 : (m, p) => (F.includes(m) && !(m === 'addClient' && p && p[0] && p[0].name === 'Round2 online guest') ? Promise.reject(new Error(m + ': TEST – refused on purpose')) : a0(m, p));
       /* every booking gets its OWN contact with exactly the name typed on the page – guests use fun names or a
          different name each time, and staff greet them by it at the door. Never reuse an old contact. */
       /* ONE email per guest: SimplyBook emails once when the booking is made and again when it's confirmed. So the contact is
@@ -952,13 +955,14 @@ async function finalize(env, ref, source) {
         bk = await a('book', [q.eventId, q.unit, cid, q.date, q.time + ':00', endDate, hhmm(eB) + ':00', 0, { [PAX_FIELD]: String(d.pax) }]).catch((e) => { bErr = String(e.message || e).slice(0, 100); return null; });
       const b0 = bk && bk.bookings && bk.bookings[0];
       if (!b0 || !b0.id) {   /* the very last resort: a note holds the room with the guest's phone and details */
+        if (F.includes('note')) throw new Error('TEST – the calendar note was refused on purpose too');
         result = await noteBooking(env, d, q, ref);
         how.push('a calendar note holds the room (SimplyBook refused the booking: ' + (bErr || 'no answer') + ')');
       } else result = { bookingId: b0.id, code: b0.code };
       if (how.length) result.fallback = how;
       if (late && result.bookingId) result.email = await a('editClient', [cid, { name: d.name, email: d.email, phone: d.phone }]).then(() => 'ok').catch((e) => 'no: ' + String(e.message || e).slice(0, 60));
       /* SimplyBook's own guest bookings are confirmed; ours come in unconfirmed. Confirming sends the guest's one email. */
-      if (b0 && b0.id) result.confirm = await a('confirmBooking', [b0.id]).then(() => 'ok').catch((e) => 'no: ' + String(e.message || e).slice(0, 60));
+      /* (no confirm step: SimplyBook has no confirmBooking for our account – bookings made here are confirmed already; tested 3 Nov) */
       /* the details SimplyBook doesn't show: the name typed on the page (SimplyBook keeps an existing contact's name),
          what was really paid (SimplyBook shows the base service price) */
       const note = (d.pay === 'test' ? '*** TEST BOOKING (HitPay sandbox, nobody paid) – CANCEL IT ***\n' : '') + `Online booking (round2.sg) · paid $${q.total.toFixed(2)} via HitPay · ref ${ref}\nBooked as: ${d.name} · ${d.phone} · ${d.email} · ${d.pax} guests` +
@@ -972,10 +976,11 @@ async function finalize(env, ref, source) {
   result.at = Date.now(); result.source = source;
   await hb.done(ref, result);   /* first, so the guest's page shows the outcome straight away */
   /* paid but not in SimplyBook (slot gone, SimplyBook down…): tell staff straight away so they can call / refund */
+  const T = d.pay === 'test' ? 'TEST · ' : '';
   const who = `${q.unit === 11 ? 'Maximillion' : q.room} · ${q.date} ${q.time}–${q.end} (${q.hours}h) · paid $${q.total.toFixed(2)}\n${d.name} · ${d.phone} · ${d.email} · ref ${ref}`;
-  if (result.problem) await humanAlert(env, ref, '⚠️ Paid online – NOT booked', result.problem + '\n' + who).catch(() => null);
-  else if (result.fallback) await humanAlert(env, ref, result.note ? '⚠️ Paid online – held by a NOTE only' : '⚠️ Online booking – check it', 'Booked using ' + result.fallback.join('; ') + '\n' + who).catch(() => null);
-  else if (result.email && result.email !== 'ok') await humanAlert(env, ref, '⚠️ Online booking – no email reached the guest', 'SimplyBook refused the email (' + result.email + '). Booked fine – WhatsApp them the details.\n' + who).catch(() => null);
+  if (result.problem) await humanAlert(env, ref, T + '⚠️ Paid online – NOT booked', result.problem + '\n' + who).catch(() => null);
+  else if (result.fallback) await humanAlert(env, ref, T + (result.note ? '⚠️ Paid online – held by a NOTE only' : '⚠️ Online booking – check it'), 'Booked using ' + result.fallback.join('; ') + '\n' + who).catch(() => null);
+  else if (result.email && result.email !== 'ok') await humanAlert(env, ref, T + '⚠️ Online booking – no email reached the guest', 'SimplyBook refused the email (' + result.email + '). Booked fine – WhatsApp them the details.\n' + who).catch(() => null);
   if (!result.problem && !result.dryRun) await staffAlert(env, `🎮 NEW ONLINE BOOKING\n${q.unit === 11 ? 'Maximillion' : q.room} · ${q.date} ${q.time}–${q.end} (${q.hours}h)\n${d.name} · ${d.pax} guests · ${d.phone}\nPaid $${q.total.toFixed(2)}${d.pay === 'test' ? ' (TEST – sandbox, cancel it)' : ''} · ref ${ref}${d.msg ? '\nTV message: ' + d.msg.kind : ''}`).catch(() => null);
   if (!result.problem && !result.dryRun) await paidStat(q, d).catch(() => null);
   d.done = result;
@@ -1704,6 +1709,21 @@ async function gm(env, req) {
     const days = Math.max(1, Math.min(60, +f.days || 30));
     return gmJ({ ok: true, list: (await hb.problems(Date.now() - days * 86400e3)).map((r) => ({ ref: r.ref, date: r.date, room: r.data.q && r.data.q.room, time: r.data.q && r.data.q.time, status: r.status, pay: r.data.pay, total: r.data.q && r.data.q.total, name: r.data.name, phone: r.data.phone, done: r.data.done || null })) });
   }
+  if (act === 'testbook') {   /* staff, sandbox holds only: run the after-payment steps without paying (fail=addClient,book,note to
+                                 force fallbacks), or clean up (do=cleanup: cancel the test booking / delete its notes) */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const ref = String(f.ref || '').replace(/[^A-Z0-9]/g, ''), h = await hb.get(ref);
+    if (!h || h.data.pay !== 'test') return gmJ({ error: 'Only sandbox test holds.' });
+    if (f.do === 'cleanup') {
+      const dn = h.data.done || {}, out = {};
+      if (dn.bookingId) out.cancel = await (await admin(env))('cancelBooking', [dn.bookingId]).then(() => 'ok').catch((e) => String(e.message || e).slice(0, 100));
+      if (dn.noteIds) { const s2 = await sb2(env); out.notes = []; for (const id of dn.noteIds) out.notes.push(await s2('DELETE', '/admin/calendar-notes/' + id).then(() => 'deleted ' + id).catch((e) => String(e.message || e).slice(0, 80))); }
+      return gmJ({ ok: true, ...out });
+    }
+    const e2 = Object.assign(Object.create(env), env, { __fail: String(f.fail || '').split(',').filter(Boolean) });
+    const r = await finalize(e2, ref, 'testbench');
+    return gmJ({ ok: r.ok, err: r.err || null, pending: !!r.pending, done: r.h && r.h.done });
+  }
   if (act === 'sbdiag') {   /* staff: why SimplyBook refused a contact (3 Nov, Denzel) – recent online bookings, and (try=1) a real retry */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     const recent = (await hb.rows(`SELECT ref, date, status, created, data FROM holds WHERE status IN ('paid','booking') ORDER BY created DESC LIMIT 20`)).map((r) => {
@@ -1967,7 +1987,7 @@ ${test ? '<div class="test">TEST BOOKING · nothing was really charged</div>' : 
 <dl><dt>Date</dt><dd>${esc(dayTxt)}</dd><dt>Time</dt><dd class="big">${esc(clock(q.time))} – ${esc(clock(q.end))}</dd><dt>Length</dt><dd>${q.hours} hours</dd>
 <dt>Name</dt><dd>${esc(d.name)}</dd><dt>Guests</dt><dd>${esc(d.pax)}</dd><dt>Paid</dt><dd>$${q.total.toFixed(2)}</dd><dt>Ref</dt><dd class="ref">${esc(ref)}</dd></dl></div>
 ${msgBox}
-<div class="card"><div class="k">WHEN YOU ARRIVE</div><ul><li>Come in and take a seat in our lobby. We’ll know you’ve arrived and come to show you to ${esc(room)}.</li><li>Your booking is under <b>${esc(d.name)}</b>.</li><li>Please be on time: your session ends at ${esc(clock(q.end))}.</li><li>A confirmation email is on its way to ${esc(d.email)}.</li></ul></div>
+<div class="card"><div class="k">WHEN YOU ARRIVE</div><ul><li>Come in and take a seat in our lobby. We’ll know you’ve arrived and come to show you to ${esc(room)}.</li><li>Your booking is under <b>${esc(d.name)}</b>.</li><li>Please be on time: your session ends at ${esc(clock(q.end))}.</li><li>${done.note || !done.bookingId || (done.fallback || []).some((x) => /shared/.test(x)) || (done.email && done.email !== 'ok') ? `We’ll WhatsApp you on ${esc(d.phone)} to confirm the details.` : `A confirmation email is on its way to ${esc(d.email)}.`}</li></ul></div>
 <div class="row"><a class="btn ghost" download="Round2-${esc(ref)}.ics" href="data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}">Add to calendar</a><a class="btn ghost" href="https://wa.me/6591625767?text=${encodeURIComponent('Hi Round2, about my booking ' + ref)}">WhatsApp us</a></div>
 ${d.ret ? `<a class="btn" href="${esc(d.ret)}">Back to Round2</a>` : '<a class="btn" href="https://www.round2.sg">Back to Round2</a>'}
 <p class="fine">Closed this page? The link in your confirmation email brings you back here, and so does your calendar entry.</p>

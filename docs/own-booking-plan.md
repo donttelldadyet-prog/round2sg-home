@@ -106,3 +106,10 @@ Now:
   first" step always falls through to the normal way. SimplyBook checks that the email is well-formed with a real ending – it does
   not check the mailbox exists – so any provider (company domains too) works, and whatever SimplyBook refuses is now caught before
   payment. SimplyBook's own error messages are now kept (`done.fallback`, checkout log).
+- **Tested end to end 3 Nov** (sandbox, Atlas Tue 5 Jan 2027, gm `testbook` – runs the after-payment steps on sandbox holds only;
+  `fail=book` / `fail=book,note` make SimplyBook "refuse" on purpose; `do=cleanup` cancels the booking / deletes the notes):
+  typo email, made-up email ending (SimplyBook refused → told before paying, hold let go), bad phone, no name, broken email →
+  all stopped before payment with a clear message. Normal booking ✓ (twice = still one booking). Booking refused → note on Atlas
+  + twin Vale ✓, page says "We'll WhatsApp you". Note refused too → "Payment received… we'll WhatsApp you" page + red alert ✓.
+  Found and fixed: vague message for a broken email / no name; "confirmation email is on its way" on a note-only booking;
+  `confirmBooking` doesn't exist for our SimplyBook account (bookings are confirmed already) – the call is gone.
