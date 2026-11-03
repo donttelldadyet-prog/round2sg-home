@@ -113,3 +113,11 @@ Now:
   + twin Vale ✓, page says "We'll WhatsApp you". Note refused too → "Payment received… we'll WhatsApp you" page + red alert ✓.
   Found and fixed: vague message for a broken email / no name; "confirmation email is on its way" on a note-only booking;
   `confirmBooking` doesn't exist for our SimplyBook account (bookings are confirmed already) – the call is gone.
+- **The 10-minute gap is closed (3 Nov):** while a guest pays, the room and its twin are blocked in SimplyBook with a time-blocked
+  note `SYSTEM BLOCK · ONLINE HOLD · a guest is paying for <room> right now · ref … · removed automatically` (`holdNotesMake`).
+  It goes: the moment they pay (just before the real booking), when they come back without paying (/release, /done), when the
+  hold runs out (the hold book's alarm), and a 10-minute sweep (`holdSweep`) catches any left behind. The same guest picking again
+  lets their old hold + block go first. Because it says SYSTEM BLOCK, In session / Tonight / Auto wrap-up / 1-hour alert / guest
+  links / Late session list / after-midnight markers skip it; Late session and +1h clash checks show "online guest paying (held
+  ~10 min)"; a twin's hold is never deleted along with a late session. Tested live in sandbox (Atlas, 5 Jan 2027): blocked in
+  SimplyBook for Atlas + Vale, other guests and staff refused, block gone on pay (real booking made), on leave, on picking again.

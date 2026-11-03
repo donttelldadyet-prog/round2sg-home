@@ -625,6 +625,13 @@ export class HoldBook extends DurableObject {
   }
   list(date) { return this.rows(`SELECT unit, s, e FROM holds WHERE date = ? AND status = 'pending' AND exp > ?`, date, Date.now()); }
   setPr(ref, pr) { this.sql.exec(`UPDATE holds SET pr = ? WHERE ref = ?`, pr, ref); }
+  /* this guest's unpaid holds (same phone or email) – let go before they pick again */
+  pendingFor(phone, email) { return this.rows(`SELECT ref, pr, data FROM holds WHERE status = 'pending' AND (phone = ? OR email = ?)`, phone, email); }
+  /* SimplyBook hold notes still up although their hold is over (paid, released, expired) – the 10-min sweep removes them */
+  holdNotesDue() {
+    return this.rows(`SELECT ref, status, exp, data FROM holds WHERE created > ? AND json_extract(data, '$.holdNotes') IS NOT NULL AND json_extract(data, '$.holdNotesDone') IS NULL`, Date.now() - 3 * 86400e3)
+      .map((r) => ({ ...r, data: JSON.parse(r.data || '{}') })).filter((r) => r.status !== 'pending' || r.exp <= Date.now()).map((r) => ({ ref: r.ref, ids: r.data.holdNotes, status: r.status }));
+  }
   /* add fields to a hold's data (the SimplyBook contact made before payment) */
   patch(ref, obj) { const h = this.get(ref); if (!h) return; Object.assign(h.data, obj); this.sql.exec(`UPDATE holds SET data = ? WHERE ref = ?`, JSON.stringify(h.data), ref); }
   /* online bookings that need a human (owner, 3 Nov – Denzel paid, no booking): paid but not booked, a fallback used,
@@ -735,7 +742,8 @@ export class HoldBook extends DurableObject {
   async alarm() { try { await this.alarm0(); } finally { if (sbCalls) { this.sbAdd(sbCalls); sbCalls = 0; } } }
   async alarm0() {
     const due = this.rows(`SELECT ref, pr, data FROM holds WHERE status = 'pending' AND exp <= ?`, Date.now());
-    for (const d of due) { this.sql.exec(`UPDATE holds SET status = 'released' WHERE ref = ?`, d.ref); let pay = ''; try { pay = JSON.parse(d.data || '{}').pay; } catch (e) {} await cancelLink(envFor(this.env, pay), d.pr); }
+    for (const d of due) { try { const hd = JSON.parse(d.data || '{}'); if (hd.holdNotes && !hd.holdNotesDone) { await holdNotesDel(this.env, hd.holdNotes); this.patch(d.ref, { holdNotesDone: Date.now() }); } } catch (e) {}
+      this.sql.exec(`UPDATE holds SET status = 'released' WHERE ref = ?`, d.ref); let pay = ''; try { pay = JSON.parse(d.data || '{}').pay; } catch (e) {} await cancelLink(envFor(this.env, pay), d.pr); }
     this.sql.exec(`DELETE FROM holds WHERE status = 'released' AND created < ?`, Date.now() - 7 * 86400e3);
     try { await this.qRun(); } catch (e) {}
     try { await this.bqRun(); } catch (e) {}
@@ -824,6 +832,10 @@ async function checkout(env0, b, origin) {
       after: Math.max(0, Math.min(60, Math.round((+b.msg.after || 0) / 15) * 15)) };
     if (!msg.title || !msg.text) throw new Error('Add a headline and a message for the TV, or untick the celebration');
   }
+  const hb0 = book(env);
+  for (const o of await hb0.pendingFor(phone.slice(-8), email)) {   /* the same guest picking again: their old hold (and its block) goes first */
+    await hb0.release(o.ref); await cancelAny(env, o.pr).catch(() => null); await holdNotesClear(env, o.ref).catch(() => null);
+  }
   const p = await pub(env);
   const s = mins(q.time), e = s + q.hours * 60;
   const gaps = await gapsFor(p, q.date, q.unit, q.peak ? 'peak' : 'off');
@@ -839,6 +851,9 @@ async function checkout(env0, b, origin) {
     let c = null; const errs = []; try { c = await sbContact(await admin(env), name, email, phone, errs); } catch (e) { errs.push(String(e.message || e).slice(0, 140)); }
     if (!c) { await hb.release(ref); console.log('[checkout] contact refused: ' + errs.join(' | ')); throw new Error('We couldn’t save your details for the booking – please check your name, email and mobile number. Still stuck? WhatsApp us on +65 9162 5767.'); }
     await hb.patch(ref, { cid: c.cid, cidLate: c.late });
+    /* block the time in SimplyBook while they pay (if SimplyBook won't take the note, the hold on our page still stands) */
+    const hn = await holdNotesMake(env, ref, q).catch((e) => { console.log('[checkout] hold note: ' + String(e.message || e).slice(0, 120)); return []; });
+    if (hn.length) await hb.patch(ref, { holdNotes: hn });
   }
   const when = new Date(q.date + 'T00:00:00Z').toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
   let pr;
@@ -848,7 +863,7 @@ async function checkout(env0, b, origin) {
       purpose: (pay === 'test' ? 'TEST · ' : '') + `Round2 ${q.room} · ${when} ${q.time}–${q.end} (${q.hours}h)`,
       reference_number: ref, redirect_url: `${PUBLIC_BOOK}/done?ref=${ref}`, webhook: `${origin}/booking/hitpay`,
     });
-  } catch (err) { await hb.release(ref); throw err; }
+  } catch (err) { await hb.release(ref); await holdNotesClear(env, ref).catch(() => null); throw err; }
   await hb.setPr(ref, pr.id);
   return { ref, url: pr.url, total: q.total, room: q.room, date: q.date, time: q.time, end: q.end, holdUntil: Date.now() + HOLD_SEC * 1000, test: pay === 'test' || undefined };
 }
@@ -893,6 +908,33 @@ async function noteBooking(env, d, q, ref) {
   if (tw) { const r2 = await s2('POST', '/admin/calendar-notes', body(tw, 'SYSTEM BLOCK · ' + ROOMS[q.unit][0] + ' online booking ' + nm + ' till ' + clock12(end - BUF * 60e3))).catch(() => null); if (r2 && r2.id) ids.push(String(r2.id)); }
   return { note: true, noteIds: ids };
 }
+/* The 10-minute gap (owner, 3 Nov: "close the 10 min gap completely"): while a guest pays, the room (and its twin) is blocked
+   in SimplyBook too, with a time-blocked note "SYSTEM BLOCK · ONLINE HOLD …". So staff keying in a WhatsApp booking, Late
+   session and SimplyBook's own page all see the time as taken. The note goes the moment the guest pays (just before the real
+   booking is made), lets go, or the hold runs out; a sweep every 10 minutes removes any left behind. Because it says SYSTEM
+   BLOCK, every screen that skips mirror blocks (In session, Tonight, Auto wrap-up, the 1-hour alert, guest links, Late session
+   list, after-midnight markers) skips it; clash checks show it as "an online guest is paying". */
+const holdText = (ref, room) => `SYSTEM BLOCK · ONLINE HOLD · a guest is paying for ${room} right now · ref ${ref} · removed automatically`;
+async function holdNotesMake(env, ref, q) {
+  const s2 = await sb2(env), s = sgMs0(q.date + ' ' + q.time), end = s + (q.hours * 60 + BUF) * 60e3, ids = [], room = q.unit === 11 ? 'Maximillion' : q.room;
+  const body = (u) => ({ provider_id: u, service_id: null, start_date_time: sgStr(s), end_date_time: sgStr(end), note_type_id: 1, note: holdText(ref, room), mode: 'provider', time_blocked: true });
+  for (const u of [q.unit, MIRROR[q.unit]].filter(Boolean)) { const r = await s2('POST', '/admin/calendar-notes', body(u)); if (r && r.id) ids.push(String(r.id)); }
+  return ids;
+}
+async function holdNotesDel(env, ids) {
+  if (!ids || !ids.length) return;
+  const s2 = await sb2(env);
+  for (const id of ids) await s2('DELETE', '/admin/calendar-notes/' + id).catch((e) => { if (!/ 404:/.test(String(e.message || e))) throw e; });
+}
+async function holdNotesClear(env, ref) {
+  const hb = book(env), h = await hb.get(ref); if (!h || !h.data.holdNotes || h.data.holdNotesDone) return;
+  await holdNotesDel(env, h.data.holdNotes); await hb.patch(ref, { holdNotesDone: Date.now() });
+}
+async function holdSweep(env) {
+  const hb = book(env), due = await hb.holdNotesDue(), out = [];
+  for (const r of due) { try { await holdNotesDel(env, r.ids); await hb.patch(r.ref, { holdNotesDone: Date.now() }); out.push(r.ref); } catch (e) {} }
+  return { cleared: out };
+}
 /* "needs a human" (owner, 3 Nov): every phone with alerts on, a red line in the control centre, and Telegram if set up */
 async function humanAlert(env, ref, title, body) {
   const hb = book(env), L = (await hb.kvGet('human')) || [];
@@ -923,8 +965,10 @@ async function finalize(env, ref, source) {
   try {
     if (h.status === 'released' && !(await isFree(env, q, ref))) throw new Error('slot was released and re-taken – refund needed');
     if (env.DRY_RUN === '1') {
+      await holdNotesClear(env, ref).catch(() => null);
       result = { dryRun: true, would: ['book', q.eventId, q.unit, 'client(' + d.email + ')', q.date, q.time + ':00', '(end + 15 min cleaning)', 0, { [PAX_FIELD]: String(d.pax) }] };
     } else {
+      if (d.holdNotes && !d.holdNotesDone) await holdNotesClear(env, ref).catch(() => null);   /* our own block off, then book */
       const a0 = await admin(env), F = d.pay === 'test' && Array.isArray(env.__fail) ? env.__fail : [];
       /* test bench only (gm testbook, sandbox holds): SimplyBook "refuses" on purpose, to walk every fallback */
       const a = !F.length ? a0 : (m, p) => (F.includes(m) && !(m === 'addClient' && p && p[0] && p[0].name === 'Round2 online guest') ? Promise.reject(new Error(m + ': TEST – refused on purpose')) : a0(m, p));
@@ -1022,7 +1066,7 @@ async function tvMessage(env, d, q, ref, bid) {
    Then "About 10 minutes to go" and "That's a wrap!" move to the new end (or are made if there were none), and the TV
    shows "+N CREDITS ADDED" (no OK needed unless staff tick it). Undo puts everything back. */
 const SYS_CLIENTS = ['2472', '2476'];          /* Make mirror's SYSTEM BLOCK clients (in Atlas for a Vale booking, in Vale for an Atlas one) */
-const SYS_RE = /SYSTEM\s*BLOCK/i, EXT_RE = /\bEXT\b/i, LATE_RE = /late till [0-9:]+[ap]m/i;
+const SYS_RE = /SYSTEM\s*BLOCK/i, HOLD_RE = /ONLINE\s*HOLD/i, EXT_RE = /\bEXT\b/i, LATE_RE = /late till [0-9:]+[ap]m/i;
 const sgMs0 = (t) => { const m = String(t || '').match(/(\d{4})-(\d\d)-(\d\d)[ T](\d\d):(\d\d)(?::(\d\d))?/); return m ? Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)) - 8 * 3600e3 : 0; };
 const sgStr = (ms) => new Date(ms + 8 * 3600e3).toISOString().replace('T', ' ').slice(0, 19);
 const sgDay = (ms) => new Date(ms + 8 * 3600e3).toISOString().slice(0, 10);
@@ -1080,7 +1124,7 @@ function sessClash(day, S, from, to) {
   for (const x of day.items) {
     if (x.unit !== S.unit && x.unit !== tw) continue;
     const key = x.k + x.id; if (mine.has(key) || twinChain.has(key)) continue;
-    if (x.s < to && x.e > from) out.push({ room: ROOMS[x.unit][0], what: x.k === 'b' ? (x.sys ? 'twin room booking' : 'booking: ' + (x.name || 'guest')) : (x.blk ? 'room blocked: ' : 'note: ') + (x.name || '').slice(0, 40), s: x.s, e: x.e });
+    if (x.s < to && x.e > from) out.push({ room: ROOMS[x.unit][0], what: x.k === 'b' ? (x.sys ? 'twin room booking' : 'booking: ' + (x.name || 'guest')) : (HOLD_RE.test(x.name || '') ? 'an online guest is paying for this time (held ~10 min)' : (x.blk ? 'room blocked: ' : 'note: ') + (x.name || '').slice(0, 40)), s: x.s, e: x.e });
   }
   /* closing = 11:15pm of the shop night the session belongs to (12am–11am starts count as the night before), checked on
      the GUEST end like the booking page (a guest may end exactly at 11:15pm; the cleaning after it is fine) – time check 2 Nov */
@@ -1335,7 +1379,7 @@ async function late(env, hb, f) {
   if (f.replace && !old) return { error: 'That session isn’t in SimplyBook any more. Refresh the list.' };
   const skip = new Set(old ? old.notes.map((n) => n.id) : []);
   const clash = items.filter((it) => (it.unit === unit || it.unit === tw) && it.s < blockEnd && it.e > s && !(it.k === 'n' && skip.has(it.id)))
-    .map((it) => ({ room: ROOMS[it.unit][0], what: it.k === 'b' ? 'booking' : it.blk ? 'room blocked' : 'note', name: String(it.name || '').slice(0, 40), from: clock12(it.s), to: clock12(it.e) }));
+    .map((it) => ({ room: ROOMS[it.unit][0], what: it.k === 'b' ? 'booking' : HOLD_RE.test(it.name || '') ? 'online guest paying (held ~10 min)' : it.blk ? 'room blocked' : 'note', name: String(it.name || '').slice(0, 40), from: clock12(it.s), to: clock12(it.e) }));
   /* the room must also be open in SimplyBook (day off, break, closed): the booking page asks SimplyBook the same thing
      (system check 2 Nov: Kaeden had no free slots online but Late session saw nothing). Only the part inside opening
      hours can be checked; past closing is staff's call. Not for Change (its own old note would count). */
@@ -1403,7 +1447,7 @@ async function lateFind(env, id, day) {
   const D = await sessDay(env, day), S = D.sessions.find((x) => x.key === 'n' + id && x.k === 'n' && !x.sys);
   if (!S) return null;
   const tw = MIRROR[S.unit], ids = new Set([id, ...S.ext.map((x) => x.id)]);
-  const notes = D.items.filter((x) => x.k === 'n' && (ids.has(x.id) || (tw && x.unit === tw && x.sys && x.s >= S.s - 5 * 60e3 && x.s < S.end)))
+  const notes = D.items.filter((x) => x.k === 'n' && (ids.has(x.id) || (tw && x.unit === tw && x.sys && !HOLD_RE.test(x.name) && x.s >= S.s - 5 * 60e3 && x.s < S.end)))
     .map((x) => ({ id: x.id, unit: x.unit, s: x.s, e: x.e, note: x.name }));
   return { S, notes };
 }
@@ -1745,7 +1789,7 @@ async function gm(env, req) {
   if (act === 'holdinfo') {   /* staff: what happened to an online booking (ref from the guest's confirmation) – read only */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     const h = await hb.get(String(f.ref || '').replace(/[^A-Z0-9]/g, '')); if (!h) return gmJ({ error: 'No such ref.' });
-    const d = h.data || {}, out = { status: h.status, date: h.date, unit: h.unit, s: h.s, e: h.e, exp: h.exp, q: d.q, pay: d.pay, pr: h.pr, done: d.done || null, name: d.name, agreed: d.agreed };
+    const d = h.data || {}, out = { status: h.status, date: h.date, unit: h.unit, s: h.s, e: h.e, exp: h.exp, q: d.q, pay: d.pay, pr: h.pr, done: d.done || null, name: d.name, agreed: d.agreed, holdNotes: d.holdNotes || null, holdNotesDone: d.holdNotesDone || null };
     const bid = d.done && d.done.bookingId;
     if (bid) out.sb = await (await admin(env))('getBookingDetails', [bid]).then((b) => ({ id: b.id, code: b.code, start: b.start_date_time || b.start_date, end: b.end_date_time || b.end_date, unit: b.unit_id, event: b.event_id, confirm: b.is_confirm, status: b.status, record: b.record_date, client: b.client_name })).catch((e) => ({ err: String(e.message || e).slice(0, 120) }));
     if (f.clients === '1') {   /* which SimplyBook contacts match this guest's phone / email (why a contact couldn't be made) */
@@ -2418,7 +2462,7 @@ const HANDLER = {
     /* the reminder only needs the 10-min ticks plus :15 and :45 (bookings start on the quarter hour) */
     if (ten || quarter) go(soonRun(env));
     if (ten) {
-      go(autoRun(env, 'cron')); go(msgOrphans(env, 'cron')); go(waitWarn(env)); go(keyDaily(env));
+      go(autoRun(env, 'cron')); go(msgOrphans(env, 'cron')); go(waitWarn(env)); go(keyDaily(env)); go(holdSweep(env));
       if (mm < 10 || (mm >= 30 && mm < 40)) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(shadowSync(env, [t, addDays(t, 1)])); }
     }
     ctx.waitUntil(Promise.all(jobs).then(() => sbFlush(env)).catch(() => null));
@@ -2472,7 +2516,7 @@ const HANDLER = {
       if (u.pathname === '/quote' && req.method === 'POST') { const b = await req.json(); const q = await quote(env, b); q.free = await isFree(env, q); return J(q); }
       if (u.pathname === '/checkout' && req.method === 'POST') return J(await checkout(env, await req.json(), u.origin));
       if (u.pathname === '/agree' && req.method === 'POST') { const { ref } = await req.json(); return J({ ok: await book(env).agree(String(ref || '').replace(/[^A-Z0-9]/g, '')) }); }
-      if (u.pathname === '/release' && req.method === 'POST') { const { ref } = await req.json(); const hb = book(env), h0 = await hb.get(String(ref || '')); const r = await hb.release(String(ref || '')); if (r) await cancelLink(envFor(env, h0 && h0.data.pay), r.pr); return J({ released: !!r }); }
+      if (u.pathname === '/release' && req.method === 'POST') { const { ref } = await req.json(); const hb = book(env), h0 = await hb.get(String(ref || '')); const r = await hb.release(String(ref || '')); if (r) { await cancelLink(envFor(env, h0 && h0.data.pay), r.pr); await holdNotesClear(env, String(ref || '')).catch(() => null); } return J({ released: !!r }); }
       if (u.pathname === '/hitpay' && req.method === 'POST') {
         const raw = await req.text(), sig = req.headers.get('Hitpay-Signature') || '';
         if ((await hmacHex(envFor(env, 'live').HITPAY_SALT, raw)) !== sig && (await hmacHex(envFor(env, 'test').HITPAY_SALT, raw)) !== sig) return J({ error: 'bad signature' }, 401);
@@ -2487,7 +2531,7 @@ const HANDLER = {
         const henv = envFor(env, h.data.pay);
         const pr = h.pr ? await hitpay(henv, 'GET', '/payment-requests/' + h.pr).catch(() => ({})) : {};
         if (pr.status !== 'completed' && h.status !== 'paid' && h.status !== 'booking') {
-          const p2 = await book(env).release(ref); if (p2) await cancelLink(henv, p2.pr);
+          const p2 = await book(env).release(ref); if (p2) { await cancelLink(henv, p2.pr); await holdNotesClear(env, ref).catch(() => null); }
           return Response.redirect((h.data.ret || u.origin + '/test') + '?released=1', 302);
         }
         const f = await finalize(env, ref, 'redirect');
