@@ -85,3 +85,18 @@ Preview: https://raw.githack.com/donttelldadyet-prog/round2sg-home/own-booking/s
 
 ## Later
 - Optional: a separate SimplyBook user for the Worker (the shared login also sits in the Make scenario).
+
+## Failsafe: paid must always mean booked (3 Nov 2026)
+Why: Denzel (ref R2BAD1CAE9AF, Bella early bird 3 Nov) paid $35 but got no booking – he typed `gmail.con`, SimplyBook refused the
+contact, the "needs a human" alert went to a Telegram group that was never set up, and the page still said "You're booked!".
+Now:
+- **Before payment** (checkout): obvious email typos are refused ("did you mean …@gmail.com?", `MAIL_FIX`), and the SimplyBook
+  contact is made then (`sbContact`). If SimplyBook won't take the details, the guest is told and **pays nothing**.
+- **After payment** (`finalize`), in order: the contact from checkout → make it now → typo-fixed email → their existing contact (by
+  email, then phone) → the shared "Round2 online guest" contact → `book` (tried twice) → **last resort: a time-blocked calendar
+  note** (name, pax, PAID $, ref, phone, email; twin room blocked too). Any fallback is recorded in `done.fallback`.
+- **The guest's page** only says "You're booked!" when it really is (a note counts – the room is held). Still working → "Confirming
+  your booking…" (refreshes). Failed → "Payment received … our team will WhatsApp you", with the ref.
+- **Needs a human** (`humanAlert`): push to every phone with alerts on, a red card on the control centre's Home (gm `human`,
+  "Sorted ✓"), and Telegram if `STAFF_CHAT` is ever set. Sent for: not booked, booked by a fallback, guest email refused.
+- Staff tools (gm, staff code): `holdinfo` (one ref, read only), `holdproblems` (last N days).

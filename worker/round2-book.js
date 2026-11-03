@@ -625,6 +625,14 @@ export class HoldBook extends DurableObject {
   }
   list(date) { return this.rows(`SELECT unit, s, e FROM holds WHERE date = ? AND status = 'pending' AND exp > ?`, date, Date.now()); }
   setPr(ref, pr) { this.sql.exec(`UPDATE holds SET pr = ? WHERE ref = ?`, pr, ref); }
+  /* add fields to a hold's data (the SimplyBook contact made before payment) */
+  patch(ref, obj) { const h = this.get(ref); if (!h) return; Object.assign(h.data, obj); this.sql.exec(`UPDATE holds SET data = ? WHERE ref = ?`, JSON.stringify(h.data), ref); }
+  /* online bookings that need a human (owner, 3 Nov – Denzel paid, no booking): paid but not booked, a fallback used,
+     or stuck mid-booking for over 10 minutes */
+  problems(since) {
+    return this.rows(`SELECT ref, date, unit, s, status, data, created FROM holds WHERE created > ? AND (status = 'booking' OR (status = 'paid' AND (json_extract(data, '$.done.problem') IS NOT NULL OR json_extract(data, '$.done.fallback') IS NOT NULL)))`, since)
+      .map((r) => ({ ...r, data: JSON.parse(r.data || '{}') })).filter((r) => r.status !== 'booking' || Date.now() - r.created > 10 * 60e3);
+  }
   get(ref) { const r = this.rows(`SELECT * FROM holds WHERE ref = ?`, ref)[0]; return r ? { ...r, data: JSON.parse(r.data || '{}') } : null; }
   /* guest came back without paying → free the slot now */
   release(ref) {
@@ -806,6 +814,7 @@ async function checkout(env0, b, origin) {
   /* mobile with country code (+65 by default on the page; overseas guests change it). Staff may WhatsApp this number. */
   if (/^\d{8}$/.test(phone)) phone = '+65' + phone;
   if (!/^\+\d{7,15}$/.test(phone) || (phone.startsWith('+65') && !/^\+65[3689]\d{7}$/.test(phone))) throw new Error('Please check your mobile number and country code');
+  { const fx = mailFix(email); if (fx) throw new Error('Please check your email – did you mean ' + fx + '?'); }
   /* optional celebration message for the room TV, shown 0–60 min after the start */
   let msg = null;
   if (b.msg && GM_KINDS.includes(b.msg.kind)) {
@@ -823,6 +832,13 @@ async function checkout(env0, b, origin) {
   const h = await hb.hold({ ref, date: q.date, unit: q.unit, units: [q.unit, MIRROR[q.unit]].filter(Boolean), s, e, phone: phone.slice(-8), email, data: { q, name, email, phone, pax, ret, msg, pay } });
   for (const old of h.released || []) await cancelAny(env, old);            // their earlier unpaid link stops working
   if (!h.ok) throw new Error('Sorry, someone is paying for that time right now – please pick another');
+  /* the SimplyBook contact is made BEFORE payment (owner, 3 Nov: "reject payment and booking is safer"): if SimplyBook won't
+     take these details, the guest is told now and pays nothing */
+  if (env.DRY_RUN !== '1') {
+    let c = null; try { c = await sbContact(await admin(env), name, email, phone); } catch (e) {}
+    if (!c) { await hb.release(ref); throw new Error('We couldn’t save your details for the booking – please check your name, email and mobile number. Still stuck? WhatsApp us on +65 9162 5767.'); }
+    await hb.patch(ref, { cid: c.cid, cidLate: c.late });
+  }
   const when = new Date(q.date + 'T00:00:00Z').toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
   let pr;
   try {
@@ -836,6 +852,56 @@ async function checkout(env0, b, origin) {
   return { ref, url: pr.url, total: q.total, room: q.room, date: q.date, time: q.time, end: q.end, holdUntil: Date.now() + HOLD_SEC * 1000, test: pay === 'test' || undefined };
 }
 
+/* the email typos guests make most (owner, 3 Nov: Denzel typed gmail.con, SimplyBook refused the contact, he paid and got
+   no booking). Asked on the booking page before paying; also used to retry after payment. */
+const MAIL_FIX = { 'gmail.con': 'gmail.com', 'gmail.co': 'gmail.com', 'gmail.cm': 'gmail.com', 'gmail.om': 'gmail.com', 'gmail.comm': 'gmail.com', 'gmail.coom': 'gmail.com',
+  'gmial.com': 'gmail.com', 'gmai.com': 'gmail.com', 'gmal.com': 'gmail.com', 'gamil.com': 'gmail.com', 'gnail.com': 'gmail.com', 'gmaill.com': 'gmail.com', 'gmail.cpm': 'gmail.com',
+  'hotmial.com': 'hotmail.com', 'hotmai.com': 'hotmail.com', 'hotmail.con': 'hotmail.com', 'hotmail.co': 'hotmail.com', 'yaho.com': 'yahoo.com', 'yahoo.con': 'yahoo.com', 'yahoo.co': 'yahoo.com',
+  'outlook.con': 'outlook.com', 'outlok.com': 'outlook.com', 'icloud.con': 'icloud.com', 'iclould.com': 'icloud.com', 'iclod.com': 'icloud.com', 'live.con': 'live.com' };
+function mailFix(em) {
+  const i = String(em).lastIndexOf('@'); if (i < 1) return null;
+  const u = em.slice(0, i), dm = em.slice(i + 1).toLowerCase(), f = MAIL_FIX[dm] || (/\.con$/.test(dm) ? dm.replace(/\.con$/, '.com') : null);
+  return f ? u + '@' + f : null;
+}
+/* a SimplyBook contact for this guest: without the email first (so only the confirmation email reaches them), else with it */
+async function sbContact(a, name, email, phone) {
+  let cid = await a('addClient', [{ name, phone }]).catch(() => null);
+  if (cid) return { cid, late: true };
+  cid = await a('addClient', [{ name, email, phone }]).catch(() => null);
+  return cid ? { cid, late: false } : null;
+}
+/* last-but-one resort: one shared "Round2 online guest" contact (the booking note carries the guest's real details) */
+async function sbGeneric(env, a) {
+  const hb = book(env), k = await hb.kvGet('sbGenericCid'); if (k) return k;
+  const f = Object.values((await a('getClientList', ['Round2 online guest', 1]).catch(() => null)) || {})[0];
+  const cid = f ? f.id : await a('addClient', [{ name: 'Round2 online guest', email: 'online-guest@round2.sg', phone: '+6591625767' }]).catch(() => null);
+  if (cid) await hb.kvSet('sbGenericCid', cid);
+  return cid || null;
+}
+/* the very last resort (owner, 3 Nov: "always make a note booking with phone number and details"): SimplyBook refused the
+   booking itself, so the room is blocked with a calendar note carrying everything staff need to reach the guest. Our own
+   screens treat it as a session (name first, like Late session notes); the twin room is blocked too. */
+async function noteBooking(env, d, q, ref) {
+  const s2 = await sb2(env), s = sgMs0(q.date + ' ' + q.time), end = s + (q.hours * 60 + BUF) * 60e3, tw = MIRROR[q.unit], ids = [];
+  const nm = String(d.name || 'Guest').replace(/\s+/g, ' ').trim().slice(0, 30);
+  const text = `${nm} ${d.pax} pax · ONLINE BOOKING, PAID $${q.total.toFixed(2)} · ref ${ref} · ${d.phone} · ${d.email} · ` +
+    `SimplyBook refused a normal booking, so this note holds the room – please turn it into a booking`;
+  const body = (u, txt) => ({ provider_id: u, service_id: null, start_date_time: sgStr(s), end_date_time: sgStr(end), note_type_id: 1, note: txt, mode: 'provider', time_blocked: true });
+  const r = await s2('POST', '/admin/calendar-notes', body(q.unit, text)); ids.push(String(r.id));
+  if (tw) { const r2 = await s2('POST', '/admin/calendar-notes', body(tw, 'SYSTEM BLOCK · ' + ROOMS[q.unit][0] + ' online booking ' + nm + ' till ' + clock12(end - BUF * 60e3))).catch(() => null); if (r2 && r2.id) ids.push(String(r2.id)); }
+  return { note: true, noteIds: ids };
+}
+/* "needs a human" (owner, 3 Nov): every phone with alerts on, a red line in the control centre, and Telegram if set up */
+async function humanAlert(env, ref, title, body) {
+  const hb = book(env), L = (await hb.kvGet('human')) || [];
+  if (!L.some((x) => x.ref === ref && x.title === title)) { L.unshift({ id: Date.now().toString(36), ref, title, body, t: Date.now(), sorted: 0 }); await hb.kvSet('human', L.slice(0, 40)); }
+  if (env.VAPID_JWK) {
+    const subs = await hb.pushList();
+    await Promise.all(subs.map(async (x) => hb.pushResult(x.id, await pushOne(env, x.sub, { kind: 'booking', title, body, tag: 'human-' + ref, url: '/?tab=home' }))));
+  }
+  await staffAlert(env, title + '\n' + body).catch(() => null);
+}
+
 /* ---------- after payment: put the booking into SimplyBook (exactly once) ---------- */
 /* staff alerts (Telegram): secret STAFF_CHAT = the chat id of a staff-only group with the Round2 kitchen bot in it */
 async function staffAlert(env, text) {
@@ -845,7 +911,11 @@ async function staffAlert(env, text) {
 async function finalize(env, ref, source) {
   const hb = book(env);
   let h = await hb.get(ref); if (!h) return { ok: false, err: 'unknown ref' };
-  if (!(await hb.claim(ref))) { h = await hb.get(ref); return { ok: true, already: true, h: h.data }; }
+  if (!(await hb.claim(ref))) {   /* the other caller (webhook / redirect) has it: only "booked" if it really is (owner, 3 Nov) */
+    h = await hb.get(ref); const dn = h.data.done;
+    if (!dn) return { ok: false, pending: true, h: h.data };
+    return dn.problem ? { ok: false, err: dn.problem, h: h.data } : { ok: true, already: true, h: h.data };
+  }
   const d = h.data, q = d.q;
   let result;
   try {
@@ -859,20 +929,31 @@ async function finalize(env, ref, source) {
       /* ONE email per guest: SimplyBook emails once when the booking is made and again when it's confirmed. So the contact is
          made without the email, booked (that email goes nowhere), given the email, then confirmed → only the confirmation
          email reaches the guest. If SimplyBook won't take a contact without email, fall back to the normal way (2 emails). */
-      let cid = await a('addClient', [{ name: d.name, phone: d.phone }]).catch(() => null), late = !!cid;
-      if (!cid) cid = await a('addClient', [{ name: d.name, email: d.email, phone: d.phone }]).catch(() => null);
-      if (!cid) {                            // only if SimplyBook refuses a second contact for this email
-        const found = Object.values((await a('getClientList', [d.email, 1]).catch(() => null)) || {});
-        if (!found[0]) throw new Error('could not create the SimplyBook contact');
-        cid = found[0].id;                   // the note below still carries the typed name
+      /* the contact: made before payment (since 3 Nov), else now; then the typo-fixed email, an existing contact, the shared
+         "Round2 online guest" contact. Each fallback is noted and staff are told. */
+      const how = [];
+      let cid = d.cid || null, late = !!d.cidLate;
+      if (!cid) { const c = await sbContact(a, d.name, d.email, d.phone).catch(() => null); if (c) { cid = c.cid; late = c.late; } }
+      if (!cid) { const fx = mailFix(d.email); if (fx) { cid = await a('addClient', [{ name: d.name, email: fx, phone: d.phone }]).catch(() => null); if (cid) { late = false; how.push('email fixed to ' + fx); } } }
+      if (!cid) {
+        const p8 = String(d.phone || '').replace(/\D/g, '').slice(-8);
+        const found = Object.values((await a('getClientList', [d.email, 1]).catch(() => null)) || {})[0] || Object.values((await a('getClientList', [p8, 1]).catch(() => null)) || {})[0];
+        if (found) { cid = found.id; late = false; how.push('their existing SimplyBook contact'); }
       }
+      if (!cid) { cid = await sbGeneric(env, a).catch(() => null); if (cid) { late = false; how.push('the shared "Round2 online guest" contact – the guest gets no email'); } }
       /* SimplyBook's own bookings end 15 min after the session (its "buffer after" = cleaning time, e.g. 11:00–14:15 for 3 h),
          so ours do too – the calendar then blocks the cleaning time and nobody can book into it */
       const eB = mins(q.time) + q.hours * 60 + BUF, endDate = eB >= 1440 ? addDays(q.date, 1) : q.date;
-      const bk = await a('book', [q.eventId, q.unit, cid, q.date, q.time + ':00', endDate, hhmm(eB) + ':00', 0, { [PAX_FIELD]: String(d.pax) }]);
+      let bk = null, bErr = cid ? '' : 'no contact';
+      for (let i = 0; cid && i < 2 && !(bk && bk.bookings && bk.bookings[0]); i++)
+        bk = await a('book', [q.eventId, q.unit, cid, q.date, q.time + ':00', endDate, hhmm(eB) + ':00', 0, { [PAX_FIELD]: String(d.pax) }]).catch((e) => { bErr = String(e.message || e).slice(0, 100); return null; });
       const b0 = bk && bk.bookings && bk.bookings[0];
-      result = { bookingId: b0 && b0.id, code: b0 && b0.code };
-      if (late) result.email = await a('editClient', [cid, { name: d.name, email: d.email, phone: d.phone }]).then(() => 'ok').catch((e) => 'no: ' + String(e.message || e).slice(0, 60));
+      if (!b0 || !b0.id) {   /* the very last resort: a note holds the room with the guest's phone and details */
+        result = await noteBooking(env, d, q, ref);
+        how.push('a calendar note holds the room (SimplyBook refused the booking: ' + (bErr || 'no answer') + ')');
+      } else result = { bookingId: b0.id, code: b0.code };
+      if (how.length) result.fallback = how;
+      if (late && result.bookingId) result.email = await a('editClient', [cid, { name: d.name, email: d.email, phone: d.phone }]).then(() => 'ok').catch((e) => 'no: ' + String(e.message || e).slice(0, 60));
       /* SimplyBook's own guest bookings are confirmed; ours come in unconfirmed. Confirming sends the guest's one email. */
       if (b0 && b0.id) result.confirm = await a('confirmBooking', [b0.id]).then(() => 'ok').catch((e) => 'no: ' + String(e.message || e).slice(0, 60));
       /* the details SimplyBook doesn't show: the name typed on the page (SimplyBook keeps an existing contact's name),
@@ -886,10 +967,13 @@ async function finalize(env, ref, source) {
     if (d.msg && !result.dryRun) result.tv = await tvMessage(env, d, q, ref, result.bookingId).catch((e) => ({ problem: String(e.message || e).slice(0, 120) }));
   } catch (err) { result = { problem: 'paid – booking not created: ' + String(err.message || err).slice(0, 150) }; }
   result.at = Date.now(); result.source = source;
+  await hb.done(ref, result);   /* first, so the guest's page shows the outcome straight away */
   /* paid but not in SimplyBook (slot gone, SimplyBook down…): tell staff straight away so they can call / refund */
-  if (result.problem) await staffAlert(env, `⚠️ ONLINE BOOKING NEEDS A HUMAN\n${result.problem}\n\nRef ${ref}\n${q.room} · ${q.date} ${q.time}–${q.end} (${q.hours}h) · paid $${q.total.toFixed(2)}\n${d.name} · ${d.phone} · ${d.email}`).catch(() => null);
-  else if (!result.dryRun) await staffAlert(env, `🎮 NEW ONLINE BOOKING\n${q.unit === 11 ? 'Maximillion' : q.room} · ${q.date} ${q.time}–${q.end} (${q.hours}h)\n${d.name} · ${d.pax} guests · ${d.phone}\nPaid $${q.total.toFixed(2)}${d.pay === 'test' ? ' (TEST – sandbox, cancel it)' : ''} · ref ${ref}${d.msg ? '\nTV message: ' + d.msg.kind : ''}`).catch(() => null);
-  await hb.done(ref, result);
+  const who = `${q.unit === 11 ? 'Maximillion' : q.room} · ${q.date} ${q.time}–${q.end} (${q.hours}h) · paid $${q.total.toFixed(2)}\n${d.name} · ${d.phone} · ${d.email} · ref ${ref}`;
+  if (result.problem) await humanAlert(env, ref, '⚠️ Paid online – NOT booked', result.problem + '\n' + who).catch(() => null);
+  else if (result.fallback) await humanAlert(env, ref, result.note ? '⚠️ Paid online – held by a NOTE only' : '⚠️ Online booking – check it', 'Booked using ' + result.fallback.join('; ') + '\n' + who).catch(() => null);
+  else if (result.email && result.email !== 'ok') await humanAlert(env, ref, '⚠️ Online booking – no email reached the guest', 'SimplyBook refused the email (' + result.email + '). Booked fine – WhatsApp them the details.\n' + who).catch(() => null);
+  if (!result.problem && !result.dryRun) await staffAlert(env, `🎮 NEW ONLINE BOOKING\n${q.unit === 11 ? 'Maximillion' : q.room} · ${q.date} ${q.time}–${q.end} (${q.hours}h)\n${d.name} · ${d.pax} guests · ${d.phone}\nPaid $${q.total.toFixed(2)}${d.pay === 'test' ? ' (TEST – sandbox, cancel it)' : ''} · ref ${ref}${d.msg ? '\nTV message: ' + d.msg.kind : ''}`).catch(() => null);
   if (!result.problem && !result.dryRun) await paidStat(q, d).catch(() => null);
   d.done = result;
   return result.problem ? { ok: false, err: result.problem, h: d } : { ok: true, h: d };
@@ -1605,6 +1689,17 @@ async function gm(env, req) {
     if (act === 'msgimport') { let L = []; try { L = JSON.parse(f.records || '[]'); } catch (e) { return gmJ({ error: 'records must be JSON' }); } return gmJ({ ok: true, imported: await hb.msgImport(L) }); }
     const m = await hb.getMode(); if (f.set === 'on' || f.set === 'off') { m.msgLocal = f.set === 'on'; m.msgT = Date.now(); await hb.setMode(m); await hb.gmDrop('__LIST__'); if (m.msgLocal) await gmList(env, hb).catch(() => null); }
     return gmJ({ ok: true, local: !!m.msgLocal, count: await hb.msgCount() });
+  }
+  if (act === 'human') {   /* staff: control centre › "needs a human" list (owner, 3 Nov); sorted=<id> ticks one off */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    let L = (await hb.kvGet('human')) || [];
+    if (f.sorted) { L = L.map((x) => x.id === f.sorted ? Object.assign(x, { sorted: Date.now() }) : x); await hb.kvSet('human', L); }
+    return gmJ({ ok: true, list: L.filter((x) => !x.sorted || Date.now() - x.sorted < 86400e3) });
+  }
+  if (act === 'holdproblems') {   /* staff: online bookings in the last N days (max 60) that were paid but not booked, used a fallback, or got stuck */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const days = Math.max(1, Math.min(60, +f.days || 30));
+    return gmJ({ ok: true, list: (await hb.problems(Date.now() - days * 86400e3)).map((r) => ({ ref: r.ref, date: r.date, room: r.data.q && r.data.q.room, time: r.data.q && r.data.q.time, status: r.status, pay: r.data.pay, total: r.data.q && r.data.q.total, name: r.data.name, phone: r.data.phone, done: r.data.done || null })) });
   }
   if (act === 'holdinfo') {   /* staff: what happened to an online booking (ref from the guest's confirmation) – read only */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
@@ -2358,7 +2453,8 @@ const HANDLER = {
         const q = f.h.q;
         if (f.ok) return H(bookedPage(env, ref, f.h, u.origin));
         return H(PAGE(f.ok ? `<h1>You're booked 🎉</h1><p><b>${esc(q.room)}</b>, ${esc(q.date)}, ${esc(q.time)}–${esc(q.end)} (${q.hours}h) · $${q.total.toFixed(2)} paid.</p><p>Ref ${esc(ref)}${f.h.done && f.h.done.dryRun ? ' · <span class="tag">TEST – not put in calendar</span>' : ''}</p><p>A confirmation email is on its way.</p>${f.h.done && f.h.done.tv && f.h.done.tv.code ? `<p>Your message pops up on the TV ${f.h.msg.after ? f.h.msg.after + ' minutes after you start' : 'when you start'}. Want to change it? <a style="color:#F2C21B" href="https://cue.round2.sg/${esc(f.h.done.tv.code)}">cue.round2.sg/${esc(f.h.done.tv.code)}</a></p>` : ''}${f.h.ret ? `<a class="btn" href="${esc(f.h.ret)}">Back to Round2</a>` : ''}<script>try{sessionStorage.clear()}catch(e){}</script>`
-          : `<h1>Payment received</h1><p class="err">${esc(f.err)}</p><p>We'll WhatsApp you shortly. Ref ${esc(ref)}.</p>`));
+          : f.pending ? `<h1>Confirming your booking…</h1><p>Your payment came through. We’re putting the booking into our calendar – this page refreshes by itself.</p><meta http-equiv="refresh" content="4">`
+          : `<h1>Payment received</h1><p>We couldn’t confirm your booking automatically, so our team has been alerted and will WhatsApp you on <b>${esc(f.h.phone || '')}</b> shortly to sort it out.</p><p>Please keep this reference: <b>${esc(ref)}</b>. Questions? <a href="https://wa.me/6591625767">WhatsApp us</a>.</p>`));
       }
       /* SimplyBook's confirmation email links here with its booking code → that booking's page (see it, add/change the TV message) */
       if (u.pathname.startsWith('/b/')) {
