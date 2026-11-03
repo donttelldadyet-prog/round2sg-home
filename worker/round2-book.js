@@ -1750,6 +1750,35 @@ async function gm(env, req) {
     if (f.sorted) { L = L.map((x) => x.id === f.sorted ? Object.assign(x, { sorted: Date.now() }) : x); await hb.kvSet('human', L); }
     return gmJ({ ok: true, list: L });   /* sorted ones stay (last 40) – the control centre shows them under History */
   }
+  if (act === 'payout') {   /* staff, SANDBOX ONLY (3 Nov, trying HitPay's Payout API for paying Madd Pizza): no real money can move here.
+       do=bens (list recipients) · do=ben (make the made-up "Madd Pizza (TEST)" bank recipient) · do=send&ref=<food order> (pay Madd's
+       share of that order, min $1) · do=get&path=/… (look at any sandbox page, e.g. /transfers) */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const e0 = rawEnv(env);
+    if (!isSandbox(e0) || !e0.HITPAY_KEY) return gmJ({ error: 'The HitPay sandbox isn’t set up.' });
+    const hp = async (method, path, body) => { const r = await fetch(e0.HITPAY_API + path, { method, headers: { 'X-BUSINESS-API-KEY': e0.HITPAY_KEY, 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json', ...(body ? { 'Content-Type': 'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
+      const t = await r.text(); let j; try { j = JSON.parse(t); } catch (x) { j = { text: t.slice(0, 300) }; } return { status: r.status, body: j }; };
+    const dd = String(f.do || '');
+    if (dd === 'bens') return gmJ(await hp('GET', '/beneficiaries'));
+    if (dd === 'get') return gmJ(await hp('GET', '/' + String(f.path || '').replace(/^\/+/, '').replace(/[^\w\/?=&.-]/g, '')));
+    if (dd === 'ben') {
+      const r = await hp('POST', '/beneficiaries', { country: 'sg', transfer_method: 'bank_transfer', transfer_type: 'local', currency: 'sgd', holder_type: f.htype || 'individual',
+        holder_name: 'Madd Pizza (TEST)', bank_swift_code: f.swift || 'DBSSSGSGXXX', account_number: f.acct || '0123456789', nickname: 'Madd Pizza sandbox test' });
+      if (r.body && r.body.id) await hb.kvSet('payBenTest', r.body.id);
+      return gmJ(r);
+    }
+    if (dd === 'send') {
+      const rec = await hb.menuGet(String(f.ref || '')); if (!rec) return gmJ({ error: 'No such food order.' });
+      if (rec.pay !== 'test') return gmJ({ error: 'Only sandbox test orders here.' });
+      const ben = f.ben || (await hb.kvGet('payBenTest')); if (!ben) return gmJ({ error: 'Make the test recipient first (do=ben).' });
+      const amt = Math.max(100, rec.mb || 0) / 100;
+      const r = await hp('POST', '/transfers', { beneficiary_id: ben, source_currency: 'sgd', source_amount: amt, reference: 'MADD ' + rec.orderNo, remark: 'TEST payout for ' + f.ref,
+        remitter: { entity_type: 'company', company_name: 'Round2 (TEST)', full_name: 'Round2 test', contact_number: '+6500000000', email: 'hello@round2.sg', nationality: 'sg',
+          address: { street_address: '1 Test Road', city: 'Singapore', state: 'Singapore', postal_code: '000000', country: 'sg' } } });
+      return gmJ({ amount: amt, maddShare: (rec.mb || 0) / 100, ...r });
+    }
+    return gmJ({ error: 'do=bens|ben|send|get' });
+  }
   if (act === 'holdproblems') {   /* staff: online bookings in the last N days (max 60) that were paid but not booked, used a fallback, or got stuck */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     const days = Math.max(1, Math.min(60, +f.days || 30));
@@ -1959,7 +1988,7 @@ async function menuCheckout(env0, req, origin) {
       purpose: (pay === 'test' ? 'TEST · ' : '') + 'Round2 food order #' + orderNo + ' (' + room + '): ' + (summary.length > 190 ? summary.slice(0, 187) + '...' : summary),
       webhook: origin + '/menu/hitpay', redirect_url: MENU_RETURN + '?room=' + room.toLowerCase() });
   } catch (e) { return no('The payment page couldn’t be opened. Try again, or WhatsApp us.', 502); }
-  await hb.menuPut(ref, { pay, gst, sub, base: pay === 'test' ? 0 : base, note: String(o.note || '').slice(0, 500), room, lines: lines.join('\n'), total, status: 'pending', orderNo, createdAt: new Date().toISOString(), requestId: pr.id });
+  await hb.menuPut(ref, { pay, gst, sub, base: pay === 'test' ? 0 : base, mb: base, note: String(o.note || '').slice(0, 500), room, lines: lines.join('\n'), total, status: 'pending', orderNo, createdAt: new Date().toISOString(), requestId: pr.id });
   const prev = String(o.prev || '');
   if (prev && prev !== pr.id) await cancelLink(env, prev);
   return J({ url: pr.url, order: ref, no: orderNo, request_id: pr.id, test: pay === 'test' || undefined });
