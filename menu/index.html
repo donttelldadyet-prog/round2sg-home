@@ -54,6 +54,12 @@ button{cursor:pointer;border:0;background:none;padding:0}
 .partner img{height:16px;width:auto;display:block}
 /* "with Madd Pizza" sits under the Round2 logo, on the left (owner's admin, 3 Nov) */
 .brandcol{display:flex;flex-direction:column;align-items:flex-start;gap:7px}
+/* Round2 × Madd Pizza side by side (owner, 3 Nov: make the collaboration clear – Madd Pizza cooks the food) */
+.lockup{display:flex;align-items:center;gap:10px;min-width:0}
+.lockup .r2logo{height:30px;width:auto}
+.lockup .lx{font-size:18px;line-height:1;color:var(--mute);font-weight:300}
+.lockup .madd{height:21px;width:auto;display:block}
+@media (max-width:360px){.lockup{gap:7px}.lockup .r2logo{height:26px}.lockup .madd{height:18px}}
 .eyebrow .count{font-size:8px;letter-spacing:.14em;color:var(--mute)}
 .divider{display:flex;align-items:center;gap:10px;margin:12px 0 16px}
 .divider span{width:70px;height:1px;background:var(--rule)}
@@ -175,7 +181,7 @@ textarea{display:block;width:100%;margin-top:8px;min-height:64px;resize:vertical
 </style>
 
 <header class="wrap hud">
-  <div class="brandcol"><img class="r2logo" src="https://donttelldadyet-prog.github.io/round2sg-home/menu/img/round2-logo.png" alt="Round2" width="149" height="38"><span class="partner">with <img src="https://donttelldadyet-prog.github.io/round2sg-home/menu/img/madd-pizza-logo.png" alt="Madd Pizza" width="80" height="16"></span></div>
+  <div class="lockup" aria-label="Round2 × Madd Pizza"><img class="r2logo" src="https://donttelldadyet-prog.github.io/round2sg-home/menu/img/round2-logo.png" alt="Round2" width="149" height="38"><span class="lx" aria-hidden="true">×</span><img class="madd" src="https://donttelldadyet-prog.github.io/round2sg-home/menu/img/madd-pizza-logo.png" alt="Madd Pizza" width="80" height="16"></div>
   <span class="badge" id="roomTag"></span>
 </header>
 <div class="wrap intro"><div class="eyebrow"><span>Food &amp; drinks</span></div><div class="divider" aria-hidden="true"><span></span><i></i><span></span></div></div>
