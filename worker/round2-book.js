@@ -1748,7 +1748,7 @@ async function gm(env, req) {
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     let L = (await hb.kvGet('human')) || [];
     if (f.sorted) { L = L.map((x) => x.id === f.sorted ? Object.assign(x, { sorted: Date.now() }) : x); await hb.kvSet('human', L); }
-    return gmJ({ ok: true, list: L.filter((x) => !x.sorted || Date.now() - x.sorted < 86400e3) });
+    return gmJ({ ok: true, list: L });   /* sorted ones stay (last 40) – the control centre shows them under History */
   }
   if (act === 'holdproblems') {   /* staff: online bookings in the last N days (max 60) that were paid but not booked, used a fallback, or got stuck */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
