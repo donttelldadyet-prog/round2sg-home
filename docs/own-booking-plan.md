@@ -100,3 +100,9 @@ Now:
 - **Needs a human** (`humanAlert`): push to every phone with alerts on, a red card on the control centre's Home (gm `human`,
   "Sorted ✓"), and Telegram if `STAFF_CHAT` is ever set. Sent for: not booked, booked by a fallback, guest email refused.
 - Staff tools (gm, staff code): `holdinfo` (one ref, read only), `holdproblems` (last N days).
+- **Root cause, confirmed 3 Nov** (gm `sbdiag`, a real retry with Denzel's details): SimplyBook answered `addClient: Client email
+  value is wrong` both without an email and with `@gmail.con`; with `@gmail.com` it was accepted at once (contact 3175). All 19 other
+  online bookings since 31 Oct also needed the email (SimplyBook never takes a contact without one), so the "contact without email
+  first" step always falls through to the normal way. SimplyBook checks that the email is well-formed with a real ending – it does
+  not check the mailbox exists – so any provider (company domains too) works, and whatever SimplyBook refuses is now caught before
+  payment. SimplyBook's own error messages are now kept (`done.fallback`, checkout log).

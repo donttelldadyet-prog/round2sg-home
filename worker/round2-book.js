@@ -835,8 +835,8 @@ async function checkout(env0, b, origin) {
   /* the SimplyBook contact is made BEFORE payment (owner, 3 Nov: "reject payment and booking is safer"): if SimplyBook won't
      take these details, the guest is told now and pays nothing */
   if (env.DRY_RUN !== '1') {
-    let c = null; try { c = await sbContact(await admin(env), name, email, phone); } catch (e) {}
-    if (!c) { await hb.release(ref); throw new Error('We couldn’t save your details for the booking – please check your name, email and mobile number. Still stuck? WhatsApp us on +65 9162 5767.'); }
+    let c = null; const errs = []; try { c = await sbContact(await admin(env), name, email, phone, errs); } catch (e) { errs.push(String(e.message || e).slice(0, 140)); }
+    if (!c) { await hb.release(ref); console.log('[checkout] contact refused: ' + errs.join(' | ')); throw new Error('We couldn’t save your details for the booking – please check your name, email and mobile number. Still stuck? WhatsApp us on +65 9162 5767.'); }
     await hb.patch(ref, { cid: c.cid, cidLate: c.late });
   }
   const when = new Date(q.date + 'T00:00:00Z').toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -864,10 +864,11 @@ function mailFix(em) {
   return f ? u + '@' + f : null;
 }
 /* a SimplyBook contact for this guest: without the email first (so only the confirmation email reaches them), else with it */
-async function sbContact(a, name, email, phone) {
-  let cid = await a('addClient', [{ name, phone }]).catch(() => null);
+async function sbContact(a, name, email, phone, errs) {
+  const why = (e) => { if (errs) errs.push(String(e.message || e).slice(0, 140)); return null; };
+  let cid = await a('addClient', [{ name, phone }]).catch(why);
   if (cid) return { cid, late: true };
-  cid = await a('addClient', [{ name, email, phone }]).catch(() => null);
+  cid = await a('addClient', [{ name, email, phone }]).catch(why);
   return cid ? { cid, late: false } : null;
 }
 /* last-but-one resort: one shared "Round2 online guest" contact (the booking note carries the guest's real details) */
@@ -933,7 +934,9 @@ async function finalize(env, ref, source) {
          "Round2 online guest" contact. Each fallback is noted and staff are told. */
       const how = [];
       let cid = d.cid || null, late = !!d.cidLate;
-      if (!cid) { const c = await sbContact(a, d.name, d.email, d.phone).catch(() => null); if (c) { cid = c.cid; late = c.late; } }
+      const cErr = [];
+      if (!cid) { const c = await sbContact(a, d.name, d.email, d.phone, cErr).catch(() => null); if (c) { cid = c.cid; late = c.late; } }
+      if (cErr.length) how.push('SimplyBook said: ' + cErr.join(' | '));
       if (!cid) { const fx = mailFix(d.email); if (fx) { cid = await a('addClient', [{ name: d.name, email: fx, phone: d.phone }]).catch(() => null); if (cid) { late = false; how.push('email fixed to ' + fx); } } }
       if (!cid) {
         const p8 = String(d.phone || '').replace(/\D/g, '').slice(-8);
@@ -1700,6 +1703,24 @@ async function gm(env, req) {
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     const days = Math.max(1, Math.min(60, +f.days || 30));
     return gmJ({ ok: true, list: (await hb.problems(Date.now() - days * 86400e3)).map((r) => ({ ref: r.ref, date: r.date, room: r.data.q && r.data.q.room, time: r.data.q && r.data.q.time, status: r.status, pay: r.data.pay, total: r.data.q && r.data.q.total, name: r.data.name, phone: r.data.phone, done: r.data.done || null })) });
+  }
+  if (act === 'sbdiag') {   /* staff: why SimplyBook refused a contact (3 Nov, Denzel) – recent online bookings, and (try=1) a real retry */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const recent = (await hb.rows(`SELECT ref, date, status, created, data FROM holds WHERE status IN ('paid','booking') ORDER BY created DESC LIMIT 20`)).map((r) => {
+      const d = JSON.parse(r.data || '{}'), dn = d.done || {};
+      return { ref: r.ref, made: sgStr(r.created).slice(0, 16), date: r.date, pay: d.pay, emailDomain: String(d.email || '').split('@')[1], phone: String(d.phone || '').replace(/\d(?=\d{3})/g, '•'), cid: d.cid || null,
+        contactWithoutEmail: 'email' in dn, emailStep: dn.email, booked: !!dn.bookingId, problem: dn.problem || null, fallback: dn.fallback || null };
+    });
+    const out = { recent };
+    if (f.try === '1' && f.ref) {
+      const h = await hb.get(String(f.ref).replace(/[^A-Z0-9]/g, '')); if (!h) return gmJ({ error: 'No such ref.' });
+      const d = h.data, a = await admin(env), t = async (label, c) => { try { const id = await a('addClient', [c]); return { label, ok: true, id }; } catch (e) { return { label, ok: false, err: String(e.message || e).slice(0, 200) }; } };
+      out.tries = [await t('name + phone (no email)', { name: d.name, phone: d.phone })];
+      if (!out.tries[0].ok) out.tries.push(await t('name + email + phone (as typed)', { name: d.name, email: d.email, phone: d.phone }));
+      if (!out.tries.some((x) => x.ok) && mailFix(d.email)) out.tries.push(await t('name + fixed email + phone', { name: d.name, email: mailFix(d.email), phone: d.phone }));
+      if (!out.tries.some((x) => x.ok)) out.tries.push(await t('name + phone without +65', { name: d.name, phone: String(d.phone).replace(/^\+65/, '') }));
+    }
+    return gmJ({ ok: true, ...out });
   }
   if (act === 'holdinfo') {   /* staff: what happened to an online booking (ref from the guest's confirmation) – read only */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
