@@ -2413,6 +2413,7 @@ async function tvUpdate(env, f) {
   const base = FB_BASE + env.TV_KEY + '/' + room, now = Date.now();
   const hb = await fetch(base + '/helper.json').then((r) => r.json()).catch(() => null);
   if (!hb || !hb.t || now - hb.t > 12 * 60e3) return { error: 'The TV is off – switch it on first.', off: true };
+  if (hb.pw && hb.pw !== 'Active') return { error: 'The TV is asleep (screen off, Quick Start+) – switch it on first.', off: true, asleep: true };   /* owner, 3 Nov */
   if (hb.ru === false) return { error: 'Locked on the TV (Staff tools › Updates from the control centre: not allowed).', locked: true };
   const night = sgDay(now - SHADOW_TILL * 60e3), tw = MIRROR[unit], busy = [];
   for (const d of [night, addDays(night, 1)]) for (const S of (await sessDay(env, d)).sessions) {
