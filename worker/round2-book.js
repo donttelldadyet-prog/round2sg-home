@@ -658,6 +658,8 @@ export class HoldBook extends DurableObject {
   /* "Find my booking": paid, not yet past, matching email + last 8 digits of the mobile */
   find(email, p8, today) { return this.rows(`SELECT ref, date, CAST(json_extract(data, '$.done.bookingId') AS TEXT) AS bid FROM holds WHERE status = 'paid' AND email = ? AND phone = ? AND date >= ? ORDER BY date, s LIMIT 6`, email, p8, today); }
   /* cancelled in SimplyBook → no longer shown in "View your booking", its /done and /b pages say so */
+  /* the online booking behind a SimplyBook booking id: what the guest paid for */
+  holdOfBid(bid) { const r = this.rows(`SELECT ref, data FROM holds WHERE status = 'paid' AND CAST(json_extract(data, '$.done.bookingId') AS TEXT) = ? LIMIT 1`, String(bid))[0]; return r ? { ref: r.ref, data: JSON.parse(r.data) } : null; }
   cancelBid(bid) { this.sql.exec(`UPDATE holds SET status = 'cancelled' WHERE status = 'paid' AND CAST(json_extract(data, '$.done.bookingId') AS TEXT) = ?`, String(bid)); }
   /* SimplyBook told us a booking was made, changed or cancelled (/sb/notify): act now instead of waiting for a check */
   async onSb(bid, type) {
@@ -1764,6 +1766,12 @@ async function gm(env, req) {
       if (dn.noteIds) { const s2 = await sb2(env); out.notes = []; for (const id of dn.noteIds) out.notes.push(await s2('DELETE', '/admin/calendar-notes/' + id).then(() => 'deleted ' + id).catch((e) => String(e.message || e).slice(0, 80))); }
       return gmJ({ ok: true, ...out });
     }
+    if (f.do === 'length') {   /* test: set the test booking's SimplyBook length (hours=3 to cut it short, or the paid hours), then run the check */
+      const dn = h.data.done || {}, q = h.data.q; if (!dn.bookingId) return gmJ({ error: 'Not booked.' });
+      const a = await admin(env), hrs = Math.max(1, Math.min(8, +f.hours || q.hours)), eB = mins(q.time) + hrs * 60 + BUF;
+      const ed = await a('editBook', [dn.bookingId, q.eventId, q.unit, h.data.cid, q.date, q.time + ':00', eB >= 1440 ? addDays(q.date, 1) : q.date, hhmm(eB) + ':00', 0, { [PAX_FIELD]: String(h.data.pax || 2) }]).then(() => 'ok').catch((e) => String(e.message || e).slice(0, 140));
+      return gmJ({ ok: true, edit: ed, check: await paidLengthCheck(env, dn.bookingId, 'change') });
+    }
     const e2 = Object.assign(Object.create(env), env, { __fail: String(f.fail || '').split(',').filter(Boolean) });
     const r = await finalize(e2, ref, 'testbench');
     return gmJ({ ok: r.ok, err: r.err || null, pending: !!r.pending, done: r.h && r.h.done });
@@ -2343,6 +2351,26 @@ async function bookingAlert(env, bid, type, prev) {
   const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10) === date;
   return { msg: { title: roomTitle(unit) + ' · ' + (name || 'No name'), body, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/' }, b, now: { unit, s, e } };
 }
+/* An online booking cut short in SimplyBook (owner, 3 Nov: Andrew L paid 5 h for Vale; his start was moved in SimplyBook,
+   SimplyBook reset him to its standard 3 h, Auto wrap-up followed and the room looked free after 3 h). The engine knows what
+   was paid: shorter than that → every phone + a red card on Home. Put right → the card ticks itself off. */
+async function paidLengthCheck(env, bid, type) {
+  if (type === 'cancel') return null;
+  const hb = book(env), h = await hb.holdOfBid(bid); if (!h || !h.data.q) return null;
+  const b = await (await admin(env))('getBookingDetails', [bid]).catch(() => null); if (!b) return null;
+  const q = h.data.q, s = sgMs0(b.start_date_time || b.start_date), e = sgMs0(b.end_date_time || b.end_date), have = Math.round((e - s) / 60e3), paid = q.hours * 60 + BUF;
+  const title = '⚠️ Online booking cut short in SimplyBook', room = q.unit === 11 ? 'Maximillion' : q.room;
+  if (have >= paid - 1) {   /* fine (again): tick off an open card for it */
+    const L = (await hb.kvGet('human')) || []; let ch = false;
+    for (const x of L) if (x.ref === h.ref && x.title === title && !x.sorted) { x.sorted = Date.now(); x.body += '\n✓ Put right in SimplyBook ' + clock12(Date.now()); ch = true; }
+    if (ch) await hb.kvSet('human', L);
+    return { ok: true, have, paid };
+  }
+  const want = s + paid * 60e3;
+  await humanAlert(env, h.ref, title, `${h.data.name} paid for ${q.hours}h in ${room}, but SimplyBook now shows ${Math.round((have - BUF) / 6) / 10}h (${clock12(s)}–${clock12(e - BUF * 60e3)}).` +
+    `\nSet the SimplyBook end to ${clock12(want)} (guest leaves ${clock12(want - BUF * 60e3)}) – until then those hours look free to other guests.\nRef ${h.ref} · ${h.data.phone}`);
+  return { short: true, have, paid };
+}
 async function bookingPush(env, bid, type) {
   if (!SB_ALERT[type] || !env.VAPID_JWK) return null;
   const hb = book(env), prev = await hb.bkGet(String(bid)).catch(() => null);
@@ -2461,6 +2489,9 @@ const HANDLER = {
     go((async () => { const prev = await hb.kvGet('cronLast'); await hb.kvSet('cronPrev', prev || 0); await hb.kvSet('cronLast', Date.now()); })());
     /* the reminder only needs the 10-min ticks plus :15 and :45 (bookings start on the quarter hour) */
     if (ten || quarter) go(soonRun(env));
+    /* a SimplyBook change a few minutes ago: Auto wrap-up looks again on the next 5-min tick (owner, 3 Nov: a quick fix was
+       only picked up after a refresh); the 10-min ticks run it anyway */
+    go((async () => { const ag = await hb.kvGet('autoAgain'); if (ag && Date.now() >= ag) { await hb.kvSet('autoAgain', 0); if (!ten) await autoRun(env, 'recheck'); } })());
     if (ten) {
       go(autoRun(env, 'cron')); go(msgOrphans(env, 'cron')); go(waitWarn(env)); go(keyDaily(env)); go(holdSweep(env));
       if (mm < 10 || (mm >= 30 && mm < 40)) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(shadowSync(env, [t, addDays(t, 1)])); }
@@ -2601,6 +2632,8 @@ const HANDLER = {
         const bid = String(j.booking_id || '').replace(/\D/g, ''), type = String(j.notification_type || '');
         if (bid) ctx.waitUntil(book(env).onSb(bid, type).catch(() => null));
         if (bid) ctx.waitUntil(bookingPush(env, bid, type).catch(() => null));   /* staff phones: New booking / changed / cancelled */
+        if (bid) ctx.waitUntil(paidLengthCheck(env, bid, type).catch(() => null));   /* an online booking cut shorter than paid */
+        ctx.waitUntil(book(env).kvSet('autoAgain', Date.now() + 2 * 60e3).catch(() => null));   /* look again in ~2–5 min (a quick second edit) */
         ctx.waitUntil(autoRun(env, 'simplybook ' + type).catch(() => null));   /* auto end messages follow straight away */
         ctx.waitUntil(msgOrphans(env, 'simplybook ' + type).catch(() => null));   /* a cancelled booking's wrap-up messages go */
         await book(env).gmDrop('__LIST__').catch(() => null);

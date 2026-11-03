@@ -121,3 +121,7 @@ Now:
   links / Late session list / after-midnight markers skip it; Late session and +1h clash checks show "online guest paying (held
   ~10 min)"; a twin's hold is never deleted along with a late session. Tested live in sandbox (Atlas, 5 Jan 2027): blocked in
   SimplyBook for Atlas + Vale, other guests and staff refused, block gone on pay (real booking made), on leave, on picking again.
+- **Cut short in SimplyBook (3 Nov, Andrew L, Vale 5 h):** moving an online booking's time in SimplyBook resets it to the service's
+  standard 3 h. `paidLengthCheck` runs on every SimplyBook change: an online booking shorter than what was paid → every phone + a
+  red card ("set the SimplyBook end to …"); put right → the card ticks itself off. Auto wrap-up also looks again ~2–5 min after
+  any SimplyBook change (kv `autoAgain`, 5-min tick). Tested in sandbox (gm testbook do=length): cut to 3 h → card; back to 5 h → ✓.
