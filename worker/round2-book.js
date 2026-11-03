@@ -1606,6 +1606,21 @@ async function gm(env, req) {
     const m = await hb.getMode(); if (f.set === 'on' || f.set === 'off') { m.msgLocal = f.set === 'on'; m.msgT = Date.now(); await hb.setMode(m); await hb.gmDrop('__LIST__'); if (m.msgLocal) await gmList(env, hb).catch(() => null); }
     return gmJ({ ok: true, local: !!m.msgLocal, count: await hb.msgCount() });
   }
+  if (act === 'holdinfo') {   /* staff: what happened to an online booking (ref from the guest's confirmation) – read only */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const h = await hb.get(String(f.ref || '').replace(/[^A-Z0-9]/g, '')); if (!h) return gmJ({ error: 'No such ref.' });
+    const d = h.data || {}, out = { status: h.status, date: h.date, unit: h.unit, s: h.s, e: h.e, exp: h.exp, q: d.q, pay: d.pay, pr: h.pr, done: d.done || null, name: d.name, agreed: d.agreed };
+    const bid = d.done && d.done.bookingId;
+    if (bid) out.sb = await (await admin(env))('getBookingDetails', [bid]).then((b) => ({ id: b.id, code: b.code, start: b.start_date_time || b.start_date, end: b.end_date_time || b.end_date, unit: b.unit_id, event: b.event_id, confirm: b.is_confirm, status: b.status, record: b.record_date, client: b.client_name })).catch((e) => ({ err: String(e.message || e).slice(0, 120) }));
+    if (f.clients === '1') {   /* which SimplyBook contacts match this guest's phone / email (why a contact couldn't be made) */
+      const a = await admin(env), p8 = String(d.phone || '').replace(/\D/g, '').slice(-8), em = String(d.email || '');
+      const pick = (r) => Object.values(r || {}).slice(0, 5).map((c) => ({ id: c.id, name: c.name, phone: c.phone, email: c.email }));
+      out.byPhone = await a('getClientList', [p8, 5]).then(pick).catch((e) => String(e.message || e).slice(0, 120));
+      out.byEmail = await a('getClientList', [em.split('@')[0], 5]).then(pick).catch((e) => String(e.message || e).slice(0, 120));
+      out.typed = { phone: d.phone, email: em };
+    }
+    return gmJ({ ok: true, hold: out });
+  }
   if (act === 'tvupdate') {   /* staff: Round2 messages › On the TVs now › Update now */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await tvUpdate(env, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
