@@ -26,5 +26,5 @@ Marketing & design only. **Nothing here is used by the live site** – it lives 
 - Blurbs in our own words; no quotes from reviews.
 
 ## Issue 01 (6–19 Nov 2026)
-Heartland (Netflix, 13 Nov) → Scarlett · Possible Love (Netflix, 6 Nov) → Kai · Madden (Prime Video, 18 Nov) → Maximillion ·
+You (Netflix series, poster in posters/you.jpg) → Scarlett · Possible Love (Netflix, 6 Nov) → Kai · Madden (Prime Video, 18 Nov) → Maximillion ·
 Dune (HBO Max) → Atlas. Rooms picked to suit each film; no room descriptions on the slides. Posters not added yet. Dates from US release lists – confirm in the SG apps before posting.
