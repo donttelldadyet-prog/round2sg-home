@@ -20,7 +20,7 @@ body{margin:0;background:#1a1726;font-family:'Chakra Petch',sans-serif;color:var
 body.render .deck{padding:0;gap:0}
 .slide{position:relative;width:1080px;height:1350px;overflow:hidden;background:var(--bg);flex:none;--c:var(--accent);--cink:#0b0914}
 .glow{position:absolute;width:900px;height:900px;border-radius:50%;background:var(--c);filter:blur(180px);opacity:.22}
-.scan{position:absolute;inset:0;z-index:5;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 2px,transparent 2px 5px)}
+.scan{position:absolute;inset:0;z-index:5;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.016) 0 2px,transparent 2px 6px)}
 .vign{position:absolute;inset:0;z-index:4;pointer-events:none;background:radial-gradient(120% 90% at 50% 45%,transparent 55%,rgba(0,0,0,.7) 100%)}
 .frame{position:absolute;inset:36px;border:1px solid var(--line);z-index:3}
 .frame::before,.frame::after{content:"";position:absolute;width:34px;height:34px;border:4px solid var(--c)}
@@ -68,16 +68,16 @@ body.render .blink{animation:none}
 .type{margin-top:22px;align-self:flex-start;padding:12px 20px 10px;font-size:40px;font-weight:700;line-height:1;text-transform:uppercase;
   background:var(--c);color:var(--cink);transform:skewX(-8deg);box-shadow:8px 8px 0 rgba(0,0,0,.5)}
 .type span{display:inline-block;transform:skewX(8deg)}
-.perks{margin-top:26px;display:grid;gap:10px}
-.perk{display:flex;align-items:center;gap:20px;padding:16px 20px;background:rgba(14,11,23,.86);border:1px solid var(--line);border-left:6px solid var(--c)}
+.perks{margin-top:28px;display:grid}
+.perk{display:flex;align-items:baseline;gap:20px;padding:15px 0;border-top:1px solid var(--line)}
 .perk .n{font-size:15px;color:var(--c);flex:none}
-.perk .t{font-size:29px;font-weight:600;line-height:1.2;color:var(--ink)}
+.perk .t{font-size:31px;font-weight:600;line-height:1.2;color:var(--ink)}
 .spec{margin-top:22px;display:flex;justify-content:space-between;font-size:13px;color:var(--mute)}
-.hud{position:absolute;right:84px;top:478px;z-index:7;width:390px;padding:20px 22px 18px;background:rgba(6,5,10,.8);border:1px solid var(--line);border-top:4px solid var(--c);backdrop-filter:blur(6px)}
+.hud{position:absolute;right:84px;top:478px;z-index:7;width:390px;padding:20px 22px 18px;background:rgba(6,5,10,.8);border-top:4px solid var(--c);backdrop-filter:blur(6px)}
 .hud .h{display:flex;justify-content:space-between;font-size:12px;color:var(--mute)}
 .hud .h b{font-weight:400;color:var(--c)}
 .stat{margin-top:16px}
-.stat .lb{display:flex;justify-content:space-between;font-size:13px;color:var(--soft)}
+.stat .lb{display:flex;justify-content:space-between;font-size:15px;color:var(--soft)}
 .stat .bar{margin-top:9px;display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
 .stat .bar i{height:16px;background:rgba(244,241,251,.12)}
 .stat .bar i.on{background:var(--c);box-shadow:0 0 10px color-mix(in srgb,var(--c) 60%,transparent)}
@@ -104,24 +104,24 @@ body.render .blink{animation:none}
 /* ============================ EDIT HERE ============================ */
 // One option per room. Rooms, colours and specs come from the live site. Kaeden is left out while it's under renovation.
 const QUIZ = [
-  { k:'A', room:'Vale',        night:'Look fierce, actually damn friendly',        type:'The cold-girl extrovert',
-    traits:['Look unapproachable, chat with Grab uncle whole way','First one to ask “eh, karaoke anot?”','Cry at Pixar movies, then deny'],
-    stats:[['Social',9],['Drama',8],['Paiseh',2]], sprite:'bauhaus' },
-  { k:'B', room:'Scarlett',    night:'2am still awake, overthinking one text',     type:'The 2am overthinker',
-    traits:['Reply “ok” then overthink for 3 hours','Supper at 1am, deep talk at 3am','Send a Spotify song instead of saying feelings'],
+  { k:'A', room:'Vale',        night:'Looks fierce, actually super friendly',      type:'The cold-girl extrovert',
+    traits:['Looks unapproachable, chats with every Grab driver','First to suggest karaoke after dinner','Cries at Pixar movies, then denies it'],
+    stats:[['Social',9],['Drama',8],['Shy',2]], sprite:'bauhaus' },
+  { k:'B', room:'Scarlett',    night:'Still awake at 2am, overthinking one text',   type:'The 2am overthinker',
+    traits:['Replies “ok”, then overthinks for 3 hours','Supper at 1am, deep talks at 3am','Sends a song instead of saying how she feels'],
     stats:[['Night owl',10],['Overthinking',9],['Supper cravings',8]], sprite:'moon' },
-  { k:'C', room:'Kai',         night:'Weekend plan: stay home. Can.',              type:'The “can, no problem” introvert',
-    traits:['Reply “can” to everything, and mean it','Free therapist for the whole friend group','Social battery die after one dinner'],
+  { k:'C', room:'Kai',         night:'Weekend plan: stay home and recharge',        type:'The calm introvert',
+    traits:['Replies “can” to everything, and means it','The whole group’s free therapist','Social battery dies after one dinner'],
     stats:[['Chill',10],['Patience',9],['Social battery',3]], sprite:'bonsai' },
-  { k:'D', room:'Bella',       night:'Look innocent, actually the mastermind',     type:'The innocent-face mastermind',
-    traits:['Plan the whole chaos, then “eh not me leh”','Read tarot “for fun”, but very serious','Rainy day = book, kopi, don’t disturb'],
+  { k:'D', room:'Bella',       night:'Looks innocent, actually the mastermind',     type:'The innocent-face mastermind',
+    traits:['Plans the chaos, then acts surprised','Reads tarot “for fun”, takes it seriously','Rainy day plan: a book, kopi, no texts'],
     stats:[['Mischief',9],['Mystery',8],['Alibi',10]], sprite:'candle' },
-  { k:'E', room:'Atlas',       night:'Main character, even at the hawker centre', type:'The main-character dreamer',
-    traits:['Plan Santorini trip every month, never book','Take 200 photos at Haji Lane, post none','Crush on someone after one bus stop chat'],
+  { k:'E', room:'Atlas',       night:'Main character, even at the hawker centre',   type:'The main-character dreamer',
+    traits:['Plans a Santorini trip monthly, never books','Takes 200 photos on Haji Lane, posts none','Gets a crush after one conversation'],
     stats:[['Daydreaming',10],['Romance',9],['Posting',1]], sprite:'column' },
-  { k:'F', room:'Maximillion', night:'Lose Monopoly also cannot accept one',      type:'The kiasu competitor',
-    traits:['Play Monopoly like his life depends on it','“One more round lah” at 3am','Lose already, still say “best of 3”'],
-    stats:[['Kiasu',10],['Speed',9],['Losing well',1]], sprite:'flag' },
+  { k:'F', room:'Maximillion', night:'Can’t accept losing, even at Monopoly',      type:'The kiasu competitor',
+    traits:['Plays Monopoly like his life depends on it','Says “one more round” at 3am','Loses, then asks for best of 3'],
+    stats:[['Competitive',10],['Speed',9],['Losing well',1]], sprite:'flag' },
 ];
 /* =================================================================== */
 
@@ -178,14 +178,14 @@ function cover(){
     <div class="cv-k px"><span>Round2 quiz</span><span>6 rooms · 1 you</span></div>
     <h1 class="cv-t">Which room<br><span>are you?</span></h1>
     <div class="grid">${tiles}</div>
-    <div class="cv-f px"><span>Don’t think so much lah</span><b>Swipe to see <span class="blink">▶</span></b></div>`, 'right:-380px;top:-300px');
+    <div class="cv-f px"><span>Pick fast, don’t overthink</span><b>Swipe to see <span class="blink">▶</span></b></div>`, 'right:-380px;top:-300px');
 }
 function card(q, i){
   const r = ROOMS[q.room];
   const bg = `<div class="hero">${sprite(q.sprite, r.c)}<img src="photos/${q.room.toLowerCase()}.jpg" alt="" onerror="this.remove()"></div>
-    <div class="hud"><div class="h px"><span>Player stats</span><b>Lv. 99</b></div>${q.stats.map(([l, v]) => `<div class="stat"><div class="lb px"><span>${esc(l)}</span><span>${v}/10</span></div><div class="bar">${Array.from({length:10}, (_, j) => `<i class="${j < v ? 'on' : ''}"></i>`).join('')}</div></div>`).join('')}</div>`;
+    <div class="hud"><div class="h px"><span>Stats</span></div>${q.stats.map(([l, v]) => `<div class="stat"><div class="lb px"><span>${esc(l)}</span><span>${v}/10</span></div><div class="bar">${Array.from({length:10}, (_, j) => `<i class="${j < v ? 'on' : ''}"></i>`).join('')}</div></div>`).join('')}</div>`;
   return frame(r.c, r.ink, `${topBar('Player ' + (i+1) + '/' + QUIZ.length)}
-    <div class="pick px">You picked<b>${q.k}</b><span class="tier">${esc(r.tier)}</span></div>
+    <div class="pick px"><b>${q.k}</b><span class="tier">${esc(r.tier)}</span></div>
     <div class="you px">You are</div>
     <h2 class="nm${q.room.length > 7 ? ' long' : ''}">${esc(q.room)}</h2>
     <div class="type"><span>${esc(q.type)}</span></div>
@@ -198,9 +198,9 @@ function end(){
     <img src="photos/${q.room.toLowerCase()}.jpg" alt="" onerror="this.remove()"><span class="k px">${q.k}</span>
     <span class="r px">${esc(q.room === 'Maximillion' ? 'Max' : q.room)}</span></div>`; }).join('');
   return frame('#F2C21B','#0b0914', `${topBar('Your move')}
-    <div class="en-k px">Player 2, your turn ah <span class="blink">_</span></div>
-    <h2 class="en-t">Drop your<br><em>letter lah.</em></h2>
-    <div class="en-s">Comment A–F, then tag the friend who confirm plus chop is a Bella.</div>
+    <div class="en-k px">Player 2, your turn <span class="blink">_</span></div>
+    <h2 class="en-t">Drop your<br><em>letter.</em></h2>
+    <div class="en-s">Comment A–F, then tag the friend who’s definitely a Bella.</div>
     <div class="chips">${chips}</div>
     <div class="cta"><div><div class="b px">Play your room</div><div class="a" style="margin-top:12px">Book at round2.sg</div></div><div class="a">▶</div></div>
     <div class="foot px"><span>Private movie &amp; game rooms</span><span>Haji Lane</span></div>`, 'left:-260px;bottom:-420px');
