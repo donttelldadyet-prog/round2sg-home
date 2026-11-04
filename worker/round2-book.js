@@ -2350,7 +2350,7 @@ function lateSess(s, e) { const m = (t) => { const d = new Date(+t + 8 * 3600e3)
 /* log the alert and point its tap at its own page (/?alert=<id>) */
 async function logAlert(env, kind, msg, ctx) {
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6), c = ctx || {};
-  const late = c.late != null ? !!c.late : lateSess(c.s, c.e) || /late/i.test(String(c.name || ''));
+  const late = c.late != null ? !!c.late : lateSess(c.s, c.e);   /* by the times only (owner, 5 Nov: sessions keyed in with the control centre's tool say "late till 7pm" but aren't late) */
   await book(env).alogAdd({ id, t: Date.now(), kind, title: String(msg.title || '').slice(0, 160), body: String(msg.body || '').slice(0, 900), ctx: c, late }).catch(() => null);
   return Object.assign({}, msg, { url: '/?alert=' + id, ctx: undefined });
 }
