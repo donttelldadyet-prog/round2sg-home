@@ -1921,7 +1921,19 @@ async function gm(env, req) {
       if (ref) { const h = await hb.get(ref).catch(() => null); if (h) hold = { ref, status: h.status, name: h.data.name, phone: h.data.phone, email: h.data.email, total: h.data.q && h.data.q.total, done: h.data.done || null, made: h.created, pay: h.data.pay, msg: h.data.msg ? { kind: h.data.msg.kind, title: h.data.msg.title } : null }; }
       return gmJ({ ok: true, alert: Object.assign({}, x, { sorted: sortedOf(x) }), hold, now: Date.now() });
     }
-    return gmJ({ ok: true, list: L.map((x) => ({ id: x.id, t: x.t, kind: x.kind, title: x.title, body: x.body, late: x.late, type: x.ctx && x.ctx.type, s: x.ctx && x.ctx.s, room: x.ctx && x.ctx.room, sorted: sortedOf(x) })), now: Date.now() });
+    return gmJ({ ok: true, list: L.map((x) => ({ id: x.id, t: x.t, kind: x.kind, title: x.title, body: x.body, late: x.late, type: x.ctx && x.ctx.type, s: x.ctx && x.ctx.s, room: x.ctx && x.ctx.room, preview: !!(x.ctx && x.ctx.preview), sorted: sortedOf(x) })), now: Date.now() });
+  }
+  if (act === 'alogseed' || act === 'alogclear') {   /* staff (5 Nov): PREVIEW entries in the alert history for one shop night, to see the format (nothing is sent to phones); alogclear removes them */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    if (act === 'alogclear') { const L = (await hb.alogList()).filter((x) => !(x.ctx && x.ctx.preview)); await hb.kvSet('alog', L); return gmJ({ ok: true, left: L.length }); }
+    const day = /^\d{4}-\d\d-\d\d$/.test(f.day || '') ? f.day : sgDay(Date.now() - SHADOW_TILL * 60e3), now = Date.now(), made = [];
+    const all = (await sessDay(env, day)).sessions.filter((S) => !S.sys && !S.orphanExt && ROOMS[S.unit]);
+    for (const S of all) {
+      if (S.k === 'b') { const r = await bookingAlert(env, S.id || String(S.key).slice(1), 'new', null).catch(() => null); if (r && r.msg) { r.msg.ctx.preview = true; await logAlert(env, 'booking', r.msg, r.msg.ctx); made.push('booking ' + S.key); } }
+      const m = soonMsg(S, S.s - 60 * 60e3, await soonPax(env, S).catch(() => ''), await soonExtra(env, S, all, S.s - 60 * 60e3).catch(() => [])); m.ctx.preview = true;
+      await logAlert(env, 'soon', m, m.ctx); made.push('soon ' + S.key);
+    }
+    return gmJ({ ok: true, day, made });
   }
   if (act === 'paytimes') {   /* staff, read-only (5 Nov): how long real guests took from pressing Pay to the booking, and how many walked away */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
