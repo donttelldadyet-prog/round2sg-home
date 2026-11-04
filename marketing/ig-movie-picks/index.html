@@ -184,8 +184,8 @@ function cover(){
       <span class="t">${esc(p.title)}</span><span class="sv px">${esc(p.service)}</span></div>`; }).join('');
   return frame('#F2C21B', '#0b0914', `${topBar('Issue ' + ISSUE.no)}
     <div class="cv-kicker px">Round2 Picks · ${esc(ISSUE.dates)}</div>
-    <h1 class="cv-title">Now<span>Playing</span></h1>
-    <div class="cv-sub">${ISSUE.picks.length} picks we’d queue up this fortnight, and the best room to watch each one in.</div>
+    <h1 class="cv-title">What to<span>Watch</span></h1>
+    <div class="cv-sub">Not sure what to put on? Here are ${ISSUE.picks.length} picks for your next visit, all ready to play on our TVs.</div>
     <div class="select"><div class="hd px"><span>Watch select</span><span class="blink">Swipe ▶</span></div>${rows}</div>
     <div class="cv-foot px"><span>Haji Lane · SG</span><span>round2.sg</span></div>`, 'right:-380px;top:-300px');
 }
