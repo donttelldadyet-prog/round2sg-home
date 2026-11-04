@@ -125,3 +125,25 @@ Now:
   standard 3 h. `paidLengthCheck` runs on every SimplyBook change: an online booking shorter than what was paid → every phone + a
   red card ("set the SimplyBook end to …"); put right → the card ticks itself off. Auto wrap-up also looks again ~2–5 min after
   any SimplyBook change (kv `autoAgain`, 5-min tick). Tested in sandbox (gm testbook do=length): cut to 3 h → card; back to 5 h → ✓.
+
+## Paid but released – Malia, 5 Nov 2026 (2:24am, Scarlett 6 Nov Early Bird, PayNow $35)
+What happened: she paid by PayNow; HitPay sent her back to /done a moment before its own API said "completed"; /done
+released the hold at once and DELETED the HitPay payment request (so HitPay's API answered 404 afterwards and the
+webhook never booked it); she picked the slot again (second, unpaid hold). Booked by hand with gm forcebook (#3133).
+Why the tests missed it: every end-to-end test paid with the sandbox test card, which confirms instantly. PayNow's
+short delay was never tested, and nothing checked HitPay again after a release.
+Rules now ("HitPay is the truth"):
+- hpPaid() asks HitPay; paid = request completed or a succeeded payment of the right amount; a payment still going
+  through = "inflight" (never released).
+- safeRelease() is the only way a hold is let go (back button /release, same guest picking again, /done after waiting);
+  it asks HitPay first; paid → finalize instead.
+- /done waits ~2 minutes ("Checking your payment…") before giving up a pending hold.
+- The 10-minute timer never releases a paid/inflight hold (adds 5 min instead).
+- Payment pages are NOT deleted any more: a late payment on a released hold is booked by the webhook / sweep if the
+  time is still free, else "needs a human" (refund).
+- finalize(): a released hold whose time is taken only by the SAME guest's newer unpaid hold → that hold gives way.
+- paidSweep() every 5 min: released / older-pending holds of the last 6 h that HitPay says are paid → booked.
+- gm prinfo (what HitPay says about a ref), gm holdsday (holds for a date), gm forcebook (owner-confirmed).
+Tested 5 Nov in the HitPay sandbox: guest back before paying → page waits, payment 2 min later → booked (no release);
+back button on a paid hold → refused; same guest picking again → old unpaid hold released; Malia replay (hold
+released, then paid on the kept payment page) → booked by the webhook. Test bookings cancelled.

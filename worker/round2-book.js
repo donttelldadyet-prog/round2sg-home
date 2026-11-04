@@ -754,7 +754,7 @@ export class HoldBook extends DurableObject {
       /* paid at HitPay but nobody has booked it yet (webhook late, guest closed the page): keep it – the sweep books it */
       try { const hd0 = JSON.parse(d.data || '{}'); const pp = await hpPaid(this.env, { pr: d.pr, data: hd0 }); if (pp.paid || pp.inflight || (pp.err && !pp.none)) { this.sql.exec(`UPDATE holds SET exp = ? WHERE ref = ?`, Date.now() + 5 * 60e3, d.ref); continue; } } catch (e) {}
       try { const hd = JSON.parse(d.data || '{}'); if (hd.holdNotes && !hd.holdNotesDone) { await holdNotesDel(this.env, hd.holdNotes); this.patch(d.ref, { holdNotesDone: Date.now() }); } } catch (e) {}
-      this.sql.exec(`UPDATE holds SET status = 'released' WHERE ref = ?`, d.ref); let pay = ''; try { pay = JSON.parse(d.data || '{}').pay; } catch (e) {} await cancelLink(envFor(this.env, pay), d.pr); }
+      this.sql.exec(`UPDATE holds SET status = 'released' WHERE ref = ?`, d.ref); }   /* payment page kept (see safeRelease) */
     this.sql.exec(`DELETE FROM holds WHERE status = 'released' AND created < ?`, Date.now() - 7 * 86400e3);
     try { await this.qRun(); } catch (e) {}
     try { await this.bqRun(); } catch (e) {}
@@ -969,7 +969,9 @@ async function safeRelease(env, ref, why) {
   if (p.paid) { const f = await finalize(env, ref, 'paid-' + why); return { released: false, paid: true, booked: !!f.ok }; }
   if ((p.err && !p.none) || p.inflight) return { released: false, unknown: true };   /* HitPay didn't answer, or a payment is going through: keep the hold */
   const r = await hb.release(ref);
-  if (r) { await cancelLink(envFor(env, h.data.pay), r.pr); await holdNotesClear(env, ref).catch(() => null); }
+  /* the payment page is NOT deleted any more: once deleted, HitPay can't tell us about money that arrives late (Malia).
+     A late payment on a released hold is booked by the webhook or the sweep if the time is still free, else flagged for a refund. */
+  if (r) await holdNotesClear(env, ref).catch(() => null);
   return { released: !!r };
 }
 /* every 5 minutes: holds from the last 6 hours that were released or are still waiting – paid at HitPay? book them now */
@@ -1022,7 +1024,7 @@ async function finalize(env, ref, source) {
       for (const o of await hb.pendingFor(String(h.phone || ''), String(h.email || ''))) {
         if (o.ref === ref) continue;
         const oh = await hb.get(o.ref); if (!oh || (await hpPaid(env, oh)).paid) continue;
-        if (await hb.release(o.ref)) { await cancelAny(env, o.pr).catch(() => null); await holdNotesClear(env, o.ref).catch(() => null); }
+        if (await hb.release(o.ref)) await holdNotesClear(env, o.ref).catch(() => null);
       }
       if (!(await isFree(env, q, ref))) throw new Error('slot was released and re-taken – refund needed');
     }
@@ -2700,6 +2702,7 @@ const HANDLER = {
             const n = Math.max(0, Math.min(99, +u.searchParams.get('n') || 0));
             if (h.status === 'pending' && n < 40) return H(PAGE(`<h1>Checking your payment…</h1><p>PayNow can take a few seconds to confirm. This page checks again by itself – please keep it open and <b>don’t pay again</b>.</p><meta http-equiv="refresh" content="3;url=/done?ref=${ref}&n=${n + 1}">`));
             const r = h.status === 'pending' ? await safeRelease(env, ref, 'done') : { released: true };
+            if (r.unknown && pp.inflight) return H(PAGE(`<h1>Your payment is going through…</h1><p>The bank is still confirming it. This page checks again by itself – please keep it open and <b>don’t pay again</b>. Ref <b>${esc(ref)}</b>.</p><meta http-equiv="refresh" content="5;url=/done?ref=${ref}&n=${n + 1}">`));
             if (r.unknown) return H(PAGE(`<h1>Checking your payment…</h1><p>We can’t reach the payment service right now. If you paid, you’re covered – we’ll confirm by email or WhatsApp. Please <b>don’t pay again</b>. Ref <b>${esc(ref)}</b>.</p><meta http-equiv="refresh" content="10;url=/done?ref=${ref}&n=${n + 1}">`));
             if (!r.paid) return Response.redirect((h.data.ret || u.origin + '/test') + '?released=1', 302);
           }
