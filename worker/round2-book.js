@@ -44,10 +44,12 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 
 /* SimplyBook requests are counted (owner, 2 Nov: "is that too intensive?"): SimplyBook's shared servers allow about 5,000 API
    requests a day. Each part adds to sbCalls; it's written to the engine's kv as sbn:<day> after each request / tick / alarm. */
-let sbCalls = 0;
-async function sbFlush(env) { if (!sbCalls) return; const n = sbCalls; sbCalls = 0; await book(env).sbAdd(n); }
+let sbCalls = 0, sbBy = {}, sbWho = '?';
+/* which kind of request, and roughly who asked (owner, 5 Nov: 7,901 requests on 4 Nov – over the limit; find out what) */
+function sbHit(k) { sbCalls++; const kk = sbWho + ' › ' + k; sbBy[kk] = (sbBy[kk] || 0) + 1; }
+async function sbFlush(env) { if (!sbCalls) return; const n = sbCalls, by = sbBy; sbCalls = 0; sbBy = {}; await book(env).sbAdd(n, by); }
 async function rpc(path, method, params, headers = {}) {
-  sbCalls++;
+  sbHit(method);
   const r = await fetch(SB + path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ jsonrpc: '2.0', method, params, id: 1 }) });
   const j = await r.json();
   if (j.error) throw new Error(method + ': ' + (j.error.message || JSON.stringify(j.error)));
@@ -66,12 +68,12 @@ const SB2 = 'https://user-api-v2.simplybook.asia';
 let sb2tok = null;
 async function sb2(env) {
   if (!sb2tok || sb2tok.t < Date.now()) {
-    sbCalls++; const r = await fetch(SB2 + '/admin/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company: env.SB_COMPANY, login: env.SB_USER, password: env.SB_PASS }) });
+    sbHit('REST login'); const r = await fetch(SB2 + '/admin/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company: env.SB_COMPANY, login: env.SB_USER, password: env.SB_PASS }) });
     const j = await r.json(); if (!j.token) throw new Error('SimplyBook REST login: ' + JSON.stringify(j).slice(0, 120));
     sb2tok = { k: j.token, t: Date.now() + 50 * 60e3 };
   }
   return async (method, path, body) => {
-    sbCalls++; const r = await fetch(SB2 + path, { method, headers: { 'Content-Type': 'application/json', 'X-Company-Login': env.SB_COMPANY, 'X-Token': sb2tok.k }, body: body ? JSON.stringify(body) : undefined });
+    sbHit(method + ' ' + path.split('?')[0].replace(/\/\d+/g, '/#')); const r = await fetch(SB2 + path, { method, headers: { 'Content-Type': 'application/json', 'X-Company-Login': env.SB_COMPANY, 'X-Token': sb2tok.k }, body: body ? JSON.stringify(body) : undefined });
     const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch (e) {}
     if (!r.ok) throw new Error('SimplyBook ' + method + ' ' + path.split('?')[0] + ' ' + r.status + ': ' + t.slice(0, 200));
     return j;
@@ -374,7 +376,9 @@ export class HoldBook extends DurableObject {
     }
   }
   autoLock(on) { this.qInit(); const now = Date.now(), r = this.rows(`SELECT v FROM kv WHERE k = 'autoLock'`)[0]; if (on) { if (r && now - +JSON.parse(r.v) < 90e3) return false; this.sql.exec(`INSERT OR REPLACE INTO kv VALUES ('autoLock', ?)`, String(now)); return true; } this.sql.exec(`DELETE FROM kv WHERE k = 'autoLock'`); return true; }
-  sbAdd(n) { this.qInit(); const k = 'sbn:' + new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10); this.kvSet(k, (this.kvGet(k) || 0) + n); }
+  sbAdd(n, by) { this.qInit(); const day = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10), k = 'sbn:' + day; this.kvSet(k, (this.kvGet(k) || 0) + n);   /* day-ok: SimplyBook's limit is per calendar day */
+    if (by) { const kb = 'sbb:' + day, m = this.kvGet(kb) || {}; for (const x in by) if (m[x] || Object.keys(m).length < 120) m[x] = (m[x] || 0) + by[x]; this.kvSet(kb, m);
+      const old = 'sbb:' + new Date(Date.now() + 8 * 3600e3 - 3 * 86400e3).toISOString().slice(0, 10); this.sql.exec(`DELETE FROM kv WHERE k = ?`, old); } }
   kvGet(k) { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = ?`, k)[0]; return r ? JSON.parse(r.v) : null; }
   kvSet(k, v) { this.qInit(); this.sql.exec(`INSERT OR REPLACE INTO kv VALUES (?, ?)`, k, JSON.stringify(v)); }
   /* every phone alert, with what it was about (owner, 5 Nov: tapping an alert opens its own page in the control centre).
@@ -754,7 +758,7 @@ export class HoldBook extends DurableObject {
     if (ts.length) this.ctx.storage.setAlarm(Math.max(Date.now() + 1000, Math.min(...ts)));
   }
   /* timer ran out → release the hold and kill its HitPay link */
-  async alarm() { try { await this.alarm0(); } finally { if (sbCalls) { this.sbAdd(sbCalls); sbCalls = 0; } } }
+  async alarm() { sbWho = 'hold timer'; try { await this.alarm0(); } finally { if (sbCalls) { this.sbAdd(sbCalls, sbBy); sbCalls = 0; sbBy = {}; } } }
   async alarm0() {
     const due = this.rows(`SELECT ref, pr, data, created FROM holds WHERE status = 'pending' AND exp <= ?`, Date.now());
     for (const d of due) {
@@ -1439,7 +1443,7 @@ async function autoApi(env, hb, f) {
   }
   const q = await hb.qList(), own = new Set(recs.filter((r) => r.code).map((r) => r.code));
   for (const x of list) if (!x.msgs && q.some((m) => /^R2/.test(m.code) && !own.has(m.code) && m.room === x.room && (Math.abs(m.at - x.guestEnd) <= 5 * 60e3 || Math.abs(m.at - (x.guestEnd - 10 * 60e3)) <= 5 * 60e3))) x.msgs = { w: true, t: true, own: false, synced: true };
-  return { ok: true, on: !!m2.autoEnd, by: m2.autoBy || '', t: m2.autoT || 0, now, last: await hb.kvGet('autoLast'), cronLast: await hb.kvGet('cronLast'), cronPrev: await hb.kvGet('cronPrev'), sbToday: await hb.kvGet('sbn:' + sgDay(now)), sbYesterday: await hb.kvGet('sbn:' + addDays(sgDay(now), -1)), orphanLast: await hb.kvGet('orphanLast'), sessions: list.sort((a, b) => a.guestEnd - b.guestEnd) };
+  return { ok: true, on: !!m2.autoEnd, by: m2.autoBy || '', t: m2.autoT || 0, now, last: await hb.kvGet('autoLast'), cronLast: await hb.kvGet('cronLast'), cronPrev: await hb.kvGet('cronPrev'), sbToday: await hb.kvGet('sbn:' + sgDay(now)), sbBy: await hb.kvGet('sbb:' + sgDay(now)), sbYesterday: await hb.kvGet('sbn:' + addDays(sgDay(now), -1)), orphanLast: await hb.kvGet('orphanLast'), sessions: list.sort((a, b) => a.guestEnd - b.guestEnd) };
 }
 const sgDayName = (ms) => new Date(ms + 8 * 3600e3).toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).replace(/,/g, '');
 async function late(env, hb, f) {
@@ -1789,7 +1793,7 @@ async function linkPair(env, hb, code, room, start, pair) {
 }
 async function gm(env, req) {
   const f = Object.fromEntries(new URLSearchParams(await req.text()));
-  const act = String(f.action || ''), who = req.headers.get('cf-connecting-ip') || 'x', hb = book(env);
+  const act = String(f.action || ''), who = req.headers.get('cf-connecting-ip') || 'x', hb = book(env); sbWho = 'gm ' + act.slice(0, 16);
   const guest = act === 'get' || act === 'submit';
   if (act === 'queue') {   /* staff: what the timer will send, and the last send */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
@@ -2691,7 +2695,7 @@ const HANDLER = {
      booking (bookings start on the quarter hour, so a 5-minute tick always lands on it), at the same time as SimplyBook's
      own 1-hour reminder email (owner, 2 Nov). Everything else still runs every 10 minutes. */
   async scheduled(ev, env0, ctx) {
-    const base = envFor(env0, 'live'), env = Object.assign(Object.create(base), base, { __tick: new Map() }), hb = book(env);
+    const base = envFor(env0, 'live'), env = Object.assign(Object.create(base), base, { __tick: new Map() }), hb = book(env); sbWho = 'cron';
     const mm = new Date(ev.scheduledTime || Date.now()).getUTCMinutes(), ten = mm % 10 < 5, quarter = mm % 15 < 5, jobs = [];
     const go = (p) => { const q = p.catch(() => null); jobs.push(q); ctx.waitUntil(q); };
     if (env.TV_KEY) go(Promise.all(['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max'].map((r) => fetch(FB_BASE + env.TV_KEY + '/' + r + '/msgAck.json').then((x) => x.json()).then((k) => hb.ackNote(r, k)).catch(() => null))));   /* every OK, kept per message */
@@ -2710,7 +2714,7 @@ const HANDLER = {
   },
   async fetch(req, env0, ctx) { try { return await HANDLER.fetch0(req, env0, ctx); } finally { ctx.waitUntil(sbFlush(rawEnv(env0)).catch(() => null)); } },
   async fetch0(req, env0, ctx) {
-    const u = new URL(req.url);
+    const u = new URL(req.url); sbWho = u.pathname.slice(0, 24);
     const env = envFor(env0, 'live');   /* default for anything not tied to a hold/order: live once the live key is in */
     try {
       if (req.method === 'OPTIONS') return J({});
