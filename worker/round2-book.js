@@ -625,7 +625,7 @@ export class HoldBook extends DurableObject {
   /* any pending hold overlapping s–e (plus cleaning buffer) on these rooms? */
   clash(date, units, s, e, ignore = '') {
     const now = Date.now();
-    return this.rows(`SELECT ref, unit, s, e FROM holds WHERE date = ? AND status = 'pending' AND exp > ? AND ref != ?`, date, now, ignore)
+    return this.rows(`SELECT ref, unit, s, e FROM holds WHERE date = ? AND ((status = 'pending' AND exp > ?) OR (status = 'booking' AND created > ?)) AND ref != ?`, date, now, now - 3 * 3600e3, ignore)   /* 'booking': being put into SimplyBook right now (review 5 Nov) */
       .some((h) => units.includes(h.unit) && s < h.e + BUF && h.s < e + BUF);
   }
   /* atomic: drop this guest's earlier unpaid holds, then hold the slot if nobody else has it */
@@ -637,14 +637,14 @@ export class HoldBook extends DurableObject {
     this.arm();
     return { ok: true, released };
   }
-  list(date) { return this.rows(`SELECT unit, s, e FROM holds WHERE date = ? AND status = 'pending' AND exp > ?`, date, Date.now()); }
+  list(date) { return this.rows(`SELECT unit, s, e FROM holds WHERE date = ? AND ((status = 'pending' AND exp > ?) OR (status = 'booking' AND created > ?))`, date, Date.now(), Date.now() - 3 * 3600e3); }
   setPr(ref, pr) { this.sql.exec(`UPDATE holds SET pr = ? WHERE ref = ?`, pr, ref); }
   /* this guest's unpaid holds (same phone or email) – let go before they pick again */
   pendingFor(phone, email) { return this.rows(`SELECT ref, pr, data FROM holds WHERE status = 'pending' AND (phone = ? OR email = ?)`, phone, email); }
   /* SimplyBook hold notes still up although their hold is over (paid, released, expired) – the 10-min sweep removes them */
   holdNotesDue() {
     return this.rows(`SELECT ref, status, exp, data FROM holds WHERE created > ? AND json_extract(data, '$.holdNotes') IS NOT NULL AND json_extract(data, '$.holdNotesDone') IS NULL`, Date.now() - 3 * 86400e3)
-      .map((r) => ({ ...r, data: JSON.parse(r.data || '{}') })).filter((r) => r.status !== 'pending' || r.exp <= Date.now()).map((r) => ({ ref: r.ref, ids: r.data.holdNotes, status: r.status }));
+      .map((r) => ({ ...r, data: JSON.parse(r.data || '{}') })).filter((r) => r.status !== 'pending' && r.status !== 'booking').map((r) => ({ ref: r.ref, ids: r.data.holdNotes, status: r.status }));   /* pending: its own timer lifts them (review 5 Nov) */
   }
   /* add fields to a hold's data (the SimplyBook contact made before payment) */
   patch(ref, obj) { const h = this.get(ref); if (!h) return; Object.assign(h.data, obj); this.sql.exec(`UPDATE holds SET data = ? WHERE ref = ?`, JSON.stringify(h.data), ref); }
@@ -767,9 +767,9 @@ export class HoldBook extends DurableObject {
          still "going through" then, or HitPay not answering, lets the time go; if money does arrive later, the webhook or the
          5-minute sweep books it (time still free) or flags a refund (needs a human). Only a PAID hold is kept, for the sweep. */
       const capped = Date.now() - (+d.created || 0) >= HOLD_SEC * 1000 + HOLD_CAP_EXTRA;
-      if (pp.paid || (!capped && (pp.inflight || pp.open || (pp.err && !pp.none)))) { this.sql.exec(`UPDATE holds SET exp = ? WHERE ref = ?`, pp.paid ? Date.now() + 5 * 60e3 : Math.min(pp.open && !pp.inflight ? pp.open + 30e3 : Date.now() + 60e3, (+d.created || 0) + HOLD_SEC * 1000 + HOLD_CAP_EXTRA), d.ref); continue; }   /* page still payable: hold until it closes */ } catch (e) {}
+      if (pp.paid || (!capped && (pp.inflight || pp.open || (pp.err && !pp.none)))) { this.sql.exec(`UPDATE holds SET exp = ? WHERE ref = ? AND status = 'pending'`, pp.paid ? Date.now() + 5 * 60e3 : Math.min(pp.open && !pp.inflight ? pp.open + 30e3 : Date.now() + 60e3, (+d.created || 0) + HOLD_SEC * 1000 + HOLD_CAP_EXTRA), d.ref); continue; }   /* page still payable: hold until it closes */ } catch (e) {}
       try { const hd = JSON.parse(d.data || '{}'); if (hd.holdNotes && !hd.holdNotesDone) { await holdNotesDel(this.env, hd.holdNotes); this.patch(d.ref, { holdNotesDone: Date.now() }); } } catch (e) {}
-      this.sql.exec(`UPDATE holds SET status = 'released', data = json_set(COALESCE(data, '{}'), '$.relWhy', 'timeout') WHERE ref = ?`, d.ref); }   /* payment page kept (see safeRelease) */
+      this.sql.exec(`UPDATE holds SET status = 'released', data = json_set(COALESCE(data, '{}'), '$.relWhy', 'timeout') WHERE ref = ? AND status = 'pending'`, d.ref); }   /* only if still unpaid: the webhook may have claimed it while HitPay was asked (review 5 Nov) */   /* payment page kept (see safeRelease) */
     this.sql.exec(`DELETE FROM holds WHERE status = 'released' AND created < ?`, Date.now() - 7 * 86400e3);
     try { await this.qRun(); } catch (e) {}
     try { await this.bqRun(); } catch (e) {}
@@ -897,7 +897,7 @@ async function checkout(env0, b, origin) {
     });
   } catch (err) { await hb.release(ref, 'error'); await holdNotesClear(env, ref).catch(() => null); throw err; }
   await hb.setPr(ref, pr.id);
-  return { ref, url: pr.url, total: q.total, room: q.room, date: q.date, time: q.time, end: q.end, holdUntil: Date.now() + HOLD_SEC * 1000, test: pay === 'test' || undefined };
+  return { ref, url: pr.url, total: q.total, room: q.room, date: q.date, time: q.time, end: q.end, holdUntil: Date.now() + HOLD_SEC * 1000, now: Date.now(), test: pay === 'test' || undefined };
 }
 
 /* the email typos guests make most (owner, 3 Nov: Denzel typed gmail.con, SimplyBook refused the contact, he paid and got
@@ -998,10 +998,17 @@ async function safeRelease(env, ref, why) {
 /* every 5 minutes: holds from the last 6 hours that were released or are still waiting – paid at HitPay? book them now */
 async function paidSweep(env) {
   const hb = book(env), out = [];
-  const rows = await hb.rows(`SELECT ref FROM holds WHERE created > ? AND (status = 'released' OR (status = 'pending' AND created < ?)) AND pr != '' ORDER BY created DESC LIMIT 25`, Date.now() - 6 * 3600e3, Date.now() - 3 * 60e3);
+  const rows = await hb.rows(`SELECT ref FROM holds WHERE created > ? AND (status = 'released' OR (status = 'pending' AND created < ?)) AND pr != '' AND json_extract(data, '$.hpFinal') IS NULL ORDER BY created DESC LIMIT 40`, Date.now() - 6 * 3600e3, Date.now() - 3 * 60e3);
+  /* a booking cut off half-way (page closed mid-booking): never rebooked by itself – a human looks (review 5 Nov) */
+  for (const r of await hb.rows(`SELECT ref FROM holds WHERE status = 'booking' AND created > ? AND created < ? AND json_extract(data, '$.stuckAlert') IS NULL`, Date.now() - 86400e3, Date.now() - 10 * 60e3)) {
+    await hb.patch(r.ref, { stuckAlert: Date.now() });
+    await humanAlert(env, r.ref, '⚠️ Online booking stuck half-way', 'Paid online, but putting it into SimplyBook stopped half-way over 10 minutes ago. Check SimplyBook for ref ' + r.ref + ' and book it by hand if it is not there.').catch(() => null);
+  }
   for (const r of rows) {
     const h = await hb.get(r.ref); if (!h) continue;
     const p = await hpPaid(env, h);
+    /* HitPay has closed the page for good and nothing was paid: stop asking about it (keeps the sweep short on busy nights) */
+    if (!p.paid && !p.inflight && !p.err && /^(expired|canceled|cancelled)$/i.test(String(p.status || '')) && !(p.payments || []).length && Date.now() - h.created > 20 * 60e3) { await hb.patch(r.ref, { hpFinal: p.status }); continue; }
     if (p.paid) { const f = await finalize(env, r.ref, 'sweep').catch((e) => ({ ok: false, err: String(e.message || e) })); out.push({ ref: r.ref, booked: !!f.ok, err: f.err || null }); }
   }
   if (out.length) await hb.kvSet('paidSweepLast', { t: Date.now(), out });
@@ -2779,10 +2786,10 @@ const HANDLER = {
             /* PayNow can take a while to confirm at HitPay: keep checking for ~2 minutes before giving the time up */
             const n = Math.max(0, Math.min(99, +u.searchParams.get('n') || 0));
             if (h.status === 'pending' && n < 40) return H(PAGE(`<h1>Checking your payment…</h1><p>PayNow can take a few seconds to confirm. This page checks again by itself – please keep it open and <b>don’t pay again</b>.</p><meta http-equiv="refresh" content="3;url=/done?ref=${ref}&n=${n + 1}">`));
-            const r = h.status === 'pending' ? await safeRelease(env, ref, 'payback') : { released: true };
+            const r = h.status === 'pending' ? await safeRelease(env, ref, 'payback') : h.status === 'released' && pp.err && !pp.none ? { unknown: true } : { released: true };
             if (r.unknown && pp.inflight) return H(PAGE(`<h1>Your payment is going through…</h1><p>The bank is still confirming it. This page checks again by itself – please keep it open and <b>don’t pay again</b>. Ref <b>${esc(ref)}</b>.</p><meta http-equiv="refresh" content="5;url=/done?ref=${ref}&n=${n + 1}">`));
             if (r.unknown) return H(PAGE(`<h1>Checking your payment…</h1><p>We can’t reach the payment service right now. If you paid, you’re covered – we’ll confirm by email or WhatsApp. Please <b>don’t pay again</b>. Ref <b>${esc(ref)}</b>.</p><meta http-equiv="refresh" content="10;url=/done?ref=${ref}&n=${n + 1}">`));
-            if (!r.paid) return Response.redirect((h.data.ret || u.origin + '/test') + '?released=1', 302);
+            if (!r.paid && r.released) return Response.redirect((h.data.ret || u.origin + '/test') + '?released=1', 302);   /* paid/booking in the meantime → on to the booking below (review 5 Nov) */
           }
         }
         const f = await finalize(env, ref, 'redirect');

@@ -592,16 +592,21 @@ h3.nm, .nm { color: var(--rc); }
     $('hPay').href = j.url; $('hPay').textContent = 'PAY ' + money(j.total);
     if (EMBED) $('hPay').setAttribute('target', '_blank');
     step('hold');
+    var off = j.now ? j.now - Date.now() : 0;
     clearInterval(timer);
     timer = setInterval(function () {
-      var s = Math.max(0, Math.round((j.holdUntil - Date.now()) / 1000));
+      var s = Math.max(0, Math.round((j.holdUntil - (Date.now() + off)) / 1000));   /* the engine's clock, not the phone's (review 5 Nov) */
       $('hCd').textContent = Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2);
       if (!s) release('Your 10 minutes ran out, so the slot was released. Pick a time again.', 'timeout');
     }, 500);
   }
   function release(msg, why) {   /* why: the engine notes it for Booking page stats (owner, 5 Nov) */
     var ref = ss.get('r2.ref'), went = ss.get('r2.went'); if (ref) count(went ? 'board_left_pay' : 'board_let_go'); ss.set('r2.ref', null); ss.set('r2.went', null); clearInterval(timer);
-    if (ref) post('/release', { ref: ref, why: why || (went ? 'payback' : 'cancel') }).catch(function () {});
+    if (ref) post('/release', { ref: ref, why: why || (went ? 'payback' : 'cancel') }).then(function (r) {
+      /* the engine asks HitPay first: a payment that went through (or is going through) is never "released" (review 5 Nov) */
+      if (r && r.paid) banner(r.booked ? 'Your payment went through – you’re booked. Check your email for the confirmation.' : 'Your payment went through – we’re confirming your booking now. Please don’t pay again.', true);
+      else if (r && (r.unknown || r.status === 'paid' || r.status === 'booking')) banner('We’re still checking your payment – please don’t pay again. If it went through, you’re booked and we’ll email you.', true);
+    }).catch(function () {});
     if (msg) banner(msg);
     if (!$('modal').hidden) closeBook();
     at('board'); load(day, true); show(day);
