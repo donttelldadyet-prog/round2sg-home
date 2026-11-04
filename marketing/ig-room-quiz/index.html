@@ -54,7 +54,7 @@ body.render .blink{animation:none}
 .rk .l{font-size:18px;color:var(--mute)}
 .rk .l b{display:inline-block;margin-left:12px;padding:10px 14px;background:var(--c);color:var(--cink);font-weight:400}
 .rk .tier{font-size:15px;color:var(--c)}
-.screen{position:relative;margin-top:28px;height:540px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
+.screen{position:relative;margin-top:28px;height:500px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
   background:radial-gradient(80% 90% at 50% 100%,color-mix(in srgb,var(--c) 26%,transparent),transparent 70%),#0b0914}
 .sprite{display:grid}
 .screen{overflow:hidden}
@@ -62,12 +62,14 @@ body.render .blink{animation:none}
 .screen .sprite{position:relative;z-index:1}
 .screen .ptag{position:absolute;left:16px;top:16px;z-index:3;padding:8px 10px;background:rgba(6,5,10,.72);font-size:13px;color:var(--soft)}
 .sprite i{display:block}
-.you{margin-top:46px;font-size:18px;color:var(--c)}
+.you{margin-top:36px;font-size:18px;color:var(--c)}
 .nm{margin:14px 0 0;font-weight:700;font-size:150px;line-height:.86;text-transform:uppercase;letter-spacing:-.01em;
   text-shadow:7px 7px 0 color-mix(in srgb,var(--c) 55%,transparent)}
 .nm.long{font-size:116px}
 .type{margin-top:22px;font-size:44px;font-weight:700;color:var(--c);text-transform:uppercase}
-.copy{margin-top:18px;font-size:32px;line-height:1.36;color:var(--soft)}
+.traits{margin:18px 0 0;padding:0;list-style:none;display:grid;gap:10px}
+.traits li{position:relative;padding-left:34px;font-size:30px;line-height:1.25;color:var(--soft)}
+.traits li::before{content:'▶';position:absolute;left:0;top:7px;font-size:18px;color:var(--c)}
 .spec{margin-top:auto;padding-top:20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;font-size:13px;color:var(--mute)}
 
 /* end */
@@ -89,18 +91,18 @@ body.render .blink{animation:none}
 /* ============================ EDIT HERE ============================ */
 // One option per room. Rooms, colours and specs come from the live site. Kaeden is left out while it's under renovation.
 const QUIZ = [
-  { k:'A', room:'Vale',        night:'Starting trouble, then ordering dessert',     type:'The Playful Rebel',
-    copy:'You start the chaos and still remember everyone’s birthday. Bauhaus pink and grey, warm light, soft at heart.', sprite:'bauhaus' },
-  { k:'B', room:'Scarlett',    night:'Lights off, stars on, deep talks till 2am',   type:'The Stargazer',
-    copy:'You’re the 2am deep-talk friend. A dark cosmic room, starlight projections and moody vibes only.', sprite:'moon' },
-  { k:'C', room:'Kai',         night:'Phone on silent, nowhere to be',              type:'The Calm One',
-    copy:'Nothing rattles you. Bonsai, stone and soft neutrals for a quiet, peaceful escape from everything.', sprite:'bonsai' },
-  { k:'D', room:'Bella',       night:'A candle, an old book, a little chaos',       type:'The Mischief Maker',
-    copy:'Sweet on the surface, plotting underneath. Mystic lore, vintage books and candlelit shadows.', sprite:'candle' },
-  { k:'E', room:'Atlas',       night:'Planning a trip to Greece you’ll never take', type:'The Dreamer',
-    copy:'Graceful, clever and always half in a daydream. Greek-inspired details, warm whites, timeless accents.', sprite:'column' },
-  { k:'F', room:'Maximillion', night:'Racing everyone to the last slice',           type:'The Speed Demon',
-    copy:'You turn everything into a race. Our biggest screen, home theatre sound and a racing sim to settle it.', sprite:'flag' },
+  { k:'A', room:'Vale',        night:'Unbothered face, loudest in the group chat', type:'The cold-girl extrovert',
+    traits:['Looks unapproachable, talks to everyone','Starts the karaoke and the drama','Secretly cries at Pixar movies'], sprite:'bauhaus' },
+  { k:'B', room:'Scarlett',    night:'Most awake at 2am',                         type:'The night-owl overthinker',
+    traits:['Sends songs instead of saying how she feels','Deep talks only after midnight','Believes in the stars, a little'], sprite:'moon' },
+  { k:'C', room:'Kai',         night:'Leaves first, sleeps best',                 type:'The calm introvert',
+    traits:['Replies “all good” and actually means it','Everyone’s unpaid therapist','Owns more plants than friends'], sprite:'bonsai' },
+  { k:'D', room:'Bella',       night:'Looks innocent, planned everything',        type:'The sweet-looking menace',
+    traits:['Started the whole plan, takes no blame','Reads tarot “for fun”, takes it seriously','Romanticises rainy days and old books'], sprite:'candle' },
+  { k:'E', room:'Atlas',       night:'Romanticises literally everything',         type:'The main-character dreamer',
+    traits:['Has a Pinterest board for a life not lived yet','Falls for people in one conversation','Takes 200 photos, posts none'], sprite:'column' },
+  { k:'F', room:'Maximillion', night:'Turns everything into a competition',       type:'The sore winner',
+    traits:['Turns Monopoly into a blood sport','Says “one more round” at 3am','Never admits a loss, asks for a rematch'], sprite:'flag' },
 ];
 /* =================================================================== */
 
@@ -157,7 +159,7 @@ function cover(){
     <div class="cv-k px"><span>Round2 quiz</span><span>6 rooms · 1 you</span></div>
     <h1 class="cv-t">Which room<br><span>are you?</span></h1>
     <div class="grid">${tiles}</div>
-    <div class="cv-f px"><span>Pick fast. No overthinking.</span><b>Swipe to reveal <span class="blink">▶</span></b></div>`, 'right:-380px;top:-300px');
+    <div class="cv-f px"><span>Pick the one that’s SO you.</span><b>Swipe to reveal <span class="blink">▶</span></b></div>`, 'right:-380px;top:-300px');
 }
 function card(q, i){
   const r = ROOMS[q.room];
@@ -167,7 +169,7 @@ function card(q, i){
     <div class="you px">You are</div>
     <h2 class="nm${q.room.length > 7 ? ' long' : ''}">${esc(q.room)}</h2>
     <div class="type">${esc(q.type)}</div>
-    <div class="copy">${esc(q.copy)}</div>
+    <ul class="traits">${q.traits.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
     <div class="spec px"><span>${esc(r.spec)}</span><span>${esc(STREAM[r.tier])}</span></div>`,
     i % 2 ? 'right:-360px;top:60px' : 'left:-360px;top:60px');
 }
