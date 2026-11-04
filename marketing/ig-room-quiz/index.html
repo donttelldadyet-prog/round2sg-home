@@ -57,8 +57,6 @@ body.render .blink{animation:none}
 .hero::after{content:"";position:absolute;inset:0;
   background:linear-gradient(180deg,rgba(6,5,10,.78) 0%,rgba(6,5,10,0) 24%,rgba(6,5,10,0) 50%,rgba(6,5,10,.7) 80%,rgba(6,5,10,.9) 100%),
              linear-gradient(90deg,color-mix(in srgb,var(--c) 28%,transparent),transparent 45%)}
-.big{position:absolute;right:84px;top:176px;z-index:2;font-family:'Press Start 2P',monospace;font-size:150px;line-height:1;
-  color:transparent;-webkit-text-stroke:3px color-mix(in srgb,var(--c) 85%,white);opacity:.9;text-shadow:0 0 50px color-mix(in srgb,var(--c) 60%,transparent)}
 .slide .glow.card{opacity:.16}
 .pick{margin-top:34px;align-self:flex-start;display:flex;align-items:center;gap:12px;padding:10px 14px 10px 12px;background:rgba(6,5,10,.72);font-size:15px;color:var(--soft)}
 .pick b{display:inline-block;padding:8px 11px;background:var(--c);color:var(--cink);font-weight:400}
@@ -75,6 +73,14 @@ body.render .blink{animation:none}
 .perk .n{font-size:15px;color:var(--c);flex:none}
 .perk .t{font-size:29px;font-weight:600;line-height:1.2;color:var(--ink)}
 .spec{margin-top:22px;display:flex;justify-content:space-between;font-size:13px;color:var(--mute)}
+.hud{position:absolute;right:84px;top:478px;z-index:7;width:390px;padding:20px 22px 18px;background:rgba(6,5,10,.8);border:1px solid var(--line);border-top:4px solid var(--c);backdrop-filter:blur(6px)}
+.hud .h{display:flex;justify-content:space-between;font-size:12px;color:var(--mute)}
+.hud .h b{font-weight:400;color:var(--c)}
+.stat{margin-top:16px}
+.stat .lb{display:flex;justify-content:space-between;font-size:13px;color:var(--soft)}
+.stat .bar{margin-top:9px;display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.stat .bar i{height:16px;background:rgba(244,241,251,.12)}
+.stat .bar i.on{background:var(--c);box-shadow:0 0 10px color-mix(in srgb,var(--c) 60%,transparent)}
 /* end */
 .en-k{margin-top:70px;font-size:24px;color:var(--accent)}
 .en-t{margin:30px 0 0;font-weight:700;font-size:128px;line-height:.92;text-transform:uppercase}
@@ -99,17 +105,17 @@ body.render .blink{animation:none}
 // One option per room. Rooms, colours and specs come from the live site. Kaeden is left out while it's under renovation.
 const QUIZ = [
   { k:'A', room:'Vale',        night:'Unbothered face, loudest in the group chat', type:'The cold-girl extrovert',
-    traits:['Looks unapproachable, talks to everyone','Starts the karaoke and the drama','Secretly cries at Pixar movies'], sprite:'bauhaus' },
+    traits:['Looks unapproachable, talks to everyone','Starts the karaoke and the drama','Secretly cries at Pixar movies'], stats:[['Social',9],['Chaos',8],['Soft side',7]], sprite:'bauhaus' },
   { k:'B', room:'Scarlett',    night:'Most awake at 2am',                         type:'The night-owl overthinker',
-    traits:['Sends songs instead of saying how she feels','Deep talks only after midnight','Believes in the stars, a little'], sprite:'moon' },
+    traits:['Sends songs instead of saying how she feels','Deep talks only after midnight','Believes in the stars, a little'], stats:[['Night owl',10],['Overthinking',9],['Mystery',8]], sprite:'moon' },
   { k:'C', room:'Kai',         night:'Leaves first, sleeps best',                 type:'The calm introvert',
-    traits:['Replies “all good” and actually means it','Everyone’s unpaid therapist','Owns more plants than friends'], sprite:'bonsai' },
+    traits:['Replies “all good” and actually means it','Everyone’s unpaid therapist','Owns more plants than friends'], stats:[['Chill',10],['Patience',9],['Social battery',3]], sprite:'bonsai' },
   { k:'D', room:'Bella',       night:'Looks innocent, planned everything',        type:'The sweet-looking menace',
-    traits:['Started the whole plan, takes no blame','Reads tarot “for fun”, takes it seriously','Romanticises rainy days and old books'], sprite:'candle' },
+    traits:['Started the whole plan, takes no blame','Reads tarot “for fun”, takes it seriously','Romanticises rainy days and old books'], stats:[['Mischief',9],['Mystery',8],['Alibi',10]], sprite:'candle' },
   { k:'E', room:'Atlas',       night:'Romanticises literally everything',         type:'The main-character dreamer',
-    traits:['Has a Pinterest board for a life not lived yet','Falls for people in one conversation','Takes 200 photos, posts none'], sprite:'column' },
+    traits:['Has a Pinterest board for a life not lived yet','Falls for people in one conversation','Takes 200 photos, posts none'], stats:[['Daydreaming',10],['Romance',9],['Posting',1]], sprite:'column' },
   { k:'F', room:'Maximillion', night:'Turns everything into a competition',       type:'The sore winner',
-    traits:['Turns Monopoly into a blood sport','Says “one more round” at 3am','Never admits a loss, asks for a rematch'], sprite:'flag' },
+    traits:['Turns Monopoly into a blood sport','Says “one more round” at 3am','Never admits a loss, asks for a rematch'], stats:[['Competitive',10],['Speed',9],['Losing well',1]], sprite:'flag' },
 ];
 /* =================================================================== */
 
@@ -171,7 +177,7 @@ function cover(){
 function card(q, i){
   const r = ROOMS[q.room];
   const bg = `<div class="hero">${sprite(q.sprite, r.c)}<img src="photos/${q.room.toLowerCase()}.jpg" alt="" onerror="this.remove()"></div>
-    <div class="big">${q.k}</div>`;
+    <div class="hud"><div class="h px"><span>Player stats</span><b>Lv. 99</b></div>${q.stats.map(([l, v]) => `<div class="stat"><div class="lb px"><span>${esc(l)}</span><span>${v}/10</span></div><div class="bar">${Array.from({length:10}, (_, j) => `<i class="${j < v ? 'on' : ''}"></i>`).join('')}</div></div>`).join('')}</div>`;
   return frame(r.c, r.ink, `${topBar('Player ' + (i+1) + '/' + QUIZ.length)}
     <div class="pick px">You picked<b>${q.k}</b><span class="tier">${esc(r.tier)}</span></div>
     <div class="you px">You are</div>
