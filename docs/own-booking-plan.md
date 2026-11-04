@@ -157,3 +157,8 @@ released, then paid on the kept payment page) → booked by the webhook. Test bo
 - 5 Nov sandbox test (card form filled, left open past the page's 10 minutes): HitPay's checkout page timed out by itself
   ("Checkout page timed out … complete payment within 5 minutes") – Pay couldn't be pressed; the request said "expired".
   An opened card form leaves a payment with status requires_payment_method: that is NOT "going through" (fixed in hpPaid).
+- 5 Nov (owner: sort "left before paying"): every let-go hold records why in data.relWhy – payback (went to HitPay,
+  came back unpaid, incl. /done giving up), cancel (Change / close before paying), timeout (10-minute timer, engine or
+  page), again (same guest picked again), gaveway (made way for their own paid booking), error (checkout failed),
+  left (old page / no reason sent). The page sends why with /release. Shown in control centre › Website › Booking page
+  (gm paytimes list.why, gm holdsday why). Holds from before 5 Nov ~5am have no reason. Sandbox-tested: cancel, payback.
