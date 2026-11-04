@@ -104,18 +104,24 @@ body.render .blink{animation:none}
 /* ============================ EDIT HERE ============================ */
 // One option per room. Rooms, colours and specs come from the live site. Kaeden is left out while it's under renovation.
 const QUIZ = [
-  { k:'A', room:'Vale',        night:'Unbothered face, loudest in the group chat', type:'The cold-girl extrovert',
-    traits:['Looks unapproachable, talks to everyone','Starts the karaoke and the drama','Secretly cries at Pixar movies'], stats:[['Social',9],['Chaos',8],['Soft side',7]], sprite:'bauhaus' },
-  { k:'B', room:'Scarlett',    night:'Most awake at 2am',                         type:'The night-owl overthinker',
-    traits:['Sends songs instead of saying how she feels','Deep talks only after midnight','Believes in the stars, a little'], stats:[['Night owl',10],['Overthinking',9],['Mystery',8]], sprite:'moon' },
-  { k:'C', room:'Kai',         night:'Leaves first, sleeps best',                 type:'The calm introvert',
-    traits:['Replies “all good” and actually means it','Everyone’s unpaid therapist','Owns more plants than friends'], stats:[['Chill',10],['Patience',9],['Social battery',3]], sprite:'bonsai' },
-  { k:'D', room:'Bella',       night:'Looks innocent, planned everything',        type:'The sweet-looking menace',
-    traits:['Started the whole plan, takes no blame','Reads tarot “for fun”, takes it seriously','Romanticises rainy days and old books'], stats:[['Mischief',9],['Mystery',8],['Alibi',10]], sprite:'candle' },
-  { k:'E', room:'Atlas',       night:'Romanticises literally everything',         type:'The main-character dreamer',
-    traits:['Has a Pinterest board for a life not lived yet','Falls for people in one conversation','Takes 200 photos, posts none'], stats:[['Daydreaming',10],['Romance',9],['Posting',1]], sprite:'column' },
-  { k:'F', room:'Maximillion', night:'Turns everything into a competition',       type:'The sore winner',
-    traits:['Turns Monopoly into a blood sport','Says “one more round” at 3am','Never admits a loss, asks for a rematch'], stats:[['Competitive',10],['Speed',9],['Losing well',1]], sprite:'flag' },
+  { k:'A', room:'Vale',        night:'Look fierce, actually damn friendly',        type:'The cold-girl extrovert',
+    traits:['Look unapproachable, chat with Grab uncle whole way','First one to ask “eh, karaoke anot?”','Cry at Pixar movies, then deny'],
+    stats:[['Social',9],['Drama',8],['Paiseh',2]], sprite:'bauhaus' },
+  { k:'B', room:'Scarlett',    night:'2am still awake, overthinking one text',     type:'The 2am overthinker',
+    traits:['Reply “ok” then overthink for 3 hours','Supper at 1am, deep talk at 3am','Send a Spotify song instead of saying feelings'],
+    stats:[['Night owl',10],['Overthinking',9],['Supper cravings',8]], sprite:'moon' },
+  { k:'C', room:'Kai',         night:'Weekend plan: stay home. Can.',              type:'The “can, no problem” introvert',
+    traits:['Reply “can” to everything, and mean it','Free therapist for the whole friend group','Social battery die after one dinner'],
+    stats:[['Chill',10],['Patience',9],['Social battery',3]], sprite:'bonsai' },
+  { k:'D', room:'Bella',       night:'Look innocent, actually the mastermind',     type:'The innocent-face mastermind',
+    traits:['Plan the whole chaos, then “eh not me leh”','Read tarot “for fun”, but very serious','Rainy day = book, kopi, don’t disturb'],
+    stats:[['Mischief',9],['Mystery',8],['Alibi',10]], sprite:'candle' },
+  { k:'E', room:'Atlas',       night:'Main character, even at the hawker centre', type:'The main-character dreamer',
+    traits:['Plan Santorini trip every month, never book','Take 200 photos at Haji Lane, post none','Crush on someone after one bus stop chat'],
+    stats:[['Daydreaming',10],['Romance',9],['Posting',1]], sprite:'column' },
+  { k:'F', room:'Maximillion', night:'Lose Monopoly also cannot accept one',      type:'The kiasu competitor',
+    traits:['Play Monopoly like his life depends on it','“One more round lah” at 3am','Lose already, still say “best of 3”'],
+    stats:[['Kiasu',10],['Speed',9],['Losing well',1]], sprite:'flag' },
 ];
 /* =================================================================== */
 
@@ -172,7 +178,7 @@ function cover(){
     <div class="cv-k px"><span>Round2 quiz</span><span>6 rooms · 1 you</span></div>
     <h1 class="cv-t">Which room<br><span>are you?</span></h1>
     <div class="grid">${tiles}</div>
-    <div class="cv-f px"><span>Pick the one that’s SO you.</span><b>Swipe to reveal <span class="blink">▶</span></b></div>`, 'right:-380px;top:-300px');
+    <div class="cv-f px"><span>Don’t think so much lah</span><b>Swipe to see <span class="blink">▶</span></b></div>`, 'right:-380px;top:-300px');
 }
 function card(q, i){
   const r = ROOMS[q.room];
@@ -192,9 +198,9 @@ function end(){
     <img src="photos/${q.room.toLowerCase()}.jpg" alt="" onerror="this.remove()"><span class="k px">${q.k}</span>
     <span class="r px">${esc(q.room === 'Maximillion' ? 'Max' : q.room)}</span></div>`; }).join('');
   return frame('#F2C21B','#0b0914', `${topBar('Your move')}
-    <div class="en-k px">Player 2, press start <span class="blink">_</span></div>
-    <h2 class="en-t">Drop your<br><em>letter.</em></h2>
-    <div class="en-s">Comment A–F below, then tag the friend who is so obviously a Bella.</div>
+    <div class="en-k px">Player 2, your turn ah <span class="blink">_</span></div>
+    <h2 class="en-t">Drop your<br><em>letter lah.</em></h2>
+    <div class="en-s">Comment A–F, then tag the friend who confirm plus chop is a Bella.</div>
     <div class="chips">${chips}</div>
     <div class="cta"><div><div class="b px">Play your room</div><div class="a" style="margin-top:12px">Book at round2.sg</div></div><div class="a">▶</div></div>
     <div class="foot px"><span>Private movie &amp; game rooms</span><span>Haji Lane</span></div>`, 'left:-260px;bottom:-420px');
