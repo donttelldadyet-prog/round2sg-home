@@ -361,6 +361,7 @@ export class HoldBook extends DurableObject {
       if (now - r.at > 10 * 60e3) { this.sql.exec(`UPDATE autoq SET sent = 2 WHERE key = ? AND kind = ?`, r.key, r.kind); continue; }   /* far too late (engine asleep): skip */
       const base = FB_BASE + env.TV_KEY + '/' + r.room;
       const [c, k] = await Promise.all([fetch(base + '/msg.json').then((x) => x.json()).catch(() => null), fetch(base + '/msgAck.json').then((x) => x.json()).catch(() => null)]);
+      this.ackNote(r.room, k);
       /* never push a guest's message off the TV before they've pressed OK: wait, checked every minute */
       if (c && /^g/.test(String(c.id || '')) && c.ack !== false && +c.until > now && +c.at <= now + 60e3 && !(k && k.id === c.id)) { this.sql.exec(`UPDATE autoq SET at = ? WHERE key = ? AND kind = ?`, now + 60e3, r.key, r.kind); continue; }
       const T = R2_TXT[r.kind], m = { id: 'A' + r.kind[0] + now.toString(36), kind: r.kind, title: T.title, text: T.text, from: 'The Round2 team', to: '', ack: true, at: now,
@@ -376,6 +377,14 @@ export class HoldBook extends DurableObject {
   sbAdd(n) { this.qInit(); const k = 'sbn:' + new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10); this.kvSet(k, (this.kvGet(k) || 0) + n); }
   kvGet(k) { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = ?`, k)[0]; return r ? JSON.parse(r.v) : null; }
   kvSet(k, v) { this.qInit(); this.sql.exec(`INSERT OR REPLACE INTO kv VALUES (?, ?)`, k, JSON.stringify(v)); }
+  /* every OK a TV reports, kept per message (owner, 4 Nov): each TV only holds its LATEST OK (/msgAck), so a later OK
+     made the control centre show an earlier message as "ended without OK" (Niv's birthday message, OK'd 7:28pm) */
+  ackNote(room, k) {
+    if (!k || !k.id || !k.t) return;
+    const m = this.kvGet('acks') || {}; if (m[k.id] && m[k.id].t === k.t) return;
+    m[k.id] = { t: k.t, room }; const ids = Object.keys(m); if (ids.length > 400) ids.sort((a, b) => m[a].t - m[b].t).slice(0, ids.length - 400).forEach((x) => delete m[x]);
+    this.kvSet('acks', m);
+  }
   pushCount() { this.pushInit(); return this.rows(`SELECT COUNT(*) AS n FROM push`)[0].n; }
   gmGet(code) { this.gmInit(); const r = this.rows(`SELECT * FROM gm WHERE code = ?`, code)[0]; return r ? { link: r.link ? JSON.parse(r.link) : null, err: r.err, exp: r.exp, edits: r.edits } : null; }
   gmPut(code, link, err, ttl) {
@@ -787,6 +796,7 @@ export class HoldBook extends DurableObject {
           continue;
         }
       }
+      if (env.TV_KEY) this.ackNote(m.room, await fetch(FB_BASE + env.TV_KEY + '/' + m.room + '/msgAck.json').then((r) => r.json()).catch(() => null));   /* keep the last OK before a new message can replace it */
       const t = await call({ action: 'push', staff: env.GM_STAFF, code: m.code });
       let pj = null; try { pj = JSON.parse(t); } catch (e) {}
       if (pj && pj.retry) { this.sql.exec(`UPDATE gmq SET at = ? WHERE code = ?`, pj.retry + 60e3, m.code); continue; }   /* an earlier message is still on the TV: go right after it */
@@ -1779,6 +1789,11 @@ async function gm(env, req) {
     }
     return gmJ({ error: 'do=bens|ben|send|get' });
   }
+  if (act === 'acks') {   /* staff: every OK the TVs reported, per message id ({ id: { t, room } }) */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    if (f.add && /^[A-Za-z0-9_-]{4,40}$/.test(f.add) && +f.t > 0) await hb.ackNote(String(f.room || ''), { id: f.add, t: +f.t });   /* fill in one from a TV's log */
+    return gmJ({ ok: true, acks: (await hb.kvGet('acks')) || {} });
+  }
   if (act === 'tvlog') {   /* staff (4 Nov): ask an LG for its helper log (ask=1 sends the request; it arrives within ~20 s), then read it */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     const room = String(f.room || '').toLowerCase(); if (!['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max'].includes(room) || !env.TV_KEY) return gmJ({ error: 'Pick a room.' });
@@ -2535,6 +2550,7 @@ const HANDLER = {
     const base = envFor(env0, 'live'), env = Object.assign(Object.create(base), base, { __tick: new Map() }), hb = book(env);
     const mm = new Date(ev.scheduledTime || Date.now()).getUTCMinutes(), ten = mm % 10 < 5, quarter = mm % 15 < 5, jobs = [];
     const go = (p) => { const q = p.catch(() => null); jobs.push(q); ctx.waitUntil(q); };
+    if (env.TV_KEY) go(Promise.all(['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max'].map((r) => fetch(FB_BASE + env.TV_KEY + '/' + r + '/msgAck.json').then((x) => x.json()).then((k) => hb.ackNote(r, k)).catch(() => null))));   /* every OK, kept per message */
     go((async () => { const prev = await hb.kvGet('cronLast'); await hb.kvSet('cronPrev', prev || 0); await hb.kvSet('cronLast', Date.now()); })());
     /* the reminder only needs the 10-min ticks plus :15 and :45 (bookings start on the quarter hour) */
     if (ten || quarter) go(soonRun(env));
