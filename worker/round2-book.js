@@ -1779,6 +1779,13 @@ async function gm(env, req) {
     }
     return gmJ({ error: 'do=bens|ben|send|get' });
   }
+  if (act === 'tvlog') {   /* staff (4 Nov): ask an LG for its helper log (ask=1 sends the request; it arrives within ~20 s), then read it */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const room = String(f.room || '').toLowerCase(); if (!['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max'].includes(room) || !env.TV_KEY) return gmJ({ error: 'Pick a room.' });
+    const base = FB_BASE + env.TV_KEY + '/' + room, now = Date.now();
+    if (f.ask === '1') { const ok = await fetch(base + '/cmd.json', { method: 'PUT', body: JSON.stringify({ id: 'l' + now.toString(36), do: 'log', at: now }) }).then((r) => r.ok).catch(() => false); return gmJ({ ok, asked: now }); }
+    return gmJ({ ok: true, diag: await fetch(base + '/diag.json').then((r) => r.json()).catch(() => null) });
+  }
   if (act === 'tvmsgs') {   /* staff, read-only (4 Nov): each room's message on the TV, when it first showed, and the last OK */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     if (!env.TV_KEY) return gmJ({ error: 'no TV key' });
