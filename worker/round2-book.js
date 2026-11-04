@@ -623,9 +623,6 @@ export class HoldBook extends DurableObject {
   /* atomic: drop this guest's earlier unpaid holds, then hold the slot if nobody else has it */
   hold(h) {
     const released = [];
-    for (const o of this.rows(`SELECT ref, pr FROM holds WHERE status = 'pending' AND (phone = ? OR email = ?)`, h.phone, h.email)) {
-      this.sql.exec(`UPDATE holds SET status = 'released' WHERE ref = ?`, o.ref); released.push(o.pr);
-    }
     if (this.clash(h.date, h.units, h.s, h.e)) return { ok: false, released };
     this.sql.exec(`INSERT INTO holds VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, h.ref, h.date, h.unit, h.s, h.e, Date.now() + HOLD_SEC * 1000,
       '', h.phone, h.email, 'pending', JSON.stringify(h.data), Date.now());
@@ -753,7 +750,10 @@ export class HoldBook extends DurableObject {
   async alarm() { try { await this.alarm0(); } finally { if (sbCalls) { this.sbAdd(sbCalls); sbCalls = 0; } } }
   async alarm0() {
     const due = this.rows(`SELECT ref, pr, data FROM holds WHERE status = 'pending' AND exp <= ?`, Date.now());
-    for (const d of due) { try { const hd = JSON.parse(d.data || '{}'); if (hd.holdNotes && !hd.holdNotesDone) { await holdNotesDel(this.env, hd.holdNotes); this.patch(d.ref, { holdNotesDone: Date.now() }); } } catch (e) {}
+    for (const d of due) {
+      /* paid at HitPay but nobody has booked it yet (webhook late, guest closed the page): keep it – the sweep books it */
+      try { const hd0 = JSON.parse(d.data || '{}'); const pp = await hpPaid(this.env, { pr: d.pr, data: hd0 }); if (pp.paid || pp.inflight || (pp.err && !pp.none)) { this.sql.exec(`UPDATE holds SET exp = ? WHERE ref = ?`, Date.now() + 5 * 60e3, d.ref); continue; } } catch (e) {}
+      try { const hd = JSON.parse(d.data || '{}'); if (hd.holdNotes && !hd.holdNotesDone) { await holdNotesDel(this.env, hd.holdNotes); this.patch(d.ref, { holdNotesDone: Date.now() }); } } catch (e) {}
       this.sql.exec(`UPDATE holds SET status = 'released' WHERE ref = ?`, d.ref); let pay = ''; try { pay = JSON.parse(d.data || '{}').pay; } catch (e) {} await cancelLink(envFor(this.env, pay), d.pr); }
     this.sql.exec(`DELETE FROM holds WHERE status = 'released' AND created < ?`, Date.now() - 7 * 86400e3);
     try { await this.qRun(); } catch (e) {}
@@ -845,8 +845,10 @@ async function checkout(env0, b, origin) {
     if (!msg.title || !msg.text) throw new Error('Add a headline and a message for the TV, or untick the celebration');
   }
   const hb0 = book(env);
-  for (const o of await hb0.pendingFor(phone.slice(-8), email)) {   /* the same guest picking again: their old hold (and its block) goes first */
-    await hb0.release(o.ref); await cancelAny(env, o.pr).catch(() => null); await holdNotesClear(env, o.ref).catch(() => null);
+  for (const o of await hb0.pendingFor(phone.slice(-8), email)) {   /* the same guest picking again: their old hold (and its block) goes first – unless it's paid */
+    const r = await safeRelease(env, o.ref, 'again');
+    if (r.paid) throw new Error('Your earlier payment went through' + (r.booked ? ' and you’re booked – check your email for the confirmation.' : '. We’re confirming that booking now – please don’t pay again; we’ll WhatsApp you.'));
+    if (r.unknown) throw new Error('We’re still checking your earlier payment. Please wait a minute before trying again – don’t pay twice.');
   }
   const p = await pub(env);
   const s = mins(q.time), e = s + q.hours * 60;
@@ -942,6 +944,46 @@ async function holdNotesClear(env, ref) {
   const hb = book(env), h = await hb.get(ref); if (!h || !h.data.holdNotes || h.data.holdNotesDone) return;
   await holdNotesDel(env, h.data.holdNotes); await hb.patch(ref, { holdNotesDone: Date.now() });
 }
+/* ---------- HitPay is the truth (5 Nov, Malia paid by PayNow at 2:24am; our page asked HitPay a moment too early, was told
+   "not paid yet", released her hold and sent her back – the money arrived, the booking didn't). Rules since then:
+   a hold is never released without asking HitPay first; a paid hold is always booked, whichever path finds it
+   (redirect, webhook, back button, the same guest picking again, the 10-minute timer, or the 5-minute sweep). ---------- */
+async function hpPaid(env, h) {
+  if (!h || !h.pr) return { paid: false, none: true };
+  let pr = null;
+  try { pr = await hitpay(envFor(env, h.data && h.data.pay), 'GET', '/payment-requests/' + h.pr); }
+  catch (e) { const m = String(e.message || e).slice(0, 160); return /HitPay 404/.test(m) ? { paid: false, gone: true, err: m, none: true } : { paid: false, err: m }; }   /* 404 = that payment page was deleted */
+  const want = Math.round(+(((h.data || {}).q || {}).total || 0) * 100);
+  const good = (x) => /^(succeeded|completed|paid)$/i.test(String(x.status || '')) && (!want || Math.round(+x.amount * 100) === want);
+  const pays = pr.payments || [];
+  /* a payment still going through (not failed or cancelled): not paid YET – never release it (we used to delete the payment
+     page here, and once it's deleted HitPay can't even tell us about the money any more: Malia, 5 Nov) */
+  const inflight = !pays.some(good) && pays.some((x) => !/fail|cancel|void|refund|expire/i.test(String(x.status || '')));
+  return { paid: pr.status === 'completed' || pays.some(good), inflight, status: pr.status, payments: pays.map((x) => ({ id: x.id, status: x.status, amount: x.amount })) };
+}
+/* release a pending hold only if HitPay says it isn't paid; a paid one is booked instead */
+async function safeRelease(env, ref, why) {
+  const hb = book(env), h = await hb.get(ref);
+  if (!h || h.status !== 'pending') return { released: false, status: h && h.status };
+  const p = await hpPaid(env, h);
+  if (p.paid) { const f = await finalize(env, ref, 'paid-' + why); return { released: false, paid: true, booked: !!f.ok }; }
+  if ((p.err && !p.none) || p.inflight) return { released: false, unknown: true };   /* HitPay didn't answer, or a payment is going through: keep the hold */
+  const r = await hb.release(ref);
+  if (r) { await cancelLink(envFor(env, h.data.pay), r.pr); await holdNotesClear(env, ref).catch(() => null); }
+  return { released: !!r };
+}
+/* every 5 minutes: holds from the last 6 hours that were released or are still waiting – paid at HitPay? book them now */
+async function paidSweep(env) {
+  const hb = book(env), out = [];
+  const rows = await hb.rows(`SELECT ref FROM holds WHERE created > ? AND (status = 'released' OR (status = 'pending' AND created < ?)) AND pr != '' ORDER BY created DESC LIMIT 25`, Date.now() - 6 * 3600e3, Date.now() - 3 * 60e3);
+  for (const r of rows) {
+    const h = await hb.get(r.ref); if (!h) continue;
+    const p = await hpPaid(env, h);
+    if (p.paid) { const f = await finalize(env, r.ref, 'sweep').catch((e) => ({ ok: false, err: String(e.message || e) })); out.push({ ref: r.ref, booked: !!f.ok, err: f.err || null }); }
+  }
+  if (out.length) await hb.kvSet('paidSweepLast', { t: Date.now(), out });
+  return out;
+}
 async function holdSweep(env) {
   const hb = book(env), due = await hb.holdNotesDue(), out = [];
   for (const r of due) { try { await holdNotesDel(env, r.ids); await hb.patch(r.ref, { holdNotesDone: Date.now() }); out.push(r.ref); } catch (e) {} }
@@ -975,7 +1017,15 @@ async function finalize(env, ref, source) {
   const d = h.data, q = d.q;
   let result;
   try {
-    if (h.status === 'released' && !(await isFree(env, q, ref))) throw new Error('slot was released and re-taken – refund needed');
+    if (h.status === 'released' && !(await isFree(env, q, ref))) {
+      /* the same guest picked again after paying (Malia, 5 Nov): their newer UNPAID hold gives way to the paid one */
+      for (const o of await hb.pendingFor(String(h.phone || ''), String(h.email || ''))) {
+        if (o.ref === ref) continue;
+        const oh = await hb.get(o.ref); if (!oh || (await hpPaid(env, oh)).paid) continue;
+        if (await hb.release(o.ref)) { await cancelAny(env, o.pr).catch(() => null); await holdNotesClear(env, o.ref).catch(() => null); }
+      }
+      if (!(await isFree(env, q, ref))) throw new Error('slot was released and re-taken – refund needed');
+    }
     if (env.DRY_RUN === '1') {
       await holdNotesClear(env, ref).catch(() => null);
       result = { dryRun: true, would: ['book', q.eventId, q.unit, 'client(' + d.email + ')', q.date, q.time + ':00', '(end + 15 min cleaning)', 0, { [PAX_FIELD]: String(d.pax) }] };
@@ -1839,6 +1889,19 @@ async function gm(env, req) {
     const r = await finalize(e2, ref, 'testbench');
     return gmJ({ ok: r.ok, err: r.err || null, pending: !!r.pending, done: r.h && r.h.done });
   }
+  if (act === 'forcebook') {   /* OWNER only, after checking HitPay himself: book a paid online hold whose payment page is gone (Malia, 5 Nov) */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const ref = String(f.ref || '').replace(/[^A-Z0-9]/g, ''), h = await hb.get(ref); if (!h) return gmJ({ error: 'No such ref.' });
+    if (h.status === 'paid' || h.status === 'booking') return gmJ({ error: 'Already ' + h.status + '.' });
+    await hb.patch(ref, { forcedBy: String(f.by || 'staff').slice(0, 40), forcedAt: Date.now() });
+    const r = await finalize(env, ref, 'staff-confirmed');
+    return gmJ({ ok: !!r.ok, err: r.err || null, done: r.h && r.h.done });
+  }
+  if (act === 'prinfo') {   /* staff, read-only: what HitPay says about an online hold's payment */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const h = await hb.get(String(f.ref || '').replace(/[^A-Z0-9]/g, '')); if (!h) return gmJ({ error: 'No such ref.' });
+    return gmJ({ ok: true, status: h.status, hp: await hpPaid(env, h), sweep: await hb.kvGet('paidSweepLast') });
+  }
   if (act === 'holdsday') {   /* staff, read-only (5 Nov): every online hold for one date or made in the last N hours, any status */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     const since = Date.now() - Math.min(72, +f.hours || 12) * 3600e3, rows = /^\d{4}-\d\d-\d\d$/.test(f.date || '') ? await hb.rows(`SELECT ref, date, unit, s, status, created, data FROM holds WHERE date = ? ORDER BY created DESC LIMIT 30`, f.date) : await hb.rows(`SELECT ref, date, unit, s, status, created, data FROM holds WHERE created > ? ORDER BY created DESC LIMIT 30`, since);
@@ -2559,6 +2622,7 @@ const HANDLER = {
     go((async () => { const prev = await hb.kvGet('cronLast'); await hb.kvSet('cronPrev', prev || 0); await hb.kvSet('cronLast', Date.now()); })());
     /* the reminder only needs the 10-min ticks plus :15 and :45 (bookings start on the quarter hour) */
     if (ten || quarter) go(soonRun(env));
+    go(paidSweep(env).catch(() => null));   /* paid at HitPay but not booked? book it (every 5 min) */
     /* a SimplyBook change a few minutes ago: Auto wrap-up looks again on the next 5-min tick (owner, 3 Nov: a quick fix was
        only picked up after a refresh); the 10-min ticks run it anyway */
     go((async () => { const ag = await hb.kvGet('autoAgain'); if (ag && Date.now() >= ag) { await hb.kvSet('autoAgain', 0); if (!ten) await autoRun(env, 'recheck'); } })());
@@ -2617,7 +2681,7 @@ const HANDLER = {
       if (u.pathname === '/quote' && req.method === 'POST') { const b = await req.json(); const q = await quote(env, b); q.free = await isFree(env, q); return J(q); }
       if (u.pathname === '/checkout' && req.method === 'POST') return J(await checkout(env, await req.json(), u.origin));
       if (u.pathname === '/agree' && req.method === 'POST') { const { ref } = await req.json(); return J({ ok: await book(env).agree(String(ref || '').replace(/[^A-Z0-9]/g, '')) }); }
-      if (u.pathname === '/release' && req.method === 'POST') { const { ref } = await req.json(); const hb = book(env), h0 = await hb.get(String(ref || '')); const r = await hb.release(String(ref || '')); if (r) { await cancelLink(envFor(env, h0 && h0.data.pay), r.pr); await holdNotesClear(env, String(ref || '')).catch(() => null); } return J({ released: !!r }); }
+      if (u.pathname === '/release' && req.method === 'POST') { const { ref } = await req.json(); const r = await safeRelease(env, String(ref || '').replace(/[^A-Z0-9]/g, ''), 'back'); return J(r); }
       if (u.pathname === '/hitpay' && req.method === 'POST') {
         const raw = await req.text(), sig = req.headers.get('Hitpay-Signature') || '';
         if ((await hmacHex(envFor(env, 'live').HITPAY_SALT, raw)) !== sig && (await hmacHex(envFor(env, 'test').HITPAY_SALT, raw)) !== sig) return J({ error: 'bad signature' }, 401);
@@ -2629,11 +2693,16 @@ const HANDLER = {
         const ref = (u.searchParams.get('ref') || '').replace(/[^A-Z0-9]/g, '');
         const h = await book(env).get(ref); if (!h) return H(PAGE('<h1>Booking not found</h1>'));
         if (h.status === 'cancelled') return H(PAGE('<h1>This booking was cancelled</h1><p>It’s no longer in our calendar. If that’s not right, message us on <a href="https://wa.me/6591625767">WhatsApp</a>.</p>'));
-        const henv = envFor(env, h.data.pay);
-        const pr = h.pr ? await hitpay(henv, 'GET', '/payment-requests/' + h.pr).catch(() => ({})) : {};
-        if (pr.status !== 'completed' && h.status !== 'paid' && h.status !== 'booking') {
-          const p2 = await book(env).release(ref); if (p2) { await cancelLink(henv, p2.pr); await holdNotesClear(env, ref).catch(() => null); }
-          return Response.redirect((h.data.ret || u.origin + '/test') + '?released=1', 302);
+        if (h.status !== 'paid' && h.status !== 'booking') {
+          const pp = await hpPaid(env, h);
+          if (!pp.paid) {
+            /* PayNow can take a while to confirm at HitPay: keep checking for ~2 minutes before giving the time up */
+            const n = Math.max(0, Math.min(99, +u.searchParams.get('n') || 0));
+            if (h.status === 'pending' && n < 40) return H(PAGE(`<h1>Checking your payment…</h1><p>PayNow can take a few seconds to confirm. This page checks again by itself – please keep it open and <b>don’t pay again</b>.</p><meta http-equiv="refresh" content="3;url=/done?ref=${ref}&n=${n + 1}">`));
+            const r = h.status === 'pending' ? await safeRelease(env, ref, 'done') : { released: true };
+            if (r.unknown) return H(PAGE(`<h1>Checking your payment…</h1><p>We can’t reach the payment service right now. If you paid, you’re covered – we’ll confirm by email or WhatsApp. Please <b>don’t pay again</b>. Ref <b>${esc(ref)}</b>.</p><meta http-equiv="refresh" content="10;url=/done?ref=${ref}&n=${n + 1}">`));
+            if (!r.paid) return Response.redirect((h.data.ret || u.origin + '/test') + '?released=1', 302);
+          }
         }
         const f = await finalize(env, ref, 'redirect');
         const q = f.h.q;
