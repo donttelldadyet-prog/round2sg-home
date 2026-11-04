@@ -652,10 +652,13 @@ export class HoldBook extends DurableObject {
   }
   get(ref) { const r = this.rows(`SELECT * FROM holds WHERE ref = ?`, ref)[0]; return r ? { ...r, data: JSON.parse(r.data || '{}') } : null; }
   /* guest came back without paying → free the slot now */
-  release(ref) {
+  /* why (owner, 5 Nov: sort "left before paying" in Booking page stats): payback = went to HitPay, came back unpaid ·
+     cancel = changed their mind before paying · timeout = 10 minutes ran out · again = picked another time ·
+     gaveway = made way for their own paid booking · error = checkout failed */
+  release(ref, why) {
     const r = this.rows(`SELECT pr FROM holds WHERE ref = ? AND status = 'pending'`, ref)[0];
     if (!r) return null;
-    this.sql.exec(`UPDATE holds SET status = 'released' WHERE ref = ?`, ref);
+    this.sql.exec(`UPDATE holds SET status = 'released', data = json_set(COALESCE(data, '{}'), '$.relWhy', ?) WHERE ref = ?`, String(why || 'left').slice(0, 12), ref);
     return { pr: r.pr };
   }
   /* payment confirmed → only the FIRST caller (webhook or redirect) gets true, so we never book twice */
@@ -762,7 +765,7 @@ export class HoldBook extends DurableObject {
       const capped = Date.now() - (+d.created || 0) >= HOLD_SEC * 1000 + HOLD_CAP_EXTRA;
       if (pp.paid || (!capped && (pp.inflight || pp.open || (pp.err && !pp.none)))) { this.sql.exec(`UPDATE holds SET exp = ? WHERE ref = ?`, pp.paid ? Date.now() + 5 * 60e3 : Math.min(pp.open && !pp.inflight ? pp.open + 30e3 : Date.now() + 60e3, (+d.created || 0) + HOLD_SEC * 1000 + HOLD_CAP_EXTRA), d.ref); continue; }   /* page still payable: hold until it closes */ } catch (e) {}
       try { const hd = JSON.parse(d.data || '{}'); if (hd.holdNotes && !hd.holdNotesDone) { await holdNotesDel(this.env, hd.holdNotes); this.patch(d.ref, { holdNotesDone: Date.now() }); } } catch (e) {}
-      this.sql.exec(`UPDATE holds SET status = 'released' WHERE ref = ?`, d.ref); }   /* payment page kept (see safeRelease) */
+      this.sql.exec(`UPDATE holds SET status = 'released', data = json_set(COALESCE(data, '{}'), '$.relWhy', 'timeout') WHERE ref = ?`, d.ref); }   /* payment page kept (see safeRelease) */
     this.sql.exec(`DELETE FROM holds WHERE status = 'released' AND created < ?`, Date.now() - 7 * 86400e3);
     try { await this.qRun(); } catch (e) {}
     try { await this.bqRun(); } catch (e) {}
@@ -871,7 +874,7 @@ async function checkout(env0, b, origin) {
      take these details, the guest is told now and pays nothing */
   if (env.DRY_RUN !== '1') {
     let c = null; const errs = []; try { c = await sbContact(await admin(env), name, email, phone, errs); } catch (e) { errs.push(String(e.message || e).slice(0, 140)); }
-    if (!c) { await hb.release(ref); console.log('[checkout] contact refused: ' + errs.join(' | ')); throw new Error('We couldn’t save your details for the booking – please check your name, email and mobile number. Still stuck? WhatsApp us on +65 9162 5767.'); }
+    if (!c) { await hb.release(ref, 'error'); console.log('[checkout] contact refused: ' + errs.join(' | ')); throw new Error('We couldn’t save your details for the booking – please check your name, email and mobile number. Still stuck? WhatsApp us on +65 9162 5767.'); }
     await hb.patch(ref, { cid: c.cid, cidLate: c.late });
     /* block the time in SimplyBook while they pay (if SimplyBook won't take the note, the hold on our page still stands) */
     const hn = await holdNotesMake(env, ref, q).catch((e) => { console.log('[checkout] hold note: ' + String(e.message || e).slice(0, 120)); return []; });
@@ -888,7 +891,7 @@ async function checkout(env0, b, origin) {
          can pay an old tab later; the timer keeps the time held until the page has closed (HitPay: SGT, tested in sandbox) */
       expiry_date: new Date(Date.now() + HOLD_SEC * 1000 + PAGE_GRACE + 8 * 3600e3).toISOString().slice(0, 19).replace('T', ' '),
     });
-  } catch (err) { await hb.release(ref); await holdNotesClear(env, ref).catch(() => null); throw err; }
+  } catch (err) { await hb.release(ref, 'error'); await holdNotesClear(env, ref).catch(() => null); throw err; }
   await hb.setPr(ref, pr.id);
   return { ref, url: pr.url, total: q.total, room: q.room, date: q.date, time: q.time, end: q.end, holdUntil: Date.now() + HOLD_SEC * 1000, test: pay === 'test' || undefined };
 }
@@ -982,7 +985,7 @@ async function safeRelease(env, ref, why) {
   const p = await hpPaid(env, h);
   if (p.paid) { const f = await finalize(env, ref, 'paid-' + why); return { released: false, paid: true, booked: !!f.ok }; }
   if ((p.err && !p.none) || p.inflight) return { released: false, unknown: true };   /* HitPay didn't answer, or a payment is going through: keep the hold */
-  const r = await hb.release(ref);
+  const r = await hb.release(ref, why);
   /* the payment page is NOT deleted any more: once deleted, HitPay can't tell us about money that arrives late (Malia).
      A late payment on a released hold is booked by the webhook or the sweep if the time is still free, else flagged for a refund. */
   if (r) await holdNotesClear(env, ref).catch(() => null);
@@ -1042,7 +1045,7 @@ async function finalize(env, ref, source) {
       for (const o of await hb.pendingFor(String(h.phone || ''), String(h.email || ''))) {
         if (o.ref === ref) continue;
         const oh = await hb.get(o.ref); if (!oh || (await hpPaid(env, oh)).paid) continue;
-        if (await hb.release(o.ref)) await holdNotesClear(env, o.ref).catch(() => null);
+        if (await hb.release(o.ref, 'gaveway')) await holdNotesClear(env, o.ref).catch(() => null);
       }
       if (!(await isFree(env, q, ref))) throw new Error('slot was released and re-taken – refund needed');
     }
@@ -1944,7 +1947,7 @@ async function gm(env, req) {
     for (const r of rows) { const d = JSON.parse(r.data || '{}'); if (d.pay !== 'live') continue;
       const q = d.q || {}, secs = r.status === 'paid' && d.done && d.done.at && !d.forcedAt ? Math.round((d.done.at - r.created) / 1000) : null;
       if (secs !== null) paid.push(secs); else other[d.forcedAt ? 'forced' : r.status] = (other[d.forcedAt ? 'forced' : r.status] || 0) + 1;
-      list.push({ t: r.created, st: d.forcedAt ? 'forced' : r.status, secs, room: q.room || '', date: q.date || '', time: q.time || '', hours: q.hours || 0, total: q.total || 0, eb: !!q.earlyBird }); }
+      list.push({ t: r.created, st: d.forcedAt ? 'forced' : r.status, why: r.status === 'released' ? d.relWhy || '' : '', secs, room: q.room || '', date: q.date || '', time: q.time || '', hours: q.hours || 0, total: q.total || 0, eb: !!q.earlyBird }); }
     paid.sort((x, y) => x - y);
     return gmJ({ ok: true, days, holdSec: HOLD_SEC, paidSecs: paid, others: other, list: list.slice(0, 400) });
   }
@@ -1964,7 +1967,7 @@ async function gm(env, req) {
   if (act === 'holdsday') {   /* staff, read-only (5 Nov): every online hold for one date or made in the last N hours, any status */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     const since = Date.now() - Math.min(72, +f.hours || 12) * 3600e3, rows = /^\d{4}-\d\d-\d\d$/.test(f.date || '') ? await hb.rows(`SELECT ref, date, unit, s, status, created, data FROM holds WHERE date = ? ORDER BY created DESC LIMIT 30`, f.date) : await hb.rows(`SELECT ref, date, unit, s, status, created, data FROM holds WHERE created > ? ORDER BY created DESC LIMIT 30`, since);
-    return gmJ({ ok: true, list: rows.map((r) => { const d = JSON.parse(r.data || '{}'); return { ref: r.ref, date: r.date, unit: r.unit, s: r.s, status: r.status, made: sgStr(r.created).slice(0, 16), pay: d.pay, name: d.name, room: d.q && d.q.room, time: d.q && d.q.time, hours: d.q && d.q.hours, total: d.q && d.q.total, done: d.done || null, pr: d.pr || r.pr || null }; }) });
+    return gmJ({ ok: true, list: rows.map((r) => { const d = JSON.parse(r.data || '{}'); return { ref: r.ref, date: r.date, unit: r.unit, s: r.s, status: r.status, why: d.relWhy || '', made: sgStr(r.created).slice(0, 16), pay: d.pay, name: d.name, room: d.q && d.q.room, time: d.q && d.q.time, hours: d.q && d.q.hours, total: d.q && d.q.total, done: d.done || null, pr: d.pr || r.pr || null }; }) });
   }
   if (act === 'sbdiag') {   /* staff: why SimplyBook refused a contact (3 Nov, Denzel) – recent online bookings, and (try=1) a real retry */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
@@ -2754,7 +2757,7 @@ const HANDLER = {
       if (u.pathname === '/quote' && req.method === 'POST') { const b = await req.json(); const q = await quote(env, b); q.free = await isFree(env, q); return J(q); }
       if (u.pathname === '/checkout' && req.method === 'POST') return J(await checkout(env, await req.json(), u.origin));
       if (u.pathname === '/agree' && req.method === 'POST') { const { ref } = await req.json(); return J({ ok: await book(env).agree(String(ref || '').replace(/[^A-Z0-9]/g, '')) }); }
-      if (u.pathname === '/release' && req.method === 'POST') { const { ref } = await req.json(); const r = await safeRelease(env, String(ref || '').replace(/[^A-Z0-9]/g, ''), 'back'); return J(r); }
+      if (u.pathname === '/release' && req.method === 'POST') { const { ref, why } = await req.json(); const r = await safeRelease(env, String(ref || '').replace(/[^A-Z0-9]/g, ''), ['payback', 'cancel', 'timeout'].includes(why) ? why : 'left'); return J(r); }
       if (u.pathname === '/hitpay' && req.method === 'POST') {
         const raw = await req.text(), sig = req.headers.get('Hitpay-Signature') || '';
         if ((await hmacHex(envFor(env, 'live').HITPAY_SALT, raw)) !== sig && (await hmacHex(envFor(env, 'test').HITPAY_SALT, raw)) !== sig) return J({ error: 'bad signature' }, 401);
@@ -2772,7 +2775,7 @@ const HANDLER = {
             /* PayNow can take a while to confirm at HitPay: keep checking for ~2 minutes before giving the time up */
             const n = Math.max(0, Math.min(99, +u.searchParams.get('n') || 0));
             if (h.status === 'pending' && n < 40) return H(PAGE(`<h1>Checking your payment…</h1><p>PayNow can take a few seconds to confirm. This page checks again by itself – please keep it open and <b>don’t pay again</b>.</p><meta http-equiv="refresh" content="3;url=/done?ref=${ref}&n=${n + 1}">`));
-            const r = h.status === 'pending' ? await safeRelease(env, ref, 'done') : { released: true };
+            const r = h.status === 'pending' ? await safeRelease(env, ref, 'payback') : { released: true };
             if (r.unknown && pp.inflight) return H(PAGE(`<h1>Your payment is going through…</h1><p>The bank is still confirming it. This page checks again by itself – please keep it open and <b>don’t pay again</b>. Ref <b>${esc(ref)}</b>.</p><meta http-equiv="refresh" content="5;url=/done?ref=${ref}&n=${n + 1}">`));
             if (r.unknown) return H(PAGE(`<h1>Checking your payment…</h1><p>We can’t reach the payment service right now. If you paid, you’re covered – we’ll confirm by email or WhatsApp. Please <b>don’t pay again</b>. Ref <b>${esc(ref)}</b>.</p><meta http-equiv="refresh" content="10;url=/done?ref=${ref}&n=${n + 1}">`));
             if (!r.paid) return Response.redirect((h.data.ret || u.origin + '/test') + '?released=1', 302);

@@ -596,12 +596,12 @@ h3.nm, .nm { color: var(--rc); }
     timer = setInterval(function () {
       var s = Math.max(0, Math.round((j.holdUntil - Date.now()) / 1000));
       $('hCd').textContent = Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2);
-      if (!s) release('Your 10 minutes ran out, so the slot was released. Pick a time again.');
+      if (!s) release('Your 10 minutes ran out, so the slot was released. Pick a time again.', 'timeout');
     }, 500);
   }
-  function release(msg) {
-    var ref = ss.get('r2.ref'); if (ref) count(ss.get('r2.went') ? 'board_left_pay' : 'board_let_go'); ss.set('r2.ref', null); ss.set('r2.went', null); clearInterval(timer);
-    if (ref) post('/release', { ref: ref }).catch(function () {});
+  function release(msg, why) {   /* why: the engine notes it for Booking page stats (owner, 5 Nov) */
+    var ref = ss.get('r2.ref'), went = ss.get('r2.went'); if (ref) count(went ? 'board_left_pay' : 'board_let_go'); ss.set('r2.ref', null); ss.set('r2.went', null); clearInterval(timer);
+    if (ref) post('/release', { ref: ref, why: why || (went ? 'payback' : 'cancel') }).catch(function () {});
     if (msg) banner(msg);
     if (!$('modal').hidden) closeBook();
     at('board'); load(day, true); show(day);
@@ -610,7 +610,7 @@ h3.nm, .nm { color: var(--rc); }
     if (EMBED) $('tNeed').hidden = false, $('tNeed').textContent = 'Payment opened in a new tab. Finish there and your confirmation shows up in that tab.'; });
   $('hChange').addEventListener('click', function () { release(''); });
   /* back button from HitPay (page restored) → free the slot straight away */
-  addEventListener('pageshow', function () { if (ss.get('r2.ref') && ss.get('r2.went')) release('You left the payment page, so we released the slot. Pick a time again.'); });
+  addEventListener('pageshow', function () { if (ss.get('r2.ref') && ss.get('r2.went')) release('You left the payment page, so we released the slot. Pick a time again.', 'payback'); });
   function banner(t, ok) { $('banner').hidden = !t; $('banner').textContent = t || ''; $('banner').className = 'banner' + (ok ? ' ok' : ''); }
   function closeBook() { $('modal').hidden = true; document.body.style.overflow = ''; at('board'); }
 
