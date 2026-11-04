@@ -105,10 +105,10 @@ body.render .blink{animation:none}
 // One option per room. Rooms, colours and specs come from the live site. Kaeden is left out while it's under renovation.
 const QUIZ = [
   { k:'A', room:'Vale',        night:'Looks fierce, actually super friendly',      type:'The cold-girl extrovert',
-    traits:['Looks unapproachable, chats with every Grab driver','First to suggest karaoke after dinner','Cries at Pixar movies, then denies it'],
+    traits:['Looks unapproachable, chats with every Grab driver','Keeps sending you random reels','Cries at Pixar movies, then denies it'],
     stats:[['Social',9],['Drama',8],['Shy',2]], sprite:'bauhaus' },
   { k:'B', room:'Scarlett',    night:'Still awake at 2am, overthinking one text',   type:'The 2am overthinker',
-    traits:['Replies “ok”, then overthinks for 3 hours','Supper at 1am, deep talks at 3am','Sends a song instead of saying how she feels'],
+    traits:['Replies “ok”, then overthinks for 3 hours','Supper at 1am, deep talks at 3am','Sends a Spotify link instead of saying how she feels'],
     stats:[['Night owl',10],['Overthinking',9],['Supper cravings',8]], sprite:'moon' },
   { k:'C', room:'Kai',         night:'Weekend plan: stay home and recharge',        type:'The calm introvert',
     traits:['Replies “can” to everything, and means it','The whole group’s free therapist','Social battery dies after one dinner'],
@@ -117,7 +117,7 @@ const QUIZ = [
     traits:['Plans the chaos, then acts surprised','Reads tarot “for fun”, takes it seriously','Rainy day plan: a book, kopi, no texts'],
     stats:[['Mischief',9],['Mystery',8],['Alibi',10]], sprite:'candle' },
   { k:'E', room:'Atlas',       night:'Main character, even at the hawker centre',   type:'The main-character dreamer',
-    traits:['Plans a Santorini trip monthly, never books','Takes 200 photos on Haji Lane, posts none','Gets a crush after one conversation'],
+    traits:['Plans an overseas trip, never books','Takes 200 photos, posts none','Gets a crush after one conversation'],
     stats:[['Daydreaming',10],['Romance',9],['Posting',1]], sprite:'column' },
   { k:'F', room:'Maximillion', night:'Can’t accept losing, even at Monopoly',      type:'The kiasu competitor',
     traits:['Plays Monopoly like his life depends on it','Says “one more round” at 3am','Loses, then asks for best of 3'],
@@ -177,8 +177,7 @@ function cover(){
   return frame('#F2C21B','#0b0914', `${topBar('Choose your player')}
     <div class="cv-k px"><span>Round2 quiz</span><span>6 rooms · 1 you</span></div>
     <h1 class="cv-t">Which room<br><span>are you?</span></h1>
-    <div class="grid">${tiles}</div>
-    <div class="cv-f px"><span>Pick fast, don’t overthink</span><b>Swipe to see <span class="blink">▶</span></b></div>`, 'right:-380px;top:-300px');
+    <div class="grid">${tiles}</div>`, 'right:-380px;top:-300px');
 }
 function card(q, i){
   const r = ROOMS[q.room];
@@ -189,8 +188,7 @@ function card(q, i){
     <div class="you px">You are</div>
     <h2 class="nm${q.room.length > 7 ? ' long' : ''}">${esc(q.room)}</h2>
     <div class="type"><span>${esc(q.type)}</span></div>
-    <div class="perks">${q.traits.map((t, j) => `<div class="perk"><span class="n px">0${j+1}</span><span class="t">${esc(t)}</span></div>`).join('')}</div>
-    <div class="spec px"><span>${esc(r.spec)}</span><span>${esc(STREAM[r.tier])}</span></div>`,
+    <div class="perks">${q.traits.map((t, j) => `<div class="perk"><span class="n px">0${j+1}</span><span class="t">${esc(t)}</span></div>`).join('')}</div>`,
     i % 2 ? 'right:-360px;bottom:-300px' : 'left:-360px;bottom:-300px', bg);
 }
 function end(){
@@ -202,8 +200,7 @@ function end(){
     <h2 class="en-t">Drop your<br><em>letter.</em></h2>
     <div class="en-s">Comment A–F, then tag the friend who’s definitely a Bella.</div>
     <div class="chips">${chips}</div>
-    <div class="cta"><div><div class="b px">Play your room</div><div class="a" style="margin-top:12px">Book at round2.sg</div></div><div class="a">▶</div></div>
-    <div class="foot px"><span>Private movie &amp; game rooms</span><span>Haji Lane</span></div>`, 'left:-260px;bottom:-420px');
+    <div class="cta"><div><div class="b px">Play your room</div><div class="a" style="margin-top:12px">Book at round2.sg</div></div><div class="a">▶</div></div>`, 'left:-260px;bottom:-420px');
 }
 document.getElementById('deck').innerHTML = [cover(), ...QUIZ.map(card), end()].join('');
 if (location.search.includes('render')) document.body.classList.add('render');
