@@ -1839,6 +1839,11 @@ async function gm(env, req) {
     const r = await finalize(e2, ref, 'testbench');
     return gmJ({ ok: r.ok, err: r.err || null, pending: !!r.pending, done: r.h && r.h.done });
   }
+  if (act === 'holdsday') {   /* staff, read-only (5 Nov): every online hold for one date or made in the last N hours, any status */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const since = Date.now() - Math.min(72, +f.hours || 12) * 3600e3, rows = /^\d{4}-\d\d-\d\d$/.test(f.date || '') ? await hb.rows(`SELECT ref, date, unit, s, status, created, data FROM holds WHERE date = ? ORDER BY created DESC LIMIT 30`, f.date) : await hb.rows(`SELECT ref, date, unit, s, status, created, data FROM holds WHERE created > ? ORDER BY created DESC LIMIT 30`, since);
+    return gmJ({ ok: true, list: rows.map((r) => { const d = JSON.parse(r.data || '{}'); return { ref: r.ref, date: r.date, unit: r.unit, s: r.s, status: r.status, made: sgStr(r.created).slice(0, 16), pay: d.pay, name: d.name, room: d.q && d.q.room, time: d.q && d.q.time, hours: d.q && d.q.hours, total: d.q && d.q.total, done: d.done || null, pr: d.pr || r.pr || null }; }) });
+  }
   if (act === 'sbdiag') {   /* staff: why SimplyBook refused a contact (3 Nov, Denzel) – recent online bookings, and (try=1) a real retry */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     const recent = (await hb.rows(`SELECT ref, date, status, created, data FROM holds WHERE status IN ('paid','booking') ORDER BY created DESC LIMIT 20`)).map((r) => {
