@@ -1779,6 +1779,17 @@ async function gm(env, req) {
     }
     return gmJ({ error: 'do=bens|ben|send|get' });
   }
+  if (act === 'tvmsgs') {   /* staff, read-only (4 Nov): each room's message on the TV, when it first showed, and the last OK */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    if (!env.TV_KEY) return gmJ({ error: 'no TV key' });
+    const out = {};
+    for (const r of ['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max']) {
+      const base = FB_BASE + env.TV_KEY + '/' + r, get = (n) => fetch(base + '/' + n + '.json').then((x) => x.json()).catch(() => null);
+      const [m, k, sh, h] = await Promise.all([get('msg'), get('msgAck'), get('msgShown'), get('helper')]);
+      out[r] = { msg: m && { id: m.id, kind: m.kind, title: m.title, at: m.at, until: m.until, ack: m.ack }, ack: k, shown: sh, tv: h && { tv: h.tv, v: h.v, t: h.t, front: h.front, pw: h.pw } };
+    }
+    return gmJ({ ok: true, rooms: out, now: Date.now() });
+  }
   if (act === 'holdproblems') {   /* staff: online bookings in the last N days (max 60) that were paid but not booked, used a fallback, or got stuck */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     const days = Math.max(1, Math.min(60, +f.days || 30));
