@@ -66,21 +66,29 @@ async function pub(env) {
 /* SimplyBook REST API v2 (calendar notes): token from /admin/auth, cached ~50 min */
 const SB2 = 'https://user-api-v2.simplybook.asia';
 let sb2tok = null;
+/* SimplyBook logins shared through the engine's own storage (overnight review 5 Nov: every 5-minute background run logged
+   in again – ~30% of all requests). If the store doesn't answer within 2 s, it just logs in as before. */
+async function tokGet(env, k) { try { const v = await Promise.race([book(env).kvGet(k), new Promise((r) => setTimeout(() => r(null), 2000))]); return v && v.t > Date.now() + 30e3 ? v : null; } catch (e) { return null; } }
+async function tokPut(env, k, v) { try { await book(env).kvSet(k, v); } catch (e) {} }
 async function sb2(env) {
+  if (!sb2tok || sb2tok.t < Date.now()) sb2tok = await tokGet(env, 'tokRest');
   if (!sb2tok || sb2tok.t < Date.now()) {
     sbHit('REST login'); const r = await fetch(SB2 + '/admin/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ company: env.SB_COMPANY, login: env.SB_USER, password: env.SB_PASS }) });
     const j = await r.json(); if (!j.token) throw new Error('SimplyBook REST login: ' + JSON.stringify(j).slice(0, 120));
-    sb2tok = { k: j.token, t: Date.now() + 50 * 60e3 };
+    sb2tok = { k: j.token, t: Date.now() + 50 * 60e3 }; await tokPut(env, 'tokRest', sb2tok);
   }
-  return async (method, path, body) => {
+  const go = async (method, path, body, again) => {
     sbHit(method + ' ' + path.split('?')[0].replace(/\/\d+/g, '/#')); const r = await fetch(SB2 + path, { method, headers: { 'Content-Type': 'application/json', 'X-Company-Login': env.SB_COMPANY, 'X-Token': sb2tok.k }, body: body ? JSON.stringify(body) : undefined });
+    if (r.status === 401 && !again) { sb2tok = { k: '', t: 0 }; await tokPut(env, 'tokRest', null); await sb2(env); return go(method, path, body, true); }   /* a shared login gone stale: log in once more */
     const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch (e) {}
     if (!r.ok) throw new Error('SimplyBook ' + method + ' ' + path.split('?')[0] + ' ' + r.status + ': ' + t.slice(0, 200));
     return j;
   };
+  return (method, path, body) => go(method, path, body);
 }
 async function admin(env, fresh) {
-  const get = async () => { admTok = { k: await rpc('/login/', 'getUserToken', [env.SB_COMPANY, env.SB_USER, env.SB_PASS]), t: Date.now() + 20 * 60e3 }; return admTok.k; };
+  const get = async () => { admTok = { k: await rpc('/login/', 'getUserToken', [env.SB_COMPANY, env.SB_USER, env.SB_PASS]), t: Date.now() + 20 * 60e3 }; await tokPut(env, 'tokAdm', admTok); return admTok.k; };
+  if (!fresh && !(admTok && admTok.t > Date.now())) admTok = (await tokGet(env, 'tokAdm')) || admTok;
   let tok = !fresh && admTok && admTok.t > Date.now() ? admTok.k : await get();
   const h = () => ({ 'X-Company-Login': env.SB_COMPANY, 'X-User-Token': tok });
   return async (m, p) => { try { return await rpc('/admin', m, p, h()); } catch (e) { if (!tokBad(e)) throw e; tok = await get(); return rpc('/admin', m, p, h()); } };
@@ -1802,6 +1810,9 @@ async function gm(env, req) {
   const f = Object.fromEntries(new URLSearchParams(await req.text()));
   const act = String(f.action || ''), who = req.headers.get('cf-connecting-ip') || 'x', hb = book(env); sbWho = 'gm ' + act.slice(0, 16);
   const guest = act === 'get' || act === 'submit';
+  /* wrong staff codes are counted for every staff action (overnight review 5 Nov: only some were). The right code is never
+     slowed down, so a phone with an old code can't lock anyone else out on the shop wifi. */
+  if (!guest && (!env.GM_STAFF || f.staff !== env.GM_STAFF) && !(await hb.gmRate('gmbad:' + who, 60))) return gmJ({ error: 'Too many wrong staff codes from here. Wait 10 minutes.' });
   if (act === 'queue') {   /* staff: what the timer will send, and the last send */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     if (f.sync) await gmList(env, hb);
