@@ -378,8 +378,8 @@ export class HoldBook extends DurableObject {
   kvGet(k) { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = ?`, k)[0]; return r ? JSON.parse(r.v) : null; }
   kvSet(k, v) { this.qInit(); this.sql.exec(`INSERT OR REPLACE INTO kv VALUES (?, ?)`, k, JSON.stringify(v)); }
   /* every phone alert, with what it was about (owner, 5 Nov: tapping an alert opens its own page in the control centre).
-     Kept 14 days, newest first, at most 400. */
-  alogAdd(e) { const L = (this.kvGet('alog') || []).filter((x) => x.t > Date.now() - 14 * 86400e3); L.unshift(e); this.kvSet('alog', L.slice(0, 400)); }
+     The control centre lists the last 24 hours; kept 3 days so a notification tapped late still opens. Newest first, at most 400. */
+  alogAdd(e) { const L = (this.kvGet('alog') || []).filter((x) => x.t > Date.now() - 3 * 86400e3); L.unshift(e); this.kvSet('alog', L.slice(0, 400)); }
   alogList() { return this.kvGet('alog') || []; }
   /* every OK a TV reports, kept per message (owner, 4 Nov): each TV only holds its LATEST OK (/msgAck), so a later OK
      made the control centre show an earlier message as "ended without OK" (Niv's birthday message, OK'd 7:28pm) */
@@ -1915,7 +1915,7 @@ async function gm(env, req) {
     const L = await hb.alogList(), H = (await hb.kvGet('human')) || [];
     const sortedOf = (x) => { const h = x.ctx && x.ctx.hid ? H.find((y) => y.id === x.ctx.hid) : null; return h ? (h.sorted || 0) : null; };
     if (f.id) {
-      const x = L.find((y) => y.id === f.id); if (!x) return gmJ({ error: 'That alert is older than 14 days or was cleared.' });
+      const x = L.find((y) => y.id === f.id); if (!x) return gmJ({ error: 'That alert is more than 3 days old, so its page has been cleared. The booking itself is in In session / the calendar.' });
       const c = x.ctx || {}; let hold = null;
       const ref = c.ref || (c.bid ? ((await hb.holdByBid(c.bid).catch(() => null)) || {}).ref : '');
       if (ref) { const h = await hb.get(ref).catch(() => null); if (h) hold = { ref, status: h.status, name: h.data.name, phone: h.data.phone, email: h.data.email, total: h.data.q && h.data.q.total, done: h.data.done || null, made: h.created, pay: h.data.pay, msg: h.data.msg ? { kind: h.data.msg.kind, title: h.data.msg.title } : null }; }
