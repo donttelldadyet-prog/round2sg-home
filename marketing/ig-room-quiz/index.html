@@ -49,36 +49,43 @@ body.render .blink{animation:none}
 .tile .p1{position:absolute;right:14px;top:14px;z-index:2;padding:9px 10px;font-size:13px;background:#06050a;color:var(--oc)}
 .cv-f{margin-top:22px;display:flex;justify-content:space-between;font-size:16px;color:var(--mute)}
 .cv-f b{font-weight:400;color:var(--accent)}
-/* room card */
-.rk{margin-top:52px;display:flex;justify-content:space-between;align-items:center}
-.rk .l{font-size:18px;color:var(--mute)}
-.rk .l b{display:inline-block;margin-left:12px;padding:10px 14px;background:var(--c);color:var(--cink);font-weight:400}
-.rk .tier{font-size:15px;color:var(--c)}
-.screen{position:relative;margin-top:28px;height:500px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
-  background:radial-gradient(80% 90% at 50% 100%,color-mix(in srgb,var(--c) 26%,transparent),transparent 70%),#0b0914}
-.sprite{display:grid}
-.screen{overflow:hidden}
-.screen .photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2}
-.screen .sprite{position:relative;z-index:1}
-.screen .ptag{position:absolute;left:16px;top:16px;z-index:3;padding:8px 10px;background:rgba(6,5,10,.72);font-size:13px;color:var(--soft)}
-.sprite i{display:block}
-.you{margin-top:36px;font-size:18px;color:var(--c)}
-.nm{margin:14px 0 0;font-weight:700;font-size:150px;line-height:.86;text-transform:uppercase;letter-spacing:-.01em;
-  text-shadow:7px 7px 0 color-mix(in srgb,var(--c) 55%,transparent)}
-.nm.long{font-size:116px}
-.type{margin-top:22px;font-size:44px;font-weight:700;color:var(--c);text-transform:uppercase}
-.traits{margin:18px 0 0;padding:0;list-style:none;display:grid;gap:10px}
-.traits li{position:relative;padding-left:34px;font-size:30px;line-height:1.25;color:var(--soft)}
-.traits li::before{content:'▶';position:absolute;left:0;top:7px;font-size:18px;color:var(--c)}
-.spec{margin-top:auto;padding-top:20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;font-size:13px;color:var(--mute)}
-
+/* room card – character profile */
+.hero{position:absolute;left:0;right:0;top:0;height:880px;overflow:hidden;z-index:1;background:#0b0914;
+  -webkit-mask-image:linear-gradient(180deg,#000 62%,transparent 100%);mask-image:linear-gradient(180deg,#000 62%,transparent 100%)}
+.hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(1.08)}
+.hero .sprite{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%)}
+.hero::after{content:"";position:absolute;inset:0;
+  background:linear-gradient(180deg,rgba(6,5,10,.78) 0%,rgba(6,5,10,0) 24%,rgba(6,5,10,0) 50%,rgba(6,5,10,.7) 80%,rgba(6,5,10,.9) 100%),
+             linear-gradient(90deg,color-mix(in srgb,var(--c) 28%,transparent),transparent 45%)}
+.big{position:absolute;right:84px;top:176px;z-index:2;font-family:'Press Start 2P',monospace;font-size:150px;line-height:1;
+  color:transparent;-webkit-text-stroke:3px color-mix(in srgb,var(--c) 85%,white);opacity:.9;text-shadow:0 0 50px color-mix(in srgb,var(--c) 60%,transparent)}
+.slide .glow.card{opacity:.16}
+.pick{margin-top:34px;align-self:flex-start;display:flex;align-items:center;gap:12px;padding:10px 14px 10px 12px;background:rgba(6,5,10,.72);font-size:15px;color:var(--soft)}
+.pick b{display:inline-block;padding:8px 11px;background:var(--c);color:var(--cink);font-weight:400}
+.pick .tier{color:var(--c)}
+.you{margin-top:auto;font-size:18px;color:var(--c);text-shadow:0 2px 12px #000}
+.nm{margin:12px 0 0;font-weight:700;font-size:170px;line-height:.84;text-transform:uppercase;letter-spacing:-.015em;
+  text-shadow:8px 8px 0 color-mix(in srgb,var(--c) 70%,transparent),0 10px 40px rgba(0,0,0,.6)}
+.nm.long{font-size:124px}
+.type{margin-top:22px;align-self:flex-start;padding:12px 20px 10px;font-size:40px;font-weight:700;line-height:1;text-transform:uppercase;
+  background:var(--c);color:var(--cink);transform:skewX(-8deg);box-shadow:8px 8px 0 rgba(0,0,0,.5)}
+.type span{display:inline-block;transform:skewX(8deg)}
+.perks{margin-top:26px;display:grid;gap:10px}
+.perk{display:flex;align-items:center;gap:20px;padding:16px 20px;background:rgba(14,11,23,.86);border:1px solid var(--line);border-left:6px solid var(--c)}
+.perk .n{font-size:15px;color:var(--c);flex:none}
+.perk .t{font-size:29px;font-weight:600;line-height:1.2;color:var(--ink)}
+.spec{margin-top:22px;display:flex;justify-content:space-between;font-size:13px;color:var(--mute)}
 /* end */
-.en-k{margin-top:120px;font-size:24px;color:var(--accent)}
+.en-k{margin-top:70px;font-size:24px;color:var(--accent)}
 .en-t{margin:30px 0 0;font-weight:700;font-size:128px;line-height:.92;text-transform:uppercase}
 .en-t em{font-style:normal;color:var(--accent)}
 .en-s{margin-top:34px;font-size:36px;line-height:1.35;color:var(--soft)}
-.chips{margin-top:44px;display:flex;gap:12px}
-.chips span{flex:1;height:84px;display:flex;align-items:center;justify-content:center;font-size:26px;background:var(--oc);color:var(--ok)}
+.chips{margin-top:40px;display:flex;gap:10px}
+.chip{position:relative;flex:1;height:340px;overflow:hidden;border-bottom:8px solid var(--oc);background:#0b0914}
+.chip img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.chip::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,5,10,0) 35%,rgba(6,5,10,.9))}
+.chip .k{position:absolute;left:50%;top:18px;transform:translateX(-50%);z-index:2;width:50px;height:50px;display:flex;align-items:center;justify-content:center;font-size:20px;background:var(--oc);color:var(--ok)}
+.chip .r{position:absolute;left:0;right:0;bottom:14px;z-index:2;text-align:center;font-size:10px;color:var(--ink)}
 .cta{margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding:34px 36px;background:var(--accent);color:#0b0914}
 .cta .a{font-weight:700;font-size:50px;text-transform:uppercase;line-height:1}
 .cta .b{font-size:16px}
@@ -145,8 +152,8 @@ function sprite(name, color, px=32){
     cells += `<i style="width:${px}px;height:${px}px;background:${k==='.'?'transparent':(s.pal[k]==='C'?color:s.pal[k])}"></i>`; }
   return `<div class="sprite" style="grid-template-columns:repeat(${w},${px}px)">${cells}</div>`;
 }
-const frame = (c, ink, inner, g='left:-300px;top:-260px') =>
-  `<section class="slide" style="--c:${c};--cink:${ink}"><div class="glow" style="${g}"></div><div class="frame"></div><div class="vign"></div><div class="scan"></div><div class="in">${inner}</div></section>`;
+const frame = (c, ink, inner, g='left:-300px;top:-260px', bg='') =>
+  `<section class="slide" style="--c:${c};--cink:${ink}">${bg}<div class="glow" style="${g}"></div><div class="frame"></div><div class="vign"></div><div class="scan"></div><div class="in">${inner}</div></section>`;
 const topBar = t => `<div class="top px"><img src="${LOGO}" alt="Round2"><div class="dash"></div><span>${esc(t)}</span></div>`;
 
 function cover(){
@@ -163,18 +170,21 @@ function cover(){
 }
 function card(q, i){
   const r = ROOMS[q.room];
+  const bg = `<div class="hero">${sprite(q.sprite, r.c)}<img src="photos/${q.room.toLowerCase()}.jpg" alt="" onerror="this.remove()"></div>
+    <div class="big">${q.k}</div>`;
   return frame(r.c, r.ink, `${topBar('Player ' + (i+1) + '/' + QUIZ.length)}
-    <div class="rk"><div class="l px">You picked<b>${q.k}</b></div><div class="tier px">${esc(r.tier)}</div></div>
-    <div class="screen">${sprite(q.sprite, r.c)}<img class="photo" src="photos/${q.room.toLowerCase()}.jpg" alt="" onerror="this.remove()"><span class="ptag px">${esc(q.room)} room</span></div>
+    <div class="pick px">You picked<b>${q.k}</b><span class="tier">${esc(r.tier)}</span></div>
     <div class="you px">You are</div>
     <h2 class="nm${q.room.length > 7 ? ' long' : ''}">${esc(q.room)}</h2>
-    <div class="type">${esc(q.type)}</div>
-    <ul class="traits">${q.traits.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
+    <div class="type"><span>${esc(q.type)}</span></div>
+    <div class="perks">${q.traits.map((t, j) => `<div class="perk"><span class="n px">0${j+1}</span><span class="t">${esc(t)}</span></div>`).join('')}</div>
     <div class="spec px"><span>${esc(r.spec)}</span><span>${esc(STREAM[r.tier])}</span></div>`,
-    i % 2 ? 'right:-360px;top:60px' : 'left:-360px;top:60px');
+    i % 2 ? 'right:-360px;bottom:-300px' : 'left:-360px;bottom:-300px', bg);
 }
 function end(){
-  const chips = QUIZ.map(q => { const r = ROOMS[q.room]; return `<span class="px" style="--oc:${r.c};--ok:${r.ink}">${q.k}</span>`; }).join('');
+  const chips = QUIZ.map(q => { const r = ROOMS[q.room]; return `<div class="chip" style="--oc:${r.c};--ok:${r.ink}">
+    <img src="photos/${q.room.toLowerCase()}.jpg" alt="" onerror="this.remove()"><span class="k px">${q.k}</span>
+    <span class="r px">${esc(q.room === 'Maximillion' ? 'Max' : q.room)}</span></div>`; }).join('');
   return frame('#F2C21B','#0b0914', `${topBar('Your move')}
     <div class="en-k px">Player 2, press start <span class="blink">_</span></div>
     <h2 class="en-t">Drop your<br><em>letter.</em></h2>
