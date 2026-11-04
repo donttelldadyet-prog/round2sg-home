@@ -68,21 +68,23 @@ body.render .blink{animation:none}
 .pk-head{margin-top:44px;display:flex;justify-content:space-between;align-items:center}
 .pk-num{font-size:18px;color:var(--c)}
 .badge{font-size:15px;padding:14px 16px;background:var(--c);color:var(--cink)}
-.screen{position:relative;margin-top:30px;height:440px;border:1px solid var(--line);
+.pk-body{margin-top:30px;display:flex;gap:36px;align-items:flex-start}
+.pk-text{flex:1;min-width:0;padding-top:6px}
+.screen{position:relative;flex:none;width:480px;height:720px;border:1px solid var(--line);
   background:radial-gradient(80% 90% at 50% 100%,color-mix(in srgb,var(--c) 26%,transparent),transparent 70%),#0b0914;
   display:flex;align-items:center;justify-content:center;overflow:hidden}
 .screen .fill{position:absolute;inset:-40px;width:calc(100% + 80px);height:calc(100% + 80px);object-fit:cover;filter:blur(28px) brightness(.55);z-index:1}
-.screen .art{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:2}
+.screen .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top;z-index:2}
 .screen .tag,.screen .rec{z-index:3;padding:8px 10px;background:rgba(6,5,10,.72)}
 .screen .tag{position:absolute;left:16px;top:16px;font-size:13px;color:var(--soft)}
 .screen .rec{position:absolute;right:16px;top:16px;font-size:13px;color:var(--c)}
 .screen .ph{position:absolute;left:0;right:0;bottom:18px;text-align:center;font-size:11px;color:var(--mute)}
 .sprite{display:grid;gap:0}
-.pk-title{margin:38px 0 0;font-weight:700;font-size:var(--ts,110px);line-height:.9;text-transform:uppercase;letter-spacing:-.01em;
+.pk-title{margin:0;font-weight:700;font-size:var(--ts,110px);line-height:.9;text-transform:uppercase;letter-spacing:-.01em;
   text-shadow:6px 6px 0 color-mix(in srgb,var(--c) 55%,transparent)}
-.pk-meta{margin-top:20px;font-size:15px;color:var(--mute)}
+.pk-meta{margin-top:24px;font-size:14px;line-height:2.1;color:var(--mute)}
 .pk-meta b{color:var(--ink);font-weight:400}
-.pk-why{margin-top:20px;font-size:31px;line-height:1.35;color:var(--soft);max-width:900px}
+.pk-why{margin-top:22px;padding-top:22px;border-top:1px solid var(--line);font-size:28px;line-height:1.38;color:var(--soft)}
 .room{margin-top:auto;position:relative;padding:24px 30px 22px;border:1px solid var(--line);border-left:10px solid var(--c);background:rgba(14,11,23,.86)}
 .room .l{font-size:15px;color:var(--c)}
 .room .nm{margin-top:12px;font-weight:700;font-size:58px;text-transform:uppercase;line-height:.95}
@@ -111,7 +113,7 @@ body.render .blink{animation:none}
 const ISSUE = {
   no: '01',
   dates: '6–19 Nov',
-  // poster: drop the official poster or key art (landscape fills the screen; portrait sits centred on a blurred fill) into posters/ with this file name. Missing → 8-bit placeholder.
+  // poster: drop the official poster or key art (portrait 2:3 fills the frame; anything else is cropped from the top centre) into posters/ with this file name. Missing → 8-bit placeholder.
   picks: [
     { title: 'You', service: 'Netflix', when: 'All 5 seasons', genre: 'Thriller series', year: '2018–2025',
       why: 'Bookstore manager Joe Goldberg (Penn Badgley) falls for a customer and will do anything, even kill, to make her his.',
@@ -192,15 +194,15 @@ function pick(p, i){
   const r = ROOMS[p.room], n = ISSUE.picks.length;
   const hbo = /hbo/i.test(p.service);
   const note = hbo ? 'HBO Max in all Deluxe &amp; VIP rooms' : `${esc(p.service)} in every room`;
-  const ts = p.title.length > 11 ? 96 : 116;
+  const ts = p.title.length > 8 ? 68 : 90;
   const art = p.poster ? `<img class="fill" src="${esc(p.poster)}" alt="" onerror="this.remove()"><img class="art" src="${esc(p.poster)}" alt="" onerror="this.remove()">` : '';
   return frame(r.c, r.ink, `${topBar('Round2 Picks')}
     <div class="pk-head"><div class="pk-num px">Pick ${i+1}/${n} · ${esc(p.when)}</div><div class="badge px">${esc(p.service)}</div></div>
-    <div class="screen">${sprite(p.sprite, r.c)}<div class="ph px">Poster · ${esc(p.poster || '')}</div>${art}
+    <div class="pk-body"><div class="screen">${sprite(p.sprite, r.c)}<div class="ph px">Poster · ${esc(p.poster || '')}</div>${art}
       <span class="tag px">${esc(p.genre)}</span><span class="rec px"><span class="blink">●</span> Play</span></div>
-    <h2 class="pk-title" style="--ts:${ts}px">${esc(p.title)}</h2>
-    <div class="pk-meta px"><b>${esc(p.year)}</b> · ${esc(p.genre)} · on <b>${esc(p.service)}</b></div>
-    <div class="pk-why">${esc(p.why)}</div>
+    <div class="pk-text"><h2 class="pk-title" style="--ts:${ts}px">${esc(p.title)}</h2>
+    <div class="pk-meta px"><b>${esc(p.year)}</b><br>${esc(p.genre)}<br>on <b>${esc(p.service)}</b></div>
+    <div class="pk-why">${esc(p.why)}</div></div></div>
     <div class="room">
       <div class="l px">▶ Best room to watch in</div>
       <div class="nm">${esc(p.room)}<small>${esc(r.tier)}</small></div>
