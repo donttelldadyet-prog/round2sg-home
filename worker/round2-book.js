@@ -22,7 +22,7 @@ const PRICES = {
   vip:     { off: { base: 109, ext: [36.30, 54.50, 65.40] }, peak: { base: 129, ext: [43, 64.50, 77.40] }, eb: { base: 35, ext: { off: [36.33, 72.67, 109], peak: [43, 86, 129] } } },
 };
 const PAX_FIELD = 'fb11a6d3f6a3baaf248df77785de850e';
-const BUF = 15, HOLD_SEC = 720, EB_START = 660, PAGE_GRACE = 0;   /* owner, 5 Nov: the guest's counter is 12 min, the block and the payment page follow it exactly */
+const BUF = 15, HOLD_SEC = 600, EB_START = 660, PAGE_GRACE = 0;   /* owner, 5 Nov: one number – the guest's 10-minute counter, the block and the payment page end together (real guests pay in ~50 s, slowest 2 min) */
 /* cleaning time is only needed before the NEXT booking: a session may run right up to closing (11:15pm),
    so the last start is 8:15pm, not 8pm */
 const CLOSE = 23 * 60 + 15;
@@ -876,7 +876,7 @@ async function checkout(env0, b, origin) {
       amount: q.total.toFixed(2), currency: 'SGD', name, email, phone,
       purpose: (pay === 'test' ? 'TEST · ' : '') + `Round2 ${q.room} · ${when} ${q.time}–${q.end} (${q.hours}h)`,
       reference_number: ref, redirect_url: `${PUBLIC_BOOK}/done?ref=${ref}`, webhook: `${origin}/booking/hitpay`,
-      /* the payment page closes itself when the guest's 12 minutes run out (owner, 5 Nov: "keep it airtight") – nobody
+      /* the payment page closes itself when the guest's 10 minutes run out (owner, 5 Nov: "keep it airtight") – nobody
          can pay an old tab later; the timer keeps the time held until the page has closed (HitPay: SGT, tested in sandbox) */
       expiry_date: new Date(Date.now() + HOLD_SEC * 1000 + PAGE_GRACE + 8 * 3600e3).toISOString().slice(0, 19).replace('T', ' '),
     });
@@ -1899,12 +1899,15 @@ async function gm(env, req) {
   }
   if (act === 'paytimes') {   /* staff, read-only (5 Nov): how long real guests took from pressing Pay to the booking, and how many walked away */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
-    const rows = await hb.rows(`SELECT status, created, data FROM holds WHERE created > ? ORDER BY created DESC LIMIT 2000`, Date.now() - 60 * 86400e3);
-    const paid = [], other = {};
+    const days = Math.max(1, Math.min(90, +f.days || 60));
+    const rows = await hb.rows(`SELECT status, created, data FROM holds WHERE created > ? ORDER BY created DESC LIMIT 3000`, Date.now() - days * 86400e3);
+    const paid = [], other = {}, list = [];
     for (const r of rows) { const d = JSON.parse(r.data || '{}'); if (d.pay !== 'live') continue;
-      if (r.status === 'paid' && d.done && d.done.at && !d.forcedAt) paid.push(Math.round((d.done.at - r.created) / 1000)); else other[r.status] = (other[r.status] || 0) + 1; }
+      const q = d.q || {}, secs = r.status === 'paid' && d.done && d.done.at && !d.forcedAt ? Math.round((d.done.at - r.created) / 1000) : null;
+      if (secs !== null) paid.push(secs); else other[d.forcedAt ? 'forced' : r.status] = (other[d.forcedAt ? 'forced' : r.status] || 0) + 1;
+      list.push({ t: r.created, st: d.forcedAt ? 'forced' : r.status, secs, room: q.room || '', date: q.date || '', time: q.time || '', hours: q.hours || 0, total: q.total || 0, eb: !!q.earlyBird }); }
     paid.sort((x, y) => x - y);
-    return gmJ({ ok: true, paidSecs: paid, others: other });
+    return gmJ({ ok: true, days, holdSec: HOLD_SEC, paidSecs: paid, others: other, list: list.slice(0, 400) });
   }
   if (act === 'forcebook') {   /* OWNER only, after checking HitPay himself: book a paid online hold whose payment page is gone (Malia, 5 Nov) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
