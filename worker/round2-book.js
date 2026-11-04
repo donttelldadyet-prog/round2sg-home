@@ -1783,7 +1783,7 @@ async function gm(env, req) {
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     const room = String(f.room || '').toLowerCase(); if (!['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max'].includes(room) || !env.TV_KEY) return gmJ({ error: 'Pick a room.' });
     const base = FB_BASE + env.TV_KEY + '/' + room, now = Date.now();
-    if (f.test) { const ok = await fetch(base + '/cmd.json', { method: 'PUT', body: JSON.stringify({ id: 't' + now.toString(36), do: 'alerttest', app: String(f.test).replace(/[^a-z.]/g, ''), raise: f.raise === '1' ? '1' : '', at: now }) }).then((r) => r.ok).catch(() => false); return gmJ({ ok, asked: now }); }   /* LG Netflix experiment (4 Nov) */
+    if (f.test) { const ok = await fetch(base + '/cmd.json', { method: 'PUT', body: JSON.stringify({ id: 't' + now.toString(36), do: 'alerttest', app: String(f.test).replace(/[^a-z0-9.]/g, ''), raise: f.raise === '1' ? '1' : '', at: now }) }).then((r) => r.ok).catch(() => false); return gmJ({ ok, asked: now }); }   /* LG Netflix experiment (4 Nov) */
     if (f.ask === '1') { const ok = await fetch(base + '/cmd.json', { method: 'PUT', body: JSON.stringify({ id: 'l' + now.toString(36), do: 'log', at: now }) }).then((r) => r.ok).catch(() => false); return gmJ({ ok, asked: now }); }
     return gmJ({ ok: true, diag: await fetch(base + '/diag.json').then((r) => r.json()).catch(() => null) });
   }
