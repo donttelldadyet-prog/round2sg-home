@@ -34,16 +34,21 @@ body.render .deck{padding:0;gap:0}
 .blink{animation:b 1.1s steps(2,start) infinite}@keyframes b{to{visibility:hidden}}
 body.render .blink{animation:none}
 
-/* cover */
-.cv-k{margin-top:64px;font-size:22px;color:var(--accent)}
-.cv-t{margin:26px 0 0;font-weight:700;font-size:132px;line-height:.9;text-transform:uppercase}
-.cv-t span{display:block;color:transparent;-webkit-text-stroke:3px var(--ink)}
-.cv-s{margin-top:28px;font-size:32px;line-height:1.35;color:var(--soft)}
-.opts{margin-top:auto;display:grid;gap:12px}
-.opt{display:flex;align-items:center;gap:22px;padding:18px 22px;border:1px solid var(--line);background:rgba(14,11,23,.78)}
-.opt .k{width:56px;height:56px;flex:none;display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--oc);color:var(--ok)}
-.opt .q{font-size:31px;font-weight:600;line-height:1.15}
-
+/* cover – character select */
+.cv-k{margin-top:46px;display:flex;justify-content:space-between;font-size:20px;color:var(--accent)}
+.cv-k span:last-child{color:var(--mute)}
+.cv-t{margin:20px 0 0;font-weight:700;font-size:112px;line-height:.9;text-transform:uppercase}
+.cv-t span{color:transparent;-webkit-text-stroke:3px var(--ink)}
+.grid{margin-top:34px;flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:repeat(3,1fr);gap:14px}
+.tile{position:relative;overflow:hidden;border:2px solid rgba(244,241,251,.16);background:#0b0914}
+.tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(1.1) brightness(.8)}
+.tile::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,5,10,.05) 25%,rgba(6,5,10,.92) 100%)}
+.tile .k{position:absolute;left:14px;top:14px;z-index:2;width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:22px;background:var(--oc);color:var(--ok)}
+.tile .q{position:absolute;left:18px;right:18px;bottom:16px;z-index:2;font-size:27px;font-weight:700;line-height:1.12}
+.tile.on{border:4px solid var(--oc);box-shadow:0 0 40px color-mix(in srgb,var(--oc) 60%,transparent)}
+.tile .p1{position:absolute;right:14px;top:14px;z-index:2;padding:9px 10px;font-size:13px;background:#06050a;color:var(--oc)}
+.cv-f{margin-top:22px;display:flex;justify-content:space-between;font-size:16px;color:var(--mute)}
+.cv-f b{font-weight:400;color:var(--accent)}
 /* room card */
 .rk{margin-top:52px;display:flex;justify-content:space-between;align-items:center}
 .rk .l{font-size:18px;color:var(--mute)}
@@ -143,13 +148,16 @@ const frame = (c, ink, inner, g='left:-300px;top:-260px') =>
 const topBar = t => `<div class="top px"><img src="${LOGO}" alt="Round2"><div class="dash"></div><span>${esc(t)}</span></div>`;
 
 function cover(){
-  const opts = QUIZ.map(q => { const r = ROOMS[q.room];
-    return `<div class="opt" style="--oc:${r.c};--ok:${r.ink}"><span class="k px">${q.k}</span><span class="q">${esc(q.night)}</span></div>`; }).join('');
+  const tiles = QUIZ.map((q, i) => { const r = ROOMS[q.room];
+    return `<div class="tile${i===0?' on':''}" style="--oc:${r.c};--ok:${r.ink}">
+      <img src="photos/${q.room.toLowerCase()}.jpg" alt="" onerror="this.remove()">
+      <span class="k px">${q.k}</span>${i===0?'<span class="p1 px blink">P1 ▼</span>':''}
+      <span class="q">${esc(q.night)}</span></div>`; }).join('');
   return frame('#F2C21B','#0b0914', `${topBar('Choose your player')}
-    <div class="cv-k px">Round2 quiz <span class="blink">_</span></div>
-    <h1 class="cv-t">Which room<span>are you?</span></h1>
-    <div class="cv-s">Pick your perfect night. Swipe to meet your room.</div>
-    <div class="opts">${opts}</div>`, 'right:-380px;top:-300px');
+    <div class="cv-k px"><span>Round2 quiz</span><span>6 rooms · 1 you</span></div>
+    <h1 class="cv-t">Which room<br><span>are you?</span></h1>
+    <div class="grid">${tiles}</div>
+    <div class="cv-f px"><span>Pick fast. No overthinking.</span><b>Swipe to reveal <span class="blink">▶</span></b></div>`, 'right:-380px;top:-300px');
 }
 function card(q, i){
   const r = ROOMS[q.room];
