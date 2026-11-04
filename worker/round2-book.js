@@ -22,7 +22,7 @@ const PRICES = {
   vip:     { off: { base: 109, ext: [36.30, 54.50, 65.40] }, peak: { base: 129, ext: [43, 64.50, 77.40] }, eb: { base: 35, ext: { off: [36.33, 72.67, 109], peak: [43, 86, 129] } } },
 };
 const PAX_FIELD = 'fb11a6d3f6a3baaf248df77785de850e';
-const BUF = 15, HOLD_SEC = 600, EB_START = 660;
+const BUF = 15, HOLD_SEC = 600, EB_START = 660, PAGE_GRACE = 120e3;
 /* cleaning time is only needed before the NEXT booking: a session may run right up to closing (11:15pm),
    so the last start is 8:15pm, not 8pm */
 const CLOSE = 23 * 60 + 15;
@@ -752,7 +752,7 @@ export class HoldBook extends DurableObject {
     const due = this.rows(`SELECT ref, pr, data FROM holds WHERE status = 'pending' AND exp <= ?`, Date.now());
     for (const d of due) {
       /* paid at HitPay but nobody has booked it yet (webhook late, guest closed the page): keep it – the sweep books it */
-      try { const hd0 = JSON.parse(d.data || '{}'); const pp = await hpPaid(this.env, { pr: d.pr, data: hd0 }); if (pp.paid || pp.inflight || (pp.err && !pp.none)) { this.sql.exec(`UPDATE holds SET exp = ? WHERE ref = ?`, Date.now() + 5 * 60e3, d.ref); continue; } } catch (e) {}
+      try { const hd0 = JSON.parse(d.data || '{}'); const pp = await hpPaid(this.env, { pr: d.pr, data: hd0 }); if (pp.paid || pp.inflight || pp.open || (pp.err && !pp.none)) { this.sql.exec(`UPDATE holds SET exp = ? WHERE ref = ?`, pp.open && !pp.paid && !pp.inflight ? pp.open + 30e3 : Date.now() + 5 * 60e3, d.ref); continue; }   /* page still payable: hold until it closes */ } catch (e) {}
       try { const hd = JSON.parse(d.data || '{}'); if (hd.holdNotes && !hd.holdNotesDone) { await holdNotesDel(this.env, hd.holdNotes); this.patch(d.ref, { holdNotesDone: Date.now() }); } } catch (e) {}
       this.sql.exec(`UPDATE holds SET status = 'released' WHERE ref = ?`, d.ref); }   /* payment page kept (see safeRelease) */
     this.sql.exec(`DELETE FROM holds WHERE status = 'released' AND created < ?`, Date.now() - 7 * 86400e3);
@@ -876,6 +876,9 @@ async function checkout(env0, b, origin) {
       amount: q.total.toFixed(2), currency: 'SGD', name, email, phone,
       purpose: (pay === 'test' ? 'TEST · ' : '') + `Round2 ${q.room} · ${when} ${q.time}–${q.end} (${q.hours}h)`,
       reference_number: ref, redirect_url: `${PUBLIC_BOOK}/done?ref=${ref}`, webhook: `${origin}/booking/hitpay`,
+      /* the payment page closes itself 2 minutes after the hold's 10 minutes (owner, 5 Nov: "keep it airtight") – nobody
+         can pay an old tab later; the timer keeps the time held until the page has closed (HitPay: SGT, tested in sandbox) */
+      expiry_date: new Date(Date.now() + HOLD_SEC * 1000 + PAGE_GRACE + 8 * 3600e3).toISOString().slice(0, 19).replace('T', ' '),
     });
   } catch (err) { await hb.release(ref); await holdNotesClear(env, ref).catch(() => null); throw err; }
   await hb.setPr(ref, pr.id);
@@ -959,7 +962,10 @@ async function hpPaid(env, h) {
   /* a payment still going through (not failed or cancelled): not paid YET – never release it (we used to delete the payment
      page here, and once it's deleted HitPay can't even tell us about the money any more: Malia, 5 Nov) */
   const inflight = !pays.some(good) && pays.some((x) => !/fail|cancel|void|refund|expire/i.test(String(x.status || '')));
-  return { paid: pr.status === 'completed' || pays.some(good), inflight, status: pr.status, payments: pays.map((x) => ({ id: x.id, status: x.status, amount: x.amount })) };
+  /* the page can still be paid until its expiry (SGT): "open" until then */
+  const expMs = pr.expiry_date ? Date.parse(String(pr.expiry_date).replace(' ', 'T').slice(0, 19) + '+08:00') : 0;
+  const open = pr.status === 'pending' && expMs > Date.now() ? expMs : 0;
+  return { paid: pr.status === 'completed' || pays.some(good), inflight, open, status: pr.status, payments: pays.map((x) => ({ id: x.id, status: x.status, amount: x.amount })) };
 }
 /* release a pending hold only if HitPay says it isn't paid; a paid one is booked instead */
 async function safeRelease(env, ref, why) {
