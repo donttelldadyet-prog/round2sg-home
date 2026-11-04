@@ -1148,7 +1148,7 @@ async function tvMessage(env, d, q, ref, bid) {
    Then "About 10 minutes to go" and "That's a wrap!" move to the new end (or are made if there were none), and the TV
    shows "+N CREDITS ADDED" (no OK needed unless staff tick it). Undo puts everything back. */
 const SYS_CLIENTS = ['2472', '2476'];          /* Make mirror's SYSTEM BLOCK clients (in Atlas for a Vale booking, in Vale for an Atlas one) */
-const SYS_RE = /SYSTEM\s*BLOCK/i, HOLD_RE = /ONLINE\s*HOLD/i, EXT_RE = /\bEXT\b/i, LATE_RE = /late till [0-9:]+[ap]m/i;
+const SYS_RE = /SYSTEM\s*BLOCK/i, HOLD_RE = /ONLINE\s*HOLD/i, EXT_RE = /\bEXT\b/i, LATE_RE = /(?:\blate|·|BLOCK · \w+) till [0-9:]+[ap]m/i;   /* a control-centre session note: "· late till 1am" (late by its times) or "· till 7pm" (owner, 5 Nov: a 4–7pm session keyed in here isn't late); twin "SYSTEM BLOCK · Vale (late) till …". Not EXT notes. */
 const sgMs0 = (t) => { const m = String(t || '').match(/(\d{4})-(\d\d)-(\d\d)[ T](\d\d):(\d\d)(?::(\d\d))?/); return m ? Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)) - 8 * 3600e3 : 0; };
 const sgStr = (ms) => new Date(ms + 8 * 3600e3).toISOString().replace('T', ' ').slice(0, 19);
 const sgDay = (ms) => new Date(ms + 8 * 3600e3).toISOString().slice(0, 10);
@@ -1320,7 +1320,7 @@ async function extend(env, hb, f) {
   const body = (unit, st, en, text) => ({ provider_id: unit, service_id: null, start_date_time: sgStr(st), end_date_time: sgStr(en), note_type_id: 1, note: text, mode: 'provider', time_blocked: true });
   try {
     for (const N of [plan.note.main, plan.note.twin].filter(Boolean)) {
-      const text = N.late ? String(N.edit.note).replace(LATE_RE, 'late till ' + clock12(N.twin ? to : newGuest))
+      const text = N.late ? String(N.edit.note).replace(LATE_RE, (m) => m.replace(/till [0-9:]+[ap]m/i, 'till ' + clock12(N.twin ? to : newGuest)))
         : N.twin ? 'SYSTEM BLOCK · EXT ' + ROOMS[S.unit][0] + ' till ' + clock12(to) : 'EXT till ' + clock12(newGuest) + ' · ' + who;
       if (N.edit) {
         await s2('PUT', '/admin/calendar-notes/' + N.edit.id, body(N.unit, N.edit.s, to, text));
@@ -1475,7 +1475,8 @@ async function late(env, hb, f) {
       } catch (e) {}
     }
   }
-  const text = name + ' ' + pax + ' pax · late till ' + clock12(guestEnd) + ' · control centre';
+  const lateW = lateSess(s, guestEnd) ? 'late till ' : 'till ';   /* "late" only when the times are late (owner, 5 Nov) */
+  const text = name + ' ' + pax + ' pax · ' + lateW + clock12(guestEnd) + ' · control centre';
   /* "About 10 minutes to go" + "That's a wrap!" on the TV (toggle, default on): only for sessions starting within 24 h,
      so a session cancelled days later doesn't leave messages behind on an empty room's TV */
   const autoOn = !!(await hb.getMode()).autoEnd;
@@ -1493,7 +1494,7 @@ async function late(env, hb, f) {
   }
   try {
     const r = await s2('POST', '/admin/calendar-notes', body(unit, text)); done.push({ unit, id: String(r.id), made: true });
-    if (tw) { const r2 = await s2('POST', '/admin/calendar-notes', body(tw, 'SYSTEM BLOCK · ' + room + ' late till ' + clock12(blockEnd))); done.push({ unit: tw, id: String(r2.id), made: true }); }
+    if (tw) { const r2 = await s2('POST', '/admin/calendar-notes', body(tw, 'SYSTEM BLOCK · ' + room + ' ' + lateW + clock12(blockEnd))); done.push({ unit: tw, id: String(r2.id), made: true }); }
   } catch (e) {
     await extRevert(s2, done);
     if (old) await lateRestore(s2, old.notes, hb).catch(() => null);
@@ -1572,7 +1573,7 @@ async function latelist(env, hb) {
     for (;;) { const nx = its.find((x) => x.ext && x.unit === it.unit && Math.abs(x.s - end) <= 5 * 60e3); if (!nx) break; end = nx.e; nExt++; }
     const guestEnd = end - BUF * 60e3, sgH = new Date(it.s + 8 * 3600e3).getUTCHours();
     if (guestEnd <= now) continue;
-    if (!(/late till/i.test(it.txt) || sgH * 60 < SHADOW_TILL || sgDay(guestEnd - 1) !== sgDay(it.s))) continue;
+    if (!(LATE_RE.test(it.txt) || sgH * 60 < SHADOW_TILL || sgDay(guestEnd - 1) !== sgDay(it.s))) continue;
     const pm = it.txt.match(/(\d+)\s*(?:pax|ppl|pp)\b/i);
     out.push({ id: it.id, unit: it.unit, room: ROOMS[it.unit][0], text: it.txt.slice(0, 80), name: it.txt.split(' · ')[0].replace(/\s*\d+\s*(?:pax|ppl|pp)\b.*$/i, '').trim().slice(0, 40), pax: pm ? +pm[1] : 0,
       s: it.s, guestEnd, day: sgDay(it.s), night: sgDay(it.s - SHADOW_TILL * 60e3), ext: nExt, live: it.s <= now });
