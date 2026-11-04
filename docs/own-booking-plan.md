@@ -154,3 +154,6 @@ released, then paid on the kept payment page) → booked by the webhook. Test bo
 - 5 Nov (owner: "the highest priority should be the time limit"): hard cap. An unpaid hold never lives past 10 + 5 minutes,
   whatever HitPay says (payment "going through" or HitPay not answering). Only a PAID hold is kept (for the sweep to book).
   Money that arrives after the cap is still seen (pages aren't deleted): booked if the time is free, else needs-a-human.
+- 5 Nov sandbox test (card form filled, left open past the page's 10 minutes): HitPay's checkout page timed out by itself
+  ("Checkout page timed out … complete payment within 5 minutes") – Pay couldn't be pressed; the request said "expired".
+  An opened card form leaves a payment with status requires_payment_method: that is NOT "going through" (fixed in hpPaid).

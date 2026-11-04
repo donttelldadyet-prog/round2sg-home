@@ -969,7 +969,7 @@ async function hpPaid(env, h) {
   const pays = pr.payments || [];
   /* a payment still going through (not failed or cancelled): not paid YET – never release it (we used to delete the payment
      page here, and once it's deleted HitPay can't even tell us about the money any more: Malia, 5 Nov) */
-  const inflight = !pays.some(good) && pays.some((x) => !/fail|cancel|void|refund|expire/i.test(String(x.status || '')));
+  const inflight = !pays.some(good) && pays.some((x) => !/fail|cancel|void|refund|expire|requires_payment_method/i.test(String(x.status || '')));   /* requires_payment_method = card form opened, nothing sent yet (sandbox test 5 Nov) */
   /* the page can still be paid until its expiry (SGT): "open" until then */
   const expMs = pr.expiry_date ? Date.parse(String(pr.expiry_date).replace(' ', 'T').slice(0, 19) + '+08:00') : 0;
   const open = pr.status === 'pending' && expMs > Date.now() ? expMs : 0;
