@@ -253,7 +253,7 @@ h3.nm, .nm { color: var(--rc); }
 /* Round2 booking board (round2sg-home/slots/). Everything comes from the Round2 booking engine
    (worker/round2-book.js on Cloudflare): /day gives every room's free starts in 15-min steps, how long each can run
    and the price per length (our own price table – Early bird = 11am, $35 + its own extension rates; public holidays
-   use peak prices). Guests pick room → start → length → details → the engine holds the slot for 10 min and makes a
+   use peak prices). Guests pick room → start → length → details → the engine holds the slot for 12 min and makes a
    HitPay payment → after payment the engine puts the booking into SimplyBook (calendar, staff alerts, guest emails).
    No SimplyBook widget and no SimplyBook key on this page. Docs: docs/own-booking-plan.md */
 (function () {
@@ -596,7 +596,7 @@ h3.nm, .nm { color: var(--rc); }
     timer = setInterval(function () {
       var s = Math.max(0, Math.round((j.holdUntil - Date.now()) / 1000));
       $('hCd').textContent = Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2);
-      if (!s) release('Your 10 minutes ran out, so the slot was released. Pick a time again.');
+      if (!s) release('Your 12 minutes ran out, so the slot was released. Pick a time again.');
     }, 500);
   }
   function release(msg) {

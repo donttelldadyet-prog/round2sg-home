@@ -147,7 +147,7 @@ Rules now ("HitPay is the truth"):
 Tested 5 Nov in the HitPay sandbox: guest back before paying → page waits, payment 2 min later → booked (no release);
 back button on a paid hold → refused; same guest picking again → old unpaid hold released; Malia replay (hold
 released, then paid on the kept payment page) → booked by the webhook. Test bookings cancelled.
-- 5 Nov (owner: "make them expire"): every booking payment page gets expiry_date = hold end + 2 min (HitPay, SGT –
+- 5 Nov (owner: "make them expire"): every booking payment page gets expiry_date = hold end (the hold is 12 min since 5 Nov 3am; it was 10 + 2 min grace) (HitPay, SGT –
   tested in sandbox: the page shows "Payment Link is expired" and the API says status "expired", not 404). The
   10-minute timer keeps the time held until the page has closed (hpPaid "open"), so no one can pay for a time that's
   already gone to someone else.

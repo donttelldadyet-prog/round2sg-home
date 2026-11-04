@@ -22,7 +22,7 @@ const PRICES = {
   vip:     { off: { base: 109, ext: [36.30, 54.50, 65.40] }, peak: { base: 129, ext: [43, 64.50, 77.40] }, eb: { base: 35, ext: { off: [36.33, 72.67, 109], peak: [43, 86, 129] } } },
 };
 const PAX_FIELD = 'fb11a6d3f6a3baaf248df77785de850e';
-const BUF = 15, HOLD_SEC = 600, EB_START = 660, PAGE_GRACE = 120e3;
+const BUF = 15, HOLD_SEC = 720, EB_START = 660, PAGE_GRACE = 0;   /* owner, 5 Nov: the guest's counter is 12 min, the block and the payment page follow it exactly */
 /* cleaning time is only needed before the NEXT booking: a session may run right up to closing (11:15pm),
    so the last start is 8:15pm, not 8pm */
 const CLOSE = 23 * 60 + 15;
@@ -876,7 +876,7 @@ async function checkout(env0, b, origin) {
       amount: q.total.toFixed(2), currency: 'SGD', name, email, phone,
       purpose: (pay === 'test' ? 'TEST · ' : '') + `Round2 ${q.room} · ${when} ${q.time}–${q.end} (${q.hours}h)`,
       reference_number: ref, redirect_url: `${PUBLIC_BOOK}/done?ref=${ref}`, webhook: `${origin}/booking/hitpay`,
-      /* the payment page closes itself 2 minutes after the hold's 10 minutes (owner, 5 Nov: "keep it airtight") – nobody
+      /* the payment page closes itself when the guest's 12 minutes run out (owner, 5 Nov: "keep it airtight") – nobody
          can pay an old tab later; the timer keeps the time held until the page has closed (HitPay: SGT, tested in sandbox) */
       expiry_date: new Date(Date.now() + HOLD_SEC * 1000 + PAGE_GRACE + 8 * 3600e3).toISOString().slice(0, 19).replace('T', ' '),
     });
