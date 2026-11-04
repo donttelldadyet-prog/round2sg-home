@@ -22,7 +22,7 @@ const PRICES = {
   vip:     { off: { base: 109, ext: [36.30, 54.50, 65.40] }, peak: { base: 129, ext: [43, 64.50, 77.40] }, eb: { base: 35, ext: { off: [36.33, 72.67, 109], peak: [43, 86, 129] } } },
 };
 const PAX_FIELD = 'fb11a6d3f6a3baaf248df77785de850e';
-const BUF = 15, HOLD_SEC = 600, EB_START = 660, PAGE_GRACE = 0;   /* owner, 5 Nov: one number – the guest's 10-minute counter, the block and the payment page end together (real guests pay in ~50 s, slowest 2 min) */
+const BUF = 15, HOLD_SEC = 600, EB_START = 660, PAGE_GRACE = 0, HOLD_CAP_EXTRA = 5 * 60e3;   /* owner, 5 Nov: one number – the guest's 10-minute counter, the block and the payment page end together (real guests pay in ~50 s, slowest 2 min) */
 /* cleaning time is only needed before the NEXT booking: a session may run right up to closing (11:15pm),
    so the last start is 8:15pm, not 8pm */
 const CLOSE = 23 * 60 + 15;
@@ -749,10 +749,14 @@ export class HoldBook extends DurableObject {
   /* timer ran out → release the hold and kill its HitPay link */
   async alarm() { try { await this.alarm0(); } finally { if (sbCalls) { this.sbAdd(sbCalls); sbCalls = 0; } } }
   async alarm0() {
-    const due = this.rows(`SELECT ref, pr, data FROM holds WHERE status = 'pending' AND exp <= ?`, Date.now());
+    const due = this.rows(`SELECT ref, pr, data, created FROM holds WHERE status = 'pending' AND exp <= ?`, Date.now());
     for (const d of due) {
       /* paid at HitPay but nobody has booked it yet (webhook late, guest closed the page): keep it – the sweep books it */
-      try { const hd0 = JSON.parse(d.data || '{}'); const pp = await hpPaid(this.env, { pr: d.pr, data: hd0 }); if (pp.paid || pp.inflight || pp.open || (pp.err && !pp.none)) { this.sql.exec(`UPDATE holds SET exp = ? WHERE ref = ?`, pp.open && !pp.paid && !pp.inflight ? pp.open + 30e3 : Date.now() + 5 * 60e3, d.ref); continue; }   /* page still payable: hold until it closes */ } catch (e) {}
+      try { const hd0 = JSON.parse(d.data || '{}'); const pp = await hpPaid(this.env, { pr: d.pr, data: hd0 }); /* the time limit comes first (owner, 5 Nov): whatever HitPay says, an unpaid hold never lives past 10 + 5 minutes. A payment
+         still "going through" then, or HitPay not answering, lets the time go; if money does arrive later, the webhook or the
+         5-minute sweep books it (time still free) or flags a refund (needs a human). Only a PAID hold is kept, for the sweep. */
+      const capped = Date.now() - (+d.created || 0) >= HOLD_SEC * 1000 + HOLD_CAP_EXTRA;
+      if (pp.paid || (!capped && (pp.inflight || pp.open || (pp.err && !pp.none)))) { this.sql.exec(`UPDATE holds SET exp = ? WHERE ref = ?`, pp.paid ? Date.now() + 5 * 60e3 : Math.min(pp.open && !pp.inflight ? pp.open + 30e3 : Date.now() + 60e3, (+d.created || 0) + HOLD_SEC * 1000 + HOLD_CAP_EXTRA), d.ref); continue; }   /* page still payable: hold until it closes */ } catch (e) {}
       try { const hd = JSON.parse(d.data || '{}'); if (hd.holdNotes && !hd.holdNotesDone) { await holdNotesDel(this.env, hd.holdNotes); this.patch(d.ref, { holdNotesDone: Date.now() }); } } catch (e) {}
       this.sql.exec(`UPDATE holds SET status = 'released' WHERE ref = ?`, d.ref); }   /* payment page kept (see safeRelease) */
     this.sql.exec(`DELETE FROM holds WHERE status = 'released' AND created < ?`, Date.now() - 7 * 86400e3);
