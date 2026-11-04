@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Round2 Picks</title>
+<!--
+  Round2 Picks – fortnightly Instagram movie carousel (1080 x 1350, 4:5).
+  Marketing only. Nothing here is used by the live site (index.html / slots / menu / worker).
+  To make a new issue: edit ISSUE below, then run  python3 render.py  (see README.md).
+-->
+<style>
+@font-face{font-family:'Press Start 2P';src:url(fonts/PressStart2P-Regular.ttf)}
+@font-face{font-family:'Chakra Petch';font-weight:500;src:url(fonts/ChakraPetch-Medium.ttf)}
+@font-face{font-family:'Chakra Petch';font-weight:600;src:url(fonts/ChakraPetch-SemiBold.ttf)}
+@font-face{font-family:'Chakra Petch';font-weight:700;src:url(fonts/ChakraPetch-Bold.ttf)}
+
+:root{
+  /* same tokens as www.round2.sg */
+  --bg:#06050a; --panel:#0e0b17; --ink:#f4f1fb; --soft:#d6d0e3; --mute:#a79fbd;
+  --line:rgba(244,241,251,.14); --accent:#F2C21B;
+}
+*{box-sizing:border-box}
+body{margin:0;background:#1a1726;font-family:'Chakra Petch',sans-serif;color:var(--ink)}
+.deck{display:flex;flex-wrap:wrap;gap:40px;padding:40px;justify-content:center}
+body.render .deck{padding:0;gap:0}
+
+/* ---------- slide frame ---------- */
+.slide{position:relative;width:1080px;height:1350px;overflow:hidden;background:var(--bg);flex:none;
+  --c:var(--accent); --cink:#0b0914}
+.glow{position:absolute;width:900px;height:900px;border-radius:50%;background:var(--c);filter:blur(180px);opacity:.22;pointer-events:none}
+.scan{position:absolute;inset:0;pointer-events:none;z-index:5;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 2px,transparent 2px 5px)}
+.vign{position:absolute;inset:0;pointer-events:none;z-index:4;
+  background:radial-gradient(120% 90% at 50% 45%,transparent 55%,rgba(0,0,0,.7) 100%)}
+.frame{position:absolute;inset:36px;border:1px solid var(--line);z-index:3;pointer-events:none}
+.frame::before,.frame::after{content:"";position:absolute;width:34px;height:34px;border:4px solid var(--c)}
+.frame::before{left:-4px;top:-4px;border-right:0;border-bottom:0}
+.frame::after{right:-4px;bottom:-4px;border-left:0;border-top:0}
+.px{font-family:'Press Start 2P',monospace;letter-spacing:.14em;text-transform:uppercase}
+.in{position:absolute;inset:84px 84px 84px 84px;z-index:6;display:flex;flex-direction:column}
+
+.top{display:flex;justify-content:space-between;align-items:center;font-size:17px;color:var(--mute)}
+.top img{height:38px;display:block}
+.dash{flex:1;height:10px;margin:0 22px;opacity:.5;
+  background:repeating-linear-gradient(90deg,var(--c) 0 10px,transparent 10px 20px)}
+
+/* ---------- cover ---------- */
+.cv-kicker{margin-top:110px;font-size:22px;color:var(--accent)}
+.cv-title{margin:30px 0 0;font-weight:700;font-size:190px;line-height:.88;text-transform:uppercase;letter-spacing:-.01em}
+.cv-title span{display:block;color:transparent;-webkit-text-stroke:3px var(--ink)}
+.cv-sub{margin-top:34px;font-size:34px;line-height:1.35;color:var(--soft);max-width:820px}
+.select{margin-top:auto;border:1px solid var(--line);background:rgba(14,11,23,.75)}
+.select .hd{display:flex;justify-content:space-between;padding:22px 28px;font-size:15px;color:var(--mute);border-bottom:1px solid var(--line)}
+.row{display:flex;align-items:center;gap:24px;padding:22px 28px;border-bottom:1px solid rgba(244,241,251,.08)}
+.row:last-child{border-bottom:0}
+.row .n{font-size:18px;color:var(--rc);width:60px}
+.row .t{flex:1;font-weight:700;font-size:40px;text-transform:uppercase;line-height:1}
+.row .sv{font-size:13px;padding:10px 12px;border:1px solid var(--rc);color:var(--rc)}
+.row.on{background:color-mix(in srgb,var(--rc) 14%,transparent)}
+.row.on .t::before{content:"▶ ";color:var(--rc);font-size:30px;vertical-align:4px}
+.blink{animation:b 1.1s steps(2,start) infinite}@keyframes b{to{visibility:hidden}}
+body.render .blink{animation:none}
+.cv-foot{margin-top:30px;display:flex;justify-content:space-between;font-size:15px;color:var(--mute)}
+
+/* ---------- pick ---------- */
+.pk-head{margin-top:70px;display:flex;justify-content:space-between;align-items:flex-start}
+.pk-num{font-size:20px;color:var(--c)}
+.badge{font-size:15px;padding:14px 16px;background:var(--c);color:var(--cink)}
+.screen{position:relative;margin-top:36px;height:430px;border:1px solid var(--line);
+  background:radial-gradient(80% 90% at 50% 100%,color-mix(in srgb,var(--c) 26%,transparent),transparent 70%),#0b0914;
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
+.screen .sprite{display:grid;gap:0;image-rendering:pixelated}
+.screen .sprite i{display:block;width:22px;height:22px}
+.screen .tag{position:absolute;left:20px;top:18px;font-size:13px;color:var(--mute)}
+.screen .rec{position:absolute;right:20px;top:18px;font-size:13px;color:var(--c)}
+.pk-title{margin:52px 0 0;font-weight:700;font-size:118px;line-height:.9;text-transform:uppercase;letter-spacing:-.01em;
+  text-shadow:6px 6px 0 color-mix(in srgb,var(--c) 55%,transparent)}
+.pk-meta{margin-top:26px;font-size:16px;color:var(--mute);display:flex;gap:18px;flex-wrap:wrap}
+.pk-meta b{color:var(--ink);font-weight:400}
+.pk-why{margin-top:28px;font-size:36px;line-height:1.35;color:var(--soft);max-width:880px}
+.room{margin-top:auto;display:flex;align-items:center;gap:26px;padding:24px 26px;border:1px solid var(--line);background:rgba(14,11,23,.8)}
+.room .chip{width:92px;height:92px;flex:none;background:var(--c);color:var(--cink);display:flex;align-items:center;justify-content:center;font-size:32px}
+.room .l{font-size:14px;color:var(--c)}
+.room .nm{margin-top:10px;font-weight:700;font-size:40px;text-transform:uppercase;line-height:1}
+.room .sp{margin-top:8px;font-size:24px;color:var(--mute)}
+
+/* ---------- end ---------- */
+.en-k{margin-top:120px;font-size:24px;color:var(--accent)}
+.en-t{margin:34px 0 0;font-weight:700;font-size:132px;line-height:.92;text-transform:uppercase}
+.en-t em{font-style:normal;color:var(--accent)}
+.svc{margin-top:64px;display:grid;gap:18px}
+.svc div{display:flex;justify-content:space-between;align-items:center;padding:26px 28px;border:1px solid var(--line);background:rgba(14,11,23,.75);font-size:34px;font-weight:600}
+.svc span{font-family:'Press Start 2P',monospace;font-size:14px;letter-spacing:.12em;color:var(--mute)}
+.cta{margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding:34px 36px;background:var(--accent);color:#0b0914}
+.cta .a{font-weight:700;font-size:52px;text-transform:uppercase;line-height:1}
+.cta .b{font-size:16px}
+.en-foot{margin-top:28px;display:flex;justify-content:space-between;font-size:15px;color:var(--mute)}
+</style>
+</head>
+<body>
+<div class="deck" id="deck"></div>
+
+<script>
+/* ======================= EDIT THIS FOR EACH ISSUE ======================= */
+const ISSUE = {
+  no: '01',
+  dates: '6–19 Nov',
+  picks: [
+    { title: 'Heartland', service: 'Netflix', when: 'New · 13 Nov', genre: 'Thriller', year: '2026',
+      why: 'A Netflix original thriller led by Jessica Chastain. Lights off, phones face down.',
+      room: 'Vale', sprite: 'house' },
+    { title: 'Possible Love', service: 'Netflix', when: 'New · 6 Nov', genre: 'Korean cinema', year: '2026',
+      why: 'The new film from Lee Chang-dong, the director of Burning. One for a quiet night in.',
+      room: 'Scarlett', sprite: 'heart' },
+    { title: 'Madden', service: 'Prime Video', when: 'New · 18 Nov', genre: 'Sports biopic', year: '2026',
+      why: 'Nicolas Cage plays football legend John Madden. Bring the squad and pick sides.',
+      room: 'Kai', sprite: 'ball' },
+    { title: 'Dune', service: 'HBO Max', when: 'Streaming now', genre: 'Sci-fi epic', year: '2021',
+      why: 'Villeneuve’s desert epic was made for a huge screen and a lot of bass. We have both.',
+      room: 'Maximillion', sprite: 'dune' },
+  ],
+};
+/* ======================================================================== */
+
+// Rooms, from the live site (index.html). Kaeden is under renovation, so it isn't offered here.
+const ROOMS = {
+  Vale:        { tier:'Netflix room', c:'#E8436A', ink:'#0b0914', spec:'65" TV · 1–3 pax' },
+  Scarlett:    { tier:'Netflix room', c:'#F2C21B', ink:'#0b0914', spec:'65" TV · 1–3 pax' },
+  Kai:         { tier:'Deluxe room',  c:'#24B49A', ink:'#0b0914', spec:'75" TV · enhanced audio · 1–4 pax' },
+  Bella:       { tier:'Deluxe room',  c:'#7A5BE0', ink:'#ffffff', spec:'75" TV · enhanced audio · 1–4 pax' },
+  Atlas:       { tier:'Deluxe room',  c:'#E9E7EF', ink:'#0b0914', spec:'75" TV · enhanced audio · 1–5 pax' },
+  Maximillion: { tier:'VIP room',     c:'#E0402F', ink:'#ffffff', spec:'85" TV · home theatre audio · 1–6 pax' },
+};
+
+// 8-bit sprites drawn on our own (no posters or studio artwork). '.' = empty, letters = palette.
+const SPRITES = {
+  heart: { pal:{a:'C',b:'#ffffff'}, rows:[
+    '..aaa...aaa..','.aaaaa.aaaaa.','aabbaaaaaaaaa','abbaaaaaaaaaa','aaaaaaaaaaaaa','aaaaaaaaaaaaa',
+    '.aaaaaaaaaaa.','..aaaaaaaaa..','...aaaaaaa...','....aaaaa....','.....aaa.....','......a......']},
+  house: { pal:{a:'C',b:'#f4f1fb',c:'#0b0914',d:'#F2C21B',e:'#3a3350'}, rows:[
+    '.......aa.......','......aaaa......','.....aaaaaa.....','....aaaaaaaa....','...aaaaaaaaaa...',
+    '..aaaaaaaaaaaa..','...bbbbbbbbbb...','...bddbbbbddb...','...bddbbbbddb...','...bbbbccbbbbb..',
+    '...bbbbccbbbb...','...bbbbccbbbb...','eeeeeeeeeeeeeeee','.e.e.e.e.e.e.e.e']},
+  ball: { pal:{a:'#8a4b2a',b:'#f4f1fb',c:'C'}, rows:[
+    '.....aaaaaa.....','...aaaaaaaaaa...','..aaaaaaaaaaaa..','.aaaaaaaaaaaaaa.','aabaaaaaaaaaabaa',
+    'aabaabababaaabaa','aabaabbbbbaaabaa','aabaabababaaabaa','.aaaaaaaaaaaaaa.','..aaaaaaaaaaaa..',
+    '...aaaaaaaaaa...','.....aaaaaa.....','................','cccccccccccccccc']},
+  dune: { pal:{a:'#F2C21B',b:'C',c:'#b8462f',d:'#6e2a1f'}, rows:[
+    '..........aaaa..','.........aaaaaa.','.........aaaaaa.','..........aaaa..','................',
+    '................','.....bb..........','...bbbbbb.......','..bbbbbbbbb...bb','.bbbbbbbbbbbbbbb',
+    'bbbbbccccccbbbbb','bbccccccccccccbb','cccccccddddccccc','ccdddddddddddddd']},
+};
+
+const esc = s => String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+const LOGO = '../../menu/img/round2-logo.png';
+
+function sprite(name, color){
+  const s = SPRITES[name]; if(!s) return '';
+  const w = Math.max(...s.rows.map(r => r.length)), px = Math.min(22, Math.floor(330 / s.rows.length));
+  let cells = '';
+  for(const r of s.rows) for(let i=0;i<w;i++){
+    const k = r[i] || '.', col = k === '.' ? 'transparent' : (s.pal[k] === 'C' ? color : s.pal[k]);
+    cells += `<i style="background:${col};width:${px}px;height:${px}px"></i>`;
+  }
+  return `<div class="sprite" style="grid-template-columns:repeat(${w},${px}px)">${cells}</div>`;
+}
+const frame = (c, ink, inner, glowPos='left:-300px;top:-260px') =>
+  `<section class="slide" style="--c:${c};--cink:${ink}"><div class="glow" style="${glowPos}"></div>
+   <div class="frame"></div><div class="vign"></div><div class="scan"></div><div class="in">${inner}</div></section>`;
+const topBar = label => `<div class="top px"><img src="${LOGO}" alt="Round2"><div class="dash"></div><span>${esc(label)}</span></div>`;
+
+function cover(){
+  const rows = ISSUE.picks.map((p, i) => { const r = ROOMS[p.room];
+    return `<div class="row${i===0?' on':''}" style="--rc:${r.c}"><span class="n px">0${i+1}</span>
+      <span class="t">${esc(p.title)}</span><span class="sv px">${esc(p.service)}</span></div>`; }).join('');
+  return frame('#F2C21B', '#0b0914', `${topBar('Issue ' + ISSUE.no)}
+    <div class="cv-kicker px">Round2 Picks · ${esc(ISSUE.dates)}</div>
+    <h1 class="cv-title">Now<span>Playing</span></h1>
+    <div class="cv-sub">${ISSUE.picks.length} films we’d queue up this fortnight — and the room to watch each one in.</div>
+    <div class="select"><div class="hd px"><span>Movie select</span><span class="blink">Swipe ▶</span></div>${rows}</div>
+    <div class="cv-foot px"><span>Haji Lane · SG</span><span>round2.sg</span></div>`, 'right:-380px;top:-300px');
+}
+
+function pick(p, i){
+  const r = ROOMS[p.room], n = ISSUE.picks.length;
+  return frame(r.c, r.ink, `${topBar('Round2 Picks')}
+    <div class="pk-head"><div class="pk-num px">Pick ${i+1}/${n} · ${esc(p.when)}</div><div class="badge px">${esc(p.service)}</div></div>
+    <div class="screen"><span class="tag px">${esc(p.genre)}</span><span class="rec px"><span class="blink">●</span> Play</span>${sprite(p.sprite, r.c)}</div>
+    <h2 class="pk-title">${esc(p.title)}</h2>
+    <div class="pk-meta px"><span><b>${esc(p.year)}</b></span><span>·</span><span>${esc(p.genre)}</span><span>·</span><span>on <b>${esc(p.service)}</b></span></div>
+    <div class="pk-why">${esc(p.why)}</div>
+    <div class="room"><div class="chip px">${esc(p.room[0])}</div><div>
+      <div class="l px">Best room · ${esc(r.tier)}</div><div class="nm">${esc(p.room)}</div><div class="sp">${esc(r.spec)}</div></div></div>`,
+    i % 2 ? 'right:-360px;top:120px' : 'left:-360px;top:120px');
+}
+
+function end(){
+  return frame('#F2C21B', '#0b0914', `${topBar('Continue?')}
+    <div class="en-k px">Insert coin <span class="blink">_</span></div>
+    <h2 class="en-t">Your room.<br><em>Your movie.</em></h2>
+    <div class="svc">
+      <div>Netflix + Prime Video <span>Every room</span></div>
+      <div>HBO Max <span>Deluxe &amp; VIP</span></div>
+      <div>PS4 / PS4 Pro <span>Every room</span></div>
+    </div>
+    <div class="cta"><div><div class="b px">Press start</div><div class="a" style="margin-top:12px">Book at round2.sg</div></div><div class="a">▶</div></div>
+    <div class="en-foot px"><span>Private movie &amp; game rooms</span><span>Haji Lane</span></div>`, 'left:-260px;bottom:-420px');
+}
+
+document.getElementById('deck').innerHTML = [cover(), ...ISSUE.picks.map(pick), end()].join('');
+if (location.search.includes('render')) document.body.classList.add('render');
+</script>
+</body>
+</html>
