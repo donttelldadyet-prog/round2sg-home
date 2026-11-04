@@ -64,26 +64,31 @@ body.render .blink{animation:none}
 .cv-foot{margin-top:30px;display:flex;justify-content:space-between;font-size:15px;color:var(--mute)}
 
 /* ---------- pick ---------- */
-.pk-head{margin-top:70px;display:flex;justify-content:space-between;align-items:flex-start}
-.pk-num{font-size:20px;color:var(--c)}
+.bgimg{position:absolute;inset:-60px;width:calc(100% + 120px);height:calc(100% + 120px);object-fit:cover;filter:blur(40px) saturate(1.2);opacity:.28;z-index:0}
+.pk-head{margin-top:44px;display:flex;justify-content:space-between;align-items:center}
+.pk-num{font-size:18px;color:var(--c)}
 .badge{font-size:15px;padding:14px 16px;background:var(--c);color:var(--cink)}
-.screen{position:relative;margin-top:36px;height:430px;border:1px solid var(--line);
-  background:radial-gradient(80% 90% at 50% 100%,color-mix(in srgb,var(--c) 26%,transparent),transparent 70%),#0b0914;
+.hero{margin-top:36px;display:flex;gap:44px;align-items:flex-start}
+.poster{position:relative;flex:none;width:400px;height:600px;border:3px solid var(--c);
+  box-shadow:14px 14px 0 color-mix(in srgb,var(--c) 45%,transparent);
+  background:radial-gradient(80% 70% at 50% 60%,color-mix(in srgb,var(--c) 24%,transparent),transparent 70%),#0b0914;
   display:flex;align-items:center;justify-content:center;overflow:hidden}
-.screen .sprite{display:grid;gap:0;image-rendering:pixelated}
-.screen .sprite i{display:block;width:22px;height:22px}
-.screen .tag{position:absolute;left:20px;top:18px;font-size:13px;color:var(--mute)}
-.screen .rec{position:absolute;right:20px;top:18px;font-size:13px;color:var(--c)}
-.pk-title{margin:52px 0 0;font-weight:700;font-size:118px;line-height:.9;text-transform:uppercase;letter-spacing:-.01em;
-  text-shadow:6px 6px 0 color-mix(in srgb,var(--c) 55%,transparent)}
-.pk-meta{margin-top:26px;font-size:16px;color:var(--mute);display:flex;gap:18px;flex-wrap:wrap}
+.poster img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:2}
+.poster .ph{position:absolute;left:0;right:0;bottom:22px;text-align:center;font-size:11px;color:var(--mute);line-height:1.8}
+.sprite{display:grid;gap:0}
+.side{flex:1;min-width:0;padding-top:6px}
+.genre{font-size:14px;color:var(--c)}
+.pk-title{margin:22px 0 0;font-weight:700;font-size:var(--ts,88px);line-height:.92;text-transform:uppercase;letter-spacing:-.01em;
+  text-shadow:5px 5px 0 color-mix(in srgb,var(--c) 55%,transparent);overflow-wrap:anywhere}
+.pk-meta{margin-top:22px;font-size:14px;color:var(--mute);line-height:1.9}
 .pk-meta b{color:var(--ink);font-weight:400}
-.pk-why{margin-top:28px;font-size:36px;line-height:1.35;color:var(--soft);max-width:880px}
-.room{margin-top:auto;display:flex;align-items:center;gap:26px;padding:24px 26px;border:1px solid var(--line);background:rgba(14,11,23,.8)}
-.room .chip{width:92px;height:92px;flex:none;background:var(--c);color:var(--cink);display:flex;align-items:center;justify-content:center;font-size:32px}
-.room .l{font-size:14px;color:var(--c)}
-.room .nm{margin-top:10px;font-weight:700;font-size:40px;text-transform:uppercase;line-height:1}
-.room .sp{margin-top:8px;font-size:24px;color:var(--mute)}
+.pk-why{margin-top:22px;font-size:29px;line-height:1.35;color:var(--soft)}
+.room{margin-top:auto;position:relative;padding:30px 32px 28px;border:1px solid var(--line);border-left:10px solid var(--c);background:rgba(14,11,23,.86)}
+.room .l{font-size:15px;color:var(--c)}
+.room .nm{margin-top:14px;font-weight:700;font-size:72px;text-transform:uppercase;line-height:.95}
+.room .nm small{font-family:'Press Start 2P',monospace;font-size:14px;letter-spacing:.12em;font-weight:400;color:var(--mute);margin-left:16px;vertical-align:14px}
+.room .vb{margin-top:14px;font-size:29px;line-height:1.35;color:var(--soft)}
+.room .ft{margin-top:20px;padding-top:18px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:20px;font-size:12px;color:var(--mute);line-height:1.7}
 
 /* ---------- end ---------- */
 .en-k{margin-top:120px;font-size:24px;color:var(--accent)}
@@ -106,19 +111,25 @@ body.render .blink{animation:none}
 const ISSUE = {
   no: '01',
   dates: '6–19 Nov',
+  // poster: drop the official poster (portrait, ~2:3) into posters/ with this file name. Missing → 8-bit placeholder.
+  // vibe:   why this room suits this film. It's a suggestion – the footer reminds guests it plays in other rooms too.
   picks: [
     { title: 'Heartland', service: 'Netflix', when: 'New · 13 Nov', genre: 'Thriller', year: '2026',
       why: 'A Netflix original thriller led by Jessica Chastain. Lights off, phones face down.',
-      room: 'Vale', sprite: 'house' },
+      room: 'Scarlett', poster: 'posters/heartland.jpg', sprite: 'house',
+      vibe: 'Dark, moody and lit only by starlight. The perfect room to watch a thriller through your fingers.' },
     { title: 'Possible Love', service: 'Netflix', when: 'New · 6 Nov', genre: 'Korean cinema', year: '2026',
-      why: 'The new film from Lee Chang-dong, the director of Burning. One for a quiet night in.',
-      room: 'Scarlett', sprite: 'heart' },
+      why: 'The new film from Lee Chang-dong, the director of Burning. One for a slow, quiet night in.',
+      room: 'Kai', poster: 'posters/possible-love.jpg', sprite: 'heart',
+      vibe: 'Bonsai, stone and soft neutrals. A calm room for a film that takes its time.' },
     { title: 'Madden', service: 'Prime Video', when: 'New · 18 Nov', genre: 'Sports biopic', year: '2026',
       why: 'Nicolas Cage plays football legend John Madden. Bring the squad and pick sides.',
-      room: 'Kai', sprite: 'ball' },
+      room: 'Maximillion', poster: 'posters/madden.jpg', sprite: 'ball',
+      vibe: 'Our biggest screen, home theatre sound and a racing sim for half-time. Built for game day.' },
     { title: 'Dune', service: 'HBO Max', when: 'Streaming now', genre: 'Sci-fi epic', year: '2021',
-      why: 'Villeneuve’s desert epic was made for a huge screen and a lot of bass. We have both.',
-      room: 'Maximillion', sprite: 'dune' },
+      why: 'Villeneuve’s desert epic was made for a big screen and a lot of bass.',
+      room: 'Atlas', poster: 'posters/dune.jpg', sprite: 'dune',
+      vibe: 'Warm whites and Greek-inspired details. A timeless room for an epic that feels ancient.' },
   ],
 };
 /* ======================================================================== */
@@ -133,7 +144,7 @@ const ROOMS = {
   Maximillion: { tier:'VIP room',     c:'#E0402F', ink:'#ffffff', spec:'85" TV · home theatre audio · 1–6 pax' },
 };
 
-// 8-bit sprites drawn on our own (no posters or studio artwork). '.' = empty, letters = palette.
+// 8-bit placeholders shown until a poster file is added. '.' = empty, letters = palette.
 const SPRITES = {
   heart: { pal:{a:'C',b:'#ffffff'}, rows:[
     '..aaa...aaa..','.aaaaa.aaaaa.','aabbaaaaaaaaa','abbaaaaaaaaaa','aaaaaaaaaaaaa','aaaaaaaaaaaaa',
@@ -165,8 +176,8 @@ function sprite(name, color){
   }
   return `<div class="sprite" style="grid-template-columns:repeat(${w},${px}px)">${cells}</div>`;
 }
-const frame = (c, ink, inner, glowPos='left:-300px;top:-260px') =>
-  `<section class="slide" style="--c:${c};--cink:${ink}"><div class="glow" style="${glowPos}"></div>
+const frame = (c, ink, inner, glowPos='left:-300px;top:-260px', bg='') =>
+  `<section class="slide" style="--c:${c};--cink:${ink}">${bg}<div class="glow" style="${glowPos}"></div>
    <div class="frame"></div><div class="vign"></div><div class="scan"></div><div class="in">${inner}</div></section>`;
 const topBar = label => `<div class="top px"><img src="${LOGO}" alt="Round2"><div class="dash"></div><span>${esc(label)}</span></div>`;
 
@@ -177,22 +188,36 @@ function cover(){
   return frame('#F2C21B', '#0b0914', `${topBar('Issue ' + ISSUE.no)}
     <div class="cv-kicker px">Round2 Picks · ${esc(ISSUE.dates)}</div>
     <h1 class="cv-title">Now<span>Playing</span></h1>
-    <div class="cv-sub">${ISSUE.picks.length} films we’d queue up this fortnight — and the room to watch each one in.</div>
+    <div class="cv-sub">${ISSUE.picks.length} films we’d queue up this fortnight, each matched with the room that fits its vibe.</div>
     <div class="select"><div class="hd px"><span>Movie select</span><span class="blink">Swipe ▶</span></div>${rows}</div>
     <div class="cv-foot px"><span>Haji Lane · SG</span><span>round2.sg</span></div>`, 'right:-380px;top:-300px');
 }
 
 function pick(p, i){
   const r = ROOMS[p.room], n = ISSUE.picks.length;
+  const hbo = /hbo/i.test(p.service);
+  const note = hbo ? 'HBO Max in all Deluxe &amp; VIP rooms' : `${esc(p.service)} in every room`;
+  const ts = p.title.length > 11 ? 66 : p.title.length > 7 ? 78 : 96;
+  const img = p.poster ? `<img src="${esc(p.poster)}" alt="" onerror="this.remove()">` : '';
+  const bg  = p.poster ? `<img class="bgimg" src="${esc(p.poster)}" alt="" onerror="this.remove()">` : '';
   return frame(r.c, r.ink, `${topBar('Round2 Picks')}
     <div class="pk-head"><div class="pk-num px">Pick ${i+1}/${n} · ${esc(p.when)}</div><div class="badge px">${esc(p.service)}</div></div>
-    <div class="screen"><span class="tag px">${esc(p.genre)}</span><span class="rec px"><span class="blink">●</span> Play</span>${sprite(p.sprite, r.c)}</div>
-    <h2 class="pk-title">${esc(p.title)}</h2>
-    <div class="pk-meta px"><span><b>${esc(p.year)}</b></span><span>·</span><span>${esc(p.genre)}</span><span>·</span><span>on <b>${esc(p.service)}</b></span></div>
-    <div class="pk-why">${esc(p.why)}</div>
-    <div class="room"><div class="chip px">${esc(p.room[0])}</div><div>
-      <div class="l px">Best room · ${esc(r.tier)}</div><div class="nm">${esc(p.room)}</div><div class="sp">${esc(r.spec)}</div></div></div>`,
-    i % 2 ? 'right:-360px;top:120px' : 'left:-360px;top:120px');
+    <div class="hero">
+      <div class="poster">${sprite(p.sprite, r.c)}<div class="ph px">Poster<br>${esc(p.poster || '')}</div>${img}</div>
+      <div class="side">
+        <div class="genre px">${esc(p.genre)}</div>
+        <h2 class="pk-title" style="--ts:${ts}px">${esc(p.title)}</h2>
+        <div class="pk-meta px"><b>${esc(p.year)}</b> · on <b>${esc(p.service)}</b></div>
+        <div class="pk-why">${esc(p.why)}</div>
+      </div>
+    </div>
+    <div class="room">
+      <div class="l px">▶ We’d watch it in</div>
+      <div class="nm">${esc(p.room)}<small>${esc(r.tier)}</small></div>
+      <div class="vb">${esc(p.vibe)}</div>
+      <div class="ft px"><span>${esc(r.spec)}</span><span>${note}</span></div>
+    </div>`,
+    i % 2 ? 'right:-360px;top:120px' : 'left:-360px;top:120px', bg);
 }
 
 function end(){
