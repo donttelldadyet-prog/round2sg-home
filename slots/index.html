@@ -169,6 +169,10 @@ h3.nm, .nm { color: var(--rc); }
 .fl textarea { display: block; width: 100%; margin-top: 4px; padding: 11px 12px; font: 16px 'Chakra Petch', sans-serif; color: var(--ink); background: #06050a; border: 1px solid var(--line); resize: vertical; }
 .fl input, .fl select { display: block; width: 100%; margin-top: 4px; padding: 11px 12px; font: 16px 'Chakra Petch', sans-serif; color: var(--ink); background: #06050a; border: 1px solid var(--line); text-transform: none; letter-spacing: 0; }
 .fl .tel { display: flex; gap: 6px; }
+.fl .ed { color: var(--acc); text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 6px; }
+.celedit { font-size: 13px; color: var(--ink); margin: 4px 0 12px; padding: 8px 10px; border-left: 3px solid var(--acc); background: rgba(242,194,27,.07); }
+.linkb { font: inherit; color: var(--acc); background: none; border: 0; padding: 0; text-decoration: underline; cursor: pointer; }
+.sample { color: #cfc8de; font-style: italic; }
 .fl .tel #fCc { flex: 0 0 76px; text-align: center; }
 .fl .tel #fPhone { flex: 1; min-width: 0; }
 .fl input:focus, .fl select:focus { outline: none; border-color: var(--acc); }
@@ -224,8 +228,9 @@ h3.nm, .nm { color: var(--rc); }
             <button type="button" data-k="celebrate" aria-pressed="false">Celebration</button><button type="button" data-k="note" aria-pressed="false">Note</button>
           </div>
           <label class="fl">For (name, optional)<input id="cTo" maxlength="40"></label>
-          <label class="fl">Headline<input id="cTitle" maxlength="60"></label>
-          <label class="fl">Message<textarea id="cText" maxlength="600" rows="4"></textarea></label>
+          <p class="celedit">✎ The headline and message below are just a sample. Tap to change them, or <button type="button" class="linkb" id="cOwn">clear them and write your own</button>.</p>
+          <label class="fl">Headline <span class="ed">✎ editable</span><input id="cTitle" maxlength="60" placeholder="e.g. Happy birthday, Sam!"></label>
+          <label class="fl">Message <span class="ed">✎ editable · sample text</span><textarea id="cText" maxlength="600" rows="4" placeholder="Write your own message here"></textarea></label>
           <label class="fl">From<input id="cFrom" maxlength="40"></label>
           <label class="fl">Show it<select id="cAfter"><option value="0">When the session starts</option><option value="15">15 min in</option><option value="30">30 min in</option><option value="45">45 min in</option><option value="60">1 hour in</option></select></label>
         </div>
@@ -531,6 +536,7 @@ h3.nm, .nm { color: var(--rc); }
     if (!cTitleEdited) $('cTitle').value = c[0] + (to ? ', ' + to : '') + (cKind === 'note' ? '' : '!');
     if (!cTextEdited) $('cText').value = c[1];
     if (!$('cFrom').value) $('cFrom').value = $('fName').value.trim();
+    if (typeof celLook === 'function') celLook();
   }
   $('cOn').addEventListener('change', function () { $('cBox').hidden = !this.checked; if (this.checked) celFill(); });
   $('cKind').addEventListener('click', function (e) {
@@ -539,8 +545,14 @@ h3.nm, .nm { color: var(--rc); }
     celFill();
   });
   $('cTo').addEventListener('input', celFill);
-  $('cTitle').addEventListener('input', function () { cTitleEdited = true; });
-  $('cText').addEventListener('input', function () { cTextEdited = true; });
+  /* the preset is a sample: shown in italics until the guest edits it; first tap selects it so typing replaces it */
+  function celLook() { $('cTitle').classList.toggle('sample', !cTitleEdited && !!$('cTitle').value); $('cText').classList.toggle('sample', !cTextEdited && !!$('cText').value); }
+  $('cTitle').addEventListener('input', function () { cTitleEdited = true; celLook(); });
+  $('cText').addEventListener('input', function () { cTextEdited = true; celLook(); });
+  ['cTitle', 'cText'].forEach(function (id) {
+    $(id).addEventListener('focus', function () { var el = this; if ((id === 'cTitle' ? !cTitleEdited : !cTextEdited) && el.value) setTimeout(function () { el.select(); }, 0); });
+  });
+  $('cOwn').addEventListener('click', function () { cTitleEdited = cTextEdited = true; $('cTitle').value = ''; $('cText').value = ''; celLook(); $('cTitle').focus(); });
   function celMsg() {
     if (!$('cOn').checked) return null;
     return { kind: cKind, to: $('cTo').value.trim(), title: $('cTitle').value.trim(), text: $('cText').value.trim(), from: $('cFrom').value.trim(), after: +$('cAfter').value };
