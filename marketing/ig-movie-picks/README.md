@@ -7,8 +7,8 @@ Marketing & design only. **Nothing here is used by the live site** – it lives 
 - Look: same tokens as www.round2.sg – background `#06050a`, text `#f4f1fb`/`#d6d0e3`/`#a79fbd`, accent `#F2C21B`,
   Press Start 2P (labels) + Chakra Petch (headings/body), game-menu wording (MOVIE SELECT, INSERT COIN, PRESS START).
 - Each pick takes the colour of the room we recommend for it (room colours copied from the site's room list).
-- Each pick slide has a poster slot. Put the poster (portrait, ~2:3, e.g. 800×1200) in `posters/` with the file name set
-  in `ISSUE` (`posters/heartland.jpg` …). It also becomes the blurred background. No file → an 8-bit placeholder
+- Each pick slide has the "screen" box above the title for the movie's poster. Put the file in `posters/` with the name set
+  in `ISSUE` (`posters/heartland.jpg` …). Landscape key art fills the box; a portrait poster sits centred on a blurred copy of itself. No file → an 8-bit placeholder
   (`SPRITES`) shows, so the slide never breaks. Use official key art the studio/streamer releases for promotion.
 - Room panel = "We'd watch it in <room>" + `vibe` (why the room suits the film). The footer always says the service
   plays in other rooms too, so it reads as a suggestion, not a restriction.
