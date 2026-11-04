@@ -8,5 +8,6 @@ and asks people to comment a letter and tag friends (shares + comments, which pu
 - Rooms, colours, specs and personalities come from the live site's room list. Kaeden is left out while under renovation –
   add it back (option G, sprite, copy) when it reopens.
 - Edit `QUIZ` in `index.html` (night, type, copy, sprite), then `python3 render.py` → PNGs in `out/`.
+- Room photos: put one landscape photo per room in `photos/` named after the room (vale.jpg, scarlett.jpg, kai.jpg, bella.jpg, atlas.jpg, maximillion.jpg). Missing photo → the 8-bit sprite shows instead.
 - Sprites are our own 8-bit drawings in `SPRITES` (`C` = room colour).
 - Caption idea: "Which Round2 room are you? 👀 Comment your letter and tag your squad. Book at round2.sg"
