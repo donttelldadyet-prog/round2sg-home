@@ -1897,6 +1897,15 @@ async function gm(env, req) {
     const r = await finalize(e2, ref, 'testbench');
     return gmJ({ ok: r.ok, err: r.err || null, pending: !!r.pending, done: r.h && r.h.done });
   }
+  if (act === 'paytimes') {   /* staff, read-only (5 Nov): how long real guests took from pressing Pay to the booking, and how many walked away */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const rows = await hb.rows(`SELECT status, created, data FROM holds WHERE created > ? ORDER BY created DESC LIMIT 2000`, Date.now() - 60 * 86400e3);
+    const paid = [], other = {};
+    for (const r of rows) { const d = JSON.parse(r.data || '{}'); if (d.pay !== 'live') continue;
+      if (r.status === 'paid' && d.done && d.done.at && !d.forcedAt) paid.push(Math.round((d.done.at - r.created) / 1000)); else other[r.status] = (other[r.status] || 0) + 1; }
+    paid.sort((x, y) => x - y);
+    return gmJ({ ok: true, paidSecs: paid, others: other });
+  }
   if (act === 'forcebook') {   /* OWNER only, after checking HitPay himself: book a paid online hold whose payment page is gone (Malia, 5 Nov) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     const ref = String(f.ref || '').replace(/[^A-Z0-9]/g, ''), h = await hb.get(ref); if (!h) return gmJ({ error: 'No such ref.' });
