@@ -329,7 +329,7 @@ export class HoldBook extends DurableObject {
   pushGet(id) { this.pushInit(); const r = this.rows(`SELECT * FROM push WHERE id = ?`, id)[0]; return r ? { id: r.id, sub: JSON.parse(r.sub), kinds: JSON.parse(r.kinds), label: r.label, last: r.last } : null; }
   pushList(kind) { this.pushInit(); return this.rows(`SELECT * FROM push`).map((r) => ({ id: r.id, sub: JSON.parse(r.sub), kinds: JSON.parse(r.kinds) })).filter((r) => !kind || r.kinds.includes(kind)); }
   pushResult(id, res) { this.pushInit(); if (res === 'gone') this.sql.exec(`DELETE FROM push WHERE id = ?`, id); else this.sql.exec(`UPDATE push SET last = ? WHERE id = ?`, JSON.stringify({ t: Date.now(), r: res }), id); }
-  holdByBid(bid) { const r = this.rows(`SELECT data FROM holds WHERE status = 'paid' AND CAST(json_extract(data, '$.done.bookingId') AS TEXT) = ? LIMIT 1`, String(bid))[0]; if (!r) return null; const d = JSON.parse(r.data); return { total: d.q && d.q.total, pay: d.pay }; }
+  holdByBid(bid) { const r = this.rows(`SELECT ref, data FROM holds WHERE status = 'paid' AND CAST(json_extract(data, '$.done.bookingId') AS TEXT) = ? LIMIT 1`, String(bid))[0]; if (!r) return null; const d = JSON.parse(r.data); return { total: d.q && d.q.total, pay: d.pay, ref: r.ref || '', email: d.email || '', msg: d.msg ? { kind: d.msg.kind, title: d.msg.title } : null }; }
   soonMark(k) { this.pushInit(); this.sql.exec(`CREATE TABLE IF NOT EXISTS soon (k TEXT PRIMARY KEY, t INTEGER)`); this.sql.exec(`DELETE FROM soon WHERE t < ?`, Date.now() - 3 * 86400e3);
     if (this.rows(`SELECT 1 FROM soon WHERE k = ?`, k).length) return false; this.sql.exec(`INSERT INTO soon VALUES (?, ?)`, k, Date.now()); return true; }
   /* each booking's last alerted room + times, so "Booking changed" can say "was … now …" */
@@ -377,6 +377,10 @@ export class HoldBook extends DurableObject {
   sbAdd(n) { this.qInit(); const k = 'sbn:' + new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10); this.kvSet(k, (this.kvGet(k) || 0) + n); }
   kvGet(k) { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = ?`, k)[0]; return r ? JSON.parse(r.v) : null; }
   kvSet(k, v) { this.qInit(); this.sql.exec(`INSERT OR REPLACE INTO kv VALUES (?, ?)`, k, JSON.stringify(v)); }
+  /* every phone alert, with what it was about (owner, 5 Nov: tapping an alert opens its own page in the control centre).
+     Kept 14 days, newest first, at most 400. */
+  alogAdd(e) { const L = (this.kvGet('alog') || []).filter((x) => x.t > Date.now() - 14 * 86400e3); L.unshift(e); this.kvSet('alog', L.slice(0, 400)); }
+  alogList() { return this.kvGet('alog') || []; }
   /* every OK a TV reports, kept per message (owner, 4 Nov): each TV only holds its LATEST OK (/msgAck), so a later OK
      made the control centre show an earlier message as "ended without OK" (Niv's birthday message, OK'd 7:28pm) */
   ackNote(room, k) {
@@ -1004,10 +1008,14 @@ async function holdSweep(env) {
 /* "needs a human" (owner, 3 Nov): every phone with alerts on, a red line in the control centre, and Telegram if set up */
 async function humanAlert(env, ref, title, body) {
   const hb = book(env), L = (await hb.kvGet('human')) || [];
-  if (!L.some((x) => x.ref === ref && x.title === title)) { L.unshift({ id: Date.now().toString(36), ref, title, body, t: Date.now(), sorted: 0 }); await hb.kvSet('human', L.slice(0, 40)); }
+  let hid = (L.find((x) => x.ref === ref && x.title === title) || {}).id;
+  if (!hid) { hid = Date.now().toString(36); L.unshift({ id: hid, ref, title, body, t: Date.now(), sorted: 0 }); await hb.kvSet('human', L.slice(0, 40)); }
+  const h = ref ? await hb.get(ref).catch(() => null) : null, q = (h && h.data && h.data.q) || {};
+  const at = q.date && q.time ? Date.parse(q.date + 'T' + q.time + ':00+08:00') : 0;
+  const m = await logAlert(env, 'human', { title, body }, { type: 'human', hid, ref, unit: q.unit, room: q.room, s: at, e: at ? at + (q.hours || 0) * 3600e3 : 0, name: h && h.data.name, phone: h && h.data.phone, email: h && h.data.email, total: q.total, hours: q.hours, pay: h && h.data.pay });
   if (env.VAPID_JWK) {
     const subs = await hb.pushList();
-    await Promise.all(subs.map(async (x) => hb.pushResult(x.id, await pushOne(env, x.sub, { kind: 'booking', title, body, tag: 'human-' + ref, url: '/?tab=home' }))));
+    await Promise.all(subs.map(async (x) => hb.pushResult(x.id, await pushOne(env, x.sub, { kind: 'booking', title, body, tag: 'human-' + ref, url: m.url }))));
   }
   await staffAlert(env, title + '\n' + body).catch(() => null);
 }
@@ -1761,7 +1769,8 @@ async function waitWarn(env) {
   for (const r of R) {
     const unit = +(Object.keys(GM_ROOM).find((u) => GM_ROOM[u] === r.room) || 0);
     const msg = { kind: 'soon', title: '⏳ ' + roomTitle(unit) + ' · guest link not tied yet', body: 'Starts ' + clock12(+r.start) + ' ' + sgDayName(+r.start) + ', but nothing in SimplyBook starts then. Check the note or booking time, or tap Pair in Guest messages.', tag: 'wait' + r.code, url: '/?tab=guestmsgs' };
-    await Promise.all(subs.map(async (s) => hb.pushResult(s.id, await pushOne(env, s.sub, msg))));
+    const m2 = await logAlert(env, 'soon', msg, { type: 'wait', code: r.code, unit, room: GM_ROOM[unit] || r.room, s: +r.start });
+    await Promise.all(subs.map(async (s) => hb.pushResult(s.id, await pushOne(env, s.sub, m2))));
   }
   return { warned: R.length, phones: subs.length };
 }
@@ -1900,6 +1909,19 @@ async function gm(env, req) {
     const e2 = Object.assign(Object.create(env), env, { __fail: String(f.fail || '').split(',').filter(Boolean) });
     const r = await finalize(e2, ref, 'testbench');
     return gmJ({ ok: r.ok, err: r.err || null, pending: !!r.pending, done: r.h && r.h.done });
+  }
+  if (act === 'alerts') {   /* staff: the alert log (owner, 5 Nov) – list, or one alert with what's known about it now (id=) */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const L = await hb.alogList(), H = (await hb.kvGet('human')) || [];
+    const sortedOf = (x) => { const h = x.ctx && x.ctx.hid ? H.find((y) => y.id === x.ctx.hid) : null; return h ? (h.sorted || 0) : null; };
+    if (f.id) {
+      const x = L.find((y) => y.id === f.id); if (!x) return gmJ({ error: 'That alert is older than 14 days or was cleared.' });
+      const c = x.ctx || {}; let hold = null;
+      const ref = c.ref || (c.bid ? ((await hb.holdByBid(c.bid).catch(() => null)) || {}).ref : '');
+      if (ref) { const h = await hb.get(ref).catch(() => null); if (h) hold = { ref, status: h.status, name: h.data.name, phone: h.data.phone, email: h.data.email, total: h.data.q && h.data.q.total, done: h.data.done || null, made: h.created, pay: h.data.pay, msg: h.data.msg ? { kind: h.data.msg.kind, title: h.data.msg.title } : null }; }
+      return gmJ({ ok: true, alert: Object.assign({}, x, { sorted: sortedOf(x) }), hold, now: Date.now() });
+    }
+    return gmJ({ ok: true, list: L.map((x) => ({ id: x.id, t: x.t, kind: x.kind, title: x.title, body: x.body, late: x.late, type: x.ctx && x.ctx.type, s: x.ctx && x.ctx.s, room: x.ctx && x.ctx.room, sorted: sortedOf(x) })), now: Date.now() });
   }
   if (act === 'paytimes') {   /* staff, read-only (5 Nov): how long real guests took from pressing Pay to the booking, and how many walked away */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
@@ -2310,9 +2332,20 @@ async function pushOne(env, sub, msg) {
   } catch (e) { return 'failed ' + String(e.message || e).slice(0, 80); }
 }
 /* every phone that wants this kind of alert. msg = { title, body, tag, url } */
+/* late session (owner, 5 Nov: highlight them): starts 11pm–7am, or runs past 11:15pm (the WhatsApp-only hours) */
+function lateSess(s, e) { const m = (t) => { const d = new Date(+t + 8 * 3600e3); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
+  if (!s) return false; const a = m(s); if (a >= 23 * 60 || a < 7 * 60) return true; if (!e) return false; const b = m(e); return b > 23 * 60 + 15 || (b < 7 * 60 && e > s); }
+/* log the alert and point its tap at its own page (/?alert=<id>) */
+async function logAlert(env, kind, msg, ctx) {
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6), c = ctx || {};
+  const late = c.late != null ? !!c.late : lateSess(c.s, c.e) || /late/i.test(String(c.name || ''));
+  await book(env).alogAdd({ id, t: Date.now(), kind, title: String(msg.title || '').slice(0, 160), body: String(msg.body || '').slice(0, 900), ctx: c, late }).catch(() => null);
+  return Object.assign({}, msg, { url: '/?alert=' + id, ctx: undefined });
+}
 async function pushAll(env, kind, msg) {
   if (!env.VAPID_JWK) return { sent: 0, why: 'no VAPID_JWK' };
   const hb = book(env), subs = await hb.pushList(kind); let sent = 0;
+  msg = await logAlert(env, kind, msg, msg.ctx);
   await Promise.all(subs.map(async (s) => {
     const r = await pushOne(env, s.sub, Object.assign({ kind }, msg));
     if (r === 'ok') sent++;
@@ -2396,10 +2429,11 @@ async function bookingSample(env) {
 function soonMsg(S, now, pax, extra) {
   const mins = Math.round((S.s - now) / 60e3), unit = S.unit, inT = ' · in ' + (mins >= 55 && mins <= 65 ? '1 hour' : mins + ' min');
   const len = Math.round((S.guestEnd - S.s) / 360e3) / 10, when = [clock12(S.s) + '–' + clock12(S.guestEnd), len + 'h', (pax || '?') + ' pax'].join(' · ') + (extra && extra.length ? '\n' + extra.join(' · ') : '');
-  if (S.k === 'b') return { title: roomTitle(unit) + ' · ' + (S.name || 'No name') + inT, body: when, tag: 'soon' + S.key, url: '/?tab=insession' };
+  const ctx = { type: 'soon', key: S.key, k: S.k, unit, room: ROOMS[unit] ? (unit === 11 ? 'Maximillion' : ROOMS[unit][0]) : '', s: S.s, e: S.guestEnd, name: S.name || '', pax: pax || '', phone: S.phone || '', extra: extra || [] };
+  if (S.k === 'b') return { title: roomTitle(unit) + ' · ' + (S.name || 'No name') + inT, body: when, tag: 'soon' + S.key, url: '/?tab=insession', ctx };
   /* a calendar note: the whole note under the times, so nothing staff wrote is lost (owner, 1 Nov) */
   const note = String(S.name || '').replace(/\s+/g, ' ').trim();
-  return { title: roomTitle(unit) + ' · Note' + inT, body: when + '\n' + (note ? '“' + note.slice(0, 200) + '”' : '(empty note)'), tag: 'soon' + S.key, url: '/?tab=insession' };
+  return { title: roomTitle(unit) + ' · Note' + inT, body: when + '\n' + (note ? '“' + note.slice(0, 200) + '”' : '(empty note)'), tag: 'soon' + S.key, url: '/?tab=insession', ctx };
 }
 /* what staff need to do before this group arrives (owner, 2 Nov): previous group still in (this room or its twin), and the
    guest's own TV message (a link made for this room + start) */
@@ -2504,7 +2538,9 @@ async function bookingAlert(env, bid, type, prev) {
     body = (soonTxt ? soonTxt + '\n' : '') + details + (lt ? ' · ' + lt : '');
   }
   const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10) === date;
-  return { msg: { title: roomTitle(unit) + ' · ' + (name || 'No name'), body, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/' }, b, now: { unit, s, e } };
+  const ctx = { type: 'booking', change: type || 'new', bid: String(bid), unit, room, s, e, hours, name, pax, money, rate: short || rate, phone: String(b.client_phone || ''), email: String(b.client_email || ''),
+    ref: own && own.ref || '', tvmsg: own && own.msg || null, prev: prev && type === 'change' ? { unit: prev.unit, s: prev.s, e: prev.e } : null };
+  return { msg: { title: roomTitle(unit) + ' · ' + (name || 'No name'), body, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/', ctx }, b, now: { unit, s, e } };
 }
 /* An online booking cut short in SimplyBook (owner, 3 Nov: Andrew L paid 5 h for Vale; his start was moved in SimplyBook,
    SimplyBook reset him to its standard 3 h, Auto wrap-up followed and the room looked free after 3 h). The engine knows what
