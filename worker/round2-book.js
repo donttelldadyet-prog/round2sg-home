@@ -1189,8 +1189,8 @@ function sessDay(env, day) {
 async function sessDay0(env, day) {
   const a = await admin(env), s2 = await sb2(env);
   const [bk, nt] = await Promise.all([
-    a('getBookings', [{ booking_type: 'non_cancelled', date_from: addDays(day, -1), date_to: day }]),
-    s2('GET', '/admin/calendar-notes?filter[date_from]=' + addDays(day, -1) + '&filter[date_to]=' + day + '&on_page=200'),
+    a('getBookings', [{ booking_type: 'non_cancelled', date_from: addDays(day, -1), date_to: addDays(day, 1) }]),   /* through the next morning: +1h past midnight (overnight review 5 Nov) */
+    s2('GET', '/admin/calendar-notes?filter[date_from]=' + addDays(day, -1) + '&filter[date_to]=' + addDays(day, 1) + '&on_page=200'),
   ]);
   const d0 = sgMs0(day + ' 00:00'), d1 = d0 + 86400e3 + 6 * 3600e3, items = [];
   for (const b of Object.values(bk || {})) {
@@ -1342,7 +1342,7 @@ async function extend(env, hb, f) {
   const body = (unit, st, en, text) => ({ provider_id: unit, service_id: null, start_date_time: sgStr(st), end_date_time: sgStr(en), note_type_id: 1, note: text, mode: 'provider', time_blocked: true });
   try {
     for (const N of [plan.note.main, plan.note.twin].filter(Boolean)) {
-      const text = N.late ? String(N.edit.note).replace(LATE_RE, (m) => m.replace(/till [0-9:]+[ap]m/i, 'till ' + clock12(N.twin ? to : newGuest)))
+      const text = N.late ? String(N.edit.note).replace(LATE_RE, (m) => { const x = m.replace(/till [0-9:]+[ap]m/i, 'till ' + clock12(N.twin ? to : newGuest)); return lateSess(S.s, newGuest) && !/\blate till/i.test(x) ? x.replace(/till /i, 'late till ') : x; })
         : N.twin ? 'SYSTEM BLOCK · EXT ' + ROOMS[S.unit][0] + ' till ' + clock12(to) : 'EXT till ' + clock12(newGuest) + ' · ' + who;
       if (N.edit) {
         await s2('PUT', '/admin/calendar-notes/' + N.edit.id, body(N.unit, N.edit.s, to, text));
@@ -1636,7 +1636,9 @@ async function msgOrphans(env, why, dry) {
 async function latecancel(env, hb, f) {
   const old = await lateFind(env, String(f.id || ''), String(f.day || ''));
   if (!old) return { error: 'That session isn’t in SimplyBook any more. Refresh the list.' };
-  const s2 = await sb2(env), probs = await lateDel(s2, old.notes);
+  const s2 = await sb2(env), tw = old.notes.filter((n) => +n.unit !== +old.S.unit);
+  const p0 = await lateDel(s2, tw); if (p0.length) return { error: 'SimplyBook didn’t remove the twin room’s block, so nothing else was changed: ' + p0.join('; ').slice(0, 160) };   /* overnight review 5 Nov */
+  const probs = await lateDel(s2, old.notes.filter((n) => +n.unit === +old.S.unit));
   const msgs = await lateMsgsCancel(env, hb, old.S).catch(() => 0);
   await autoRun(env, 'late cancelled').catch(() => null);
   await shadowSync(env, [sgDay(old.S.s - SHADOW_TILL * 60e3)]).catch(() => null);
@@ -1712,6 +1714,8 @@ async function extUndo(env, hb, f) {
   if (!d) return { error: 'Nothing to undo.' };
   if (d.undone) return { error: 'Already undone.' };
   if (Date.now() - d.t > 30 * 60e3) return { error: 'It’s been over 30 minutes. Change it in SimplyBook and the message calendar instead.' };
+  /* a later +1h on the same session would be wiped too (overnight review 5 Nov): undo that one first */
+  if ((await hb.extList()).some((x) => x.key && x.key === d.key && x.t > d.t && !x.undone && x.id !== String(f.id))) return { error: 'This session was extended again after this. Undo the later +1h first.' };
   const s2 = await sb2(env), probs = [];
   probs.push(...await extRevert(s2, d.notes));
   for (const m of d.moved || []) { const t = await gmFwd(env, { action: 'move', staff: env.GM_STAFF, code: m.code, start: m.from, room: d.room }); if (/"error"/.test(t)) probs.push('move back ' + m.code); }
@@ -1724,6 +1728,7 @@ async function extUndo(env, hb, f) {
   await hb.gmDrop('__LIST__'); await gmList(env, hb).catch(() => null);
   await hb.extDone(String(f.id), Date.now());
   await shadowSync(env, [sgDay((+d.guestEndWas || Date.now()) - SHADOW_TILL * 60e3)]).catch(() => null);   /* the 11:30pm label follows */
+  await autoRun(env, 'undo').catch(() => null);   /* Auto wrap-up follows the old end again */
   return { ok: true, problems: probs };
 }
 
