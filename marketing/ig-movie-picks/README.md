@@ -10,11 +10,11 @@ Marketing & design only. **Nothing here is used by the live site** – it lives 
 - Each pick slide has the "screen" box above the title for the movie's poster. Put the file in `posters/` with the name set
   in `ISSUE` (`posters/heartland.jpg` …). Landscape key art fills the box; a portrait poster sits centred on a blurred copy of itself. No file → an 8-bit placeholder
   (`SPRITES`) shows, so the slide never breaks. Use official key art the studio/streamer releases for promotion.
-- Room panel = "We'd watch it in <room>" + `vibe` (why the room suits the film). The footer always says the service
+- Room panel = "Best room to watch in <room>" + tier + specs only – no room description, so fortnightly posts don't repeat the same copy. The footer always says the service
   plays in other rooms too, so it reads as a suggestion, not a restriction.
 
 ## New issue (every 2 weeks)
-1. Edit `ISSUE` at the top of the script in `index.html` (issue no., dates, 3–5 picks: title, service, when, genre, year, why, room, vibe, poster, sprite),
+1. Edit `ISSUE` at the top of the script in `index.html` (issue no., dates, 3–5 picks: title, service, when, genre, year, why, room, poster, sprite),
    and drop the posters into `posters/`.
 2. `python3 render.py` → PNGs in `out/`. Open `index.html` in a browser to preview.
 3. Check every title is actually on the **Singapore** Netflix / Prime Video / HBO Max apps that day (release lists online are US).
@@ -27,4 +27,4 @@ Marketing & design only. **Nothing here is used by the live site** – it lives 
 
 ## Issue 01 (6–19 Nov 2026)
 Heartland (Netflix, 13 Nov) → Scarlett · Possible Love (Netflix, 6 Nov) → Kai · Madden (Prime Video, 18 Nov) → Maximillion ·
-Dune (HBO Max) → Atlas. Rooms matched by vibe (room descriptions from the live site). Posters not added yet. Dates from US release lists – confirm in the SG apps before posting.
+Dune (HBO Max) → Atlas. Rooms picked to suit each film; no room descriptions on the slides. Posters not added yet. Dates from US release lists – confirm in the SG apps before posting.
