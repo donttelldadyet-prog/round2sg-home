@@ -1786,7 +1786,7 @@ async function gm(env, req) {
     for (const r of ['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max']) {
       const base = FB_BASE + env.TV_KEY + '/' + r, get = (n) => fetch(base + '/' + n + '.json').then((x) => x.json()).catch(() => null);
       const [m, k, sh, h, sd] = await Promise.all([get('msg'), get('msgAck'), get('msgShown'), get('helper'), get('soundDiag')]);
-      out[r] = { msg: m && { id: m.id, kind: m.kind, title: m.title, at: m.at, until: m.until, ack: m.ack }, ack: k, shown: sh, tv: h && { tv: h.tv, v: h.v, t: h.t, front: h.front, pw: h.pw }, sound: sd };
+      out[r] = { msg: m && { id: m.id, kind: m.kind, title: m.title, at: m.at, until: m.until, ack: m.ack }, ack: k, shown: sh, tv: h && { tv: h.tv, v: h.v, t: h.t, front: h.front, frontAt: h.frontAt, pw: h.pw }, sound: sd };
     }
     return gmJ({ ok: true, rooms: out, now: Date.now() });
   }
