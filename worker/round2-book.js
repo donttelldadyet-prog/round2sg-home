@@ -1947,7 +1947,10 @@ async function gm(env, req) {
     const p = String(f.id || '').replace(/[^A-Za-z0-9_-]/g, ''); if (p.length < 4) return gmJ({ error: 'id?' });
     const r = (await hb.rows(`SELECT id, sub FROM push WHERE substr(id, 1, ?) = ?`, p.length, p))[0]; if (!r) return gmJ({ error: 'No such phone.' });
     const a = 't' + Date.now().toString(36), t = Date.now();
-    const res = await pushOne(env, JSON.parse(r.sub), { kind: 'booking', title: '🧪 Delivery test', body: 'Sent ' + new Date(t + 8 * 3600e3).toISOString().slice(11, 19) + ' – nothing to do', tag: a, url: '/?alert=' + a });
+    /* alert=<id>: send that logged alert again, as it was, to this one phone (owner, 6 Nov: one his phone never showed) */
+    const old = f.alert ? (await hb.alogList()).find((x) => x.id === String(f.alert)) : null; if (f.alert && !old) return gmJ({ error: 'No such alert.' });
+    const res = await pushOne(env, JSON.parse(r.sub), old ? { kind: old.kind, title: old.title, body: old.body, tag: 'again' + old.id, url: '/?alert=' + old.id }
+      : { kind: 'booking', title: '🧪 Delivery test', body: 'Sent ' + new Date(t + 8 * 3600e3).toISOString().slice(11, 19) + ' – nothing to do', tag: a, url: '/?alert=' + a });
     return gmJ({ ok: true, a, t, res });
   }
   if (act === 'visitsync') {   /* staff (6 Nov): fill the first-visit / returning guest list from SimplyBook, a few months per call */
