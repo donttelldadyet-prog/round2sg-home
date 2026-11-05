@@ -162,3 +162,7 @@ released, then paid on the kept payment page) → booked by the webhook. Test bo
   page), again (same guest picked again), gaveway (made way for their own paid booking), error (checkout failed),
   left (old page / no reason sent). The page sends why with /release. Shown in control centre › Website › Booking page
   (gm paytimes list.why, gm holdsday why). Holds from before 5 Nov ~5am have no reason. Sandbox-tested: cancel, payback.
+- 5 Nov (owner decision): pressing back from HitPay keeps releasing the slot straight away (after asking HitPay: paid →
+  booked, going through / no answer → kept). Not held until the payment page closes – guests often go to the payment page
+  and back. Rare case accepted: someone pays on the still-open page after another guest took the slot → "needs a human"
+  alert, refund by hand.
