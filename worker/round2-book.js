@@ -1941,6 +1941,15 @@ async function gm(env, req) {
     const seen = (await hb.kvGet('pseen')) || {}, al = (await hb.alogList()).slice(0, 40);
     return gmJ({ ok: true, now: Date.now(), alerts: al.map((x) => ({ id: x.id, t: x.t, title: x.title, seen: seen[x.id] || {} })), phones: (await hb.rows(`SELECT id, kinds, label, t, last, sub FROM push`)).map((r) => { let host = ''; try { host = new URL(JSON.parse(r.sub).endpoint).host; } catch (e) {} return { id: String(r.id).slice(0, 6), label: r.label, kinds: JSON.parse(r.kinds || '[]'), since: r.t, last: r.last ? JSON.parse(r.last) : null, host }; }) });
   }
+  if (act === 'pushtest') {   /* staff (6 Nov): a test alert to ONE phone (id = its first letters) and when that phone showed it */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    if (f.a) { const m = (await hb.kvGet('pseen')) || {}; return gmJ({ ok: true, seen: m[String(f.a)] || {} }); }
+    const p = String(f.id || '').replace(/[^A-Za-z0-9_-]/g, ''); if (p.length < 4) return gmJ({ error: 'id?' });
+    const r = (await hb.rows(`SELECT id, sub FROM push WHERE substr(id, 1, ?) = ?`, p.length, p))[0]; if (!r) return gmJ({ error: 'No such phone.' });
+    const a = 't' + Date.now().toString(36), t = Date.now();
+    const res = await pushOne(env, JSON.parse(r.sub), { kind: 'booking', title: '🧪 Delivery test', body: 'Sent ' + new Date(t + 8 * 3600e3).toISOString().slice(11, 19) + ' – nothing to do', tag: a, url: '/?alert=' + a });
+    return gmJ({ ok: true, a, t, res });
+  }
   if (act === 'visitsync') {   /* staff (6 Nov): fill the first-visit / returning guest list from SimplyBook, a few months per call */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await visitSync(env, f.from, f.months)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
