@@ -355,6 +355,18 @@ export class HoldBook extends DurableObject {
   bkGet(bid) { this.bkInit(); const r = this.rows(`SELECT * FROM bkseen WHERE bid = ?`, bid)[0]; return r ? { unit: r.unit, s: r.s, e: r.e } : null; }
   bkPut(bid, x) { this.bkInit(); this.sql.exec(`DELETE FROM bkseen WHERE t < ?`, Date.now() - 200 * 86400e3); this.sql.exec(`INSERT OR REPLACE INTO bkseen VALUES (?, ?, ?, ?, ?)`, bid, x.unit, x.s, x.e, Date.now()); }
   bkDel(bid) { this.bkInit(); this.sql.exec(`DELETE FROM bkseen WHERE bid = ?`, bid); }
+  /* every real booking's guest (last 8 digits of the phone, email) – first-timer or returning (owner, 6 Nov). Online bookings
+     make a new SimplyBook contact each time, so the contact can't tell; phone or email can. */
+  vInit() { if (this.vReady) return; this.vReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS visits (bid TEXT PRIMARY KEY, s INTEGER, p TEXT, e TEXT)`);
+    this.sql.exec(`CREATE INDEX IF NOT EXISTS visits_p ON visits(p)`); this.sql.exec(`CREATE INDEX IF NOT EXISTS visits_e ON visits(e)`); }
+  vPut(rows) { this.vInit(); for (const r of rows) this.sql.exec(`INSERT OR REPLACE INTO visits VALUES (?, ?, ?, ?)`, String(r.bid), +r.s, r.p || '', r.e || ''); return rows.length; }
+  vDel(bid) { this.vInit(); this.sql.exec(`DELETE FROM visits WHERE bid = ?`, String(bid)); }
+  /* earlier visits = other bookings by the same phone or email on an earlier day (two rooms one night = one visit) */
+  vBefore(bid, s, p, e) {
+    this.vInit(); const day = Math.floor((s + 8 * 3600e3) / 86400e3);
+    const r = this.rows(`SELECT COUNT(DISTINCT (s + 28800000) / 86400000) AS n, MAX(s) AS last FROM visits WHERE bid != ? AND (s + 28800000) / 86400000 < ? AND ((? != '' AND p = ?) OR (? != '' AND e = ?))`, String(bid), day, p, p, e, e)[0];
+    return { n: r.n || 0, last: r.last || 0, all: this.rows(`SELECT COUNT(*) AS n FROM visits`)[0].n };
+  }
   /* auto wrap-up (no Make): the engine's own schedule of "About 10 minutes to go" / "That's a wrap!" per session,
      written straight to the room's TV (Firebase) by the alarm, like the 5-minute reminder */
   autoInit() { if (this.autoReady) return; this.autoReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS autoq (key TEXT, kind TEXT, room TEXT, day TEXT, at INTEGER, gend INTEGER, sent INTEGER DEFAULT 0, PRIMARY KEY (key, kind))`);
@@ -1924,6 +1936,10 @@ async function gm(env, req) {
     }
     return gmJ({ ok: true, rooms: out, now: Date.now() });
   }
+  if (act === 'visitsync') {   /* staff (6 Nov): fill the first-visit / returning guest list from SimplyBook, a few months per call */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    try { return gmJ(await visitSync(env, f.from, f.months)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
+  }
   if (act === 'holdproblems') {   /* staff: online bookings in the last N days (max 60) that were paid but not booked, used a fallback, or got stuck */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     const days = Math.max(1, Math.min(60, +f.days || 30));
@@ -2544,6 +2560,28 @@ const ROOM_DOT = { 5: '🎀', 7: '🍃', 8: '🪐', 9: '🏔️', 10: '🔮', 12
 const roomTitle = (unit) => (ROOM_DOT[unit] ? ROOM_DOT[unit] + ' ' : '') + (unit === 11 ? 'MAX' : ROOMS[unit] ? ROOMS[unit][0].toUpperCase() : 'ROOM');
 /* pax from a note's text: "4 pax", "4pax", "4 ppl", "4 people", "4 guests", "4p" (not "4pm"/"4 p.m."), "pax: 4", "pax 4" */
 const notePax = (t) => { t = String(t || ''); const m = t.match(/(\d{1,2})\s*(pax|ppl|people|persons?|guests?|pp|p(?![.\s]*m\b))\b/i) || t.match(/\b(?:pax|ppl|people|guests?)\s*[:=-]?\s*(\d{1,2})\b/i); return m ? m[1] : ''; };
+/* who a guest is, for "first visit / returning": the last 8 digits of the phone and a real email (not our own) */
+const vPhone = (x) => { const d = String(x || '').replace(/\D/g, ''); return d.length >= 8 && !/91625767$/.test(d) ? d.slice(-8) : ''; };
+const vMail = (x) => { const m = String(x || '').trim().toLowerCase(); return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(m) && !/round2|example\.com|noemail|no-?reply|test@/.test(m) ? m : ''; };
+const ordinal = (n) => n + (n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] || 'th');
+/* fill the guest list from SimplyBook's bookings (staff, once; gm visitsync from=YYYY-MM-DD months=N, 1 request per month) */
+async function visitSync(env, from, months) {
+  const a = await admin(env), hb = book(env); let d = /^\d{4}-\d\d-\d\d$/.test(from || '') ? from : '2024-01-01', n = 0, seen = 0;
+  for (let i = 0; i < Math.max(1, Math.min(12, +months || 6)); i++) {
+    const to = addDays(d, 30);
+    const L = Object.values((await a('getBookings', [{ date_from: d, date_to: to, booking_type: 'non_cancelled' }])) || {});
+    const rows = [];
+    for (const b of L) {
+      const cid = String(b.client_id || ''), name = String(b.client || b.client_name || '');
+      if (SYS_CLIENTS.includes(cid) || SYS_RE.test(name) || !ROOMS[+b.unit_id]) continue;
+      const p = vPhone(b.client_phone), e = vMail(b.client_email); seen++;
+      if (p || e) rows.push({ bid: String(b.id), s: sgMs0(b.start_date || b.start_date_time), p, e });
+    }
+    n += await hb.vPut(rows); d = addDays(to, 1);
+  }
+  await hb.kvSet('visitSync', { t: Date.now(), upTo: d });
+  return { ok: true, bookings: seen, saved: n, next: d };
+}
 async function bookingAlert(env, bid, type, prev) {
   const a = await admin(env), b = await a('getBookingDetails', [bid]).catch(() => null);
   if (!b) return null;
@@ -2590,9 +2628,20 @@ async function bookingAlert(env, bid, type, prev) {
     body = (soonTxt ? soonTxt + '\n' : '') + details + (lt ? ' · ' + lt : '');
   }
   const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10) === date;
-  const ctx = { type: 'booking', change: type || 'new', bid: String(bid), unit, room, s, e, hours, name, pax, money, rate: short || rate, phone: String(b.client_phone || ''), email: String(b.client_email || ''),
+  /* first visit or returning (owner, 6 Nov) – only once the guest list has been filled (gm visitsync) */
+  let visit = null;
+  if (type !== 'cancel') {
+    const vp = vPhone(b.client_phone), ve = vMail(b.client_email), hbv = book(env);
+    if ((vp || ve) && (await hbv.kvGet('visitSync').catch(() => null))) {
+      const v = await hbv.vBefore(String(bid), s, vp, ve).catch(() => null);
+      if (v) visit = { n: v.n + 1, last: v.last };
+      await hbv.vPut([{ bid: String(bid), s, p: vp, e: ve }]).catch(() => null);
+    }
+  }
+  const vTag = visit ? (visit.n === 1 ? ' · 🆕 1st visit' : ' · 🔁 ' + ordinal(visit.n) + ' visit') : '';
+  const ctx = { type: 'booking', change: type || 'new', bid: String(bid), unit, room, s, e, hours, name, pax, money, rate: short || rate, phone: String(b.client_phone || ''), email: String(b.client_email || ''), visit,
     ref: own && own.ref || '', tvmsg: own && own.msg || null, prev: prev && type === 'change' ? { unit: prev.unit, s: prev.s, e: prev.e } : null };
-  return { msg: { title: roomTitle(unit) + ' · ' + (name || 'No name'), body, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/', ctx }, b, now: { unit, s, e } };
+  return { msg: { title: roomTitle(unit) + ' · ' + (name || 'No name') + vTag, body, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/', ctx }, b, now: { unit, s, e } };
 }
 /* An online booking cut short in SimplyBook (owner, 3 Nov: Andrew L paid 5 h for Vale; his start was moved in SimplyBook,
    SimplyBook reset him to its standard 3 h, Auto wrap-up followed and the room looked free after 3 h). The engine knows what
@@ -2619,6 +2668,7 @@ async function bookingPush(env, bid, type) {
   const hb = book(env), prev = await hb.bkGet(String(bid)).catch(() => null);
   const r = await bookingAlert(env, bid, type, prev);
   if (r && r.now) await (type === 'cancel' ? hb.bkDel(String(bid)) : hb.bkPut(String(bid), r.now)).catch(() => null);
+  if (type === 'cancel') await hb.vDel(String(bid)).catch(() => null);   /* a cancelled booking isn't a visit */
   return r && r.msg ? pushAll(env, 'booking', r.msg) : r;
 }
 
