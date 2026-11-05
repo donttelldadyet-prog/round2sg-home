@@ -2638,10 +2638,10 @@ async function bookingAlert(env, bid, type, prev) {
       await hbv.vPut([{ bid: String(bid), s, p: vp, e: ve }]).catch(() => null);
     }
   }
-  const vTag = visit ? (visit.n === 1 ? ' · 🆕 1st visit' : ' · 🔁 ' + ordinal(visit.n) + ' visit') : '';
+  const vTag = visit ? (visit.n === 1 ? ' · 🆕 1st visit' : ' · 🔁 ' + ordinal(visit.n) + ' visit') : '';   /* at the end of the details, not the bold line – it got cut off there (owner, 6 Nov) */
   const ctx = { type: 'booking', change: type || 'new', bid: String(bid), unit, room, s, e, hours, name, pax, money, rate: short || rate, phone: String(b.client_phone || ''), email: String(b.client_email || ''), visit,
     ref: own && own.ref || '', tvmsg: own && own.msg || null, prev: prev && type === 'change' ? { unit: prev.unit, s: prev.s, e: prev.e } : null };
-  return { msg: { title: roomTitle(unit) + ' · ' + (name || 'No name') + vTag, body, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/', ctx }, b, now: { unit, s, e } };
+  return { msg: { title: roomTitle(unit) + ' · ' + (name || 'No name'), body: body + vTag, tag: 'bk' + bid, url: today ? '/?tab=insession' : '/', ctx }, b, now: { unit, s, e } };
 }
 /* An online booking cut short in SimplyBook (owner, 3 Nov: Andrew L paid 5 h for Vale; his start was moved in SimplyBook,
    SimplyBook reset him to its standard 3 h, Auto wrap-up followed and the room looked free after 3 h). The engine knows what
