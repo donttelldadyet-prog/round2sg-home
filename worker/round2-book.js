@@ -1936,6 +1936,10 @@ async function gm(env, req) {
     }
     return gmJ({ ok: true, rooms: out, now: Date.now() });
   }
+  if (act === 'pushsubs') {   /* staff, read-only (6 Nov): the phones signed up for alerts and how the last send went */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    return gmJ({ ok: true, now: Date.now(), phones: (await hb.rows(`SELECT id, kinds, label, t, last, sub FROM push`)).map((r) => { let host = ''; try { host = new URL(JSON.parse(r.sub).endpoint).host; } catch (e) {} return { id: String(r.id).slice(0, 6), label: r.label, kinds: JSON.parse(r.kinds || '[]'), since: r.t, last: r.last ? JSON.parse(r.last) : null, host }; }) });
+  }
   if (act === 'visitsync') {   /* staff (6 Nov): fill the first-visit / returning guest list from SimplyBook, a few months per call */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await visitSync(env, f.from, f.months)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
