@@ -154,10 +154,18 @@ async function dayBoard(env, date) {
   const peak = dow === 0 || dow === 5 || dow === 6 || ph.has(date), dt = peak ? 'peak' : 'off';
   const now = new Date(Date.now() + 8 * 3600e3), today = now.toISOString().slice(0, 10), nowM = now.getUTCHours() * 60 + now.getUTCMinutes();
   if (date < today) return { date, peak, ph: ph.has(date), rooms: {} };
-  const p = await pub(env);
-  const units = Object.keys(ROOMS);
-  const gaps = await Promise.all(units.map((u) => gapsFor(p, date, u, dt).catch(() => null)));
-  const holds = await book(env).list(date);
+  const units = Object.keys(ROOMS), hb = book(env);
+  /* SimplyBook's free times are remembered for 60 s, shared by every visitor (5 Nov: the board was ~2/3 of all SimplyBook
+     requests – 14 per day looked at – and SimplyBook allows ~5,000 a day). Our own holds are always fresh (below), checkout
+     always asks SimplyBook again, and any SimplyBook change (/sb/notify) clears the memory at once. */
+  const ck = date + ':' + dt, C = (await hb.kvGet('gapc').catch(() => null)) || {};
+  let gaps = C[ck] && Date.now() - C[ck].t < 60e3 ? C[ck].g : null;
+  if (!gaps) {
+    const p = await pub(env);
+    gaps = await Promise.all(units.map((u) => gapsFor(p, date, u, dt).catch(() => null)));
+    if (!gaps.some((g) => g === null)) { const n = {}; for (const k in C) if (Date.now() - C[k].t < 60e3) n[k] = C[k]; n[ck] = { t: Date.now(), g: gaps }; await hb.kvSet('gapc', n).catch(() => null); }
+  }
+  const holds = await hb.list(date);
   const rooms = {};
   units.forEach((u, i) => {
     const P = PRICES[ROOMS[u][1]], starts = [];
@@ -1123,6 +1131,7 @@ async function finalize(env, ref, source) {
   } catch (err) { result = { problem: 'paid – booking not created: ' + String(err.message || err).slice(0, 150) }; }
   result.at = Date.now(); result.source = source;
   await hb.done(ref, result);   /* first, so the guest's page shows the outcome straight away */
+  await hb.kvSet('gapc', {}).catch(() => null);   /* the booking board asks SimplyBook afresh (its 60-s memory) */
   /* paid but not in SimplyBook (slot gone, SimplyBook down…): tell staff straight away so they can call / refund */
   const T = d.pay === 'test' ? 'TEST · ' : '';
   const who = `${q.unit === 11 ? 'Maximillion' : q.room} · ${q.date} ${q.time}–${q.end} (${q.hours}h) · paid $${q.total.toFixed(2)}\n${d.name} · ${d.phone} · ${d.email} · ref ${ref}`;
@@ -2873,6 +2882,7 @@ const HANDLER = {
         if (env.MIRROR_HOOK_URL) ctx.waitUntil(fetch(env.MIRROR_HOOK_URL, { method: 'POST', headers: { 'content-type': ct }, body: raw }).catch(() => null));
         let j = {}; try { j = JSON.parse(raw); } catch (e) { j = Object.fromEntries(new URLSearchParams(raw)); }
         const bid = String(j.booking_id || '').replace(/\D/g, ''), type = String(j.notification_type || '');
+        ctx.waitUntil(book(env).kvSet('gapc', {}).catch(() => null));   /* the booking board asks SimplyBook afresh */
         if (bid) ctx.waitUntil(book(env).onSb(bid, type).catch(() => null));
         if (bid) ctx.waitUntil(bookingPush(env, bid, type).catch(() => null));   /* staff phones: New booking / changed / cancelled */
         if (bid) ctx.waitUntil(paidLengthCheck(env, bid, type).catch(() => null));   /* an online booking cut shorter than paid */
