@@ -1938,7 +1938,8 @@ async function gm(env, req) {
   }
   if (act === 'pushsubs') {   /* staff, read-only (6 Nov): the phones signed up for alerts and how the last send went */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
-    return gmJ({ ok: true, now: Date.now(), phones: (await hb.rows(`SELECT id, kinds, label, t, last, sub FROM push`)).map((r) => { let host = ''; try { host = new URL(JSON.parse(r.sub).endpoint).host; } catch (e) {} return { id: String(r.id).slice(0, 6), label: r.label, kinds: JSON.parse(r.kinds || '[]'), since: r.t, last: r.last ? JSON.parse(r.last) : null, host }; }) });
+    const seen = (await hb.kvGet('pseen')) || {}, al = (await hb.alogList()).slice(0, 40);
+    return gmJ({ ok: true, now: Date.now(), alerts: al.map((x) => ({ id: x.id, t: x.t, title: x.title, seen: seen[x.id] || {} })), phones: (await hb.rows(`SELECT id, kinds, label, t, last, sub FROM push`)).map((r) => { let host = ''; try { host = new URL(JSON.parse(r.sub).endpoint).host; } catch (e) {} return { id: String(r.id).slice(0, 6), label: r.label, kinds: JSON.parse(r.kinds || '[]'), since: r.t, last: r.last ? JSON.parse(r.last) : null, host }; }) });
   }
   if (act === 'visitsync') {   /* staff (6 Nov): fill the first-visit / returning guest list from SimplyBook, a few months per call */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
@@ -2431,6 +2432,16 @@ async function pushApi(env, req, path) {
   if (path === '/push/key') return J(env.VAPID_JWK ? { key: vapidPublic(env), kinds: PUSH_KINDS } : { error: 'Alerts aren’t set up in Cloudflare yet' });
   if (req.method !== 'POST') return J({ error: 'POST' }, 405);
   const f = await req.json().catch(() => ({})), hb = book(env);
+  /* a phone saying it really showed an alert (6 Nov: Apple accepted the 4:41am alert for every phone, but it never appeared
+     on the owner's). No staff code: it only records "this phone showed alert X" for a phone that is signed up. */
+  if (path === '/push/seen') {
+    const a = String(f.a || '').replace(/[^a-z0-9]/g, '').slice(0, 20), e = String(f.e || '').slice(-40);
+    if (!a || e.length < 20 || !(await hb.gmRate('pushseen:' + (req.headers.get('cf-connecting-ip') || '?'), 300))) return J({ ok: false });
+    const sub = (await hb.rows(`SELECT id FROM push WHERE instr(sub, ?) > 0`, e))[0]; if (!sub) return J({ ok: false });
+    const m = (await hb.kvGet('pseen')) || {}; (m[a] = m[a] || {})[String(sub.id).slice(0, 6)] = Date.now();
+    const keys = Object.keys(m); if (keys.length > 300) keys.slice(0, keys.length - 300).forEach((k) => delete m[k]);
+    await hb.kvSet('pseen', m); return J({ ok: true });
+  }
   if (!env.GM_STAFF || f.staff !== env.GM_STAFF) {
     await hb.gmRate('pushbad:' + (req.headers.get('cf-connecting-ip') || '?'), 1000);
     return J({ error: 'Wrong staff code.' }, 403);
