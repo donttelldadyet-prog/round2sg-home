@@ -2577,11 +2577,23 @@ async function bookingSample(env) {
    the room set-up and how many controllers). Bold = icon ROOM · name · in 1 hour; below = arrives · length · pax. */
 /* compact (owner, 2 Nov: little space in the banner): line 1 "7pm–10pm · 3h · 2 pax"; line 2, only when there's something
    to do: "🧹 Last group leaves 6:45pm" (room not free yet), "🎂 Message 7:15pm" / "🔗 Message not written yet" */
-function soonMsg(S, now, pax, extra) {
+/* the 1-hour reminder says first visit / returning too (owner, 6 Nov): this booking's guest from the visit list (its own row
+   holds the phone/email it was booked with), else the phone on the session */
+async function soonVisit(env, S) {
+  if (S.k !== 'b') return '';
+  try {
+    const hb = book(env), bid = String(S.key).slice(1); if (!(await hb.kvGet('visitSync'))) return '';
+    const me = (await hb.rows(`SELECT p, e FROM visits WHERE bid = ?`, bid))[0] || { p: vPhone(S.phone), e: '' };
+    if (!me.p && !me.e) return '';
+    const v = await hb.vBefore(bid, S.s, me.p, me.e);
+    return v.n === 0 ? '🆕 1st visit' : '🔁 ' + ordinal(v.n + 1) + ' visit';
+  } catch (e) { return ''; }
+}
+function soonMsg(S, now, pax, extra, visit) {
   const mins = Math.round((S.s - now) / 60e3), unit = S.unit, inT = ' · in ' + (mins >= 55 && mins <= 65 ? '1 hour' : mins + ' min');
   const len = Math.round((S.guestEnd - S.s) / 360e3) / 10, when = [clock12(S.s) + '–' + clock12(S.guestEnd), len + 'h', (pax || '?') + ' pax'].join(' · ') + (extra && extra.length ? '\n' + extra.join(' · ') : '');
   const ctx = { type: 'soon', key: S.key, k: S.k, unit, room: ROOMS[unit] ? (unit === 11 ? 'Maximillion' : ROOMS[unit][0]) : '', s: S.s, e: S.guestEnd, name: S.name || '', pax: pax || '', phone: S.phone || '', extra: extra || [] };
-  if (S.k === 'b') return { title: roomTitle(unit) + ' · ' + (S.name || 'No name') + inT, body: when, tag: 'soon' + S.key, url: '/?tab=insession', ctx };
+  if (S.k === 'b') return { title: roomTitle(unit) + ' · ' + (S.name || 'No name') + inT, body: when.replace(/^([^\n]*)/, (l) => l + (visit ? ' · ' + visit : '')), tag: 'soon' + S.key, url: '/?tab=insession', ctx };
   /* a calendar note: the whole note under the times, so nothing staff wrote is lost (owner, 1 Nov) */
   const note = String(S.name || '').replace(/\s+/g, ' ').trim();
   return { title: roomTitle(unit) + ' · Note' + inT, body: when + '\n' + (note ? '“' + note.slice(0, 200) + '”' : '(empty note)'), tag: 'soon' + S.key, url: '/?tab=insession', ctx };
@@ -2632,7 +2644,7 @@ async function soonRun(env) {
   for (const S of all) {
     const m = S.s - now; if (m <= 50 * 60e3 || m > 61 * 60e3) continue;   /* exactly 1 h before on the 5-min tick (owner, 2 Nov); keyed in within the hour → none */
     if (!(await hb.soonMark(S.key + ':' + S.s))) continue;
-    sent.push(Object.assign({ key: S.key }, await pushAll(env, 'soon', soonMsg(S, now, await soonPax(env, S), await soonExtra(env, S, all, now)))));
+    sent.push(Object.assign({ key: S.key }, await pushAll(env, 'soon', soonMsg(S, now, await soonPax(env, S), await soonExtra(env, S, all, now), await soonVisit(env, S)))));
   }
   return { sent };
 }
