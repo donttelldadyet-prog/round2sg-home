@@ -2474,6 +2474,22 @@ async function pushRetry(env) {
   await hb.kvSet('pretry', T); if (out.length) await hb.kvSet('pretryLast', { t: now, out });
   return out;
 }
+/* a read-only staff question left in the engine's KV (HOLDS › diag:req, JSON form fields) is answered within 5 minutes into
+   diag:res – for when the browser link to the owner's computer is down (6 Nov). Only reading actions; only someone with
+   Cloudflare access to this account can write the KV. */
+const DIAG_OK = ['tvmsgs', 'alerts', 'pushsubs', 'tvlog', 'guestlook', 'list', 'auto', 'insess', 'holdsday', 'acks', 'latelist', 'paytimes', 'prinfo', 'queue', 'links'];
+async function diagReq(env) {
+  if (!env.HOLDS) return;
+  const q = await env.HOLDS.get('diag:req', 'json').catch(() => null); if (!q) return;
+  await env.HOLDS.delete('diag:req');
+  const reqs = Array.isArray(q) ? q.slice(0, 5) : [q], out = [];
+  for (const f of reqs) {
+    if (!DIAG_OK.includes(String(f.action))) { out.push({ q: f, error: 'not a reading action' }); continue; }
+    const r = await gm(env, new Request('https://engine/gm', { method: 'POST', body: new URLSearchParams(Object.assign({}, f, { staff: env.GM_STAFF })) }));
+    out.push({ q: f, r: await r.json().catch(() => null) });
+  }
+  await env.HOLDS.put('diag:res', JSON.stringify({ t: sgStr(Date.now()), out }));
+}
 async function pushDiag(env) {
   if (!env.HOLDS) return;
   const hb = book(env), seen = (await hb.kvGet('pseen')) || {}, al = (await hb.alogList()).slice(0, 25);
@@ -2880,7 +2896,8 @@ const HANDLER = {
     /* the reminder only needs the 10-min ticks plus :15 and :45 (bookings start on the quarter hour) */
     if (ten || quarter) go(soonRun(env));
     go(paidSweep(env).catch(() => null));
-    go(pushRetry(env).then(() => pushDiag(env)).catch(() => null));   /* resend alerts a phone hasn't shown; delivery report copy (KV diag:push) */   /* paid at HitPay but not booked? book it (every 5 min) */
+    go(pushRetry(env).then(() => pushDiag(env)).catch(() => null));
+    go(diagReq(env).catch(() => null));   /* staff questions left in KV (diag:req → diag:res) */   /* resend alerts a phone hasn't shown; delivery report copy (KV diag:push) */   /* paid at HitPay but not booked? book it (every 5 min) */
     /* a SimplyBook change a few minutes ago: Auto wrap-up looks again on the next 5-min tick (owner, 3 Nov: a quick fix was
        only picked up after a refresh); the 10-min ticks run it anyway */
     go((async () => { const ag = await hb.kvGet('autoAgain'); if (ag && Date.now() >= ag) { await hb.kvSet('autoAgain', 0); if (!ten) await autoRun(env, 'recheck'); } })());
