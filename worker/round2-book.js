@@ -2450,12 +2450,30 @@ function lateSess(s, e) { const m = (t) => { const d = new Date(+t + 8 * 3600e3)
 async function logAlert(env, kind, msg, ctx) {
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6), c = ctx || {};
   const late = c.late != null ? !!c.late : lateSess(c.s, c.e);   /* by the times only (owner, 5 Nov: sessions keyed in with the control centre's tool say "late till 7pm" but aren't late) */
-  await book(env).alogAdd({ id, t: Date.now(), kind, title: String(msg.title || '').slice(0, 160), body: String(msg.body || '').slice(0, 900), ctx: c, late }).catch(() => null);
+  await book(env).alogAdd({ id, t: Date.now(), kind, tag: String(msg.tag || '').slice(0, 60), title: String(msg.title || '').slice(0, 160), body: String(msg.body || '').slice(0, 900), ctx: c, late }).catch(() => null);
   return Object.assign({}, msg, { url: '/?alert=' + id, ctx: undefined });
 }
 /* a copy of "which phone showed which alert, how fast" in the engine's KV (HOLDS › diag:push), readable from the Cloudflare
    dashboard/API without the staff code (owner, 6 Nov: reminders late on his phone while the browser link was down).
    Written only when something changed. */
+/* every 5 min: a phone that reports back but hasn't shown an alert from 1–20 minutes ago gets it again (at most twice).
+   Owner, 6 Nov: Apple held his phone's alerts for 15–50 minutes, and a held alert came through the moment another one was
+   sent. Same tag, so if the first one does turn up, the second replaces it – no doubles. */
+async function pushRetry(env) {
+  const hb = book(env), seen = (await hb.kvGet('pseen')) || {}, now = Date.now();
+  const reports = new Set(); for (const a in seen) for (const k in seen[a]) reports.add(k);   /* phones on the new background worker */
+  const L = (await hb.alogList()).filter((x) => x.t < now - 60e3 && x.t > now - 20 * 60e3 && !x.preview);
+  if (!L.length || !reports.size) return [];
+  const T = (await hb.kvGet('pretry')) || {}, subs = await hb.pushList(), out = [];
+  for (const x of L) for (const sb of subs) {
+    const sid = String(sb.id).slice(0, 6); if (!reports.has(sid) || (seen[x.id] || {})[sid] || !sb.kinds.includes(x.kind === 'human' ? sb.kinds[0] : x.kind)) continue;
+    const k = x.id + ':' + sid; if ((T[k] || 0) >= 2) continue; T[k] = (T[k] || 0) + 1;
+    out.push(sid + ' ' + x.id + ' ' + (await pushOne(env, sb.sub, { kind: x.kind, title: x.title, body: x.body, tag: x.tag || 'r' + x.id, url: '/?alert=' + x.id })));
+  }
+  for (const k in T) if (!L.some((x) => k.startsWith(x.id + ':'))) delete T[k];
+  await hb.kvSet('pretry', T); if (out.length) await hb.kvSet('pretryLast', { t: now, out });
+  return out;
+}
 async function pushDiag(env) {
   if (!env.HOLDS) return;
   const hb = book(env), seen = (await hb.kvGet('pseen')) || {}, al = (await hb.alogList()).slice(0, 25);
@@ -2850,7 +2868,7 @@ const HANDLER = {
     /* the reminder only needs the 10-min ticks plus :15 and :45 (bookings start on the quarter hour) */
     if (ten || quarter) go(soonRun(env));
     go(paidSweep(env).catch(() => null));
-    go(pushDiag(env).catch(() => null));   /* delivery report copy (KV diag:push) */   /* paid at HitPay but not booked? book it (every 5 min) */
+    go(pushRetry(env).then(() => pushDiag(env)).catch(() => null));   /* resend alerts a phone hasn't shown; delivery report copy (KV diag:push) */   /* paid at HitPay but not booked? book it (every 5 min) */
     /* a SimplyBook change a few minutes ago: Auto wrap-up looks again on the next 5-min tick (owner, 3 Nov: a quick fix was
        only picked up after a refresh); the 10-min ticks run it anyway */
     go((async () => { const ag = await hb.kvGet('autoAgain'); if (ag && Date.now() >= ag) { await hb.kvSet('autoAgain', 0); if (!ten) await autoRun(env, 'recheck'); } })());
