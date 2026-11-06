@@ -1961,18 +1961,23 @@ async function gm(env, req) {
     const own = (await hb.rows(`SELECT ref, date, unit, status, created, phone, email, data FROM holds ORDER BY created DESC LIMIT 3000`)).map((r) => ({ r, d: JSON.parse(r.data || '{}') }))
       .filter(({ r, d }) => (p8 && String(r.phone || d.phone || '').replace(/\D/g, '').endsWith(p8)) || (em && String(r.email || d.email || '').toLowerCase() === em))
       .map(({ r, d }) => ({ ref: r.ref, made: sgStr(r.created).slice(0, 16), status: r.status, date: r.date, room: GM_ROOM[r.unit] || r.unit, total: d.q && d.q.total, pay: d.pay, name: d.name, email: d.email }));
-    const hp = []; let pages = 0, hpErr = '';
+    const hp = [], st = { seen: 0, email: 0, phone: 0, name: 0, first: '', last: '' }; let pages = 0, hpErr = '';
     try {
-      for (let pg = 1; pg <= Math.min(20, +f.pages || 10); pg++) {
-        const j = await hitpay(envFor(env, 'live'), 'GET', '/payment-requests?page=' + pg + '&per_page=100'); pages = pg;
+      /* HitPay lists oldest first (100 a page): read every page, newest first, at most 45 */
+      let last = 1;
+      for (let pg = 1, n = 0; pg >= 1 && n < 45; n++) {
+        const j = await hitpay(envFor(env, 'live'), 'GET', '/payment-requests?page=' + pg + '&per_page=100'); pages++;
+        if (n === 0) { last = +(j.meta && j.meta.last_page) || 1; if (last > 1) { pg = last; continue; } }
         const L = Array.isArray(j) ? j : j.data || [];
-        for (const x of L) { const ph = String(x.phone || '').replace(/\D/g, ''), xe = String(x.email || '').toLowerCase();
-          if ((p8 && ph.endsWith(p8)) || (em && xe === em)) hp.push({ when: x.created_at, status: x.status, amount: x.amount, ref: x.reference_number, name: x.name, email: x.email, purpose: String(x.purpose || '').slice(0, 60) }); }
-        if (L.length < 100) break;
+        for (const x of L) { const ph = String(x.phone || '').replace(/\D/g, ''), xe = String(x.email || '').toLowerCase(), xn = String(x.name || '').toLowerCase();
+          st.seen++; if (xe) st.email++; if (ph) st.phone++; if (xn) st.name++; if (!st.first || x.created_at < st.first) st.first = x.created_at; if (x.created_at > st.last) st.last = x.created_at;
+          if (f.ref && String(x.reference_number || '') === String(f.ref)) hp.push({ byRef: true, when: x.created_at, name: x.name, email: x.email, phone: x.phone, purpose: x.purpose });
+          if ((p8 && ph.endsWith(p8)) || (em && xe === em) || (f.name && xn && xn === String(f.name).toLowerCase())) hp.push({ when: x.created_at, status: x.status, amount: x.amount, ref: x.reference_number, name: x.name, email: x.email, phone: x.phone, purpose: String(x.purpose || '').slice(0, 60) }); }
+        pg = pg === 1 ? 0 : pg - 1;
       }
     } catch (e) { hpErr = String(e.message || e).slice(0, 160); }
     const vis = await hb.rows(`SELECT bid, s FROM visits WHERE (? != '' AND p = ?) OR (? != '' AND e = ?) ORDER BY s`, p8, p8, em, em).catch(() => []);
-    return gmJ({ ok: true, own, hitpay: hp, hitpayPages: pages, hitpayErr: hpErr, simplybook: vis.map((v) => ({ bid: v.bid, when: sgStr(v.s).slice(0, 16) })) });
+    return gmJ({ ok: true, own, hitpay: hp, hitpayPages: pages, hitpayErr: hpErr, hitpayStats: st, simplybook: vis.map((v) => ({ bid: v.bid, when: sgStr(v.s).slice(0, 16) })) });
   }
   if (act === 'visitsync') {   /* staff (6 Nov): fill the first-visit / returning guest list from SimplyBook, a few months per call */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
