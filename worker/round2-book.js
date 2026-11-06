@@ -2453,6 +2453,18 @@ async function logAlert(env, kind, msg, ctx) {
   await book(env).alogAdd({ id, t: Date.now(), kind, title: String(msg.title || '').slice(0, 160), body: String(msg.body || '').slice(0, 900), ctx: c, late }).catch(() => null);
   return Object.assign({}, msg, { url: '/?alert=' + id, ctx: undefined });
 }
+/* a copy of "which phone showed which alert, how fast" in the engine's KV (HOLDS › diag:push), readable from the Cloudflare
+   dashboard/API without the staff code (owner, 6 Nov: reminders late on his phone while the browser link was down).
+   Written only when something changed. */
+async function pushDiag(env) {
+  if (!env.HOLDS) return;
+  const hb = book(env), seen = (await hb.kvGet('pseen')) || {}, al = (await hb.alogList()).slice(0, 25);
+  const phones = (await hb.rows(`SELECT id, label, t, last FROM push`)).map((r) => ({ id: String(r.id).slice(0, 6), label: r.label, since: sgStr(r.t).slice(0, 16), last: r.last ? JSON.parse(r.last) : null }));
+  const out = { at: sgStr(Date.now()), phones, alerts: al.map((x) => ({ sent: sgStr(x.t).slice(5, 19), title: String(x.title).slice(0, 60), shown: Object.fromEntries(Object.entries(seen[x.id] || {}).map(([k, v]) => [k, '+' + Math.round((v - x.t) / 1000) + 's'])) })) };
+  const sig = JSON.stringify([out.phones.map((p) => p.last && p.last.t), out.alerts.map((a) => a.shown)]);
+  if ((await hb.kvGet('pushDiagSig')) === sig) return;
+  await hb.kvSet('pushDiagSig', sig); await env.HOLDS.put('diag:push', JSON.stringify(out, null, 1));
+}
 async function pushAll(env, kind, msg) {
   if (!env.VAPID_JWK) return { sent: 0, why: 'no VAPID_JWK' };
   const hb = book(env), subs = await hb.pushList(kind); let sent = 0;
@@ -2837,7 +2849,8 @@ const HANDLER = {
     go((async () => { const prev = await hb.kvGet('cronLast'); await hb.kvSet('cronPrev', prev || 0); await hb.kvSet('cronLast', Date.now()); })());
     /* the reminder only needs the 10-min ticks plus :15 and :45 (bookings start on the quarter hour) */
     if (ten || quarter) go(soonRun(env));
-    go(paidSweep(env).catch(() => null));   /* paid at HitPay but not booked? book it (every 5 min) */
+    go(paidSweep(env).catch(() => null));
+    go(pushDiag(env).catch(() => null));   /* delivery report copy (KV diag:push) */   /* paid at HitPay but not booked? book it (every 5 min) */
     /* a SimplyBook change a few minutes ago: Auto wrap-up looks again on the next 5-min tick (owner, 3 Nov: a quick fix was
        only picked up after a refresh); the 10-min ticks run it anyway */
     go((async () => { const ag = await hb.kvGet('autoAgain'); if (ag && Date.now() >= ag) { await hb.kvSet('autoAgain', 0); if (!ten) await autoRun(env, 'recheck'); } })());
