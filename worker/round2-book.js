@@ -1953,6 +1953,27 @@ async function gm(env, req) {
       : { kind: 'booking', title: '🧪 Delivery test', body: 'Sent ' + new Date(t + 8 * 3600e3).toISOString().slice(11, 19) + ' – nothing to do', tag: a, url: '/?alert=' + a });
     return gmJ({ ok: true, a, t, res });
   }
+  if (act === 'guestlook') {   /* staff, read-only (6 Nov: "is ruby really a first-timer?"): one guest across our booking page's
+       attempts, HitPay's payment requests (newest pages) and the first-visit list. q = phone (last 8 digits) or email */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const q = String(f.q || '').trim().toLowerCase(), p8 = q.replace(/\D/g, '').slice(-8), em = q.includes('@') ? q : '';
+    if (!p8 && !em) return gmJ({ error: 'q = phone or email' });
+    const own = (await hb.rows(`SELECT ref, date, unit, status, created, phone, email, data FROM holds ORDER BY created DESC LIMIT 3000`)).map((r) => ({ r, d: JSON.parse(r.data || '{}') }))
+      .filter(({ r, d }) => (p8 && String(r.phone || d.phone || '').replace(/\D/g, '').endsWith(p8)) || (em && String(r.email || d.email || '').toLowerCase() === em))
+      .map(({ r, d }) => ({ ref: r.ref, made: sgStr(r.created).slice(0, 16), status: r.status, date: r.date, room: GM_ROOM[r.unit] || r.unit, total: d.q && d.q.total, pay: d.pay, name: d.name, email: d.email }));
+    const hp = []; let pages = 0, hpErr = '';
+    try {
+      for (let pg = 1; pg <= Math.min(20, +f.pages || 10); pg++) {
+        const j = await hitpay(envFor(env, 'live'), 'GET', '/payment-requests?page=' + pg + '&per_page=100'); pages = pg;
+        const L = Array.isArray(j) ? j : j.data || [];
+        for (const x of L) { const ph = String(x.phone || '').replace(/\D/g, ''), xe = String(x.email || '').toLowerCase();
+          if ((p8 && ph.endsWith(p8)) || (em && xe === em)) hp.push({ when: x.created_at, status: x.status, amount: x.amount, ref: x.reference_number, name: x.name, email: x.email, purpose: String(x.purpose || '').slice(0, 60) }); }
+        if (L.length < 100) break;
+      }
+    } catch (e) { hpErr = String(e.message || e).slice(0, 160); }
+    const vis = await hb.rows(`SELECT bid, s FROM visits WHERE (? != '' AND p = ?) OR (? != '' AND e = ?) ORDER BY s`, p8, p8, em, em).catch(() => []);
+    return gmJ({ ok: true, own, hitpay: hp, hitpayPages: pages, hitpayErr: hpErr, simplybook: vis.map((v) => ({ bid: v.bid, when: sgStr(v.s).slice(0, 16) })) });
+  }
   if (act === 'visitsync') {   /* staff (6 Nov): fill the first-visit / returning guest list from SimplyBook, a few months per call */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await visitSync(env, f.from, f.months)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
