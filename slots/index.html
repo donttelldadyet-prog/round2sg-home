@@ -77,7 +77,6 @@ h3.nm, .nm { color: var(--rc); }
 /* a room with nothing left on this date: a locked save slot (grey, faint stripes, padlock) so the free rooms stand out */
 .room.locked { grid-template-columns: 1fr auto; padding: 12px 16px; border-left-color: rgba(244,241,251,.25);
   background: repeating-linear-gradient(135deg, rgba(244,241,251,.04) 0 6px, transparent 6px 12px), var(--panel); }
-.room.locked .nm { color: var(--mute) !important; filter: grayscale(1); }
 .room.locked .lock { display: flex; align-items: center; gap: 10px; font: 8px 'Press Start 2P', monospace; letter-spacing: .1em; line-height: 1.7; color: var(--mute); text-align: right; }
 .room.locked .lock svg { width: 16px; height: 16px; flex: none; }
 .full a { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 10px 14px; border: 1px solid var(--acc); color: var(--acc); text-decoration: none; margin-top: 2px; }
