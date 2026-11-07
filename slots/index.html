@@ -98,7 +98,10 @@ h3.nm, .nm { color: var(--rc); }
 .ebnote b { display: block; margin-bottom: 6px; }
 .ebtag { display: block; margin-bottom: 5px; }
 .row.ebrow { border-color: var(--eb); border-left-color: var(--rc); background: rgba(102,199,255,.07); }
-.ebchip.gone { border-bottom: 0; color: var(--mute); cursor: default; text-decoration: line-through; text-decoration-color: rgba(244,241,251,.35); }
+.ebchip .st { font: 600 11px 'Chakra Petch', sans-serif; padding: 1px 7px; background: var(--eb); color: #0b2238; letter-spacing: .02em; }
+.ebchip.gone .st { background: transparent; color: var(--mute); border: 1px solid rgba(244,241,251,.25); font-weight: 400; }
+.ebchip.gone s { text-decoration-color: rgba(244,241,251,.35); }
+.ebchip.gone { border-bottom: 0; color: var(--mute); cursor: default; }
 .ebchip.gone::before { background: var(--mute); }
 .ebchip.gone b { color: var(--mute); }
 .room .free { color: var(--rc, var(--tc)); }
@@ -369,8 +372,8 @@ h3.nm, .nm { color: var(--rc); }
   function ebPossible() { var n = sgNow(); return day > sgDate(0) || (n.getUTCHours() * 60 + n.getUTCMinutes()) < EB - 15; }
   function ebChip(uid) {
     var info = data.rooms[uid], o = info && info.starts[EB];
-    if (o) return '<button type="button" class="ebchip" data-u="' + uid + '" data-m="' + EB + '"><b>Early bird</b> 11am · ' + money(o.prices[3]) + '</button>';
-    return ebPossible() ? '<span class="ebchip gone"><b>Early bird</b> 11am · taken</span>' : '';
+    if (o) return '<button type="button" class="ebchip" data-u="' + uid + '" data-m="' + EB + '"><b>Early bird</b> 11am · ' + money(o.prices[3]) + ' <span class="st">Available</span></button>';
+    return ebPossible() ? '<span class="ebchip gone"><s><b>Early bird</b> 11am · $35</s> <span class="st">Taken</span></span>' : '';
   }
   function render() {
     var res = data, any = false;
