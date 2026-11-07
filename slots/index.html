@@ -70,6 +70,11 @@ h3.nm, .nm { color: var(--rc); }
 .opts button small { color: var(--mute); margin-left: 6px; }
 .none { font-size: 13px; color: var(--mute); }
 .state { padding: 30px 0; color: var(--mute); }
+/* fully booked day: its own box, so it reads as one clear notice and not as more small print */
+.full { margin: 22px 0 8px; padding: 18px 16px; border: 2px solid #FF5C7A; background: rgba(255,92,122,.08); text-align: center; display: grid; gap: 10px; justify-items: center; }
+.full b { font: 11px 'Press Start 2P', monospace; letter-spacing: .12em; color: #FF5C7A; }
+.full p { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.45; }
+.full a { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 10px 14px; border: 1px solid var(--acc); color: var(--acc); text-decoration: none; margin-top: 2px; }
 .load { font-size: 9px; color: var(--acc); }
 @media (max-width: 640px) { .room { grid-template-columns: 1fr; gap: 8px; } h1 { font-size: 16px; } }
 /* tiers: boxed, colour-coded sections */
@@ -375,7 +380,7 @@ h3.nm, .nm { color: var(--rc); }
   }
 
   /* ---------- three ways to look at a day ---------- */
-  function noneMsg() { return '<p class="state">Everything’s booked for this day. Try another day, or message us on <a style="color:var(--acc)" href="http://wa.me/6591625767" target="_blank" rel="noopener">WhatsApp</a>.</p>'; }
+  function noneMsg() { return '<div class="full" role="status"><b>FULLY BOOKED</b><p>Everything’s booked for this day.<br>Pick another day above, or ask us on WhatsApp.</p><a href="http://wa.me/6591625767" target="_blank" rel="noopener">WHATSAPP US</a></div>'; }
   /* Early bird (11am) is offered on this day unless it's today and 11am has passed */
   function ebPossible() { var n = sgNow(); return day > sgDate(0) || (n.getUTCHours() * 60 + n.getUTCMinutes()) < EB - 15; }
   function ebChip(uid) {
