@@ -74,6 +74,12 @@ h3.nm, .nm { color: var(--rc); }
 .full { margin: 22px 0 8px; padding: 18px 16px; border: 2px solid #FF5C7A; background: rgba(255,92,122,.08); text-align: center; display: grid; gap: 10px; justify-items: center; }
 .full b { font: 11px 'Press Start 2P', monospace; letter-spacing: .12em; color: #FF5C7A; }
 .full p { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.45; }
+/* a room with nothing left on this date: a locked save slot (grey, faint stripes, padlock) so the free rooms stand out */
+.room.locked { grid-template-columns: 1fr auto; padding: 12px 16px; border-left-color: rgba(244,241,251,.25);
+  background: repeating-linear-gradient(135deg, rgba(244,241,251,.04) 0 6px, transparent 6px 12px), var(--panel); }
+.room.locked .nm { color: var(--mute) !important; filter: grayscale(1); }
+.room.locked .lock { display: flex; align-items: center; gap: 10px; font: 8px 'Press Start 2P', monospace; letter-spacing: .1em; line-height: 1.7; color: var(--mute); text-align: right; }
+.room.locked .lock svg { width: 16px; height: 16px; flex: none; }
 .full a { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 10px 14px; border: 1px solid var(--acc); color: var(--acc); text-decoration: none; margin-top: 2px; }
 .load { font-size: 9px; color: var(--acc); }
 @media (max-width: 640px) { .room { grid-template-columns: 1fr; gap: 8px; } h1 { font-size: 16px; } }
@@ -423,6 +429,11 @@ h3.nm, .nm { color: var(--rc); }
         var rgs = info.ranges.filter(function (r) { return !r[2]; });
         var txt = rgs.map(function (r) { return r[0] === r[1] ? clock(r[0]) : clock(r[0]) + ' to ' + clock(r[1]); }).join(', or ');
         var lead = rgs.length === 1 && rgs[0][0] === rgs[0][1] ? 'Slot available starting at ' : 'Slots available starting anytime from ';
+        if (!info.list.length) {   /* nothing left for this room on this date: locked slot, no timeline */
+          inner += '<div class="room locked" style="--rc:' + R[1] + '" aria-label="' + esc(R[0]) + ': fully booked for this date"><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty">' + R[2] + '</div></div>' +
+            '<div class="lock"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M5 2h6v1h1v4h1v7H3V7h1V3h1zm1 2v3h4V4zM7 9v3h2V9z"/></svg><span>FULLY BOOKED<br>FOR THIS DATE</span></div></div>';
+          return;
+        }
         inner += '<div class="room" style="--rc:' + R[1] + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': ' + (txt ? lead + txt : 'early bird')) + '"' : '') + '><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty">' + R[2] + '</div>' + ebChip(uid) + '</div><div>' +
           '<div class="track">' + lines + segs + '</div><div class="ticks">' + ticks + '</div>' +
           (day3.length ? '<div class="free">' + lead + esc(txt) + ' · from ' + money(from) + '</div><button class="pickb" type="button" data-u="' + uid + '">Choose a time ›</button>'
