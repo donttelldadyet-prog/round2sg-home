@@ -44,6 +44,9 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 .cal .ft { display: flex; justify-content: space-between; gap: 8px; margin-top: 8px; font-size: 11px; color: var(--mute); }
 .cal .ft i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--dot); margin-right: 5px; vertical-align: 1px; }
 .dayhd { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 0; max-width: 420px; }
+.picked { margin: 10px 0 0; padding: 10px 14px; border: 1px solid #5BE37D; background: rgba(91,227,125,.08); font-size: 15px; color: var(--mute); max-width: 420px; box-sizing: border-box; }
+.picked b { color: var(--ink); font-weight: 600; }
+.picked i { color: #5BE37D; font-style: normal; margin-right: 8px; }
 .dayhd #toToday { margin-left: auto; font: 8px 'Press Start 2P', monospace; letter-spacing: .06em; padding: 6px 8px; background: transparent; color: var(--acc); border: 1px solid var(--acc); cursor: pointer; white-space: nowrap; }
 .cal .ft button { font: 8px 'Press Start 2P', monospace; letter-spacing: .06em; padding: 7px 9px; background: transparent; color: var(--acc); border: 1px solid var(--acc); cursor: pointer; white-space: nowrap; }
 .tiers { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 12px 0 16px; font-size: 12px; color: var(--mute); }
@@ -199,8 +202,9 @@ h3.nm, .nm { color: var(--rc); }
   <p class="sub intro">Pick a day, then look by room, by the time you'd like to start, or the earliest free. Coloured bars are times you can start; tap a room to choose your start and how long you'll stay.</p>
   <p class="sub" style="margin-top:-6px">Already booked? <a style="color:var(--acc)" target="_top" href="https://book.round2.sg/find">View your booking</a> or add a TV message.</p>
   <div class="banner" id="banner" hidden></div>
-  <div class="lbl px dayhd"><i data-ic="cal"></i>1 · PICK A DAY <span id="monthNow"></span><button type="button" id="toToday" hidden>BACK TO TODAY</button></div>
+  <div class="lbl px dayhd"><i data-ic="cal"></i>1 · PICK A DAY <button type="button" id="toToday" hidden>BACK TO TODAY</button></div>
   <div class="cal" id="days" role="group" aria-label="Pick a day"></div>
+  <div class="picked" id="picked" role="status" hidden></div>
   <div class="lbl px" style="margin-top:20px"><i data-ic="eye"></i>2 · HOW DO YOU WANT TO LOOK?</div>
   <div class="views" id="views" role="group" aria-label="View">
     <button type="button" data-v="room" aria-pressed="true">BY ROOM</button>
@@ -368,7 +372,9 @@ h3.nm, .nm { color: var(--rc); }
     }
     h += '</div><div class="ft"><span><i></i>Peak day (Fri–Sun, public holidays)</span>' + '' + '</div>';
     $('days').innerHTML = h;
-    $('monthNow').textContent = day ? (day === today ? 'Today · ' : '') + dayLabel(day) : '';
+    /* the chosen day, confirmed under the calendar: "✓ You picked Today · Sat 7 Nov" */
+    $('picked').hidden = !day;
+    $('picked').innerHTML = day ? '<i>✓</i>You picked <b>' + (day === today ? 'Today · ' : '') + dayLabel(day) + (day.slice(0, 4) !== today.slice(0, 4) ? ' ' + day.slice(0, 4) : '') + '</b>' : '';
     $('toToday').hidden = calM === first && day === today;
   }
   function dayLabel(d) { var dt = new Date(d + 'T12:00:00Z'); return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][dt.getUTCDay()] + ' ' + dt.getUTCDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][dt.getUTCMonth()]; }
