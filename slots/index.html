@@ -431,7 +431,7 @@ h3.nm, .nm { color: var(--rc); }
         var lead = rgs.length === 1 && rgs[0][0] === rgs[0][1] ? 'Slot available starting at ' : 'Slots available starting anytime from ';
         if (!info.list.length) {   /* nothing left for this room on this date: locked slot, no timeline */
           inner += '<div class="room locked" style="--rc:' + R[1] + '" aria-label="' + esc(R[0]) + ': fully booked for this date"><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty">' + R[2] + '</div></div>' +
-            '<div class="lock"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M5 2h6v1h1v4h1v7H3V7h1V3h1zm1 2v3h4V4zM7 9v3h2V9z"/></svg><span>FULLY BOOKED<br>FOR THIS DATE</span></div></div>';
+            '<div class="lock"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M5 2h6v1h1v4h1v7H3V7h1V3h1zm1 2v3h4V4zM7 9v3h2V9z"/></svg><span>FULLY BOOKED</span></div></div>';
           return;
         }
         inner += '<div class="room" style="--rc:' + R[1] + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': ' + (txt ? lead + txt : 'early bird')) + '"' : '') + '><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty">' + R[2] + '</div>' + ebChip(uid) + '</div><div>' +
