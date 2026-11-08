@@ -1864,6 +1864,11 @@ async function gm(env, req) {
     const from = /^\d{4}-\d\d-\d\d$/.test(f.from || '') ? f.from : sgDay(Date.now()), n = Math.max(1, Math.min(20, +f.n || 1));
     try { return gmJ(Object.assign({ ok: true }, await shadowSync(env, Array.from({ length: n }, (_, i) => addDays(from, i))))); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
+  if (act === 'noise') {   /* staff / System check: the noise-rule blocks on a day (sync=1: bring them up to date first) */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const day = /^\d{4}-\d\d-\d\d$/.test(f.day || '') ? f.day : sgDay(Date.now() - SHADOW_TILL * 60e3);
+    try { const sync = f.sync ? await noiseSync(env, [day], 'by hand') : null, D = await sessDay0(env, day); return gmJ({ ok: true, day, sync, notes: D.items.filter((x) => x.k === 'n' && NOISE_RE.test(x.name)).map((x) => ({ id: x.id, unit: x.unit, s: x.s, e: x.e, text: x.name })) }); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
+  }
   if (act === 'auto') {   /* staff: TV messages › Auto end messages */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await autoApi(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
@@ -2802,7 +2807,8 @@ async function bookingPush(env, bid, type) {
    actions, every 10 minutes for tonight and tomorrow, and hourly for the week ahead. */
 const NOISE = { 11: 10, 12: 10, 10: 12 }, NOISE_PAX = 4, NOISE_RE = /SYSTEM\s*BLOCK\s*·\s*NOISE/i;
 const noiseRoom = (u) => (u === 11 ? 'Max' : ROOMS[u] ? ROOMS[u][0] : 'Room');
-const noiseText = (S, pax) => `SYSTEM BLOCK · NOISE · ${noiseRoom(S.unit)}: ${pax} guests (${String(S.k === 'b' ? S.name : 'session').slice(0, 30)}) · removed automatically · src ${S.key}`;
+const noiseWho = (S) => String(S.name || '').split('·')[0].trim().slice(0, 30) || 'session';
+const noiseText = (S, pax) => `SYSTEM BLOCK · NOISE · ${noiseRoom(S.unit)}: ${pax} guests (${noiseWho(S)}) · removed automatically · src ${S.key}`;
 async function noisePax(env, hb, S) {
   if (S.k !== 'b') return +notePax(S.name) || 0;
   const k = 'npax:' + S.key, c = await hb.kvGet(k);
@@ -2830,14 +2836,14 @@ async function noiseSync(env, days, why) {
       const clash = D.items.filter((x) => x.unit === w.unit && !x.blk && (!x.sys || HOLD_RE.test(x.name)) && x.s < w.e - BUF * 60e3 && x.e - BUF * 60e3 > w.s);   /* real guests (and guests paying) in the room at the same time – cleaning time doesn't count; not mirror/noise blocks */
       const r = await s2('POST', '/admin/calendar-notes', { provider_id: w.unit, service_id: null, start_date_time: sgStr(w.s), end_date_time: sgStr(w.e), note_type_id: 1, note: noiseText(w.S, w.pax), mode: 'provider', time_blocked: true }).catch((e) => ({ err: String(e.message || e).slice(0, 120) }));
       if (r && r.id) { out.made++; keep.add(String(r.id)); }
-      if (clash.length) {
+      if (clash.length && !/^ZZTEST/.test(w.S.name)) {   /* the System check's test sessions never alert */
         const wk = 'nwarn:' + w.S.key + ':' + w.unit + ':' + w.s + ':' + w.e;
         if (!(await hb.kvGet(wk))) {
           await hb.kvSet(wk, Date.now()); out.warned++;
           const who = clash.map((x) => (x.k === 'b' ? (x.sys ? 'a system block' : x.name || 'a booking') : HOLD_RE.test(x.name) ? 'an online guest paying' : 'a note') + ' ' + clock12(x.s) + '–' + clock12(x.e)).slice(0, 3).join(', ');
           const span = sgDayName(w.s).replace(/,/g, '') + ', ' + clock12(w.s) + '–' + clock12(w.e - BUF * 60e3);
           const title = '🔊 NOISE RULE · ' + noiseRoom(w.unit).toUpperCase() + ' ALREADY BOOKED';
-          const body = noiseRoom(w.S.unit) + ' has ' + w.pax + ' guests (' + (w.S.k === 'b' ? w.S.name : 'session') + ') ' + span + ', but ' + noiseRoom(w.unit) + ' is already taken then: ' + who + '. Check the noise between the rooms.';
+          const body = noiseRoom(w.S.unit) + ' has ' + w.pax + ' guests (' + noiseWho(w.S) + ') ' + span + ', but ' + noiseRoom(w.unit) + ' is already taken then: ' + who + '. Check the noise between the rooms.';
           await pushAll(env, 'booking', { title, body, tag: 'noise' + w.S.key, url: '/', ctx: { type: 'noise', unit: w.S.unit, room: noiseRoom(w.S.unit), s: w.s, e: w.e - BUF * 60e3, pax: String(w.pax), name: w.S.name || '', late: false } }).catch(() => null);
           await staffAlert(env, title + '\n' + body).catch(() => null);
         }
