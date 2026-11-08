@@ -909,7 +909,7 @@ async function checkout(env0, b, origin) {
     if (!c) { await hb.release(ref, 'error'); console.log('[checkout] contact refused: ' + errs.join(' | ')); throw new Error('We couldn’t save your details for the booking – please check your name, email and mobile number. Still stuck? WhatsApp us on +65 9162 5767.'); }
     await hb.patch(ref, { cid: c.cid, cidLate: c.late });
     /* block the time in SimplyBook while they pay (if SimplyBook won't take the note, the hold on our page still stands) */
-    const hn = await holdNotesMake(env, ref, q).catch((e) => { console.log('[checkout] hold note: ' + String(e.message || e).slice(0, 120)); return []; });
+    const hn = await holdNotesMake(env, ref, q, pax).catch((e) => { console.log('[checkout] hold note: ' + String(e.message || e).slice(0, 120)); return []; });
     if (hn.length) await hb.patch(ref, { holdNotes: hn });
   }
   const when = new Date(q.date + 'T00:00:00Z').toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -975,10 +975,12 @@ async function noteBooking(env, d, q, ref) {
    BLOCK, every screen that skips mirror blocks (In session, Tonight, Auto wrap-up, the 1-hour alert, guest links, Late session
    list, after-midnight markers) skips it; clash checks show it as "an online guest is paying". */
 const holdText = (ref, room) => `SYSTEM BLOCK · ONLINE HOLD · a guest is paying for ${room} right now · ref ${ref} · removed automatically`;
-async function holdNotesMake(env, ref, q) {
+async function holdNotesMake(env, ref, q, pax) {
   const s2 = await sb2(env), s = sgMs0(q.date + ' ' + q.time), end = s + (q.hours * 60 + BUF) * 60e3, ids = [], room = q.unit === 11 ? 'Maximillion' : q.room;
   const body = (u) => ({ provider_id: u, service_id: null, start_date_time: sgStr(s), end_date_time: sgStr(end), note_type_id: 1, note: holdText(ref, room), mode: 'provider', time_blocked: true });
+  /* a group of 4+ in Max/Atlas/Bella also holds the noise room while paying (noise rule, owner 8 Nov); a clash there never stops the payment */
   for (const u of [q.unit, MIRROR[q.unit]].filter(Boolean)) { const r = await s2('POST', '/admin/calendar-notes', body(u)); if (r && r.id) ids.push(String(r.id)); }
+  if (+pax >= NOISE_PAX && NOISE[q.unit]) { const r = await s2('POST', '/admin/calendar-notes', body(NOISE[q.unit])).catch(() => null); if (r && r.id) ids.push(String(r.id)); }
   return ids;
 }
 async function holdNotesDel(env, ids) {
@@ -1868,7 +1870,11 @@ async function gm(env, req) {
   }
   if (act === 'insess' || act === 'extend' || act === 'extundo' || act === 'late' || act === 'latelist' || act === 'latecancel') {   /* staff: "In session" tab */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
-    try { return gmJ(await (act === 'insess' ? insess : act === 'extend' ? extend : act === 'late' ? late : act === 'latelist' ? latelist : act === 'latecancel' ? latecancel : extUndo)(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
+    try {
+      const r = await (act === 'insess' ? insess : act === 'extend' ? extend : act === 'late' ? late : act === 'latelist' ? latelist : act === 'latecancel' ? latecancel : extUndo)(env, hb, f);
+      if (act !== 'insess' && act !== 'latelist' && r && !r.error) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); await noiseSync(env, [t, addDays(t, 1), f.day, f.date].filter(Boolean), act).catch(() => null); }   /* noise rule follows extensions and keyed-in sessions */
+      return gmJ(r);
+    } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
   if (act === 'msgimport' || act === 'msgmode' || act === 'msgtest') {   /* staff: move the message store off Make (copy records in; switch where messages live) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
@@ -2785,6 +2791,74 @@ async function bookingPush(env, bid, type) {
   return r && r.msg ? pushAll(env, 'booking', r.msg) : r;
 }
 
+/* ===== Noise rule (owner, 8 Nov) =====
+   A booking for 4 or more guests in Max or Atlas blocks Bella; 4 or more in Bella blocks Atlas (noise between the rooms).
+   Max is never blocked by this rule. The block is a SimplyBook time-blocked note "SYSTEM BLOCK · NOISE …" over the same time
+   as the session, including its cleaning time and any extensions, so the booking page, SimplyBook and staff all see the room
+   as taken; screens skip it like every other SYSTEM BLOCK. Everywhere: online bookings, bookings made in SimplyBook (guest
+   count field) and control-centre sessions (guest count in the note text, e.g. "5 pax").
+   If the other room is already booked at that time, the booking still stands (owner's choice) and staff are alerted
+   (control-centre alert + Telegram), once per clash. Runs on every SimplyBook change, after In session / Late session
+   actions, every 10 minutes for tonight and tomorrow, and hourly for the week ahead. */
+const NOISE = { 11: 10, 12: 10, 10: 12 }, NOISE_PAX = 4, NOISE_RE = /SYSTEM\s*BLOCK\s*·\s*NOISE/i;
+const noiseRoom = (u) => (u === 11 ? 'Max' : ROOMS[u] ? ROOMS[u][0] : 'Room');
+const noiseText = (S, pax) => `SYSTEM BLOCK · NOISE · ${noiseRoom(S.unit)}: ${pax} guests (${String(S.k === 'b' ? S.name : 'session').slice(0, 30)}) · removed automatically · src ${S.key}`;
+async function noisePax(env, hb, S) {
+  if (S.k !== 'b') return +notePax(S.name) || 0;
+  const k = 'npax:' + S.key, c = await hb.kvGet(k);
+  if (c && Date.now() - c.t < 6 * 3600e3) return c.p;
+  const p = +(await soonPax(env, S).catch(() => '')) || 0;
+  await hb.kvSet(k, { p, t: Date.now() });
+  return p;
+}
+async function noiseSync(env, days, why) {
+  const hb = book(env), s2 = await sb2(env), out = { made: 0, removed: 0, warned: 0 };
+  for (const day of [...new Set(days)].filter((d) => /^\d{4}-\d\d-\d\d$/.test(d))) {
+    const D = await sessDay(env, day), d0 = sgMs0(day + ' 00:00'), d1 = d0 + 86400e3, inDay = (x) => x.s >= d0 && x.s < d1;
+    const want = [];
+    for (const S of D.sessions) {
+      if (S.sys || S.orphanExt || !NOISE[S.unit] || !inDay(S)) continue;
+      const pax = await noisePax(env, hb, S);
+      if (pax >= NOISE_PAX) want.push({ S, pax, unit: NOISE[S.unit], s: S.s, e: S.end });
+    }
+    const have = D.items.filter((x) => x.k === 'n' && NOISE_RE.test(x.name) && inDay(x)).map((x) => Object.assign({ src: (x.name.match(/src ([bn]\d+)/) || [])[1] || '' }, x));
+    const keep = new Set();
+    for (const w of want) {
+      const same = have.find((x) => x.src === w.S.key && x.unit === w.unit && Math.abs(x.s - w.s) < 60e3 && Math.abs(x.e - w.e) < 60e3);
+      if (same) { keep.add(same.id); continue; }
+      /* already taken in the other room? the booking stands; tell staff (once for this exact clash) */
+      const clash = D.items.filter((x) => x.unit === w.unit && !x.blk && (!x.sys || HOLD_RE.test(x.name)) && x.s < w.e - BUF * 60e3 && x.e - BUF * 60e3 > w.s);   /* real guests (and guests paying) in the room at the same time – cleaning time doesn't count; not mirror/noise blocks */
+      const r = await s2('POST', '/admin/calendar-notes', { provider_id: w.unit, service_id: null, start_date_time: sgStr(w.s), end_date_time: sgStr(w.e), note_type_id: 1, note: noiseText(w.S, w.pax), mode: 'provider', time_blocked: true }).catch((e) => ({ err: String(e.message || e).slice(0, 120) }));
+      if (r && r.id) { out.made++; keep.add(String(r.id)); }
+      if (clash.length) {
+        const wk = 'nwarn:' + w.S.key + ':' + w.unit + ':' + w.s + ':' + w.e;
+        if (!(await hb.kvGet(wk))) {
+          await hb.kvSet(wk, Date.now()); out.warned++;
+          const who = clash.map((x) => (x.k === 'b' ? (x.sys ? 'a system block' : x.name || 'a booking') : HOLD_RE.test(x.name) ? 'an online guest paying' : 'a note') + ' ' + clock12(x.s) + '–' + clock12(x.e)).slice(0, 3).join(', ');
+          const span = sgDayName(w.s).replace(/,/g, '') + ', ' + clock12(w.s) + '–' + clock12(w.e - BUF * 60e3);
+          const title = '🔊 NOISE RULE · ' + noiseRoom(w.unit).toUpperCase() + ' ALREADY BOOKED';
+          const body = noiseRoom(w.S.unit) + ' has ' + w.pax + ' guests (' + (w.S.k === 'b' ? w.S.name : 'session') + ') ' + span + ', but ' + noiseRoom(w.unit) + ' is already taken then: ' + who + '. Check the noise between the rooms.';
+          await pushAll(env, 'booking', { title, body, tag: 'noise' + w.S.key, url: '/', ctx: { type: 'noise', unit: w.S.unit, room: noiseRoom(w.S.unit), s: w.s, e: w.e - BUF * 60e3, pax: String(w.pax), name: w.S.name || '', late: false } }).catch(() => null);
+          await staffAlert(env, title + '\n' + body).catch(() => null);
+        }
+      }
+    }
+    for (const x of have) if (!keep.has(x.id)) { await s2('DELETE', '/admin/calendar-notes/' + x.id).catch((e) => { if (!/ 404:/.test(String(e.message || e))) throw e; }); out.removed++; }
+  }
+  if (out.made || out.removed || out.warned) console.log('[noise] ' + (why || '') + ' ' + JSON.stringify(out));
+  return out;
+}
+/* a SimplyBook change: that booking's day (and the day it was on before, if it moved) */
+async function noiseOnSb(env, bid, type) {
+  const hb = book(env), b = await (await admin(env))('getBookingDetails', [bid]).catch(() => null);
+  await hb.kvSet('npax:b' + bid, null);
+  const days = [], prev = await hb.kvGet('nday:b' + bid);
+  if (prev) days.push(prev);
+  const s = b ? sgMs0(b.start_date_time || b.start_date) : 0;
+  if (s) { days.push(sgDay(s)); await hb.kvSet('nday:b' + bid, type === 'cancel' ? null : sgDay(s)); }
+  return days.length ? noiseSync(env, days, 'simplybook ' + type) : null;
+}
+
 /* ===== GitHub through the engine (owner, 2 Nov) =====
    TV setup (Events, Rooms, Sounds, TV settings) and the menu editor used a personal GitHub key on each phone. Now they
    send the staff code here and the engine uses ONE GitHub key kept in Cloudflare (secret GH_TOKEN: fine-grained, only
@@ -2906,6 +2980,7 @@ const HANDLER = {
     if (ten) {
       go(autoRun(env, 'cron')); go(msgOrphans(env, 'cron')); go(waitWarn(env)); go(keyDaily(env)); go(holdSweep(env));
       if (mm < 10 || (mm >= 30 && mm < 40)) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(shadowSync(env, [t, addDays(t, 1)])); }
+      { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(noiseSync(env, mm < 10 ? Array.from({ length: 7 }, (_, i) => addDays(t, i)) : [t, addDays(t, 1)], 'cron')); }   /* noise rule: tonight + tomorrow, hourly the week ahead */
     }
     ctx.waitUntil(Promise.all(jobs).then(() => sbFlush(env)).catch(() => null));
   },
@@ -3051,6 +3126,7 @@ const HANDLER = {
         if (bid) ctx.waitUntil(book(env).onSb(bid, type).catch(() => null));
         if (bid) ctx.waitUntil(bookingPush(env, bid, type).catch(() => null));   /* staff phones: New booking / changed / cancelled */
         if (bid) ctx.waitUntil(paidLengthCheck(env, bid, type).catch(() => null));   /* an online booking cut shorter than paid */
+        if (bid) ctx.waitUntil(noiseOnSb(env, bid, type).catch((e) => console.log('[noise] ' + String(e.message || e).slice(0, 160))));   /* noise rule: Max/Atlas 4+ → Bella, Bella 4 → Atlas */
         ctx.waitUntil(book(env).kvSet('autoAgain', Date.now() + 2 * 60e3).catch(() => null));   /* look again in ~2–5 min (a quick second edit) */
         ctx.waitUntil(autoRun(env, 'simplybook ' + type).catch(() => null));   /* auto end messages follow straight away */
         ctx.waitUntil(msgOrphans(env, 'simplybook ' + type).catch(() => null));   /* a cancelled booking's wrap-up messages go */
