@@ -2194,6 +2194,7 @@ async function gm(env, req) {
    HitPay sends them back to these, and the engine's own pages run inside book.round2.sg. Webhooks stay on workers.dev. */
 const PUBLIC_BOOK = 'https://book.round2.sg';
 const PUBLIC_MENU = 'https://menu.round2.sg/';
+const MAPS_URL = 'https://maps.app.goo.gl/FzoA4QdF45th5iMu7';   // Round2 on Google Maps (same link as the homepage's Find us)
 const MENU_JSON = 'https://donttelldadyet-prog.github.io/round2sg-home/menu/menu.json';
 const MENU_PAID_HOOK = 'https://hook.eu1.make.com/55nh6wniq1wftco8af9486noj4xugasl';
 const MENU_RETURN = PUBLIC_MENU;
@@ -2303,7 +2304,7 @@ function bookedPage(env, ref, d, origin) {
   /* add-to-calendar file (session time only – the 15 min cleaning isn't the guest's) */
   const z = (t) => q.date.replace(/-/g, '') + 'T' + t.replace(':', '') + '00', endDay = q.endDate.replace(/-/g, '');
   const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Round2//Booking//EN', 'BEGIN:VEVENT', 'UID:' + ref + '@round2.sg', 'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z',
-    'DTSTART;TZID=Asia/Singapore:' + z(q.time), 'DTEND;TZID=Asia/Singapore:' + endDay + 'T' + q.end.replace(':', '') + '00', 'SUMMARY:Round2 · ' + room, 'DESCRIPTION:Booking ref ' + ref + '. Your booking and TV message: ' + PUBLIC_BOOK + '/done?ref=' + ref + ' · Questions? WhatsApp +65 9162 5767.', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+    'DTSTART;TZID=Asia/Singapore:' + z(q.time), 'DTEND;TZID=Asia/Singapore:' + endDay + 'T' + q.end.replace(':', '') + '00', 'SUMMARY:Round2 · ' + room, 'LOCATION:Round2\\, 20 Haji Lane #02-00\\, Singapore 189213', 'DESCRIPTION:Booking ref ' + ref + '. Your booking and TV message: ' + PUBLIC_BOOK + '/done?ref=' + ref + ' · Questions? WhatsApp +65 9162 5767.', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
   const msgBox = tv
     ? `<div class="card msg"><div class="k">TV MESSAGE</div><p>${msg ? `<b>${esc(msg.title)}</b> pops up on the TV ${msg.after ? msg.after + ' minutes after you start' : 'when you start'}.` : 'Your message link is ready.'}</p><a class="btn ghost" href="https://cue.round2.sg/${esc(tv.code)}">${msg ? 'Change the message' : 'Write the message'}</a><p class="fine">You can change it until it pops up: cue.round2.sg/${esc(tv.code)}</p></div>`
     : `<div class="card msg"><div class="k">CELEBRATING?</div><p>We’ll put your birthday, anniversary or any message on the big screen in your Round2 room. It pops up during your session.</p><a class="btn ghost" href="${origin}/done/message?ref=${esc(ref)}">Add a message for the TV</a></div>`;
@@ -2328,6 +2329,7 @@ ${test ? '<div class="test">TEST BOOKING · nothing was really charged</div>' : 
 <dt>Name</dt><dd>${esc(d.name)}</dd><dt>Guests</dt><dd>${esc(d.pax)}</dd><dt>Paid</dt><dd>$${q.total.toFixed(2)}</dd><dt>Ref</dt><dd class="ref">${esc(ref)}</dd></dl></div>
 ${msgBox}
 <div class="card"><div class="k">WHEN YOU ARRIVE</div><ul><li>Come in and take a seat in our lobby. We’ll know you’ve arrived and come to show you to ${esc(room)}.</li><li>Your booking is under <b>${esc(d.name)}</b>.</li><li>Please be on time: your session ends at ${esc(clock(q.end))}.</li><li>${done.note || !done.bookingId || (done.fallback || []).some((x) => /shared/.test(x)) || (done.email && done.email !== 'ok') ? `We’ll WhatsApp you on ${esc(d.phone)} to confirm the details.` : `A confirmation email is on its way to ${esc(d.email)}.`}</li></ul></div>
+<div class="card"><div class="k">FIND US</div><p class="big" style="margin:0 0 4px">20 Haji Lane, #02-00<br>Singapore 189213</p><p class="fine" style="margin:0!important">About 6 minutes’ walk from Bugis MRT, Exit B.</p><a class="btn ghost" href="${MAPS_URL}" target="_blank" rel="noopener">Open in Google Maps</a></div>
 <div class="row"><a class="btn ghost" download="Round2-${esc(ref)}.ics" href="data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}">Add to calendar</a><a class="btn ghost" href="https://wa.me/6591625767?text=${encodeURIComponent('Hi Round2, about my booking ' + ref + (d.name ? ' under ' + d.name : '') + ' (' + room + ', ' + dt.toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }) + ', ' + clock(q.time) + ')')}">WhatsApp us</a></div>
 ${d.ret ? `<a class="btn" href="${esc(d.ret)}">Back to Round2</a>` : '<a class="btn" href="https://www.round2.sg">Back to Round2</a>'}
 <p class="fine">Closed this page? The link in your confirmation email brings you back here, and so does your calendar entry.</p>
