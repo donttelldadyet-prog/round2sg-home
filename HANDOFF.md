@@ -115,6 +115,17 @@ To confirm in to-do #1 (real test booking): SimplyBook accepts the longer end ti
 - Hidden SimplyBook Early Bird services 39–44 + add-ons 38–55 exist but were NOT switched on (guest page ignored the 11:00 fixed time).
   Old Early Bird 32/33/34 are live as before. See `docs/simplybook-early-bird.md`.
 
+## Noise rule (8 Nov 2026, owner) – live
+- **4+ guests in Max or Atlas → Bella blocked; 4 guests in Bella → Atlas blocked.** Max is never blocked. Reason: noise between the rooms.
+- The block is a SimplyBook time-blocked note `SYSTEM BLOCK · NOISE · Max: 5 guests (name) · removed automatically · src b123`
+  over the session's whole time (cleaning + extensions included). Screens skip it like every SYSTEM BLOCK.
+- Everywhere: online bookings, SimplyBook bookings (guest-count field), control-centre sessions ("5 pax" in the note text).
+  A 4+ group paying online also holds the noise room with its ONLINE HOLD note.
+- **Other room already booked → the booking still goes ahead (owner's choice) and staff get an alert** (control-centre phone
+  alert + Telegram staff chat), once per clash. Cleaning-time overlap alone doesn't count. ZZTEST sessions never alert.
+- Engine `noiseSync`: runs on every SimplyBook callback, after In session / Add a session actions, every 10 min (tonight +
+  tomorrow) and hourly (week ahead). Read-out: gm action `noise` (day, sync=1). System check step "Noise rule".
+
 ## SimplyBook callback goes through the engine (30 Oct 2026)
 SimplyBook's callback URL (Custom features › API) should be `https://round2-book.donttelldadyet.workers.dev/sb/notify/<SB_NOTIFY_KEY>`
 (the full address is with the owner; the key is a Cloudflare secret). The engine passes every callback on unchanged to Make's
