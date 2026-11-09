@@ -724,7 +724,7 @@ export class HoldBook extends DurableObject {
   /* the guest ticked the terms + "non-cancellable, non-refundable" boxes on the hold step */
   agree(ref) { const h = this.get(ref); if (!h || h.status !== 'pending' || h.data.agreed) return false; h.data.agreed = Date.now(); this.sql.exec(`UPDATE holds SET data = ? WHERE ref = ?`, JSON.stringify(h.data), ref); return true; }
   /* the link in SimplyBook's confirmation email: …/b/<SimplyBook booking code> */
-  byCode(code) { return this.rows(`SELECT ref FROM holds WHERE status = 'paid' AND json_extract(data, '$.done.code') = ? LIMIT 1`, code)[0] || null; }
+  byCode(code) { return this.rows(`SELECT ref FROM holds WHERE status IN ('paid', 'cancelled') AND json_extract(data, '$.done.code') = ? ORDER BY status = 'paid' DESC LIMIT 1`, code)[0] || null; }   /* cancelled too, so its /done page says it was cancelled */
   setTv(ref, tv) { const h = this.get(ref); if (!h || !h.data.done) return; h.data.done.tv = tv; this.sql.exec(`UPDATE holds SET data = ? WHERE ref = ?`, JSON.stringify(h.data), ref); }
   done(ref, result) {
     const h = this.get(ref); if (!h) return;
@@ -3082,7 +3082,7 @@ const HANDLER = {
       if (u.pathname.startsWith('/b/')) {
         const code = u.pathname.slice(3).replace(/[^a-z0-9]/gi, '').slice(0, 20), r = code ? await book(env).byCode(code) : null;
         if (r) return Response.redirect(u.origin + '/done?ref=' + r.ref, 302);
-        return H(PAGE(`<h1>Your booking</h1><p>This booking was made with us directly, so its details are with our team. Want a birthday or celebration message on the big screen in your Round2 room? Message us on WhatsApp and we’ll set it up.</p><a class="btn" href="https://wa.me/6591625767?text=${encodeURIComponent('Hi Round2, about my booking ' + code)}">WhatsApp us</a>`));
+        return H(PAGE(`<h1>Your booking</h1><p>We can’t show this booking here. For anything about it – its details, a change, or a message on the big screen in your Round2 room – message us on WhatsApp and we’ll sort it out.</p><a class="btn" href="https://wa.me/6591625767?text=${encodeURIComponent('Hi Round2, about my booking ' + code)}">WhatsApp us</a>`));
       }
       /* "Find my booking": email + mobile → the confirmation page again (to see it or add/change the TV message) */
       if (u.pathname === '/find') {
