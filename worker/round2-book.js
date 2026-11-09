@@ -35,7 +35,7 @@ const GM_ROOM = { 5: 'vale', 7: 'kaeden', 8: 'scarlett', 9: 'kai', 10: 'bella', 
 const GM_KINDS = ['birthday', 'anniversary', 'celebrate', 'note'];
 
 const J = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type' } });
-const H = (html) => new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8' } });
+const H = (html) => new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' } });   /* guest pages are always fresh: never an old copy from the phone's cache */
 const mins = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 const hhmm = (m) => String(Math.floor(m / 60) % 24).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 const r2 = (x) => Math.round(x * 100) / 100;
