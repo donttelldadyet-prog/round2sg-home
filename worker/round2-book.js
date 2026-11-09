@@ -276,7 +276,7 @@ export class HoldBook extends DurableObject {
       const kind = String(f.kind || ''), title = one(f.title), text = one(f.text), to = one(f.to), from = one(f.from);
       const err = guestErr !== 'ok' ? guestErr : locked ? 'Your message is already on the TV. Message us if you need a change.'
         : !GM_KINDS.includes(kind) ? 'Pick an occasion.' : !title ? 'Add a headline.' : title.length > 80 ? 'Keep the headline under 80 characters.' : text.length > 600 ? 'Keep the message under 600 characters.'
-        : to.length > 40 || from.length > 40 ? 'Keep the names short.' : at < +d.start || at > +d.start + 3600e3 ? 'Pick a time within the first hour of your booking.' : 'ok';
+        : to.length > 40 || from.length > 40 ? 'Keep the names short.' : (d.retimed && at === +d.at ? false : at < +d.start || at > +d.start + 3600e3) ? 'Pick a time within the first hour of your booking.' : 'ok';
       if (err !== 'ok') return { error: err };
       this.msgPut(code, Object.assign(d, { t: now, at, id: 'g' + code.toLowerCase() + '-' + stamp(), to, from, kind, onTv: 'no', text, title, status: 'approved', approved: now, submitted: now }));
       this.qSet(code, d.room, at, +d.end || at + 10800e3);
@@ -300,7 +300,7 @@ export class HoldBook extends DurableObject {
       const links = this.rows(`SELECT key, data FROM msgs WHERE endt > ? ORDER BY start`, now - 172800e3).map((r) => ({ key: r.key, data: JSON.parse(r.data) }));
       return { ok: true, now, links };
     }
-    if (!['cancel', 'move', 'now', 'push'].includes(act)) return { error: 'Unknown action.' };
+    if (!['cancel', 'move', 'now', 'push', 'retime'].includes(act)) return { error: 'Unknown action.' };
     const d = this.msgGet(code || 'NONE');
     const err = !d || !d.room ? 'No such link.' : act === 'cancel' ? (d.status === 'cancelled' ? 'Already cancelled.' : 'ok') : d.status === 'cancelled' ? 'That link was cancelled.'
       : act === 'move' ? (start <= 0 ? 'Pick the new start time.' : start + 10800e3 < now ? 'That time has already passed.' : !roomOk ? 'Pick a room.' : 'ok')
@@ -316,6 +316,14 @@ export class HoldBook extends DurableObject {
       this.msgPut(code, Object.assign(d, { t: now, at: newAt, id: (/^R2/.test(code) ? 'q' : 'g') + code.toLowerCase() + '-' + stamp(), end: start + L, onTv: 'no', room, start, until: start + L }));
       if (d.status === 'approved' && newAt) this.qSet(code, room, newAt, start + L); else this.qDel(code);
       return { ok: true };
+    }
+    if (act === 'retime') {   /* staff (owner, 9 Nov): change only when the message pops up – the booking stays as it is */
+      const e2 = at <= 0 ? 'Pick the new pop-up time.' : at < now - 120e3 ? 'That time has already passed.' : at >= +d.end ? 'That’s after the booking ends.' : 'ok';
+      if (e2 !== 'ok') return { error: e2 };
+      await offTv(d);
+      this.msgPut(code, Object.assign(d, { t: now, at, id: (/^R2/.test(code) ? 'q' : 'g') + code.toLowerCase() + '-' + stamp(), onTv: 'no', retimed: now }));
+      this.qSet(code, d.room, Math.max(at, now), +d.end);   /* the message timer sends it then (a time now = within the minute) */
+      return { ok: true, at };
     }
     if (act === 'now') {
       this.msgPut(code, Object.assign(d, { t: now, at: now, id: (/^R2/.test(code) ? 'q' : 'g') + code.toLowerCase() + '-' + stamp(), onTv: 'no' }));
@@ -1760,7 +1768,7 @@ async function extUndo(env, hb, f) {
    Make webhook address isn't in any public page. It only passes on what Make would accept: real codes, real changes,
    the right staff code; it caches each link for a minute (page reloads cost nothing), caps guest edits, and limits how
    often one visitor can call. Saves Make operations (10,000 a month shared) – docs/guest-messages.md "Front door". */
-const GM_GUEST_EDITS = 8, GM_STAFF_ACTIONS = ['create', 'list', 'move', 'now', 'cancel', 'r2', 'push'];
+const GM_GUEST_EDITS = 8, GM_STAFF_ACTIONS = ['create', 'list', 'move', 'now', 'cancel', 'r2', 'push', 'retime'];
 async function gmFwd(env, fields) { return book(env).msgRoute(fields); }   /* the engine's own store, or Make while mode.msgLocal is off */
 const gmJ = (o) => J(o);
 /* Make's full list (staff code), kept for 15 min and used to rebuild the timer's queue */
@@ -2172,14 +2180,14 @@ async function gm(env, req) {
   }
   /* submit: check it the way Make does, drop unchanged saves, cap the number of changes */
   if (!c || c.exp <= Date.now() || c.err) { const j = await fresh(); if (j.error) return gmJ({ error: j.error }); c = await hb.gmGet(code); }
-  const L = c.link || {}, at = +f.at, start = +L.start;
+  const L = c.link || {}, at = L.retimed && +L.at ? +L.at : +f.at, start = +L.start;   /* staff set the pop-up time (Change pop-up time): a guest edit keeps it */
   const t = (x, n) => String(x || '').replace(/\s+/g, ' ').trim().slice(0, n);
   const m = { kind: String(f.kind || ''), to: t(f.to, 40), from: t(f.from, 40), title: t(f.title, 120), text: String(f.text || '').trim() };
   if (L.status === 'cancelled') return gmJ({ error: 'This link was cancelled. Message Round2 if that’s wrong.' });
   if (!GM_KINDS.includes(m.kind)) return gmJ({ error: 'Pick an occasion.' });
   if (!m.title) return gmJ({ error: 'Add a headline.' });
   if (m.text.length > 600) return gmJ({ error: 'Keep the message under 600 characters.' });
-  if (!(at >= start && at <= start + 3600e3 && (at - start) % 900e3 === 0)) return gmJ({ error: 'Pick when it pops up: at the start or up to an hour after.' });
+  if (!L.retimed && !(at >= start && at <= start + 3600e3 && (at - start) % 900e3 === 0)) return gmJ({ error: 'Pick when it pops up: at the start or up to an hour after.' });
   if (L.status === 'approved' && L.at && Date.now() >= L.at) return gmJ({ error: 'It’s already on the TV. To change it now, message Round2.' });
   const same = L.status === 'approved' && L.kind === m.kind && (L.to || '') === m.to && (L.from || '') === m.from && (L.title || '') === m.title && (L.text || '') === m.text && +L.at === at;
   if (same) return gmJ({ ok: true, unchanged: true });
