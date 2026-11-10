@@ -2514,7 +2514,7 @@ async function diagReq(env) {
   const reqs = Array.isArray(q) ? q.slice(0, 5) : [q], out = [];
   for (const f of reqs) {
     if (!DIAG_OK.includes(String(f.action))) { out.push({ q: f, error: 'not a reading action' }); continue; }
-    delete f.sync;   /* read only */
+    if (f.action !== 'noise') delete f.sync;   /* read only – except bringing the noise blocks up to date, which the timer does anyway */
     const r = await gm(env, new Request('https://engine/gm', { method: 'POST', body: new URLSearchParams(Object.assign({}, f, { staff: env.GM_STAFF })) }));
     out.push({ q: f, r: await r.json().catch(() => null) });
   }
@@ -2829,7 +2829,7 @@ const noiseText = (S, pax) => `SYSTEM BLOCK · NOISE · ${noiseRoom(S.unit)}: ${
 async function noisePax(env, hb, S) {
   if (S.k !== 'b') return +notePax(S.name) || 0;
   const k = 'npax:' + S.key, c = await hb.kvGet(k);
-  if (c && Date.now() - c.t < 6 * 3600e3) return c.p;
+  if (c && Date.now() - c.t < (c.p ? 6 * 3600e3 : 120e3)) return c.p;   /* "no count" only for 2 min: SimplyBook tells us about a new booking a moment before its guest count is saved (Anisah, 10 Nov – read as 0 and kept for 6 h) */
   const p = +(await soonPax(env, S).catch(() => '')) || 0;
   await hb.kvSet(k, { p, t: Date.now() });
   return p;
