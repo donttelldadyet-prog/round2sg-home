@@ -2662,7 +2662,8 @@ async function soonExtra(env, S, all, now) {
 /* pax: a booking's own field; a note's text ("4 pax") */
 async function soonPax(env, S) {
   if (S.k !== 'b') return notePax(S.name);
-  const b = await (await admin(env))('getBookingDetails', [S.id]).catch(() => null); let pax = '';
+  /* a session has key 'b<id>', not id (10 Nov: so the noise rule and the 1-hour reminder never got a booking's guest count) */
+  const b = await (await admin(env))('getBookingDetails', [S.id || String(S.key || '').slice(1)]).catch(() => null); let pax = '';
   for (const x of [].concat((b && b.additional_fields) || [])) if (x && (x.field_name === PAX_FIELD || /pax|guest|people/i.test(String(x.field_title || x.title || '')))) pax = String(x.value || '').replace(/\D/g, '');
   return pax;
 }
