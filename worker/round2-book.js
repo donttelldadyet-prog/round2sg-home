@@ -2995,6 +2995,10 @@ const HANDLER = {
       go(autoRun(env, 'cron')); go(msgOrphans(env, 'cron')); go(waitWarn(env)); go(keyDaily(env)); go(holdSweep(env));
       if (mm < 10 || (mm >= 30 && mm < 40)) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(shadowSync(env, [t, addDays(t, 1)])); }
       { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(noiseSync(env, mm < 10 ? Array.from({ length: 7 }, (_, i) => addDays(t, i)) : [t, addDays(t, 1)], 'cron')); }   /* noise rule: tonight + tomorrow, hourly the week ahead */
+      /* ...and further ahead, one day every half hour, 8–91 days out (owner, 10 Nov: Anisah's 6 pax on 11 Dec hadn't blocked
+         Bella – bookings made before the rule started, or a change SimplyBook didn't tell us about, were only caught a week
+         before). The whole 12 weeks are gone through every ~42 hours, about one SimplyBook day per half hour. */
+      if ((mm >= 20 && mm < 30) || mm >= 50) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(noiseSync(env, [addDays(t, 7 + Math.floor(Date.now() / 1800e3) % 84)], 'cron far')); }
     }
     ctx.waitUntil(Promise.all(jobs).then(() => sbFlush(env)).catch(() => null));
   },
