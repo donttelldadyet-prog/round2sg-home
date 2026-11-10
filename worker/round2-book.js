@@ -1152,6 +1152,9 @@ async function finalize(env, ref, source) {
     if (d.msg && !result.dryRun) result.tv = await tvMessage(env, d, q, ref, result.bookingId).catch((e) => ({ problem: String(e.message || e).slice(0, 120) }));
   } catch (err) { result = { problem: 'paid – booking not created: ' + String(err.message || err).slice(0, 150) }; }
   result.at = Date.now(); result.source = source;
+  /* noise rule for online bookings straight away, not only when SimplyBook's callback comes (owner, 10 Nov: Anisah, 6 pax in
+     Max on 11 Dec, booked online, didn't block Bella) */
+  if (result.bookingId && !result.dryRun && +d.pax >= NOISE_PAX && NOISE[q.unit]) await noiseSync(env, [q.date], 'online booking').catch((e) => console.log('[noise] online ' + String(e.message || e).slice(0, 120)));
   await hb.done(ref, result);   /* first, so the guest's page shows the outcome straight away */
   await hb.kvSet('gapc', {}).catch(() => null);   /* the booking board asks SimplyBook afresh (its 60-s memory) */
   /* paid but not in SimplyBook (slot gone, SimplyBook down…): tell staff straight away so they can call / refund */
@@ -1972,6 +1975,11 @@ async function gm(env, req) {
       : { kind: 'booking', title: '🧪 Delivery test', body: 'Sent ' + new Date(t + 8 * 3600e3).toISOString().slice(11, 19) + ' – nothing to do', tag: a, url: '/?alert=' + a });
     return gmJ({ ok: true, a, t, res });
   }
+  if (act === 'paxof') {   /* staff, read-only (10 Nov): the guest count the noise rule reads for one SimplyBook booking */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const b = await (await admin(env))('getBookingDetails', [String(f.bid || '')]).catch((e) => ({ err: String(e.message || e).slice(0, 120) }));
+    return gmJ({ ok: true, pax: await soonPax(env, { k: 'b', id: String(f.bid || '') }).catch(() => ''), start: b && b.start_date_time, unit: b && b.unit_id, fields: (b && b.additional_fields) || null, err: b && b.err, cached: await hb.kvGet('npax:b' + f.bid) });
+  }
   if (act === 'guestlook') {   /* staff, read-only (6 Nov: "is ruby really a first-timer?"): one guest across our booking page's
        attempts, HitPay's payment requests (newest pages) and the first-visit list. q = phone (last 8 digits) or email */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
@@ -2498,7 +2506,7 @@ async function pushRetry(env) {
 /* a read-only staff question left in the engine's KV (HOLDS › diag:req, JSON form fields) is answered within 5 minutes into
    diag:res – for when the browser link to the owner's computer is down (6 Nov). Only reading actions; only someone with
    Cloudflare access to this account can write the KV. */
-const DIAG_OK = ['tvmsgs', 'alerts', 'pushsubs', 'tvlog', 'guestlook', 'list', 'auto', 'insess', 'holdsday', 'acks', 'latelist', 'paytimes', 'prinfo', 'queue', 'links'];
+const DIAG_OK = ['noise', 'paxof', 'tvmsgs', 'alerts', 'pushsubs', 'tvlog', 'guestlook', 'list', 'auto', 'insess', 'holdsday', 'acks', 'latelist', 'paytimes', 'prinfo', 'queue', 'links'];
 async function diagReq(env) {
   if (!env.HOLDS) return;
   const q = await env.HOLDS.get('diag:req', 'json').catch(() => null); if (!q) return;
@@ -2506,6 +2514,7 @@ async function diagReq(env) {
   const reqs = Array.isArray(q) ? q.slice(0, 5) : [q], out = [];
   for (const f of reqs) {
     if (!DIAG_OK.includes(String(f.action))) { out.push({ q: f, error: 'not a reading action' }); continue; }
+    delete f.sync;   /* read only */
     const r = await gm(env, new Request('https://engine/gm', { method: 'POST', body: new URLSearchParams(Object.assign({}, f, { staff: env.GM_STAFF })) }));
     out.push({ q: f, r: await r.json().catch(() => null) });
   }
@@ -2870,6 +2879,7 @@ async function noiseOnSb(env, bid, type) {
   if (prev) days.push(prev);
   const s = b ? sgMs0(b.start_date_time || b.start_date) : 0;
   if (s) { days.push(sgDay(s)); await hb.kvSet('nday:b' + bid, type === 'cancel' ? null : sgDay(s)); }
+  if (days.length) { const ag = (await hb.kvGet('noiseAgain')) || { days: [] }; await hb.kvSet('noiseAgain', { at: Date.now() + 3 * 60e3, days: [...new Set(ag.days.concat(days))].slice(-10) }); }   /* again in ~3–5 min: a brand-new booking can be missing from SimplyBook's list for a moment (10 Nov) */
   return days.length ? noiseSync(env, days, 'simplybook ' + type) : null;
 }
 
@@ -2990,6 +3000,7 @@ const HANDLER = {
     go(diagReq(env).catch(() => null));   /* staff questions left in KV (diag:req → diag:res) */   /* resend alerts a phone hasn't shown; delivery report copy (KV diag:push) */   /* paid at HitPay but not booked? book it (every 5 min) */
     /* a SimplyBook change a few minutes ago: Auto wrap-up looks again on the next 5-min tick (owner, 3 Nov: a quick fix was
        only picked up after a refresh); the 10-min ticks run it anyway */
+    go((async () => { const na = await hb.kvGet('noiseAgain'); if (na && na.at && Date.now() >= na.at) { await hb.kvSet('noiseAgain', null); await noiseSync(env, na.days || [], 'recheck'); } })().catch(() => null));
     go((async () => { const ag = await hb.kvGet('autoAgain'); if (ag && Date.now() >= ag) { await hb.kvSet('autoAgain', 0); if (!ten) await autoRun(env, 'recheck'); } })());
     if (ten) {
       go(autoRun(env, 'cron')); go(msgOrphans(env, 'cron')); go(waitWarn(env)); go(keyDaily(env)); go(holdSweep(env));
