@@ -72,7 +72,8 @@ early bird 33% weekday / 44% weekend (most filled). Engine read: gm `bookstats` 
 - Waiting list, S$10 release incentive, 55/45 split fees: discussed and rejected. Flat % fees (30/40, 20/30) replaced by the hybrid.
 
 ## DEMAND-BASED FEE (owner, 12 Nov – ON TEST in the demo; replaces the per-room table above once agreed)
-Guest sees levels by the NEW slot: UPGRADE $5 (pricier slot and the move costs the shop nothing – they pay the difference;
+Guest sees the fee only (no demand labels – owner, 12 Nov: "quiet/busy" read as predatory): UPGRADE $5 · $15 · $25 · $35,
+"Popular times cost more to move into". Internal levels: UPGRADE (pricier slot, move costs the shop ≤ $5 after the difference;
 not for early-bird bookings, which stay $15+) · QUIET $15 · BUSY $25 · VERY BUSY $35 (expected cost ≤ $10 / ≤ $20 / more),
 2nd move +$10, free within 15 min, price difference on top. Fee shown on each room card and start time before choosing. Guest wording (rules card): fee depends on how likely someone
 else would have booked the new slot – from past bookings for that room, day and time, and how full that room already is.
@@ -97,3 +98,13 @@ Demand must follow trends:
 - Guardrails: 3 levels, change only on a clear shift, at most once a day; new/reopened rooms (Kaeden) start medium until
   ~4 weeks of their own data; owner can pin a slot/date busy or quiet in the control centre.
 - Control centre › Bookings › Demand: week grid per room coloured low/medium/high with the reason.
+
+### Engine stress test (demo owner view, 12 Nov)
+Every allowed move for made-up bookings (6 rooms × 11 days × 4 start times × 2 clock times → ~400k–740k moves) checks:
+never loses more than $5 · no 15-min step jumps two fee levels · Max/Bella never $35 · upgrades cost the shop ≤ $5 · early-bird
+bookings never get $5. First run failed (8,624 losing moves, up to $51; 221 quiet-room $35s). Fixes it led to:
+- 11:15am–2pm slots valued as part early-bird sale, part full-price afternoon sale, each at its own rate (2pm leans afternoon).
+- Vale + Atlas treated as one space (taking either blocks both; freeing either reopens both).
+- Upgrade tolerance: a pricier slot counts as an upgrade if the move costs the shop ≤ $5.
+After: all checks pass (live calendar, 738k moves): fees $5 29% · $15 61% · $25 6% · $35 4%; 329 moves a few dollars short,
+none by more than $5. Build: the same test becomes a System check step for the engine.
