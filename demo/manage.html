@@ -155,7 +155,7 @@ function stage(){var L=leadH();return L<3?'closed':L<24?'day':L<72?'late':'early
 function taken(i,room){if(room==='Kaeden')return [[OPEN,CLOSE+BUF]];var h=0,str=room+i;for(var k=0;k<str.length;k++)h=(h*31+str.charCodeAt(k))%9973;if(h%13===0)return [[OPEN,CLOSE+BUF]];var out=[],n=h%3;for(var j=0;j<n;j++){var st=OPEN+15*((h>>(j*3))%20)+j*360;if(st>LAST)continue;out.push([st,st+180+BUF])}
  var o=O();if(room===o.room&&i===o.day)out=out.filter(function(x){return !(x[0]<o.t+o.h*60+BUF&&x[1]>o.t)});if(i===0)out.push([OPEN,NOW+180]);return out.sort(function(a,b){return a[0]-b[0]})}
 function fits(i,room,t,h){var e=t+h*60;if(e>CLOSE)return 'past';var bz=taken(i,room);for(var k=0;k<bz.length;k++){if(t<bz[k][1]&&e+BUF>bz[k][0])return bz[k][0]}return true}
-function deadGap(i,room,t,h){var bz=taken(i,room),e=t+h*60+BUF,pe=OPEN,ns=null;bz.forEach(function(x){if(x[1]<=t&&x[1]>pe)pe=x[1];if(x[0]>=e&&(ns===null||x[0]<ns))ns=x[0]});var hg=t-pe;if(hg>0&&hg<195)return true;if(ns!==null){var tg=ns-e;if(tg>0&&tg<195)return true}return false}
+function deadGap(i,room,t,h){/* blocks a move only if it leaves fewer sellable 3h sessions than that free stretch could hold before */var bz=taken(i,room),e=t+h*60+BUF,pe=OPEN,ns=CLOSE+BUF,U=180+BUF;bz.forEach(function(x){if(x[1]<=t&&x[1]>pe)pe=x[1];if(x[0]>=e&&x[0]<ns)ns=x[0]});var before=Math.floor((ns-pe)/U),after=1+Math.floor((t-pe)/U)+Math.floor((ns-e)/U);return after<before}
 /* the rules */
 function why(i,room,t,h){var o=O(),st=stage();
  if(fits(i,room,t,h)!==true)return 'taken';
