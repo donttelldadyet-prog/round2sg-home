@@ -298,7 +298,8 @@ function dgrid(){var R=['Vale','Scarlett','Kai','Bella','Maximillion','Atlas','K
 /* STRESS TEST: every allowed move for made-up bookings; checks the fee never loses money, adjacent times don't jump 2 levels,
    quiet rooms aren't "very busy", upgrades really cost the shop ≈ nothing, early-bird bookings never get $5. */
 async function stress(){var out=$('stout');out.textContent='Running…';await new Promise(function(r){setTimeout(r,30)});
- var save=JSON.stringify(BK),sNOW=NOW,sS=JSON.stringify(S),sSel=JSON.stringify(sel),R=['Vale','Scarlett','Kai','Bella','Maximillion','Atlas'],QR={Bella:1,Maximillion:1};
+ var save=JSON.stringify(BK),sNOW=NOW,sS=JSON.stringify(S),sSel=JSON.stringify(sel),R=['Vale','Scarlett','Kai','Bella','Maximillion','Atlas'],QR={};
+ R.forEach(function(r){if(r==='Vale'||r==='Atlas')return;if(sellP(r,7,1170,72)<.25)QR[r]=1});   /* 'quiet' = whatever the data says this week (evening 3 days out sells under 25%), not a fixed list */
  var n=0,lv=[0,0,0,0],byStage={},prof=0,loss=[],jump=[],quietVB=[],upBad=[],ebUp=0,worst=null,best=null,t0=Date.now();S={moves:0,grace:false,wa:false};
  for(const now of [600,1080]){NOW=now;
   for(const r0 of R)for(let d0=0;d0<=10;d0++)for(const t0_ of [660,840,960,1170]){BK[1]={room:r0,day:d0,t:t0_,h:3};$('bk').value='1';var st=stage();if(st==='closed'||d0*1440+t0_-NOW<0)continue;var o=O();
@@ -319,7 +320,7 @@ async function stress(){var out=$('stout');out.textContent='Running…';await ne
  Object.keys(byStage).forEach(function(k){var b=byStage[k];h+='&nbsp;· '+{early:'3+ days',late:'under 3 days',day:'under 24 h'}[k]+': '+b[4].toLocaleString()+' moves – $5 '+Math.round(100*b[3]/b[4])+'%, $15 '+Math.round(100*b[0]/b[4])+'%, $25 '+Math.round(100*b[1]/b[4])+'%, $35 '+Math.round(100*b[2]/b[4])+'%<br>'});
  var big=loss.filter(function(x){return x[0]<-5}).length;h+='<br>'+ok(!big)+' Never loses money: '+loss.length+' moves where the fee is below the expected lost sale, '+big+' by more than $5'+(loss.length?' (worst: '+loss[0][1]+')':'')+'<br>';
  h+=ok(jump.length<n*.002)+' No big jumps between neighbouring times: '+jump.length+' times a 15-min step jumps two fee levels'+(jump.length?' (e.g. '+jump[0]+')':'')+'<br>';
- h+=ok(!quietVB.length)+' Max and Bella never $35: '+quietVB.length+(quietVB.length?' (e.g. '+quietVB[0]+')':'')+'<br>';
+ h+=ok(!quietVB.length)+' Rooms that are quiet right now ('+Object.keys(QR).map(function(r){return r==='Maximillion'?'Max':r}).join(', ')+') never $35: '+quietVB.length+(quietVB.length?' (e.g. '+quietVB[0]+')':'')+'<br>';
  h+=ok(!upBad.length)+' Upgrades really cost ≈ nothing: '+upBad.length+' upgrades costing over $5<br>';
  h+=ok(!ebUp)+' Early-bird bookings never get $5: '+ebUp+'<br>';
  h+='Closest call: '+worst[1];
