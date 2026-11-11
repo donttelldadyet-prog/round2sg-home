@@ -38,7 +38,7 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 .dim{opacity:.35;pointer-events:none}
 .demo label{display:block;margin-top:4px}
 .rl-k{font:8px 'Press Start 2P',monospace;letter-spacing:.1em;color:var(--mu);margin:14px 0 6px}
-.rl{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed var(--ln);font-size:14px}.rl-t{color:#d6d0e3}.rl-v{font-weight:600;text-align:right}.rl-v.g{color:#9be38f}.rl-v.a{color:#F2C21B}.rl-v.r{color:#ff9b9b}
+.rl{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed var(--ln);font-size:14px}.rl-t{color:#d6d0e3;white-space:nowrap}.rl-v{font-weight:600;text-align:right}.rl-v.g{color:#9be38f}.rl-v.a{color:#F2C21B}.rl-v.r{color:#ff9b9b}
 </style></head><body><main>
 <div class="demo">DEMO · nothing is real here.
 <label>Their booking: <select id="bk">
@@ -69,9 +69,9 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 <div class="rl"><span class="rl-t">Under 3 days</span><span class="rl-v a">From 2:15pm only</span></div>
 <div class="rl"><span class="rl-t">Under 24 hours</span><span class="rl-v a">Same-day upgrades</span></div>
 <div class="rl"><span class="rl-t">Under 3 hours</span><span class="rl-v r">Closed</span></div>
-<p class="rl-k">WHAT DOES IT COST?</p>
-<div class="rl"><span class="rl-t">3+ days before</span><span class="rl-v">30% of your booking · max $30</span></div>
-<div class="rl"><span class="rl-t">Under 3 days</span><span class="rl-v">40% of your booking · max $40</span></div>
+<p class="rl-k">WHAT DOES IT COST?</p><p class="fine" style="margin:-2px 0 4px!important">% of what you paid for this booking</p>
+<div class="rl"><span class="rl-t">3+ days before</span><span class="rl-v">30% · max $30</span></div>
+<div class="rl"><span class="rl-t">Under 3 days</span><span class="rl-v">40% · max $40</span></div>
 <div class="rl"><span class="rl-t">Early bird → 2:15pm+</span><span class="rl-v">$10</span></div>
 <div class="rl"><span class="rl-t">2nd move</span><span class="rl-v">+$10</span></div>
 <div class="rl"><span class="rl-t">Within 15 min of booking</span><span class="rl-v g">No change fee</span></div>
