@@ -225,7 +225,7 @@ function state(){var o=O(),st=stage();go('home');
  var R={early:['g','3+ DAYS','Any free slot, any day'],late:['y','UNDER 3 DAYS','Any day, but start 2:15pm or later'],day:['o','UNDER 24 HRS','Same day only: later time, bigger room or more hours'],closed:['r','UNDER 3 HRS','No rescheduling allowed']}[st];
  $('myrule').innerHTML='<span class="lead">Your session starts in '+(L>=48?Math.round(L/24)+' days':Math.round(L)+' hours')+', so right now:</span><span class="w '+R[0]+'">'+R[1]+'</span><span>'+R[2]+'</span>'+(st==='closed'?'':'<span class="sub">Change fee '+(S.grace?'<b>free</b> (within 15 min)':'from <b>$'+fee(null)+'</b>, shown on each slot')+' · new time at least 3 hours from now</span>');
  var b=$('a-move'),sub=$('a-move-sub');b.disabled=false;b.onclick=function(){sel={day:o.day,room:o.room,t:o.t,h:o.h,wk:null};go('pick');draw()};
- if(st==='closed'){b.disabled=true;sub.textContent='Closed 3 hours before your start'}
+ if(st==='closed'){b.disabled=true;sub.textContent='No rescheduling within 3 hours of your start'}
  else if(S.moves>=2){b.disabled=true;sub.textContent='No moves left (2 of 2 used)'}
  else if(st==='day')sub.textContent='Today/tomorrow: same-day upgrades only';
  else sub.textContent=S.grace?'Free right now · price difference only':('Fee from $'+fee(null)+' + any difference');
