@@ -59,6 +59,7 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 .mine{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:15px;margin:2px 0 10px}.mine .lead{grid-column:1/-1;font-size:13px;color:var(--mu)}.mine .w{font:8px 'Press Start 2P',monospace;padding:6px;border:1px solid;white-space:nowrap;letter-spacing:.02em}.mine .sub{grid-column:1/-1;font-size:13px;color:#d6d0e3}
 .more summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--ln);background:#15111f;font:700 14px 'Chakra Petch',sans-serif;letter-spacing:.06em;text-transform:uppercase}.more summary::-webkit-details-marker{display:none}.more summary:after{content:'▾';color:var(--mu)}.more[open] summary:after{content:'▴'}
 .tw{list-style:none;margin:0;padding:0;display:grid;gap:6px}.tw li{display:grid;grid-template-columns:64px 1fr auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--ln);border-left:5px solid #4DB848;font-size:14px}.tw li.warn{border-left-color:#ff6b6b;background:rgba(255,107,107,.08)}.tw b{font-size:18px}.tw li.warn b{color:#ff9b9b}.tw em{font-style:normal;font-size:12px;color:var(--mu);white-space:nowrap}
+.rm .at{font-style:normal;font-size:11px;color:var(--mu)}.rm.on .at{color:#3a3450}
 </style></head><body><main>
 <div class="demo">DEMO · nothing is real here.
 <label>Their booking: <select id="bk">
@@ -208,14 +209,15 @@ function state(){var o=O(),st=stage();go('home');
  var h=[S.wa?'<li>Booked with our team on WhatsApp · Tue 10 Nov <small>· '+money(o.paid)+'</small></li>':'<li>Booked online · Tue 10 Nov, 8:02pm <small>· paid '+money(o.paid)+' PayNow</small></li>'];
  if(S.moves>=1)h.push('<li>Moved once · Wed 11 Nov <small>· fee paid</small></li>');if(S.moves>=2)h.push('<li>Moved again · Wed 11 Nov <small>· fee paid</small></li>');
  h.push('<li>TV message added <small>· pops up 30 min in</small></li>');$('hist').innerHTML=h.join('')}
+function near(a,t){if(!a.length)return null;if(t==null)return a[0];return a.reduce(function(b,x){return Math.abs(x-t)<Math.abs(b-t)?x:b},a[0])}
 function draw(){var o=O(),st=stage();
  $('rulenote').innerHTML={early:'Your session is <b>3+ days away</b>: any free slot.',late:'Your session is <b>under 3 days away</b>: new times from <b>2:15pm</b> only. 11am–2pm slots need 3+ days notice.',day:'Your session is <b>under 24 hours away</b>: <b>same-day upgrades only</b> (later time, bigger room or more hours).'}[st];
  var w0=sel.wk==null?Math.floor(sel.day/7)*7:sel.wk;sel.wk=w0;$('mon').textContent=monthOf(w0);$('wprev').disabled=w0<=0;$('wnext').disabled=w0+7>=60;
  $('days').innerHTML=days.slice(w0,w0+7).map(function(d,k){var i=w0+k,full=dayFull(i),past=i*1440+LAST-NOW<180;return '<button class="day'+(i==sel.day?' on':'')+(full||past?' full':'')+(i==o.day?' yours':'')+'" '+(past?'disabled':'')+' onclick="sel.day='+i+';draw()">'+d.split(' ')[0]+'<br><b>'+d.split(' ')[1]+'</b><i>'+(past?'—':full?'full':peak(i)?'peak':'off')+'</i></button>'}).join('');drawCal();
  if(!starts(sel.day,sel.room).length){var f=Object.keys(ROOMS).filter(function(r){return starts(sel.day,r).length});if(f.length)sel.room=f[0]}
- $('rooms').innerHTML=Object.keys(ROOMS).map(function(r){var n=starts(sel.day,r).length,d=price(r,sel.day,sel.t,o.h)-o.paid;
-  return '<button class="rm'+(r==sel.room?' on':'')+'" '+(n?'':'disabled')+' onclick="sel.room=\''+r+'\';draw()" style="border-left:4px solid '+ROOMS[r][0]+'">'+r+(r==o.room?' <span class="ytag">YOURS</span>':'')+'<small>'+(n?TYPE[ROOMS[r][1]]+' · '+n+' start times':'Fully booked')+'</small>'+(n?tag(d):'')+'</button>'}).join('');
- var stt=starts(sel.day,sel.room),lk=locked(sel.day,sel.room);if(stt.indexOf(sel.t)<0)sel.t=stt[0];
+ $('rooms').innerHTML=Object.keys(ROOMS).map(function(r){var ss=starts(sel.day,r),n=ss.length,tt=near(ss,sel.t),d=n?price(r,sel.day,tt,o.h)-o.paid:0;
+  return '<button class="rm'+(r==sel.room?' on':'')+'" '+(n?'':'disabled')+' onclick="sel.room=\''+r+'\';draw()" style="border-left:4px solid '+ROOMS[r][0]+'">'+r+(r==o.room?' <span class="ytag">YOURS</span>':'')+'<small>'+(n?TYPE[ROOMS[r][1]]+' · '+n+' start times':'Fully booked')+'</small>'+(n?'<em class="at">at '+hm(tt)+'</em> '+tag(d):'')+'</button>'}).join('');
+ var stt=starts(sel.day,sel.room),lk=locked(sel.day,sel.room);if(stt.indexOf(sel.t)<0)sel.t=near(stt,sel.t);
  var H=Math.floor((sel.t||OPEN)/60),hh='';for(var hr=11;hr<=20;hr++){var any=stt.some(function(t){return Math.floor(t/60)===hr}),lkh=!any&&lk.some(function(t){return Math.floor(t/60)===hr}),me=sel.day==o.day&&sel.room==o.room&&Math.floor(o.t/60)===hr;
   hh+='<button class="hc'+(hr===H?' on':'')+(me?' yours':'')+'" '+(any?'':'disabled')+' onclick="pickH('+hr+')">'+hm(hr*60)+'<small>'+(lkh?'⌂ 3+ days':hr===11?'early bird':any?'':'full')+'</small></button>'}$('hrow').innerHTML=hh;
  var on=$('hrow').querySelector('.on');if(on)on.scrollIntoView({block:'nearest',inline:'center'});
