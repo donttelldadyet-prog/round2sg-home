@@ -113,12 +113,12 @@ function state(){var v=$('state').value;if(v==='owner'){go('owner');return}go('h
  S={moves:{grace:0,normal:0,one:1,none:2,late:0,staff:0}[v],grace:v==='grace',late:v==='late',staff:v==='staff'};
  $('t-time').textContent=hm(o.t)+' – '+hm(o.t+o.h*60);$('t-len').textContent=o.h+' hours';$('t-paid').textContent=money(o.paid);
  var c='';if(S.grace)c+='<span class="chip ok">Free change · 12:43 left</span>';c+='<span class="chip '+(S.moves>=2?'no':'')+'">Moves used '+S.moves+' / 2</span>';
- if(S.late)c+='<span class="chip warn">Starts in 2h · moves closed</span>';if(S.staff)c+='<span class="chip">Booked with our team · paid in shop</span>';c+='<span class="chip">TV message edited 2×</span>';$('chips').innerHTML=c;
+ if(S.late)c+='<span class="chip warn">Starts in 2h · moves closed</span>';if(S.staff)c+='<span class="chip">Booked with our team</span>';c+='<span class="chip">TV message edited 2×</span>';$('chips').innerHTML=c;
  var b=$('a-move'),sub=$('a-move-sub');b.disabled=false;
  if(S.late){b.disabled=true;sub.textContent='Closed 3 hours before your start'}
  else if(S.moves>=2){b.disabled=true;sub.textContent='No moves left (2 of 2 used)'}
  else{sub.textContent=S.grace?'Free right now · price difference only':(S.moves?'Next move S$25 + any difference':'S$15 + any price difference');b.onclick=function(){sel={day:o.day,room:o.room,t:o.t,h:o.h,wk:null};go('pick');draw()}}
- var h=[S.staff?'<li>Booked with our team on WhatsApp · Tue 10 Nov <small>· paid '+money(o.paid)+' (recorded by staff)</small></li>':'<li>Booked online · Tue 10 Nov, 8:02pm <small>· paid '+money(o.paid)+' PayNow</small></li>'];
+ var h=[S.staff?'<li>Booked with our team on WhatsApp · Tue 10 Nov <small>· paid '+money(o.paid)+'</small></li>':'<li>Booked online · Tue 10 Nov, 8:02pm <small>· paid '+money(o.paid)+' PayNow</small></li>'];
  if(S.moves>=1)h.push('<li>Moved Thu 12 → Fri 13 Nov · 8:10pm <small>· free (within 15 min)</small></li>');if(S.moves>=2)h.push('<li>Moved 2pm → 4pm · Wed 11 Nov <small>· S$15 fee</small></li>');
  h.push('<li>TV message added, edited 2× <small>· pops up 30 min in</small></li>');$('hist').innerHTML=h.join('')}
 function draw(){var o=O();
