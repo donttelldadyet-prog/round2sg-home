@@ -71,7 +71,11 @@ early bird 33% weekday / 44% weekend (most filled). Engine read: gm `bookstats` 
   over 33% of moves into Fri–Sun evenings · freed-slot resale under 15% · average profit per move at or below $0.
 - Waiting list, S$10 release incentive, 55/45 split fees: discussed and rejected. Flat % fees (30/40, 20/30) replaced by the hybrid.
 
-## DEMAND-BASED FEE (owner, 12 Nov – idea agreed, not built; replaces the per-room table above once built)
+## DEMAND-BASED FEE (owner, 12 Nov – ON TEST in the demo; replaces the per-room table above once agreed)
+Guest sees 3 levels by the NEW slot: QUIET $15 · REGULAR $25 · PRIME $35 (expected cost of the move ≤ $10 / ≤ $20 / more),
+2nd move +$10, free within 15 min, price difference on top. Fee shown on each room card and start time before choosing.
+First test (12 Nov): same-room date changes and upgrades come out QUIET; PRIME appears for late moves into busy evenings
+on fast-filling dates (e.g. Vale Fri 13 → Sat 14 7:30pm).
 Fee depends on the slot they move INTO (and the one they leave): fee ≈ expected lost sale of the new slot − expected resale
 of the freed slot − price difference paid, + ~$5, banded into 3 levels (low / medium / high) so guests see round numbers.
 Measured 12 Nov (1 Aug–10 Nov, rough): rooms differ a lot – free slot 3 days out still sells: Vale/Scarlett 58%, Kai 42%,
