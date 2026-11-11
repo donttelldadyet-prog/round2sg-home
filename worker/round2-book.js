@@ -417,6 +417,8 @@ export class HoldBook extends DurableObject {
       const old = 'sbb:' + new Date(Date.now() + 8 * 3600e3 - 3 * 86400e3).toISOString().slice(0, 10); this.sql.exec(`DELETE FROM kv WHERE k = ?`, old); } }
   kvGet(k) { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = ?`, k)[0]; return r ? JSON.parse(r.v) : null; }
   kvSet(k, v) { this.qInit(); this.sql.exec(`INSERT OR REPLACE INTO kv VALUES (?, ?)`, k, JSON.stringify(v)); }
+  /* one worker at a time on a key (no await between the look and the write, so two SimplyBook callbacks can't both win) */
+  claim(k, ms) { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = ?`, k)[0], now = Date.now(); if (r && JSON.parse(r.v) > now) return false; this.sql.exec(`INSERT OR REPLACE INTO kv VALUES (?, ?)`, k, JSON.stringify(now + ms)); return true; }
   /* every phone alert, with what it was about (owner, 5 Nov: tapping an alert opens its own page in the control centre).
      The control centre lists the last 24 hours; kept 3 days so a notification tapped late still opens. Newest first, at most 400. */
   alogAdd(e) { const L = (this.kvGet('alog') || []).filter((x) => x.t > Date.now() - 3 * 86400e3); L.unshift(e); this.kvSet('alog', L.slice(0, 400)); }
@@ -1899,6 +1901,14 @@ async function gm(env, req) {
     const m = await hb.getMode(); if (f.set === 'on' || f.set === 'off') { m.msgLocal = f.set === 'on'; m.msgT = Date.now(); await hb.setMode(m); await hb.gmDrop('__LIST__'); if (m.msgLocal) await gmList(env, hb).catch(() => null); }
     return gmJ({ ok: true, local: !!m.msgLocal, count: await hb.msgCount() });
   }
+  if (act === 'mirror') {   /* staff: Vale ↔ Atlas mirror – do=status | adopt (fix=1 blocks the missing) | on | off | run&bid=… */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const m = await hb.getMode(), d = String(f.do || 'status');
+    if (d === 'adopt') return gmJ(Object.assign({ ok: true }, await mirAdopt(env, f.fix === '1')));
+    if (d === 'run' && f.bid) return gmJ(await mirrorOnSb(env, String(f.bid).replace(/\D/g, ''), String(f.type || 'change')));
+    if (d === 'on' || d === 'off') { m.mirror = d === 'on' ? 'engine' : 'make'; m.mirT = Date.now(); await hb.setMode(m); }
+    return gmJ({ ok: true, mirror: m.mirror || 'make', since: m.mirT || 0, log: ((await hb.kvGet('mirlog')) || []).slice(0, 20) });
+  }
   if (act === 'human') {   /* staff: control centre › "needs a human" list (owner, 3 Nov); sorted=<id> ticks one off */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     let L = (await hb.kvGet('human')) || [];
@@ -2358,9 +2368,41 @@ ${msgBox}
 <div class="card"><div class="k">WHEN YOU ARRIVE</div><ul><li>Come in and take a seat in our lobby. We’ll know you’ve arrived and come to show you to ${esc(room)}.</li><li>Your booking is under <b>${esc(d.name)}</b>.</li><li>Please be on time: your session ends at ${esc(clock(q.end))}.</li><li>${done.note || !done.bookingId || (done.fallback || []).some((x) => /shared/.test(x)) || (done.email && done.email !== 'ok') ? `We’ll WhatsApp you on ${esc(d.phone)} to confirm the details.` : `A confirmation email is on its way to ${esc(d.email)}.`}</li></ul></div>
 <div class="card"><div class="k">ADDRESS</div><a class="loc" href="${MAPS_URL}" target="_blank" rel="noopener"><span class="pin"><svg width="20" height="24" viewBox="0 0 10 12" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M3 0h4v1h1v1h1v4H8v2H7v2H6v2H4v-2H3V8H2V6H1V2h1V1h1zm1 3v2h2V3z"/></svg></span><span><span class="ad">20 Haji Lane, #02-00</span><br><span class="sg">Singapore 189213</span></span><span class="go">MAP ›</span></a><span class="mrt"><b>EW12</b>Bugis MRT · Exit B · 6 min walk</span></div>
 <div class="row"><a class="btn ghost" download="Round2-${esc(ref)}.ics" href="data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}">Add to calendar</a><a class="btn ghost" href="https://wa.me/6591625767?text=${encodeURIComponent('Hi Round2, about my booking ' + ref + (d.name ? ' under ' + d.name : '') + ' (' + room + ', ' + dt.toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }) + ', ' + clock(q.time) + ')')}">WhatsApp us</a></div>
+${done.bookingId && !test ? `<a class="btn ghost" target="_top" href="${PUBLIC_BOOK}/receipt?ref=${esc(ref)}">Payment receipt</a>` : ''}
 ${d.ret ? `<a class="btn" href="${esc(d.ret)}">Back to Round2</a>` : '<a class="btn" href="https://www.round2.sg">Back to Round2</a>'}
 <p class="fine">Closed this page? The link in your confirmation email brings you back here, and so does your calendar entry.</p>
 <script>try{sessionStorage.clear()}catch(e){}</script><script>/* inside book.round2.sg: keep its address bar in step; links that leave these pages open outside the frame */(function(){if(window.top===window)return;try{parent.postMessage({r2:'page',path:location.pathname+location.search,title:document.title},'${PUBLIC_BOOK}')}catch(e){}document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href]');if(!a||a.hasAttribute('download'))return;var u=new URL(a.href,location.href);if(u.origin===location.origin&&!/^\\/done\\/message/.test(u.pathname))return;a.target=/(^|\\.)round2\\.sg$/.test(u.hostname)||u.origin===location.origin?'_top':'_blank';a.rel='noopener'},true)})()</script></main></body></html>`;
+}
+
+/* ---------- payment receipt (/receipt?ref=…) ---------- */
+const PAY_NAME = { paynow_online: 'PayNow', card: 'Card', grabpay_direct: 'GrabPay', grabpay: 'GrabPay', shopee_pay: 'ShopeePay', atome: 'Atome', apple_pay: 'Apple Pay', google_pay: 'Google Pay', wechat: 'WeChat Pay', alipay: 'Alipay' };
+async function receiptPage(env, ref, h) {
+  const d = h.data, q = d.q, room = q.unit === 11 ? 'Maximillion' : q.room, look = ROOM_LOOK[q.unit] || ['#f4f1fb', '#0b0914', ''];
+  const pr = await hitpay(envFor(env, d.pay), 'GET', '/payment-requests/' + h.pr).catch(() => ({})), p = (pr.payments || [])[0] || {};
+  const paidAt = Date.parse(String(p.created_at || p.updated_at || pr.updated_at || '').replace(' ', 'T')) || (d.done && d.done.t) || h.created || Date.now();
+  const fmt = (ms) => new Date(ms + 8 * 3600e3).toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).replace(/,/g, '') + ', ' + clock12(ms);
+  const day = new Date(q.date + 'T12:00:00Z').toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).replace(/,/g, '');
+  const clock = (t) => { const [hh, m] = t.split(':').map(Number); return ((hh + 11) % 12 + 1) + (m ? ':' + String(m).padStart(2, '0') : '') + (hh % 24 < 12 ? 'am' : 'pm'); };
+  const method = PAY_NAME[String(p.payment_type || '').toLowerCase()] || (p.payment_type ? String(p.payment_type).replace(/_/g, ' ') : 'HitPay');
+  const line = (k, v, cls) => `<tr${cls ? ` class="${cls}"` : ''}><td>${k}</td><td>${v}</td></tr>`;
+  const paid = pr.status === 'completed' || h.status === 'paid', amt = (+(pr.amount || q.total)).toFixed(2);
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Receipt ${esc(ref)} · Round2</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>:root{--rc:${look[0]}}*{box-sizing:border-box}body{margin:0;background:#06050a;color:#f4f1fb;font:16px/1.5 'Chakra Petch',system-ui,sans-serif}
+main{max-width:520px;margin:0 auto;padding:28px 16px 40px}.px{font-family:'Press Start 2P',monospace;letter-spacing:.08em}.kick{font-size:9px;color:#a79fbd}
+h1{font-family:'Press Start 2P',monospace;font-size:18px;margin:10px 0 18px}.rc{border:1px solid rgba(244,241,251,.14);border-top:4px solid var(--rc);background:#0b0914;padding:18px}
+.biz{font-weight:700;font-size:18px}.ad{color:#a79fbd;font-size:13px;margin-bottom:14px}table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px dashed rgba(244,241,251,.14);vertical-align:top}td:last-child{text-align:right;font-weight:600}
+tr.tot td{border-bottom:0;font-size:20px;font-weight:700;padding-top:12px}tr.tot td:last-child{color:var(--rc)}.st{display:inline-block;font:9px 'Press Start 2P',monospace;padding:6px 8px;background:var(--rc);color:#0b0914;margin-top:14px}
+.btn{display:block;text-align:center;padding:13px 14px;font:10px 'Press Start 2P',monospace;letter-spacing:.08em;text-decoration:none;color:#f4f1fb;border:1px solid var(--rc);background:transparent;margin-top:12px;width:100%;cursor:pointer}.fine{font-size:12px;color:#a79fbd}
+@media print{body{background:#fff;color:#000}.rc{background:#fff;border-color:#999}.ad,.fine,.kick{color:#555}.btn,.noprint{display:none}td{border-color:#ccc}}</style></head><body><main>
+<div class="px kick noprint">ROUND2 · SAVE MENU</div><h1>RECEIPT</h1>
+<div class="rc"><div class="biz">Round2</div><div class="ad">20 Haji Lane, #02-00, Singapore 189213 · hello@round2.sg · +65 9162 5767</div>
+<table>${line('Receipt for', esc(d.name))}${line('Booking ref', esc(ref))}${line('Paid on', esc(fmt(paidAt)))}${line('Paid with', esc(method) + ' (HitPay)')}${p.id ? line('Payment ID', `<span style="font-size:12px">${esc(String(p.id))}</span>`) : ''}
+${line(`${esc(room)} · ${esc(look[2] || 'Private room')}${q.earlyBird ? ' · Early bird' : ''}<br><span class="fine">${esc(day)}, ${esc(clock(q.time))} – ${esc(clock(q.end))} · ${q.hours} hours · ${esc(String(d.pax || ''))} guests</span>`, '$' + (+q.total).toFixed(2))}
+${line('Total paid (SGD)', '$' + amt, 'tot')}</table>${paid ? '<span class="st">PAID</span>' : '<span class="st">PAYMENT PENDING</span>'}</div>
+<button class="btn" onclick="print()">Save as PDF / print</button><a class="btn" target="_top" href="${PUBLIC_BOOK}/done?ref=${esc(ref)}">Back to your booking</a>
+<p class="fine">Bookings are non-cancellable and non-refundable. Questions about this payment? WhatsApp +65 9162 5767 with your booking ref.</p>
+</main></body></html>`;
 }
 
 /* ---------- pages ---------- */
@@ -2884,6 +2926,81 @@ async function noiseOnSb(env, bid, type) {
   return days.length ? noiseSync(env, days, 'simplybook ' + type) : null;
 }
 
+/* ===== Vale ↔ Atlas mirror (owner, 11 Nov: moved here from Make [BACKEND] SYSTEM BLOCKS MIRROR ROOMS 6990225) =====
+   Same as Make did: a guest booking in Vale makes a SYSTEM BLOCK booking in Atlas (client 2472) and the other way round
+   (client 2476), with the booking's exact SimplyBook start and end (cleaning included). The block moves when the booking
+   moves (and goes if it leaves Vale/Atlas), and is cancelled with it. Better than Make: any service (same kind – off-peak /
+   peak / early bird – in the twin, else its off-peak service), and a failed block alerts the staff phones.
+   kv mir:<booking> = { blk } (adopted from Make's blocks at switch-over: same room twin, same start and end). */
+const MIR_CLIENT = { 12: '2472', 5: '2476' };
+function mirSvc(ev, from, to) {
+  const A = SVC[ROOMS[from][1]] || {}, B = SVC[ROOMS[to][1]] || {}, kind = Object.keys(A).find((k) => A[k] === +ev);
+  return B[kind || 'off'];
+}
+async function mirrorOnSb(env, bid, type, tries = 0) {
+  const hb = book(env), rec = await hb.kvGet('mir:' + bid), a = await admin(env);
+  if (!(await hb.claim('mirlock:' + bid, 60e3))) { if (tries < 3) { await new Promise((r) => setTimeout(r, 5000)); return mirrorOnSb(env, bid, type, tries + 1); } return { busy: true }; }
+  try {
+    const drop = async (why) => {
+      if (!rec || !rec.blk) return { none: why };
+      const ok = await a('cancelBooking', [rec.blk]).then(() => true).catch((e) => String(e.message || e).slice(0, 120));
+      await hb.kvSet('mir:' + bid, null); await hb.kvSet('mirb:' + rec.blk, null);
+      if (ok !== true && !/cancel/i.test(ok)) await humanAlert(env, 'mirror-' + bid, 'Vale/Atlas block not removed', `Booking #${bid} ${why}, but its SYSTEM BLOCK #${rec.blk} in the other room couldn't be cancelled. Cancel it by hand in SimplyBook. (${ok})`).catch(() => null);
+      await mirLog(env, { bid, do: 'cancel', why, blk: rec.blk, ok: ok === true });
+      return { cancelled: rec.blk, why };
+    };
+    if (type === 'cancel') {
+      const owner = await hb.kvGet('mirb:' + bid);   /* someone cancelled a block itself: forget it (Make did the same, no re-block) */
+      if (owner) { await hb.kvSet('mir:' + owner, null); await hb.kvSet('mirb:' + bid, null); await mirLog(env, { bid: owner, do: 'block cancelled by hand', blk: bid }); return { forgot: bid }; }
+      return drop('was cancelled');
+    }
+    const b = await a('getBookingDetails', [bid]).catch(() => null);
+    if (!b || !b.unit_id) return { noBooking: true };
+    if (SYS_CLIENTS.includes(String(b.client_id)) || SYS_RE.test(String(b.client_name || ''))) return { skipped: 'block' };
+    if (String(b.is_confirm) === '0' && /cancel/i.test(String(b.status || ''))) return drop('was cancelled');
+    const unit = +b.unit_id, tw = MIRROR[unit];
+    if (!tw) return drop('left Vale/Atlas');
+    const st = String(b.start_date_time || ''), en = String(b.end_date_time || '');
+    if (!/^\d{4}-\d\d-\d\d \d\d:\d\d/.test(st) || !/^\d{4}-\d\d-\d\d \d\d:\d\d/.test(en)) return { badTimes: true };
+    const fields = {}; for (const x of [].concat(b.additional_fields || [])) if (x && x.field_name) fields[x.field_name] = '1';
+    const args = [mirSvc(b.event_id, unit, tw), tw, MIR_CLIENT[tw], st.slice(0, 10), st.slice(11, 19), en.slice(0, 10), en.slice(11, 19), 0, fields];
+    const room = ROOMS[unit][0], twin = ROOMS[tw][0], when = `${st.slice(0, 10)} ${st.slice(11, 16)}–${en.slice(11, 16)}`;
+    if (rec && rec.blk) {
+      if (rec.s === st && rec.e === en && rec.u === tw) return { same: rec.blk };
+      const ok = await a('editBook', [rec.blk, ...args]).then(() => true).catch((e) => String(e.message || e).slice(0, 120));
+      if (ok === true) { await hb.kvSet('mir:' + bid, { blk: rec.blk, s: st, e: en, u: tw }); await mirLog(env, { bid, do: 'move', blk: rec.blk, room, when, ok: true }); return { moved: rec.blk }; }
+      await mirLog(env, { bid, do: 'move', blk: rec.blk, room, when, ok: false, err: ok });
+      await humanAlert(env, 'mirror-' + bid, `${twin} not blocked – check`, `${room} booking #${bid} (${b.client_name || 'guest'}) moved to ${when}, but its SYSTEM BLOCK in ${twin} (#${rec.blk}) couldn't follow. Move or add the block in ${twin} by hand. (${ok})`).catch(() => null);
+      return { error: ok };
+    }
+    const r = await a('book', args).catch((e) => ({ err: String(e.message || e).slice(0, 120) }));
+    const blk = r && r.bookings && r.bookings[0] && String(r.bookings[0].id);
+    if (blk) { await hb.kvSet('mir:' + bid, { blk, s: st, e: en, u: tw }); await hb.kvSet('mirb:' + blk, bid); await mirLog(env, { bid, do: 'block', blk, room, when, ok: true }); return { blocked: blk }; }
+    await mirLog(env, { bid, do: 'block', room, when, ok: false, err: r && r.err });
+    await humanAlert(env, 'mirror-' + bid, `${twin} not blocked – check`, `${room} was booked for ${when} (#${bid}, ${b.client_name || 'guest'}), but ${twin} couldn't be blocked at the same time – someone could book ${twin} then. Block ${twin} by hand in SimplyBook. (${(r && r.err) || 'no answer'})`).catch(() => null);
+    return { error: r && r.err };
+  } finally { await hb.kvSet('mirlock:' + bid, 0); }
+}
+async function mirLog(env, x) { const hb = book(env), L = (await hb.kvGet('mirlog')) || []; L.unshift(Object.assign({ t: Date.now() }, x)); await hb.kvSet('mirlog', L.slice(0, 60)); }
+/* switch-over: link every upcoming Vale/Atlas guest booking to the SYSTEM BLOCK Make made for it (twin room, same start and
+   end). Nothing in SimplyBook changes. Bookings with no block are listed (and, with fix=1, blocked now). */
+async function mirAdopt(env, fix) {
+  const a = await admin(env), hb = book(env), from = sgDay(Date.now() - 86400e3), to = addDays(from, 120);
+  const L = Object.values((await a('getBookings', [{ booking_type: 'non_cancelled', date_from: from, date_to: to }])) || {});
+  const blocks = L.filter((x) => SYS_CLIENTS.includes(String(x.client_id)) && MIRROR[+x.unit_id]), used = new Set(), out = { linked: 0, already: 0, missing: [], fixed: [], spareBlocks: [] };
+  for (const x of L) {
+    if (SYS_CLIENTS.includes(String(x.client_id)) || !MIRROR[+x.unit_id]) continue;
+    const st = String(x.start_date || x.start_date_time || ''), en = String(x.end_date || x.end_date_time || ''), tw = MIRROR[+x.unit_id];
+    const have = await hb.kvGet('mir:' + x.id); if (have && have.blk) { used.add(String(have.blk)); out.already++; continue; }
+    const m = blocks.find((y) => +y.unit_id === tw && !used.has(String(y.id)) && String(y.start_date || y.start_date_time) === st && String(y.end_date || y.end_date_time) === en);
+    if (m) { used.add(String(m.id)); await hb.kvSet('mir:' + x.id, { blk: String(m.id), s: st, e: en, u: tw }); await hb.kvSet('mirb:' + m.id, String(x.id)); out.linked++; continue; }
+    out.missing.push({ bid: x.id, room: ROOMS[+x.unit_id][0], when: st.slice(0, 16), name: x.client || x.client_name || '' });
+    if (fix) out.fixed.push(Object.assign({ bid: x.id }, await mirrorOnSb(env, String(x.id), 'create').catch((e) => ({ error: String(e.message || e).slice(0, 80) }))));
+  }
+  for (const y of blocks) if (!used.has(String(y.id)) && !(await hb.kvGet('mirb:' + y.id))) out.spareBlocks.push({ blk: y.id, room: ROOMS[+y.unit_id][0], when: String(y.start_date || y.start_date_time).slice(0, 16) });
+  return out;
+}
+
 /* ===== GitHub through the engine (owner, 2 Nov) =====
    TV setup (Events, Rooms, Sounds, TV settings) and the menu editor used a personal GitHub key on each phone. Now they
    send the staff code here and the engine uses ONE GitHub key kept in Cloudflare (secret GH_TOKEN: fine-grained, only
@@ -3094,6 +3211,12 @@ const HANDLER = {
           : f.pending ? `<h1>Confirming your booking…</h1><p>Your payment came through. We’re putting the booking into our calendar – this page refreshes by itself.</p><meta http-equiv="refresh" content="4">`
           : `<h1>Payment received</h1><p>We couldn’t confirm your booking automatically, so our team has been alerted and will WhatsApp you on <b>${esc(f.h.phone || '')}</b> shortly to sort it out.</p><p>Please keep this reference: <b>${esc(ref)}</b>. Questions? <a href="https://wa.me/6591625767">WhatsApp us</a>.</p>`));
       }
+      /* the receipt line in SimplyBook's confirmation email: /r/<booking code> → that booking's receipt */
+      if (u.pathname.startsWith('/r/')) {
+        const code = u.pathname.slice(3).replace(/[^a-z0-9]/gi, '').slice(0, 20), r = code ? await book(env).byCode(code) : null;
+        if (r) return Response.redirect(u.origin + '/receipt?ref=' + r.ref, 302);
+        return H(PAGE(`<h1>Receipt</h1><p>This booking was paid with us directly, so its receipt is with our team. Message us on WhatsApp and we’ll send it.</p><a class="btn" href="https://wa.me/6591625767?text=${encodeURIComponent('Hi Round2, could I have the receipt for my booking ' + code + '?')}" target="_top">WhatsApp us</a>`));
+      }
       /* SimplyBook's confirmation email links here with its booking code → that booking's page (see it, add/change the TV message) */
       if (u.pathname.startsWith('/b/')) {
         const code = u.pathname.slice(3).replace(/[^a-z0-9]/gi, '').slice(0, 20), r = code ? await book(env).byCode(code) : null;
@@ -3128,6 +3251,12 @@ const HANDLER = {
         return H(PAGE(`<h1>Your bookings</h1><p>Pick one:</p>${rows.join('')}`));
       }
       /* "Add a message for the TV" on the confirmation page: make the guest-message link only when it's wanted */
+      /* the payment receipt (owner, 11 Nov: guests got the booking email but no receipt) – from HitPay's own record */
+      if (u.pathname === '/receipt') {
+        const ref = (u.searchParams.get('ref') || '').replace(/[^A-Z0-9]/g, ''), h = ref ? await book(env).get(ref) : null;
+        if (!h || h.status !== 'paid' || !h.pr) return H(PAGE('<h1>Receipt not found</h1><p>WhatsApp us on +65 9162 5767 and we’ll send it.</p>'));
+        return H(await receiptPage(env, ref, h));
+      }
       if (u.pathname === '/done/message') {
         const ref = (u.searchParams.get('ref') || '').replace(/[^A-Z0-9]/g, ''), hb = book(env), h = ref ? await hb.get(ref) : null;
         if (!h || h.status !== 'paid' || !h.data.done || h.data.done.problem) return H(PAGE('<h1>Booking not found</h1>'));
@@ -3149,9 +3278,11 @@ const HANDLER = {
       if (u.pathname.startsWith('/sb/notify/') && req.method === 'POST') {
         if (!env.SB_NOTIFY_KEY || u.pathname.slice(11) !== env.SB_NOTIFY_KEY) return J({ error: 'no' }, 404);
         const raw = await req.text(), ct = req.headers.get('content-type') || 'application/json';
-        if (env.MIRROR_HOOK_URL) ctx.waitUntil(fetch(env.MIRROR_HOOK_URL, { method: 'POST', headers: { 'content-type': ct }, body: raw }).catch(() => null));
         let j = {}; try { j = JSON.parse(raw); } catch (e) { j = Object.fromEntries(new URLSearchParams(raw)); }
         const bid = String(j.booking_id || '').replace(/\D/g, ''), type = String(j.notification_type || '');
+        const mirE = (await book(env).getMode()).mirror === 'engine';   /* Vale ↔ Atlas: the engine (owner, 11 Nov) or still Make */
+        if (!mirE && env.MIRROR_HOOK_URL) ctx.waitUntil(fetch(env.MIRROR_HOOK_URL, { method: 'POST', headers: { 'content-type': ct }, body: raw }).catch(() => null));
+        if (mirE && bid) ctx.waitUntil(mirrorOnSb(env, bid, type).catch((e) => console.log('[mirror] ' + String(e.message || e).slice(0, 160))));
         ctx.waitUntil(book(env).kvSet('gapc', {}).catch(() => null));   /* the booking board asks SimplyBook afresh */
         if (bid) ctx.waitUntil(book(env).onSb(bid, type).catch(() => null));
         if (bid) ctx.waitUntil(bookingPush(env, bid, type).catch(() => null));   /* staff phones: New booking / changed / cancelled */
