@@ -69,4 +69,7 @@ early bird 33% weekday / 44% weekend (most filled). Engine read: gm `bookstats` 
 - FEE ON TRIAL (12 Nov, demo): hybrid – $5 (3+ days) or $10 (under 3 days) + 10% of the 3-hour price (extra hours not
   counted), rounded to $5; early bird $10 flat; 2nd move +$10; first 15 min free. Netflix $10/$15, Deluxe $15/$20,
   VIP off $15/$20, VIP peak $20/$25. Covers the worst-case cost above in every room. Replaces the 30%/40% lines once agreed.
+  + $5 when a peak-day (Fri–Sun) booking is moved under 3 days (owner, 12 Nov): Netflix $20, Deluxe $25, VIP $30 – at least
+  ~$7 profit per move even in the worst case. Early bird stays $10. Trip-wires in owner stats (15% moved, 50% late, 33% into
+  Fri–Sun evenings, freed-slot resale 15%, profit per move > $0).
 - Waiting list, S$10 release incentive, 55/45 split fees, "reverse" fee: discussed and rejected.
