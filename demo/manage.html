@@ -75,6 +75,7 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 </select></label>
 <label>Moves so far: <select id="mv"><option value="0">None</option><option value="g">Just booked (free 15 min)</option><option value="1">Moved once</option><option value="2">Moved twice</option></select></label>
 <label>Demo time: <select id="clk"><option value="real">Real time now</option><option value="600">Thu 12 Nov · 10am</option><option value="840">Thu 12 Nov · 2pm</option><option value="1080" selected>Thu 12 Nov · 6pm</option><option value="1260">Thu 12 Nov · 9pm</option></select> <small id="clkst" style="opacity:.7"></small></label>
+<label>Vale/Atlas bookings on the real calendar are in: <select id="twin" onchange="refresh()"><option>Vale</option><option>Atlas</option></select> <small style="opacity:.7">(the real engine reads this from SimplyBook)</small></label>
 <label><input type="checkbox" id="real" checked onchange="refresh()"> Real calendar (read-only) <small id="realst" style="opacity:.7">Loading…</small></label>
 <label><input type="checkbox" id="wa"> Booked by WhatsApp (staff sent the link)</label>
 <label><button id="ownerb" style="font:inherit;margin-top:4px">Owner view: beta stats</button></label></div>
@@ -220,12 +221,14 @@ function sellP(room,i,t,leadH,bd){var a=PT[GRP[room]][bd||band(t)],x=[6,12,24,72
 function expV(room,i,t,ld){if(room==='Vale'||room==='Atlas'){var pv=expV1('Vale',i,t,ld),pa=expV1('Atlas',i,t,ld);return pv[0]+(1-pv[1])*pa[0]}return expV1(room,i,t,ld)[0]}
 function expV1(room,i,t,ld){var r=expV0(room,i,t,ld);return r}
 function expV0(room,i,t,ld){var b=band(t),eb=price(room,i,OPEN,3),full=price(room,i,Math.max(t,855),3);if(b==='eb'){var q=sellP(room,i,t,ld,'eb');return [q*eb,q]}if(b==='mid'){var w=(t-675)/(840-675);var q1=sellP(room,i,t,ld,'eb'),q2=sellP(room,i,t,ld,'aft');return [(1-w)*q1*eb+w*q2*full,(1-w)*q1+w*q2]}var q=sellP(room,i,t,ld);return [q*price(room,i,t,3),q]}
-/* STAFF LOAD: cleaning happens when a session ends. A move whose session ends while other rooms are also turning over
-   (e.g. the 2pm wave after early birds), or that lands back-to-back in its room, makes the team's job harder → costs more;
-   an end time when nothing else is turning over → costs less. Nudges guests to staggered times and other rooms. */
-function load(i,room,t,h){var E=t+(h||3)*60,n=0,b2b=false;Object.keys(ROOMS).forEach(function(r){if(r===room||r==='Kaeden')return;taken(i,r).forEach(function(x){var e=x[1]-BUF;if(e<CLOSE&&Math.abs(e-E)<=30)n++})});
- taken(i,room).forEach(function(x){if(x[0]>=E&&x[0]-E<=BUF)b2b=true;if(x[1]<=t&&t-x[1]<=0)b2b=true});
- var adj=(n>=2?6*(n-1):0)+(b2b?5:0);if(!n&&!b2b)adj=-5;return {adj:Math.min(15,adj),n:n,b2b:b2b}}
+/* VALE/ATLAS TURNAROUND (owner, 12 Nov): the twins share one booking calendar. If the session just before (or just after) the new
+   one is in the SAME twin room, that room has to be turned around in 15 min – rushed. If it's in the OTHER twin, the used room
+   can be cleaned last, calmly. So: same twin back-to-back costs more (+$10), the other twin costs less (−$5).
+   Which twin a booking is really in comes from SimplyBook (the engine knows); the public feed doesn't say, so the demo asks. */
+function twinOf(i,room){if(!useReal())return room;var v=$('twin')?$('twin').value:'Vale';return v}
+function load(i,room,t,h){var r={adj:0,same:false,other:false};if(room!=='Vale'&&room!=='Atlas')return r;var E=t+(h||3)*60;
+ ['Vale','Atlas'].forEach(function(src){taken(i,src).forEach(function(x){var before=x[1]<=t&&t-x[1]<=30&&x[0]>OPEN-1&&x[1]-x[0]<=420,after=x[0]>=E+BUF&&x[0]-(E+BUF)<=30&&x[1]-x[0]<=420;if(!before&&!after)return;var phys=twinOf(i,src);if(phys===room)r.same=true;else r.other=true})});
+ r.adj=r.same?10:r.other?-5:0;return r}
 function demand(i,room,t){var o=O(),lN=(i*1440+t-NOW)/60,lO=leadH(),vN=price(room,i,t,3),vO=price(o.room,o.day,o.t,3),cost=expV(room,i,t,lN)-expV(o.room,o.day,o.t,lO)-Math.max(0,vN-vO);var money=cost,L0=load(i,room,t,sel&&sel.h||3);cost+=L0.adj;var lv=cost<=10?0:cost<=20?1:2;return {lv:lv,cost:cost,money:money,load:L0,p:sellP(room,i,t,lN),why:pace(i,room)[1]}}
 /* upgrade: the new slot costs more AND the move costs the shop nothing (they pay the difference) → $5. Early-bird bookings keep $15+ (owner: discourage). */
 function lvOf(i,room,t,h){var o=O(),d=demand(i,room,t);if(d.cost<=5&&!o.eb&&price(room,i,t,h||o.h)>o.paid+.004)return 3;return d.lv}
@@ -309,11 +312,11 @@ function dgrid(){var R=['Vale','Scarlett','Kai','Bella','Maximillion','Atlas','K
 async function stress(){var out=$('stout');out.textContent='Running…';await new Promise(function(r){setTimeout(r,30)});
  var save=JSON.stringify(BK),sNOW=NOW,sS=JSON.stringify(S),sSel=JSON.stringify(sel),R=['Vale','Scarlett','Kai','Bella','Maximillion','Atlas'],QR={};
  R.forEach(function(r){if(r==='Vale'||r==='Atlas')return;if(sellP(r,7,1170,72)<.25)QR[r]=1});   /* 'quiet' = whatever the data says this week (evening 3 days out sells under 25%), not a fixed list */
- var crunch=[0,0],easy=[0,0],n=0,lv=[0,0,0,0],byStage={},prof=0,loss=[],jump=[],quietVB=[],upBad=[],ebUp=0,worst=null,best=null,t0=Date.now();S={moves:0,grace:false,wa:false};
+ var tw=[0,0,0,0],n=0,lv=[0,0,0,0],byStage={},prof=0,loss=[],jump=[],quietVB=[],upBad=[],ebUp=0,worst=null,best=null,t0=Date.now();S={moves:0,grace:false,wa:false};
  for(const now of [600,1080]){NOW=now;
   for(const r0 of R)for(let d0=0;d0<=10;d0++)for(const t0_ of [660,840,960,1170]){BK[1]={room:r0,day:d0,t:t0_,h:3};$('bk').value='1';var st=stage();if(st==='closed'||d0*1440+t0_-NOW<0)continue;var o=O();
    for(let i=0;i<=10;i++)for(const r of R){var prevL=null,prevT=null;for(let t=OPEN;t<=LAST;t+=15){if(why(i,r,t,3)){prevL=null;continue}
-     var d=demand(i,r,t),k=lvOf(i,r,t,3),f=LV[k][1],diff=Math.max(0,price(r,i,t,3)-o.paid),pr=f+Math.max(0,price(r,i,t,3)-price(o.room,o.day,o.t,3))-(d.cost+Math.max(0,price(r,i,t,3)-price(o.room,o.day,o.t,3)));n++;lv[k]++;if(d.load.adj>0){crunch[0]++;crunch[1]+=f}else if(d.load.adj<0){easy[0]++;easy[1]+=f}byStage[st]=byStage[st]||[0,0,0,0,0];byStage[st][k]++;byStage[st][4]++;prof+=f-d.money;
+     var d=demand(i,r,t),k=lvOf(i,r,t,3),f=LV[k][1],diff=Math.max(0,price(r,i,t,3)-o.paid),pr=f+Math.max(0,price(r,i,t,3)-price(o.room,o.day,o.t,3))-(d.cost+Math.max(0,price(r,i,t,3)-price(o.room,o.day,o.t,3)));n++;lv[k]++;if(d.load.same){tw[0]++;tw[1]+=f}else if(d.load.other){tw[2]++;tw[3]+=f}byStage[st]=byStage[st]||[0,0,0,0,0];byStage[st][k]++;byStage[st][4]++;prof+=f-d.money;
      var lab=r0+' '+days[d0]+' '+hm(t0_)+' → '+r+' '+days[i]+' '+hm(t)+' (clock '+hm(now)+')';
      if(f-d.money<0)loss.push([f-d.money,lab+': fee $'+f+', lost sales $'+d.money.toFixed(0)]);
      if(prevL!=null&&Math.abs((k===3?-1:k)-(prevL===3?-1:prevL))>=2)jump.push(lab+': '+GL[prevL]+' at '+hm(prevT)+' → '+GL[k]);
@@ -327,10 +330,10 @@ async function stress(){var out=$('stout');out.textContent='Running…';await ne
  var h='<b>'+n.toLocaleString()+'</b> moves tested in '+((Date.now()-t0)/1000).toFixed(1)+'s · average shop profit per move <b>$'+(prof/n).toFixed(2)+'</b> (fee − expected lost sales; differences paid on top)<br>';
  h+='Fees: Upgrade $5 '+pct(lv[3])+' · $15 '+pct(lv[0])+' · $25 '+pct(lv[1])+' · $35 '+pct(lv[2])+'<br>';
  Object.keys(byStage).forEach(function(k){var b=byStage[k];h+='&nbsp;· '+{early:'3+ days',late:'under 3 days',day:'under 24 h'}[k]+': '+b[4].toLocaleString()+' moves – $5 '+Math.round(100*b[3]/b[4])+'%, $15 '+Math.round(100*b[0]/b[4])+'%, $25 '+Math.round(100*b[1]/b[4])+'%, $35 '+Math.round(100*b[2]/b[4])+'%<br>'});
- var big=loss.filter(function(x){return x[0]<-5}).length;h+='Staff load: '+pct(crunch[0])+' of moves land in a cleaning crunch (avg fee $'+(crunch[1]/Math.max(1,crunch[0])).toFixed(0)+'), '+pct(easy[0])+' at an easy time (avg fee $'+(easy[1]/Math.max(1,easy[0])).toFixed(0)+')<br>';h+='<br>'+ok(!big)+' Never loses money: '+loss.length+' moves where the fee is below the expected lost sale, '+big+' by more than $5'+(loss.length?' (worst: '+loss[0][1]+')':'')+'<br>';
+ var big=loss.filter(function(x){return x[0]<-5}).length;h+='Vale/Atlas turnaround: '+tw[0].toLocaleString()+' moves back-to-back in the same twin room (avg fee $'+(tw[1]/Math.max(1,tw[0])).toFixed(0)+') · '+tw[2].toLocaleString()+' into the other twin (avg fee $'+(tw[3]/Math.max(1,tw[2])).toFixed(0)+')<br>';h+='<br>'+ok(!big)+' Never loses money: '+loss.length+' moves where the fee is below the expected lost sale, '+big+' by more than $5'+(loss.length?' (worst: '+loss[0][1]+')':'')+'<br>';
  h+=ok(jump.length<n*.002)+' No big jumps between neighbouring times: '+jump.length+' times a 15-min step jumps two fee levels'+(jump.length?' (e.g. '+jump[0]+')':'')+'<br>';
  h+=ok(!quietVB.length)+' Rooms that are quiet right now ('+Object.keys(QR).map(function(r){return r==='Maximillion'?'Max':r}).join(', ')+') never $35: '+quietVB.length+(quietVB.length?' (e.g. '+quietVB[0]+')':'')+'<br>';
- h+=ok(!upBad.length)+' Upgrades never lose over $5 after their $5 fee: '+upBad.length+'<br>'+ok(crunch[1]/Math.max(1,crunch[0])>easy[1]/Math.max(1,easy[0]))+' Crunch times cost more than easy times on average<br>';
+ h+=ok(!upBad.length)+' Upgrades never lose over $5 after their $5 fee: '+upBad.length+'<br>'+ok(!tw[0]||!tw[2]||tw[1]/tw[0]>tw[3]/tw[2])+' Back-to-back in the same twin costs more than switching twin<br>';
  h+=ok(!ebUp)+' Early-bird bookings never get $5: '+ebUp+'<br>';
  h+='Closest call: '+worst[1];
  out.innerHTML=h;state();go('owner')}
