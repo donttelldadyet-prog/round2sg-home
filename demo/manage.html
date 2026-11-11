@@ -209,7 +209,9 @@ function pace(i,room){if(!room||!useReal()||!REAL[i]||REAL[i]==='x')return [1,''
  var nm=room==='Maximillion'?'Max':room;return n>=1&&r>=1.8?[1.25,nm+' filling fast']:r<=.4?[.8,'quiet day for '+nm]:[1,'']}
 function sellP(room,i,t,leadH){var a=PT[GRP[room]][band(t)],x=[6,12,24,72],p;if(leadH<=6)p=a[0]*Math.max(.5,leadH/6);else if(leadH>=72)p=a[3]*Math.min(1.19,1+.19*(leadH-72)/96);else{for(var k=0;k<3;k++)if(leadH<=x[k+1]){p=a[k]+(a[k+1]-a[k])*(leadH-x[k])/(x[k+1]-x[k]);break}}
  return Math.min(.95,p/100*RF[room]*(peak(i)?1.06:.97)*pace(i,room)[0])}
-function demand(i,room,t){var o=O(),lN=(i*1440+t-NOW)/60,lO=leadH(),vN=price(room,i,t,3),vO=price(o.room,o.day,o.t,3),cost=sellP(room,i,t,lN)*vN-sellP(o.room,o.day,o.t,lO)*vO-Math.max(0,vN-vO),lv=cost<=10?0:cost<=20?1:2;return {lv:lv,cost:cost,p:sellP(room,i,t,lN),why:pace(i,room)[1]}}
+/* a slot that starts 11am–2pm mostly competes with the 11am early bird (40% of all starts), so what's lost or regained there is an early-bird sale */
+function lostV(room,i,t){return band(t)==='eb'||band(t)==='mid'?price(room,i,OPEN,3):price(room,i,t,3)}
+function demand(i,room,t){var o=O(),lN=(i*1440+t-NOW)/60,lO=leadH(),vN=price(room,i,t,3),vO=price(o.room,o.day,o.t,3),cost=sellP(room,i,t,lN)*lostV(room,i,t)-sellP(o.room,o.day,o.t,lO)*lostV(o.room,o.day,o.t)-Math.max(0,vN-vO),lv=cost<=10?0:cost<=20?1:2;return {lv:lv,cost:cost,p:sellP(room,i,t,lN),why:pace(i,room)[1]}}
 /* upgrade: the new slot costs more AND the move costs the shop nothing (they pay the difference) → $5. Early-bird bookings keep $15+ (owner: discourage). */
 function lvOf(i,room,t,h){var o=O(),d=demand(i,room,t);if(d.cost<=0&&!o.eb&&price(room,i,t,h||o.h)>o.paid+.004)return 3;return d.lv}
 function fee(t,i,room){if(S.grace)return 0;var f=t==null?(O().eb?15:5):LV[lvOf(i==null?sel.day:i,room||sel.room,t,sel.h)][1];return f+(S.moves===1?10:0)}
