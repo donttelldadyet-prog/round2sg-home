@@ -134,3 +134,13 @@ add it now) was postponed until the request count is back to normal; it must com
   are really in Atlas (e.g. Sat 14 11am, Fri 13 both, Sat 21 4:30pm). Snapshot = confirmed bookings only (not staff time
   blocks or payments in progress). For the build: the reschedule engine should read one getBookings per day range, cached,
   and take the real twin from it.
+
+### Control centre (owner, 12 Nov) – build with the real reschedule
+- Top tab "In session" → "Bookings": Today (was In session) · Add a session · Move a booking (new, staff) · Rescheduling (new,
+  owner: switch, beta stats, trip-wires, demand grid, Vale/Atlas view, stress test). Rename lands together with the new pages.
+- Move a booking (staff): same picker and the same demand-based fee the guest would see on each slot. Staff may WAIVE or lower
+  the fee (owner: staff decide – e.g. goodwill, or a guest who booked the wrong date and turns up at the door). Waive needs a
+  one-tap reason (guest mistake / goodwill / our fault / other); every waive is logged with who and why, and shows in
+  Rescheduling (count + $ waived this month).
+- Staff can move inside the online limits (under 3 h, same-day-only, 11am–2pm lock) with a warning, since they can see the
+  room is free – e.g. the wrong-date guest at the door moved into a free room right now.
