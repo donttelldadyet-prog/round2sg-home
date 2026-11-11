@@ -28,7 +28,10 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 .old{text-decoration:line-through;color:var(--mu)}.chk{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:#d6d0e3;margin-top:12px}.back{display:inline-flex;align-items:center;gap:8px;background:transparent;border:1px solid var(--ln);color:#f4f1fb;font:9px 'Press Start 2P',monospace;letter-spacing:.08em;cursor:pointer;padding:10px 12px;margin-bottom:14px}.back:hover{border-color:var(--rc)}
 .stat{display:grid;grid-template-columns:1fr 1fr;gap:10px}.st{border:1px solid var(--ln);padding:12px}.st b{display:block;font-size:26px}.st span{font-size:12px;color:var(--mu);text-transform:uppercase;letter-spacing:.06em}
 .bar{display:grid;grid-template-columns:110px 1fr 36px;gap:8px;align-items:center;font-size:13px;margin:6px 0}.bar i{display:block;height:10px;background:var(--rc)}
-.hidden{display:none}.beta{display:inline-block;font:7px 'Press Start 2P',monospace;letter-spacing:.08em;color:#06050a;background:#F2C21B;padding:3px 5px;margin-left:6px;vertical-align:middle}
+.hidden{display:none}.beta{display:inline-block;font:8px 'Press Start 2P',monospace;letter-spacing:.08em;color:#F2C21B;background:rgba(242,194,27,.12);border:1px solid #F2C21B;padding:3px 5px 2px;margin-left:6px;vertical-align:middle;line-height:1}
+.rl{display:grid;grid-template-columns:96px 1fr;gap:8px 10px;align-items:center;font-size:14px;margin:4px 0 12px}.rl .w{font:8px 'Press Start 2P',monospace;letter-spacing:.06em;padding:6px 6px;text-align:center;border:1px solid}.g{color:#9be38f;border-color:#4DB848!important;background:rgba(77,184,72,.1)}.y{color:#F2C21B;border-color:#F2C21B!important;background:rgba(242,194,27,.1)}.o{color:#ffb070;border-color:#ff8a3d!important;background:rgba(255,138,61,.1)}.r{color:#ff9b9b;border-color:#ff6b6b!important;background:rgba(255,107,107,.1)}
+.ft{width:100%;border-collapse:collapse;font-size:13px;margin:4px 0 12px}.ft th{font-weight:400;color:var(--mu);text-align:left;padding:4px 6px;font-size:12px}.ft td{padding:6px;border-top:1px solid var(--ln)}.ft td b{color:#f4f1fb}
+.ic{list-style:none;padding:0;margin:0;font-size:14px}.ic li{display:flex;gap:10px;margin:6px 0}.ic i{font-style:normal;flex:0 0 22px;text-align:center;font-family:'Press Start 2P',monospace;font-size:10px;padding-top:3px}
 .note{font-size:13px;color:#d6d0e3;border:1px dashed var(--ln);padding:8px 10px;margin:10px 0 0}.note b{color:var(--rc)}
 .sl.lk{opacity:.45}.sl.lk::after{content:' ⌂';font-size:10px}
 .mins button.lk{opacity:.45;text-decoration:none}
@@ -59,12 +62,9 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 <button class="act" onclick="alert('Opens the payment receipt (built: /receipt)')"><b>RECEIPT</b><span id="a-rc">Paid with PayNow · save PDF</span></button>
 <button class="act" onclick="alert('Downloads the calendar entry')"><b>CALENDAR</b><span>Add to your phone</span></button></div>
 <div class="card"><h2>RESCHEDULE RULES <span class="beta">BETA</span></h2>
-<ul class="hist" style="font-size:14px">
-<li>Up to <b>2 moves</b>. Bookings can’t be cancelled or refunded.</li>
-<li><b>3+ days before:</b> any free slot. <b>Under 3 days:</b> 2:15pm or later. <b>Under 24h:</b> same-day upgrades only. <b>Under 3h:</b> closed.</li>
-<li>Change fee: 30% of what you paid (max $30), 40% under 3 days (max $40). 2nd move +$10. Early bird to 2:15pm or later: $10.</li>
-<li>New slot dearer: pay the difference. Cheaper: no refund.</li>
-<li>No change fee within 15 minutes of booking.</li></ul>
+<div class="rl"><span class="w g">3+ DAYS</span><span>Any free slot</span><span class="w y">&lt; 3 DAYS</span><span>From <b>2:15pm</b> only</span><span class="w o">&lt; 24 HRS</span><span>Same-day upgrades only</span><span class="w r">&lt; 3 HRS</span><span>Closed</span></div>
+<table class="ft"><tr><th>Change fee</th><th>3+ days</th><th>&lt; 3 days</th></tr><tr><td>Share of what you paid</td><td><b>30%</b> · max $30</td><td><b>40%</b> · max $40</td></tr><tr><td>Early bird → 2:15pm+</td><td colspan="2"><b>$10</b></td></tr><tr><td>2nd move</td><td colspan="2"><b>+$10</b></td></tr></table>
+<ul class="ic"><li><i style="color:#F2C21B">2×</i><span>Up to 2 moves per booking</span></li><li><i style="color:#ffb070">+$</i><span>New slot costs more: pay the difference</span></li><li><i style="color:#ff9b9b">−$</i><span>Costs less: no refund. Bookings can’t be cancelled.</span></li><li><i style="color:#9be38f">15m</i><span>No change fee within 15 min of booking</span></li></ul>
 <p class="fine">Rescheduling is new. Tell us on WhatsApp if anything’s unclear.</p></div>
 <div class="card"><h2>YOUR SAVE HISTORY</h2><ul class="hist" id="hist"></ul></div>
 <div class="card"><h2>ADDRESS</h2><p style="margin:0"><b>20 Haji Lane, #02-00</b><br><span class="fine" style="font-size:14px">Singapore 189213 · Bugis MRT Exit B · 6 min walk</span></p></div>
