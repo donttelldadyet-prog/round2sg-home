@@ -128,3 +128,9 @@ browser. For the build: the reschedule picker must not call /day per day viewed 
 dates 2+ days out) – one guest browsing a month would cost ~200 requests. The Vale/Atlas "which twin" info (owner chose to
 add it now) was postponed until the request count is back to normal; it must come from the engine's own mirror records
 (kv mir:<bid>), not extra SimplyBook calls.
+- Fix (12 Nov, 5:15am): the demo's default calendar is a snapshot of real bookings from gm `bookstats` – ONE SimplyBook
+  request (getBookings) for a whole month, vs ~7 per day per view via /day. It also shows which Vale/Atlas entry is the real
+  booking and which is the automatic block (system client), so the twin rule works with no engine change. Most twin bookings
+  are really in Atlas (e.g. Sat 14 11am, Fri 13 both, Sat 21 4:30pm). Snapshot = confirmed bookings only (not staff time
+  blocks or payments in progress). For the build: the reschedule engine should read one getBookings per day range, cached,
+  and take the real twin from it.
