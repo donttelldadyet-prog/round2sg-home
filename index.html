@@ -881,7 +881,7 @@ class Component extends DCLogic {
       var row = b.parentElement; if (row.nextElementSibling && row.nextElementSibling.className === 'r2-ls') return;
       var a = document.createElement('a'); a.className = 'r2-ls'; a.href = 'demo/manage.html?bk=0'; a.target = '_top';
       a.style.cssText = 'display:flex;justify-content:center;align-items:center;gap:10px;margin-top:' + (mob ? 10 : 14) + 'px;padding:' + (mob ? 8 : 10) + 'px 0;text-decoration:none;color:#b9b0cf;font-size:' + (mob ? 12 : 13) + 'px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;border-top:1px dashed rgba(244,241,251,.18)';
-      a.innerHTML = '<span>Already booked?</span><span style="' + PX + 'font-size:' + (mob ? 8 : 9) + 'px;color:var(--r2-accent)">▣ LOAD SAVE ›</span><span style="' + PX + 'font-size:' + (mob ? 7 : 8) + 'px;color:#F2C21B;border:1px solid #F2C21B;background:rgba(242,194,27,.12);padding:3px 4px 2px;line-height:1">BETA</span>';
+      a.innerHTML = '<span>Already booked?</span><span style="' + PX + 'font-size:' + (mob ? 8 : 9) + 'px;color:var(--r2-accent)">▣ LOAD SAVE ›</span><span style="display:inline-block;font:700 '+(mob?10:11)+'px/1 Chakra Petch,sans-serif;letter-spacing:.14em;color:#000;background:#F2C21B;padding:3px 5px 2px;margin-left:6px;vertical-align:middle">BETA</span>';
       row.parentNode.insertBefore(a, row.nextSibling);
     });
     if (save && !stage.querySelector('.r2-sf')) {
@@ -890,7 +890,7 @@ class Component extends DCLogic {
       var top = hd.offsetTop + hd.offsetHeight + (mob ? 10 : 14);
       c.style.cssText = 'position:absolute;z-index:5;top:' + top + 'px;' + (mob ? 'left:16px;right:16px;' : 'left:56px;width:620px;') +
         'display:flex;align-items:center;gap:' + (mob ? 10 : 16) + 'px;padding:' + (mob ? '8px 8px 8px 12px' : '10px 10px 10px 16px') + ';background:rgba(10,8,18,.82);backdrop-filter:blur(10px);border:1px solid ' + save.color + ';border-left-width:4px;text-decoration:none;color:#f4f1fb;font-family:"Chakra Petch",sans-serif';
-      c.innerHTML = '<div style="flex:1;min-width:0"><div style="' + PX + 'font-size:' + (mob ? 7 : 8) + 'px;letter-spacing:.14em;color:' + save.color + '">SAVE FOUND<span style="margin-left:8px;color:#F2C21B;border:1px solid #F2C21B;background:rgba(242,194,27,.12);padding:2px 4px 1px">BETA</span></div>' +
+      c.innerHTML = '<div style="flex:1;min-width:0"><div style="' + PX + 'font-size:' + (mob ? 7 : 8) + 'px;letter-spacing:.14em;color:' + save.color + '">SAVE FOUND<span style="display:inline-block;font:700 '+(mob?10:11)+'px/1 Chakra Petch,sans-serif;letter-spacing:.14em;color:#000;background:#F2C21B;padding:3px 5px 2px;margin-left:6px;vertical-align:middle">BETA</span></div>' +
         '<div style="font-size:' + (mob ? 14 : 16) + 'px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px">' + save.room + ' <span style="font-weight:500;color:#d6d0e3;text-transform:none">· ' + save.when + '</span></div></div>' +
         '<span style="flex:0 0 auto;display:flex;align-items:center;height:' + (mob ? 36 : 40) + 'px;padding:0 ' + (mob ? 12 : 18) + 'px;background:' + save.color + ';color:' + save.ink + ';font-weight:700;font-size:' + (mob ? 12 : 13) + 'px;letter-spacing:.12em;text-transform:uppercase">Manage ›</span>';
       stage.appendChild(c);

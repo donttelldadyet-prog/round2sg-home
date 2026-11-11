@@ -28,7 +28,7 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 .old{text-decoration:line-through;color:var(--mu)}.chk{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:#d6d0e3;margin-top:12px}.back{display:inline-flex;align-items:center;gap:8px;background:transparent;border:1px solid var(--ln);color:#f4f1fb;font:9px 'Press Start 2P',monospace;letter-spacing:.08em;cursor:pointer;padding:10px 12px;margin-bottom:14px}.back:hover{border-color:var(--rc)}
 .stat{display:grid;grid-template-columns:1fr 1fr;gap:10px}.st{border:1px solid var(--ln);padding:12px}.st b{display:block;font-size:26px}.st span{font-size:12px;color:var(--mu);text-transform:uppercase;letter-spacing:.06em}
 .bar{display:grid;grid-template-columns:110px 1fr 36px;gap:8px;align-items:center;font-size:13px;margin:6px 0}.bar i{display:block;height:10px;background:var(--rc)}
-.hidden{display:none}.beta{display:inline-block;font:8px 'Press Start 2P',monospace;letter-spacing:.08em;color:#F2C21B;background:rgba(242,194,27,.12);border:1px solid #F2C21B;padding:3px 5px 2px;margin-left:6px;vertical-align:middle;line-height:1}
+.hidden{display:none}.beta{display:inline-block;font:700 11px/1 'Chakra Petch',sans-serif;letter-spacing:.14em;color:#000;background:#F2C21B;padding:3px 6px 2px;margin-left:8px;vertical-align:middle}
 .rl{display:grid;grid-template-columns:96px 1fr;gap:8px 10px;align-items:center;font-size:14px;margin:4px 0 12px}.rl .w{font:8px 'Press Start 2P',monospace;letter-spacing:.06em;padding:6px 6px;text-align:center;border:1px solid}.g{color:#9be38f;border-color:#4DB848!important;background:rgba(77,184,72,.1)}.y{color:#F2C21B;border-color:#F2C21B!important;background:rgba(242,194,27,.1)}.o{color:#ffb070;border-color:#ff8a3d!important;background:rgba(255,138,61,.1)}.r{color:#ff9b9b;border-color:#ff6b6b!important;background:rgba(255,107,107,.1)}
 .ft{width:100%;border-collapse:collapse;font-size:13px;margin:4px 0 12px}.ft th{font-weight:400;color:var(--mu);text-align:left;padding:4px 6px;font-size:12px}.ft td{padding:6px;border-top:1px solid var(--ln)}.ft td b{color:#f4f1fb}
 .ic{list-style:none;padding:0;margin:0;font-size:14px}.ic li{display:flex;gap:10px;margin:6px 0}.ic i{font-style:normal;flex:0 0 22px;text-align:center;font-family:'Press Start 2P',monospace;font-size:10px;padding-top:3px}
@@ -37,6 +37,8 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 .mins button.lk{opacity:.45;text-decoration:none}
 .dim{opacity:.35;pointer-events:none}
 .demo label{display:block;margin-top:4px}
+.rl-k{font:8px 'Press Start 2P',monospace;letter-spacing:.1em;color:var(--mu);margin:14px 0 6px}
+.rl{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px dashed var(--ln);font-size:14px}.rl-t{color:#d6d0e3}.rl-v{font-weight:600;text-align:right}.rl-v.g{color:#9be38f}.rl-v.a{color:#F2C21B}.rl-v.r{color:#ff9b9b}
 </style></head><body><main>
 <div class="demo">DEMO · nothing is real here.
 <label>Their booking: <select id="bk">
@@ -62,10 +64,21 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 <button class="act" onclick="alert('Opens the payment receipt (built: /receipt)')"><b>RECEIPT</b><span id="a-rc">Paid with PayNow · save PDF</span></button>
 <button class="act" onclick="alert('Downloads the calendar entry')"><b>CALENDAR</b><span>Add to your phone</span></button></div>
 <div class="card"><h2>RESCHEDULE RULES <span class="beta">BETA</span></h2>
-<div class="rl"><span class="w g">3+ DAYS</span><span>Any free slot</span><span class="w y">&lt; 3 DAYS</span><span>From <b>2:15pm</b> only</span><span class="w o">&lt; 24 HRS</span><span>Same-day upgrades only</span><span class="w r">&lt; 3 HRS</span><span>Closed</span></div>
-<table class="ft"><tr><th>Change fee</th><th>3+ days</th><th>&lt; 3 days</th></tr><tr><td>Share of what you paid</td><td><b>30%</b> · max $30</td><td><b>40%</b> · max $40</td></tr><tr><td>Early bird → 2:15pm+</td><td colspan="2"><b>$10</b></td></tr><tr><td>2nd move</td><td colspan="2"><b>+$10</b></td></tr></table>
-<ul class="ic"><li><i style="color:#F2C21B">2×</i><span>Up to 2 moves per booking</span></li><li><i style="color:#ffb070">+$</i><span>New slot costs more: pay the difference</span></li><li><i style="color:#ff9b9b">−$</i><span>Costs less: no refund. Bookings can’t be cancelled.</span></li><li><i style="color:#9be38f">15m</i><span>No change fee within 15 min of booking</span></li></ul>
-<p class="fine">Rescheduling is new. Tell us on WhatsApp if anything’s unclear.</p></div>
+<p class="rl-k">WHEN CAN I MOVE?</p>
+<div class="rl"><span class="rl-t">3+ days before</span><span class="rl-v g">Any free slot</span></div>
+<div class="rl"><span class="rl-t">Under 3 days</span><span class="rl-v a">From 2:15pm only</span></div>
+<div class="rl"><span class="rl-t">Under 24 hours</span><span class="rl-v a">Same-day upgrades</span></div>
+<div class="rl"><span class="rl-t">Under 3 hours</span><span class="rl-v r">Closed</span></div>
+<p class="rl-k">WHAT DOES IT COST?</p>
+<div class="rl"><span class="rl-t">3+ days before</span><span class="rl-v">30% of your booking · max $30</span></div>
+<div class="rl"><span class="rl-t">Under 3 days</span><span class="rl-v">40% of your booking · max $40</span></div>
+<div class="rl"><span class="rl-t">Early bird → 2:15pm+</span><span class="rl-v">$10</span></div>
+<div class="rl"><span class="rl-t">2nd move</span><span class="rl-v">+$10</span></div>
+<div class="rl"><span class="rl-t">Within 15 min of booking</span><span class="rl-v g">No change fee</span></div>
+<p class="rl-k">IF THE PRICE CHANGES</p>
+<div class="rl"><span class="rl-t">New slot costs more</span><span class="rl-v">You pay the difference</span></div>
+<div class="rl"><span class="rl-t">New slot costs less</span><span class="rl-v r">No refund</span></div>
+<p class="fine">Up to 2 moves. Bookings can’t be cancelled or refunded. Rescheduling is new: tell us on WhatsApp if anything’s unclear.</p></div>
 <div class="card"><h2>YOUR SAVE HISTORY</h2><ul class="hist" id="hist"></ul></div>
 <div class="card"><h2>ADDRESS</h2><p style="margin:0"><b>20 Haji Lane, #02-00</b><br><span class="fine" style="font-size:14px">Singapore 189213 · Bugis MRT Exit B · 6 min walk</span></p></div>
 <a class="btn ghost" href="#" onclick="return false">WhatsApp us</a>
@@ -189,7 +202,7 @@ function pickH(hr){var st=starts(sel.day,sel.room).filter(function(t){return Mat
 function calc(){var o=O(),T0=ROOMS[o.room][1],T1=ROOMS[sel.room][1],r0=rate(o.day,o.t),r1=rate(sel.day,sel.t),a=o.paid,b=price(sel.room,o.day,o.t,o.h),c=price(sel.room,sel.day,sel.t,o.h),dd=price(sel.room,sel.day,sel.t,sel.h),L=[],F=fee(sel.t),st=stage();
  L.push(['Change fee',F?((st==='early'?'3+ days ahead':'under 3 days')+(o.eb&&sel.t>=LOCK?' · early bird to 2:15pm+':'')+(S.moves?' · 2nd move':'')):'free · within 15 min',F]);
  if(T0!==T1)L.push(['Room: '+TYPE[T0]+' → '+TYPE[T1],b<a?'smaller room · not refunded':'bigger room',b-a]);
- if(r0!==r1||Math.abs(c-b)>0.004)L.push(['Rate: '+rateName(r0)+' → '+rateName(r1),c<b?'cheaper · not refunded':'dearer day/time',c-b]);
+ if(r0!==r1||Math.abs(c-b)>0.004)L.push(['Rate: '+rateName(r0)+' → '+rateName(r1),c<b?'cheaper · not refunded':'this day/time costs more',c-b]);
  if(sel.h!==o.h)L.push(['Length: '+o.h+'h → '+sel.h+'h',sel.h<o.h?'shorter · not refunded':'extra time',dd-c]);
  var net=dd-o.paid,diff=Math.max(0,net);return {o:o,L:L,net:net,diff:diff,tot:F+diff,newp:dd}}
 function row(l){var v=l[2];return '<tr'+(v<-0.004?' class="nr"':'')+'><td>'+l[0]+'<small>'+l[1]+'</small></td><td>'+(v>0.004?'+'+money(v):v<-0.004?'−'+money(v):'$0.00')+'</td></tr>'}
