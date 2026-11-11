@@ -72,7 +72,8 @@ early bird 33% weekday / 44% weekend (most filled). Engine read: gm `bookstats` 
 - Waiting list, S$10 release incentive, 55/45 split fees: discussed and rejected. Flat % fees (30/40, 20/30) replaced by the hybrid.
 
 ## DEMAND-BASED FEE (owner, 12 Nov – ON TEST in the demo; replaces the per-room table above once agreed)
-Guest sees 3 levels by the NEW slot: QUIET $15 · REGULAR $25 · PRIME $35 (expected cost of the move ≤ $10 / ≤ $20 / more),
+Guest sees levels by the NEW slot: UPGRADE $5 (pricier slot and the move costs the shop nothing – they pay the difference;
+not for early-bird bookings, which stay $15+) · QUIET $15 · REGULAR $25 · PRIME $35 (expected cost ≤ $10 / ≤ $20 / more),
 2nd move +$10, free within 15 min, price difference on top. Fee shown on each room card and start time before choosing.
 First test (12 Nov): same-room date changes and upgrades come out QUIET; PRIME appears for late moves into busy evenings
 on fast-filling dates (e.g. Vale Fri 13 → Sat 14 7:30pm).
