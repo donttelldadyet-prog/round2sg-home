@@ -30,12 +30,12 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 .bar{display:grid;grid-template-columns:110px 1fr 36px;gap:8px;align-items:center;font-size:13px;margin:6px 0}.bar i{display:block;height:10px;background:var(--rc)}
 .hidden{display:none}</style></head><body><main>
 <div class="demo">DEMO · nothing is real here. Guest's situation:<select id="state">
-<option value="grace">Just booked (free change, 12 min left)</option><option value="normal" selected>Booked days ago, 0 moves used</option><option value="one">Moved once (next move S$25)</option><option value="none">Moved twice (no moves left)</option><option value="late">Starts in 2 hours (too late to move)</option><option value="staff">Booked by WhatsApp/staff</option><option value="owner">— Owner view: control centre stats —</option></select><br>Their booking: <select id="olen"><option value="3">Vale · Fri 13 · 4pm–7pm · 3h · $69</option><option value="4">Vale · Fri 13 · 4pm–8pm · 4h · $92</option></select></div>
+<option value="grace">Just booked (free change, 12 min left)</option><option value="normal" selected>Booked days ago, 0 moves used</option><option value="one">Moved once (next move S$25)</option><option value="none">Moved twice (no moves left)</option><option value="late">Starts in 2 hours (too late to move)</option><option value="staff">Booked by WhatsApp (staff sent the link)</option><option value="owner">— Owner view: control centre stats —</option></select><br>Their booking: <select id="olen"><option value="3">Vale · Fri 13 · 4pm–7pm · 3h · $69</option><option value="4">Vale · Fri 13 · 4pm–8pm · 4h · $92</option></select></div>
 
 <section id="s-home">
 <div class="px kick">SAVE FILE LOADED</div><h1>YOUR BOOKING</h1>
 <div class="ticket"><p class="room" id="t-room">Vale</p><div class="type">Netflix room</div>
-<dl><dt>Date</dt><dd id="t-date">Friday 13 November 2026</dd><dt>Time</dt><dd class="big" id="t-time">4pm – 7pm</dd><dt>Length</dt><dd id="t-len">3 hours</dd><dt>Name</dt><dd>Amanda</dd><dt>Guests</dt><dd>2</dd><dt>Paid</dt><dd id="t-paid">$69.00</dd><dt>Ref</dt><dd class="ref">R2B7Q4K2M9</dd></dl>
+<dl><dt>Name</dt><dd>Amanda</dd><dt>Date</dt><dd id="t-date">Friday 13 November 2026</dd><dt>Time</dt><dd class="big" id="t-time">4pm – 7pm</dd><dt>Length</dt><dd id="t-len">3 hours</dd><dt>Guests</dt><dd>2</dd><dt>Paid</dt><dd id="t-paid">$69.00</dd><dt>Ref</dt><dd class="ref">R2B7Q4K2M9</dd></dl>
 <div class="chips" id="chips"></div></div>
 <div class="grid">
 <button class="act main" id="a-move"><b>RESCHEDULE</b><span id="a-move-sub">Change day, time, room or hours</span></button>
@@ -113,13 +113,12 @@ function state(){var v=$('state').value;if(v==='owner'){go('owner');return}go('h
  S={moves:{grace:0,normal:0,one:1,none:2,late:0,staff:0}[v],grace:v==='grace',late:v==='late',staff:v==='staff'};
  $('t-time').textContent=hm(o.t)+' – '+hm(o.t+o.h*60);$('t-len').textContent=o.h+' hours';$('t-paid').textContent=money(o.paid);
  var c='';if(S.grace)c+='<span class="chip ok">Free change · 12:43 left</span>';c+='<span class="chip '+(S.moves>=2?'no':'')+'">Moves used '+S.moves+' / 2</span>';
- if(S.late)c+='<span class="chip warn">Starts in 2h · moves closed</span>';if(S.staff)c+='<span class="chip">Booked with our team</span>';c+='<span class="chip">TV message edited 2×</span>';$('chips').innerHTML=c;
+ if(S.late)c+='<span class="chip warn">Starts in 2h · moves closed</span>';if(S.staff)c+='<span class="chip">Booked with our team · paid in shop</span>';c+='<span class="chip">TV message edited 2×</span>';$('chips').innerHTML=c;
  var b=$('a-move'),sub=$('a-move-sub');b.disabled=false;
- if(S.staff){sub.textContent='WhatsApp us to move this booking';b.onclick=function(){alert('Opens WhatsApp with the booking ref')}}
- else if(S.late){b.disabled=true;sub.textContent='Closed 3 hours before your start'}
- else if(S.moves>=2){sub.textContent='No moves left · WhatsApp us';b.onclick=function(){alert('Opens WhatsApp with the booking ref')}}
+ if(S.late){b.disabled=true;sub.textContent='Closed 3 hours before your start'}
+ else if(S.moves>=2){b.disabled=true;sub.textContent='No moves left (2 of 2 used)'}
  else{sub.textContent=S.grace?'Free right now · price difference only':(S.moves?'Next move S$25 + any difference':'S$15 + any price difference');b.onclick=function(){sel={day:o.day,room:o.room,t:o.t,h:o.h,wk:null};go('pick');draw()}}
- var h=['<li>Booked online · Tue 10 Nov, 8:02pm <small>· paid '+money(o.paid)+' PayNow</small></li>'];
+ var h=[S.staff?'<li>Booked with our team on WhatsApp · Tue 10 Nov <small>· paid '+money(o.paid)+' (recorded by staff)</small></li>':'<li>Booked online · Tue 10 Nov, 8:02pm <small>· paid '+money(o.paid)+' PayNow</small></li>'];
  if(S.moves>=1)h.push('<li>Moved Thu 12 → Fri 13 Nov · 8:10pm <small>· free (within 15 min)</small></li>');if(S.moves>=2)h.push('<li>Moved 2pm → 4pm · Wed 11 Nov <small>· S$15 fee</small></li>');
  h.push('<li>TV message added, edited 2× <small>· pops up 30 min in</small></li>');$('hist').innerHTML=h.join('')}
 function draw(){var o=O();
