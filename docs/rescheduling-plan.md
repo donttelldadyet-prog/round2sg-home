@@ -73,9 +73,10 @@ early bird 33% weekday / 44% weekend (most filled). Engine read: gm `bookstats` 
 
 ## DEMAND-BASED FEE (owner, 12 Nov – ON TEST in the demo; replaces the per-room table above once agreed)
 Guest sees levels by the NEW slot: UPGRADE $5 (pricier slot and the move costs the shop nothing – they pay the difference;
-not for early-bird bookings, which stay $15+) · QUIET $15 · REGULAR $25 · PRIME $35 (expected cost ≤ $10 / ≤ $20 / more),
-2nd move +$10, free within 15 min, price difference on top. Fee shown on each room card and start time before choosing.
-First test (12 Nov): same-room date changes and upgrades come out QUIET; PRIME appears for late moves into busy evenings
+not for early-bird bookings, which stay $15+) · QUIET $15 · BUSY $25 · VERY BUSY $35 (expected cost ≤ $10 / ≤ $20 / more),
+2nd move +$10, free within 15 min, price difference on top. Fee shown on each room card and start time before choosing. Guest wording (rules card): fee depends on how likely someone
+else would have booked the new slot – from past bookings for that room, day and time, and how full that room already is.
+First test (12 Nov): same-room date changes and upgrades come out QUIET; VERY BUSY appears for late moves into busy evenings
 on fast-filling dates (e.g. Vale Fri 13 → Sat 14 7:30pm).
 Fee depends on the slot they move INTO (and the one they leave): fee ≈ expected lost sale of the new slot − expected resale
 of the freed slot − price difference paid, + ~$5, banded into 3 levels (low / medium / high) so guests see round numbers.
