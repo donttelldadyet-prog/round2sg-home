@@ -13,11 +13,11 @@ dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:14px 0 4px}dt
 .btn{display:block;width:100%;text-align:center;padding:13px 14px;font:10px 'Press Start 2P',monospace;letter-spacing:.08em;background:var(--rc);color:var(--ri);border:0;margin-top:10px;cursor:pointer;text-decoration:none}.btn.ghost{background:transparent;color:#f4f1fb;border:1px solid var(--rc)}
 .hist li{margin:6px 0;font-size:14px}.hist{padding-left:18px;margin:0}.hist small{color:var(--mu)}
 .days{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}.day{flex:0 0 auto;padding:8px 10px;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:13px;cursor:pointer;text-align:center}.day.on{border-color:var(--rc);background:rgba(232,67,106,.12)}
-.rooms{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.rm{padding:6px 10px;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:13px;cursor:pointer}.rm.on{border-color:#f4f1fb;background:#f4f1fb;color:#0b0914}
+.rooms{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}.rm small{display:block;font-size:11px;color:var(--mu)}.rm.on small{color:#3a3450}.rm[disabled]{opacity:.35;cursor:default}.mon{font:8px 'Press Start 2P',monospace;color:var(--mu);margin:0 0 6px}.dateb{margin-top:8px;display:flex;gap:8px;align-items:center;font-size:13px;color:var(--mu)}.dateb input{background:#0b0914;color:#f4f1fb;border:1px solid var(--ln);padding:6px 8px;font:inherit;color-scheme:dark}.rm{text-align:left;padding:8px 10px;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:13px;cursor:pointer}.rm.on{border-color:#f4f1fb;background:#f4f1fb;color:#0b0914}
 .slots{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.sl{padding:9px 0;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:14px;cursor:pointer}.sl.on{background:var(--rc);color:var(--ri);border-color:var(--rc)}.sl[disabled]{opacity:.3;text-decoration:line-through;cursor:default}
 .hrs{display:flex;gap:6px;margin-top:10px}.hr{flex:1;padding:9px 0;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:14px;cursor:pointer}.hr.on{border-color:var(--rc);color:var(--rc)}.hr[disabled]{opacity:.3}
 table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px dashed var(--ln);vertical-align:top}td:last-child{text-align:right;font-weight:600}tr.tot td{border:0;font-size:20px;font-weight:700}tr.tot td:last-child{color:var(--rc)}
-.old{text-decoration:line-through;color:var(--mu)}.chk{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:#d6d0e3;margin-top:12px}.back{background:none;border:0;color:var(--mu);font:inherit;cursor:pointer;padding:0;margin-bottom:8px}
+.old{text-decoration:line-through;color:var(--mu)}.chk{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:#d6d0e3;margin-top:12px}.back{display:inline-flex;align-items:center;gap:8px;background:transparent;border:1px solid var(--ln);color:#f4f1fb;font:9px 'Press Start 2P',monospace;letter-spacing:.08em;cursor:pointer;padding:10px 12px;margin-bottom:14px}.back:hover{border-color:var(--rc)}
 .stat{display:grid;grid-template-columns:1fr 1fr;gap:10px}.st{border:1px solid var(--ln);padding:12px}.st b{display:block;font-size:26px}.st span{font-size:12px;color:var(--mu);text-transform:uppercase;letter-spacing:.06em}
 .bar{display:grid;grid-template-columns:110px 1fr 36px;gap:8px;align-items:center;font-size:13px;margin:6px 0}.bar i{display:block;height:10px;background:var(--rc)}
 .hidden{display:none}</style></head><body><main>
@@ -40,16 +40,16 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 <a class="btn ghost" href="#" onclick="return false">WhatsApp us</a>
 </section>
 
-<section id="s-pick" class="hidden"><button class="back" onclick="go('home')">‹ Back to your booking</button>
+<section id="s-pick" class="hidden"><button class="back" onclick="go('home')">‹ BACK TO BOOKING</button>
 <div class="px kick">STEP 1 OF 2</div><h1>PICK A NEW SLOT</h1>
-<div class="card" style="margin-top:0"><h2>DAY</h2><div class="days" id="days"></div>
+<div class="card" style="margin-top:0"><h2>DAY</h2><div class="mon" id="mon"></div><div class="days" id="days"></div><label class="dateb">or pick any date <input type="date" id="dpick"></label>
 <h2 style="margin-top:14px">ROOM</h2><div class="rooms" id="rooms"></div>
 <h2 style="margin-top:6px">START</h2><div class="slots" id="slots"></div>
 <h2 style="margin-top:14px">HOURS</h2><div class="hrs" id="hrs"></div>
 <p class="fine">Only free times show. Your current slot stays yours until you’ve paid for the new one.</p></div>
 <button class="btn" id="toSum">Continue</button></section>
 
-<section id="s-sum" class="hidden"><button class="back" onclick="go('pick')">‹ Change slot</button>
+<section id="s-sum" class="hidden"><button class="back" onclick="go('pick')">‹ CHANGE SLOT</button>
 <div class="px kick">STEP 2 OF 2</div><h1>CONFIRM THE MOVE</h1>
 <div class="card" style="margin-top:0"><table id="sum"></table>
 <label class="chk"><input type="checkbox" id="agree"> I understand this booking still can’t be cancelled or refunded, and this uses move <span id="mvn"></span> of 2.</label></div>
@@ -60,7 +60,7 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 <div class="card"><p>Your TV message moved with your booking. A new confirmation email is on its way.</p><p class="fine" id="d-left"></p></div>
 <button class="btn" onclick="go('home')">Back to your booking</button></section>
 
-<section id="s-tv" class="hidden"><button class="back" onclick="go('home')">‹ Back to your booking</button><div class="px kick">TV MESSAGE</div><h1>ON THE BIG SCREEN</h1>
+<section id="s-tv" class="hidden"><button class="back" onclick="go('home')">‹ BACK TO BOOKING</button><div class="px kick">TV MESSAGE</div><h1>ON THE BIG SCREEN</h1>
 <div class="card" style="margin-top:0"><p><b>Happy birthday Jess!</b><br><span class="fine" style="font-size:14px">Pops up 30 minutes after you start · edited 2 times</span></p><button class="btn ghost">Change the message</button><p class="fine">You can change it until it pops up.</p></div></section>
 
 <section id="s-owner" class="hidden"><div class="px kick">CONTROL CENTRE · BOOKINGS › CHANGES</div><h1>LAST 30 DAYS</h1>
@@ -76,10 +76,13 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 </main>
 <script>
 var S={},sel={day:1,room:'Vale',t:'16:00',h:3};
-var ROOMS={Vale:['#E8436A','netflix'],Kai:['#24B49A','deluxe'],Bella:['#7A5BE0','deluxe'],Maximillion:['#E0402F','vip']};
+var ROOMS={Vale:['#E8436A','netflix'],Kaeden:['#4DB848','netflix'],Scarlett:['#F2C21B','netflix'],Bella:['#24B49A','deluxe'],Kai:['#7A5BE0','deluxe'],Atlas:['#E9E7EF','deluxe'],Maximillion:['#E0402F','vip']};
 var BASE={netflix:[69,23,40.25,55.2],deluxe:[99,33,49.5,59.4],vip:[129,43,64.5,77.4]};
 function price(r,h){var p=BASE[ROOMS[r][1]];return h==3?p[0]:p[0]+p[h-3];}
-var days=['Thu 12','Fri 13','Sat 14','Sun 15','Mon 16','Tue 17','Wed 18'];
+var D0=new Date('2026-11-12T12:00:00Z'),days=[];for(var k=0;k<60;k++){var dd=new Date(D0.getTime()+k*864e5);days.push(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dd.getUTCDay()]+' '+dd.getUTCDate())}
+var TS=['11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','19:30','20:00','20:15'];
+function busy(day,room){if(room==='Kaeden')return TS.slice();var h=0,s=room+day;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%9973;var n=(h%5),out=[];if(h%11===0)return TS.slice();for(var j=0;j<n;j++)out.push(TS[(h>>j)%TS.length]);return out}
+function monthOf(i){return new Date(D0.getTime()+i*864e5).toLocaleDateString('en-SG',{month:'long',year:'numeric',timeZone:'UTC'}).toUpperCase()}
 function $(i){return document.getElementById(i)}
 function go(s){['home','pick','sum','done','tv','owner'].forEach(function(x){$('s-'+x).classList.toggle('hidden',x!==s)});scrollTo(0,0)}
 function state(){var v=$('state').value;
@@ -99,10 +102,13 @@ function state(){var v=$('state').value;
  if(S.moves>=2)h.push('<li>Moved 2pm → 4pm · Wed 11 Nov <small>· S$15 fee</small></li>');
  h.push('<li>TV message added, edited 2× <small>· pops up 30 min in</small></li>');$('hist').innerHTML=h.join('');}
 function draw(){
+ $('mon').textContent=monthOf(sel.day);
  $('days').innerHTML=days.map(function(d,i){return '<button class="day'+(i==sel.day?' on':'')+'" onclick="sel.day='+i+';draw()">'+d.split(' ')[0]+'<br><b>'+d.split(' ')[1]+'</b></button>'}).join('');
- $('rooms').innerHTML=Object.keys(ROOMS).map(function(r){return '<button class="rm'+(r==sel.room?' on':'')+'" onclick="sel.room=\''+r+'\';draw()">'+r+'</button>'}).join('');
- var ts=['11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','19:30','20:00','20:15'],busy={1:['13:00','14:00'],2:['17:00','18:00','19:00']};
- $('slots').innerHTML=ts.map(function(t){var b=(busy[(sel.day+sel.room.length)%3]||[]).indexOf(t)>=0;var n=+t.slice(0,2);var lab=((n+11)%12+1)+(t.slice(3)!='00'?':'+t.slice(3):'')+(n<12?'am':'pm');return '<button class="sl'+(t==sel.t?' on':'')+'" '+(b?'disabled':'')+' onclick="sel.t=\''+t+'\';draw()">'+lab+'</button>'}).join('');
+ var on=$('days').children[sel.day];if(on)on.scrollIntoView({block:'nearest',inline:'center'});
+ if(busy(sel.day,sel.room).length===TS.length){var f=Object.keys(ROOMS).filter(function(r){return busy(sel.day,r).length<TS.length});if(f.length)sel.room=f[0]}
+ $('rooms').innerHTML=Object.keys(ROOMS).map(function(r){var b=busy(sel.day,r),free=TS.length-b.length,why=r==='Kaeden'?'Closed for renovation':free?free+' start times free · from $'+price(r,3):'Fully booked';return '<button class="rm'+(r==sel.room?' on':'')+'" '+(free?'':'disabled')+' onclick="sel.room=\''+r+'\';draw()" style="border-left:4px solid '+ROOMS[r][0]+'">'+r+'<small>'+why+'</small></button>'}).join('');
+ var ts=TS,bz=busy(sel.day,sel.room);if(bz.indexOf(sel.t)>=0)sel.t=TS.filter(function(t){return bz.indexOf(t)<0})[0];
+ $('slots').innerHTML=ts.map(function(t){var b=bz.indexOf(t)>=0;var n=+t.slice(0,2);var lab=((n+11)%12+1)+(t.slice(3)!='00'?':'+t.slice(3):'')+(n<12?'am':'pm');return '<button class="sl'+(t==sel.t?' on':'')+'" '+(b?'disabled':'')+' onclick="sel.t=\''+t+'\';draw()">'+lab+'</button>'}).join('');
  var mx=sel.t>='20:15'?3:sel.t>='19:00'?4:6;if(sel.h>mx)sel.h=mx;
  $('hrs').innerHTML=[3,4,5,6].map(function(h){return '<button class="hr'+(h==sel.h?' on':'')+'" '+(h>mx?'disabled':'')+' onclick="sel.h='+h+';draw()">'+h+'h</button>'}).join('');}
 function lab(t,h){var a=+t.slice(0,2),m=t.slice(3),e=a+h;function f(x,mm){return ((x+11)%12+1)+(mm!='00'?':'+mm:'')+(x%24<12?'am':'pm')}return f(a,m)+' – '+f(e%24,m)}
@@ -112,5 +118,6 @@ $('toSum').onclick=function(){var fee=S.grace?0:(S.moves?25:15),np=price(sel.roo
  $('mvn').textContent=S.moves+1;$('pay').textContent=tot>0?'Pay $'+tot.toFixed(2)+' with HitPay':'Confirm move (free)';$('agree').checked=false;go('sum')};
 $('pay').onclick=function(){if(!$('agree').checked){alert('Tick the box first');return}$('d-room').textContent=sel.room;$('d-date').textContent=days[sel.day]+' November 2026';$('d-time').textContent=lab(sel.t,sel.h);
  $('d-left').textContent=S.moves+1>=2?'That was your last move. For anything else, WhatsApp us.':'You have 1 move left (S$25). Changes in the next 15 minutes are free of the change fee.';go('done')};
+$('dpick').min='2026-11-12';$('dpick').max='2027-01-10';$('dpick').onchange=function(){var i=Math.round((new Date(this.value+'T12:00:00Z')-D0)/864e5);if(i>=0&&i<60){sel.day=i;draw()}};
 $('state').onchange=state;state();
 </script></body></html>
