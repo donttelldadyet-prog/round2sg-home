@@ -56,4 +56,9 @@ early bird 33% weekday / 44% weekend (most filled). Engine read: gm `bookstats` 
 - Early bird nudge: an EB booking moving to 2:15pm or later pays $10 even under 3 days.
 - Price: new slot dearer → pay the difference (net, option a); cheaper → no refund. EB price kept only if it stays at 11am.
 - 15-min grace: no fee within 15 min of booking or of the last move; differences still paid.
+- Which rule applies is set by how far away the CURRENT booking is at the moment of the change (not where it moves to).
+  E.g. booked 9 days out → moves to tomorrow 11am: 3+ days rule (any free slot). The new start must be 3+ h from now.
+- No lost sessions (12 Nov, replaces "gap 0 or ≥195 min"): a move is blocked only if it leaves fewer sellable 3 h sessions
+  (180 min + 15 cleaning) in that free stretch than it could hold before. E.g. Kai free 11am–3:30pm can hold one session
+  either way, so 11am–2pm (or 11am–3pm) is allowed; on an empty day 2pm is blocked (it would cost a session).
 - Waiting list, S$10 release incentive, 55/45 split fees, "reverse" fee: discussed and rejected.
