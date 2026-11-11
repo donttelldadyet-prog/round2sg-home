@@ -112,8 +112,10 @@ none by more than $5. Build: the same test becomes a System check step for the e
 ### Early bird by room + staff load (owner, 12 Nov – in the demo)
 - 11am early bird is the same price in every room, so guests take the big rooms first: filled on Max 74% of days, Kai 57%,
   Atlas 41%, Bella 38%, Scarlett 33%, Vale 15% (Max booked first on most multi-booking mornings). Demand at 11am is per room.
-- 40% of all bookings end 2–2:30pm (the cleaning crunch after early birds). Staff-load nudge: a move whose session ends
-  while 2+ other rooms are turning over (+$6 per extra room) or lands back-to-back in its room (+$5) costs more; an end time
-  with nothing else turning over costs $5 less. Counted separately from lost sales (the "never loses money" check ignores it).
-  Aim (owner): spread turnovers so the team can clean the other rooms first and leave Vale/Atlas last.
+- Vale/Atlas turnaround (owner, 12 Nov – NOT general staggering: the team wants every room full, cleaned in one wave, then rest).
+  The twins share one booking calendar. If the session just before (or after) the new one is in the SAME twin room, that room
+  must be turned around in 15 min; if it's in the OTHER twin, the used room can be cleaned last, calmly. Rule: same twin
+  back-to-back → one fee level up and never an upgrade; other twin → counts as an upgrade more easily (move costs ≤ $10).
+  E.g. Sun 15, 11am guest in Vale: 2:15pm Vale $25, Atlas $15 (or Upgrade $5 + $30 for a Netflix guest). Engine reads which
+  twin each booking is really in from SimplyBook (the public free-slot feed doesn't say).
 - "Quiet rooms" in the stress test are worked out from the data each run (not a fixed list) – if nudging fills Bella, Bella can reach $35.
