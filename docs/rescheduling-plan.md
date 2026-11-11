@@ -87,7 +87,10 @@ busy-room morning → evening same day ($16–32; early bird covered by the pric
 Demand must follow trends:
 - Nightly recalculation from the last ~8 weeks, recent weeks weighted more (last week ≈ 2× week 8).
 - Unit: room × day type (Mon–Thu, Fri, Sat, Sun, public holiday + eve; school holidays optional) × time band.
-- Live pace: how fast that exact date is filling vs normal – filling 2× faster → high; dead → low.
+- Live pace PER ROOM: bookings already on that room + date vs normal by now (room's average bookings/day × share usually
+  booked by that many hours before: 7 days 15%, 3 days 31%, 1 day 56%, 12 h 70%). About 2× normal → "Kai filling fast"
+  (demand ×1.25); well under → "quiet day for Kai" (×0.8). Only within 7 days. Vale + Atlas paced together (they block
+  each other). In the demo since 12 Nov.
 - Guardrails: 3 levels, change only on a clear shift, at most once a day; new/reopened rooms (Kaeden) start medium until
   ~4 weeks of their own data; owner can pin a slot/date busy or quiet in the control centre.
 - Control centre › Bookings › Demand: week grid per room coloured low/medium/high with the reason.
