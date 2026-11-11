@@ -29,3 +29,17 @@ booking and the TV-message button. Rescheduling stays on WhatsApp until the owne
    paid → `editBook` the SimplyBook booking → release the old slot → email/confirmation page updated.
    The old slot is never released before the new payment lands.
 10. Who: staff first (WhatsApp, a staff page that does steps 9 for them), self-serve on "View your booking" later.
+
+## Decisions with the owner, 11 Nov 2026 (supersede the rules above where they differ)
+- Fees: 1st move S$15, 2nd S$25. Max 2 moves (free grace moves count). Then the button greys out ("No moves left").
+- Cut-off: 3 h before the current start (so also closed during and after the session; extensions stay with staff In session +1h). Checked in the engine, not only the page. Button greys out with the reason.
+- New slot: any free slot (subject to availability), no far-future limit, 15-minute start steps. Room and length changes allowed.
+- Price difference: guest pays new price − paid (never below $0); cheaper parts (smaller room, off-peak, fewer hours) are shown as "not refunded". Strict "each dearer part in full" (b) was offered; owner hasn't chosen – demo uses net (a).
+- 15-min grace: no change fee within 15 min of booking or of the last move (window restarts after a move); differences still paid.
+- WhatsApp/staff bookings: staff copy a guest link from Add a session / Bookings and send it; the guest then reschedules themselves (staff record what was paid). Late sessions past the online hours stay with staff.
+- Staff side: Bookings tab (search + day view) with Move; "send the guest a change email" ticked by default; waive fee = owner only.
+- Guest side: round2.sg gets "Already booked? ▣ LOAD SAVE ›" under the two buttons, plus a compact room-coloured "SAVE FOUND · Vale · Fri 13 Nov · 4pm–7pm · Manage ›" strip under the header on devices that opened their booking before.
+- Manage page: Name first on the ticket; Reschedule / TV message / Receipt / Calendar; save history; step 1 = week view (+ month calendar), all rooms with that day's availability, hour strip + quarter buttons, YOURS marks, live Now → New tickets in room colours with the breakdown; step 2 = review and agree.
+- Owner stats: Bookings › Changes (reschedules, fees, grace moves, staff moves, TV message edits, cap hits, reasons).
+- Later (keep in mind): put the guest's NAME in the SimplyBook confirmation email; receipt line; new rules text everywhere (T&C, booking page, FAQ, email, Wix terms).
+- Demo: branch my-booking-demo, demo/manage.html and index.html?demo=save.
