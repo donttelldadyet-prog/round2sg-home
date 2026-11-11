@@ -70,3 +70,19 @@ early bird 33% weekday / 44% weekend (most filled). Engine read: gm `bookstats` 
 - Trip-wires (owner stats; review the rules if one is hit): over 15% of bookings moved · over 50% of moves under 3 days ·
   over 33% of moves into Fri–Sun evenings · freed-slot resale under 15% · average profit per move at or below $0.
 - Waiting list, S$10 release incentive, 55/45 split fees: discussed and rejected. Flat % fees (30/40, 20/30) replaced by the hybrid.
+
+## DEMAND-BASED FEE (owner, 12 Nov – idea agreed, not built; replaces the per-room table above once built)
+Fee depends on the slot they move INTO (and the one they leave): fee ≈ expected lost sale of the new slot − expected resale
+of the freed slot − price difference paid, + ~$5, banded into 3 levels (low / medium / high) so guests see round numbers.
+Measured 12 Nov (1 Aug–10 Nov, rough): rooms differ a lot – free slot 3 days out still sells: Vale/Scarlett 58%, Kai 42%,
+Bella 32%, Max 27%, Atlas 12% (Atlas also blocked by Vale). Max has 2+ bookings on only 18% of days (Scarlett 55%).
+Time of day matters in busy rooms: 12 h before, evening (5:15–8:15pm) still sells 38%, 2:15–5pm 29%, 11am 6%; in quiet rooms
+~11–12% at any time. So demand level = room × day type × time band. Costliest moves: quiet room → busy room late ($14–35),
+busy-room morning → evening same day ($16–32; early bird covered by the price difference). Same room new date: $5–9.
+Demand must follow trends:
+- Nightly recalculation from the last ~8 weeks, recent weeks weighted more (last week ≈ 2× week 8).
+- Unit: room × day type (Mon–Thu, Fri, Sat, Sun, public holiday + eve; school holidays optional) × time band.
+- Live pace: how fast that exact date is filling vs normal – filling 2× faster → high; dead → low.
+- Guardrails: 3 levels, change only on a clear shift, at most once a day; new/reopened rooms (Kaeden) start medium until
+  ~4 weeks of their own data; owner can pin a slot/date busy or quiet in the control centre.
+- Control centre › Bookings › Demand: week grid per room coloured low/medium/high with the reason.
