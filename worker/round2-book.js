@@ -2101,6 +2101,12 @@ async function gm(env, req) {
     const since = Date.now() - Math.min(72, +f.hours || 12) * 3600e3, rows = /^\d{4}-\d\d-\d\d$/.test(f.date || '') ? await hb.rows(`SELECT ref, date, unit, s, status, created, data FROM holds WHERE date = ? ORDER BY created DESC LIMIT 30`, f.date) : await hb.rows(`SELECT ref, date, unit, s, status, created, data FROM holds WHERE created > ? ORDER BY created DESC LIMIT 30`, since);
     return gmJ({ ok: true, list: rows.map((r) => { const d = JSON.parse(r.data || '{}'); return { ref: r.ref, date: r.date, unit: r.unit, s: r.s, status: r.status, why: d.relWhy || '', made: sgStr(r.created).slice(0, 16), pay: d.pay, name: d.name, room: d.q && d.q.room, time: d.q && d.q.time, hours: d.q && d.q.hours, total: d.q && d.q.total, done: d.done || null, pr: d.pr || r.pr || null }; }) });
   }
+  if (act === 'bookstats') {   /* staff, read-only (owner, 11 Nov: reschedule maths): bookings in a date range with when each was made, compact */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const from = /^\d{4}-\d\d-\d\d$/.test(f.from || '') ? f.from : addDays(sgDay(Date.now()), -60), to = /^\d{4}-\d\d-\d\d$/.test(f.to || '') ? f.to : addDays(from, 30);
+    const a = await admin(env), L = Object.values((await a('getBookings', [{ booking_type: f.type === 'cancelled' ? 'cancelled' : 'non_cancelled', date_from: from, date_to: to }])) || {});
+    return gmJ({ ok: true, from, to, n: L.length, keys: L[0] ? Object.keys(L[0]) : [], rows: L.map((x) => [x.id, +x.unit_id, String(x.start_date || x.start_date_time || ''), String(x.end_date || x.end_date_time || ''), String(x.record_date || x.created || ''), SYS_CLIENTS.includes(String(x.client_id)) ? 1 : 0, +x.event_id]) });
+  }
   if (act === 'sbdiag') {   /* staff: why SimplyBook refused a contact (3 Nov, Denzel) – recent online bookings, and (try=1) a real retry */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     const recent = (await hb.rows(`SELECT ref, date, status, created, data FROM holds WHERE status IN ('paid','booking') ORDER BY created DESC LIMIT 20`)).map((r) => {
