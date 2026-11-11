@@ -61,4 +61,12 @@ early bird 33% weekday / 44% weekend (most filled). Engine read: gm `bookstats` 
 - No lost sessions (12 Nov, replaces "gap 0 or ≥195 min"): a move is blocked only if it leaves fewer sellable 3 h sessions
   (180 min + 15 cleaning) in that free stretch than it could hold before. E.g. Kai free 11am–3:30pm can hold one session
   either way, so 11am–2pm (or 11am–3pm) is allowed; on an empty day 2pm is blocked (it would cost a session).
+- RESALE BY LEAD TIME (measured 12 Nov, SimplyBook 1 Aug–10 Nov, 822 records; a 3h slot still free X before its start that
+  later sold): 7 days 38% · 3 days 32% · 2 days 29% · 1 day 24% · 12 h 15% · 6 h 13% · 3 h 8%. Early bird falls fastest
+  (1 day 16%, 12 h 7%). Peak ~3–5 points higher than off-peak. Rough (counts any later booking overlapping the slot).
+  Cost of a move ≈ (resale chance of the NEW slot − resale chance of the OLD slot) × price: 3+ days ≈ 0–8%,
+  under 3 days ≈ 5–14%, under 24 h (same-day only) ≈ 0 – the old and new slots are equally hard to resell.
+- FEE ON TRIAL (12 Nov, demo): hybrid – $5 (3+ days) or $10 (under 3 days) + 10% of the 3-hour price (extra hours not
+  counted), rounded to $5; early bird $10 flat; 2nd move +$10; first 15 min free. Netflix $10/$15, Deluxe $15/$20,
+  VIP off $15/$20, VIP peak $20/$25. Covers the worst-case cost above in every room. Replaces the 30%/40% lines once agreed.
 - Waiting list, S$10 release incentive, 55/45 split fees, "reverse" fee: discussed and rejected.
