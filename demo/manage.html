@@ -228,10 +228,11 @@ function expV0(room,i,t,ld){var b=band(t),eb=price(room,i,OPEN,3),full=price(roo
 function twinOf(i,room){if(!useReal())return room;var v=$('twin')?$('twin').value:'Vale';return v}
 function load(i,room,t,h){var r={adj:0,same:false,other:false};if(room!=='Vale'&&room!=='Atlas')return r;var E=t+(h||3)*60;
  ['Vale','Atlas'].forEach(function(src){taken(i,src).forEach(function(x){var before=x[1]<=t&&t-x[1]<=30&&x[0]>OPEN-1&&x[1]-x[0]<=420,after=x[0]>=E+BUF&&x[0]-(E+BUF)<=30&&x[1]-x[0]<=420;if(!before&&!after)return;var phys=twinOf(i,src);if(phys===room)r.same=true;else r.other=true})});
- r.adj=r.same?10:r.other?-5:0;return r}
-function demand(i,room,t){var o=O(),lN=(i*1440+t-NOW)/60,lO=leadH(),vN=price(room,i,t,3),vO=price(o.room,o.day,o.t,3),cost=expV(room,i,t,lN)-expV(o.room,o.day,o.t,lO)-Math.max(0,vN-vO);var money=cost,L0=load(i,room,t,sel&&sel.h||3);cost+=L0.adj;var lv=cost<=10?0:cost<=20?1:2;return {lv:lv,cost:cost,money:money,load:L0,p:sellP(room,i,t,lN),why:pace(i,room)[1]}}
+ r.adj=0;return r}   /* applied as a fee level in lvOf, not as money */
+function demand(i,room,t){var o=O(),lN=(i*1440+t-NOW)/60,lO=leadH(),vN=price(room,i,t,3),vO=price(o.room,o.day,o.t,3),cost=expV(room,i,t,lN)-expV(o.room,o.day,o.t,lO)-Math.max(0,vN-vO);var money=cost,L0=load(i,room,t,sel&&sel.h||3);var lv=cost<=10?0:cost<=20?1:2;return {lv:lv,cost:cost,money:money,load:L0,p:sellP(room,i,t,lN),why:pace(i,room)[1]}}
 /* upgrade: the new slot costs more AND the move costs the shop nothing (they pay the difference) → $5. Early-bird bookings keep $15+ (owner: discourage). */
-function lvOf(i,room,t,h){var o=O(),d=demand(i,room,t);if(d.cost<=5&&!o.eb&&price(room,i,t,h||o.h)>o.paid+.004)return 3;return d.lv}
+function lvOf(i,room,t,h){var o=O(),d=demand(i,room,t);if(d.load.same)return Math.min(2,d.lv+1);   /* same twin back-to-back: one level up, never an upgrade */
+ if(d.cost<=(d.load.other?10:5)&&!o.eb&&price(room,i,t,h||o.h)>o.paid+.004)return 3;return d.lv}
 function fee(t,i,room){if(S.grace)return 0;var f=t==null?(O().eb?15:5):LV[lvOf(i==null?sel.day:i,room||sel.room,t,sel.h)][1];return f+(S.moves===1?10:0)}
 function go(s){['home','pick','sum','done','tv','owner'].forEach(function(x){$('s-'+x).classList.toggle('hidden',x!==s)});scrollTo(0,0)}
 function tag(d){return d>0.004?'<em class="up">+'+money(d)+'</em>':d<-0.004?'<em class="dn">cheaper · no refund</em>':'<em class="eq">same price</em>'}
