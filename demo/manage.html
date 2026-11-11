@@ -69,6 +69,7 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 <option value="5">Maximillion (VIP) · Thu 12 Nov · 8:15pm · $109 · 2 hours away</option>
 </select></label>
 <label>Moves so far: <select id="mv"><option value="0">None</option><option value="g">Just booked (free 15 min)</option><option value="1">Moved once</option><option value="2">Moved twice</option></select></label>
+<label>Demo time: <select id="clk"><option value="real">Real time now</option><option value="600">Thu 12 Nov · 10am</option><option value="840">Thu 12 Nov · 2pm</option><option value="1080" selected>Thu 12 Nov · 6pm</option><option value="1260">Thu 12 Nov · 9pm</option></select> <small id="clkst" style="opacity:.7"></small></label>
 <label><input type="checkbox" id="real" checked onchange="refresh()"> Real calendar (read-only) <small id="realst" style="opacity:.7">Loading…</small></label>
 <label><input type="checkbox" id="wa"> Booked by WhatsApp (staff sent the link)</label>
 <label><button id="ownerb" style="font:inherit;margin-top:4px">Owner view: beta stats</button></label></div>
@@ -154,7 +155,7 @@ function leadH(){var o=O();return (o.day*1440+o.t-NOW)/60}
 function stage(){var L=leadH();return L<3?'closed':L<24?'day':L<72?'late':'early'}
 /* demo bookings (with cleaning) per room/day; Kaeden full; the guest's own booking never in the way */
 function fakeTaken(i,room){if(room==='Kaeden')return [[OPEN,CLOSE+BUF]];var h=0,str=room+i;for(var k=0;k<str.length;k++)h=(h*31+str.charCodeAt(k))%9973;if(h%13===0)return [[OPEN,CLOSE+BUF]];var out=[],n=h%3;for(var j=0;j<n;j++){var st=OPEN+15*((h>>(j*3))%20)+j*360;if(st>LAST)continue;out.push([st,st+180+BUF])}
- var o=O();if(room===o.room&&i===o.day)out=out.filter(function(x){return !(x[0]<o.t+o.h*60+BUF&&x[1]>o.t)});if(i===0)out.push([OPEN,NOW+180]);return out.sort(function(a,b){return a[0]-b[0]})}
+ var o=O();if(room===o.room&&i===o.day)out=out.filter(function(x){return !(x[0]<o.t+o.h*60+BUF&&x[1]>o.t)});var cut=NOW+180-i*1440;if(cut>OPEN)out.push([OPEN,Math.min(cut,CLOSE+BUF)]);return out.sort(function(a,b){return a[0]-b[0]})}
 /* REAL CALENDAR: read-only free starts from the engine's public /day (same as book.round2.sg), turned into busy blocks */
 var ENG='https://round2-book.donttelldadyet.workers.dev',UNIT={5:'Vale',7:'Kaeden',8:'Scarlett',9:'Kai',10:'Bella',12:'Atlas',11:'Maximillion'},REAL={},RQ={},RT=null;
 function useReal(){var c=$('real');return !c||c.checked}
@@ -166,7 +167,7 @@ function refresh(){var h=$('realst');if(h){var n=Object.keys(REAL).length,bad=Ob
  var vis=function(id){var e=$(id);return e&&!e.classList.contains('hidden')};if(vis('s-pick'))draw();else if(vis('s-home'))state()}
 for(var k0=0;k0<14;k0++)setTimeout(loadDay.bind(null,k0),k0*150);
 function taken(i,room){var out;if(useReal()){if(REAL[i]&&REAL[i]!=='x')out=REAL[i][room].map(function(x){return x.slice()});else{loadDay(i);return [[OPEN,CLOSE+BUF]]}}else return fakeTaken(i,room);
- var o=O();if(room===o.room&&i===o.day)out=out.filter(function(x){return !(x[0]<o.t+o.h*60+BUF&&x[1]>o.t)});if(i===0)out.push([OPEN,NOW+180]);return out.sort(function(a,b){return a[0]-b[0]})}
+ var o=O();if(room===o.room&&i===o.day)out=out.filter(function(x){return !(x[0]<o.t+o.h*60+BUF&&x[1]>o.t)});var cut=NOW+180-i*1440;if(cut>OPEN)out.push([OPEN,Math.min(cut,CLOSE+BUF)]);return out.sort(function(a,b){return a[0]-b[0]})}
 function fits(i,room,t,h){var e=t+h*60;if(e>CLOSE)return 'past';var bz=taken(i,room);for(var k=0;k<bz.length;k++){if(t<bz[k][1]&&e+BUF>bz[k][0])return bz[k][0]}return true}
 function deadGap(i,room,t,h){/* blocks a move only if it leaves fewer sellable 3h sessions than that free stretch could hold before */var bz=taken(i,room),e=t+h*60+BUF,pe=OPEN,ns=CLOSE+BUF,U=180+BUF;bz.forEach(function(x){if(x[1]<=t&&x[1]>pe)pe=x[1];if(x[0]>=e&&x[0]<ns)ns=x[0]});var before=Math.floor((ns-pe)/U),after=1+Math.floor((t-pe)/U)+Math.floor((ns-e)/U);return after<before}
 /* the rules */
@@ -245,6 +246,13 @@ $('toSum').onclick=function(){var k=calc();$('sumT').innerHTML=tickets(false);
 $('pay').onclick=function(){if(!$('agree').checked){alert('Tick the box first');return}$('d-room').textContent=sel.room;$('d-tk').style.borderTopColor=ROOMS[sel.room][0];$('d-room').style.color=ROOMS[sel.room][0];$('d-date').textContent=longDate(sel.day);$('d-time').textContent=hm(sel.t)+' – '+hm(sel.t+sel.h*60);
  $('d-left').textContent=S.moves+1>=2?'That was your last move. For anything else, WhatsApp us.':'You have 1 move left. Changes in the next 15 minutes have no change fee.';go('done')};
 $('wprev').onclick=function(){sel.wk=Math.max(0,sel.wk-7);draw()};$('wnext').onclick=function(){sel.wk=Math.min(56,sel.wk+7);draw()};$('calb').onclick=function(){toggleCal($('calv').classList.contains('hidden'))};
-$('ownerb').onclick=function(){go('owner')};$('bk').onchange=state;$('mv').onchange=state;$('wa').onchange=state;
+/* DEMO TIME: fixed times on Thu 12 Nov, or the real time from the engine's clock (/time – never the phone's clock) */
+var DAY0=Date.parse('2026-11-11T16:00:00Z');
+function away(m){return m<=0?'started':m>=2880?Math.round(m/1440)+' days away':m>=60?Math.round(m/60)+' hours away':m+' min away'}
+function relabel(){[].forEach.call($('bk').options,function(op,k){var b=BK[k];op.textContent=op.textContent.replace(/ · [^·]*(away|started)$/,'')+' · '+away(b.day*1440+b.t-NOW)})}
+function setClock(){var v=$('clk').value,done=function(){var m=((NOW%1440)+1440)%1440,d=Math.floor(NOW/1440);$('clkst').textContent=v==='real'?'('+days[Math.max(0,d)]+' · '+hm(Math.floor(m/15)*15)+(m<420?', shop night of the day before':'')+')':'';relabel();refresh()};
+ if(v!=='real'){NOW=+v;done();return}
+ $('clkst').textContent='(asking the engine…)';fetch(ENG+'/time').then(function(r){return r.json()}).then(function(t){NOW=Math.floor((t.t-DAY0)/6e4);done()}).catch(function(){$('clkst').textContent='(engine clock unreachable – kept '+hm(NOW%1440)+')'})}
+$('ownerb').onclick=function(){go('owner')};$('bk').onchange=state;$('mv').onchange=state;$('wa').onchange=state;$('clk').onchange=setClock;relabel();
 if(/bk=\d/.test(location.search))$('bk').value=location.search.match(/bk=(\d)/)[1];state();
 </script></body></html>
