@@ -76,7 +76,7 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 <label>Moves so far: <select id="mv"><option value="0">None</option><option value="g">Just booked (free 15 min)</option><option value="1">Moved once</option><option value="2">Moved twice</option></select></label>
 <label>Demo time: <select id="clk"><option value="real">Real time now</option><option value="600">Thu 12 Nov · 10am</option><option value="840">Thu 12 Nov · 2pm</option><option value="1080" selected>Thu 12 Nov · 6pm</option><option value="1260">Thu 12 Nov · 9pm</option></select> <small id="clkst" style="opacity:.7"></small></label>
 <label>Vale/Atlas bookings on the real calendar are in: <select id="twin" onchange="refresh()"><option>Vale</option><option>Atlas</option></select> <small style="opacity:.7">(the real engine reads this from SimplyBook)</small></label>
-<label><input type="checkbox" id="real" onchange="refresh()"> Real calendar (read-only) <small id="realst" style="opacity:.7">Loading…</small></label>
+<label><input type="checkbox" id="real" onchange="refresh()"> Real calendar (read-only, uses SimplyBook requests) <small id="realst" style="opacity:.7">Made-up bookings</small></label>
 <label><input type="checkbox" id="wa"> Booked by WhatsApp (staff sent the link)</label>
 <label><button id="ownerb" style="font:inherit;margin-top:4px">Owner view: beta stats</button></label></div>
 
