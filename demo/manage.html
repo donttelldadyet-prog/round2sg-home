@@ -134,12 +134,13 @@ function deadGap(i,room,t,h){var bz=taken(i,room),e=t+h*60+BUF,pe=OPEN,ns=null;b
 /* the rules */
 function why(i,room,t,h){var o=O(),st=stage();
  if(fits(i,room,t,h)!==true)return 'taken';
+ if(i===o.day&&room===o.room&&t===o.t&&h===o.h)return 'same';
  if(i*1440+t-NOW<180)return 'soon';
  if(st==='day'){if(i!==o.day)return 'sameday';if(price(room,i,t,h)<price(o.room,o.day,o.t,o.h)||(t<o.t&&room===o.room&&h<=o.h))return 'upgrade'}
  if(st==='late'&&t<LOCK)return 'lock';
  if(deadGap(i,room,t,h))return 'gap';
  return ''}
-function okStart(i,room,t){return why(i,room,t,3)===''||why(i,room,t,4)===''||why(i,room,t,O().h)===''}
+function okStart(i,room,t){var o=O();if(i===o.day&&room===o.room&&t===o.t)return true;return [3,4,5,6].some(function(h){return why(i,room,t,h)===''})}
 function starts(i,room){var a=[];for(var t=OPEN;t<=LAST;t+=15)if(okStart(i,room,t))a.push(t);return a}
 function locked(i,room){if(stage()!=='late')return [];var a=[];for(var t=OPEN;t<LOCK;t+=15)if(fits(i,room,t,3)===true&&i*1440+t-NOW>=180)a.push(t);return a}
 function dayFull(i){return Object.keys(ROOMS).every(function(r){return !starts(i,r).length})}
@@ -158,7 +159,7 @@ function state(){var o=O(),st=stage();go('home');
  if(st==='closed'){b.disabled=true;sub.textContent='Closed 3 hours before your start'}
  else if(S.moves>=2){b.disabled=true;sub.textContent='No moves left (2 of 2 used)'}
  else if(st==='day')sub.textContent='Today/tomorrow: same-day upgrades only';
- else sub.textContent=S.grace?'Free right now · price difference only':'Fee $'+fee(null)+(o.eb?' ($10 to 2:15pm+)':'')+' + any difference';
+ else sub.textContent=S.grace?'Free right now · price difference only':(o.eb?'Fee $10 to 2:15pm+ · + any difference':'Fee $'+fee(null)+' + any difference');
  var h=[S.wa?'<li>Booked with our team on WhatsApp · Tue 10 Nov <small>· '+money(o.paid)+'</small></li>':'<li>Booked online · Tue 10 Nov, 8:02pm <small>· paid '+money(o.paid)+' PayNow</small></li>'];
  if(S.moves>=1)h.push('<li>Moved once · Wed 11 Nov <small>· fee paid</small></li>');if(S.moves>=2)h.push('<li>Moved again · Wed 11 Nov <small>· fee paid</small></li>');
  h.push('<li>TV message added <small>· pops up 30 min in</small></li>');$('hist').innerHTML=h.join('')}
@@ -176,13 +177,14 @@ function draw(){var o=O(),st=stage();
  $('mins').innerHTML=[0,15,30,45].map(function(m){var t=H*60+m,ok=t<=LAST&&stt.indexOf(t)>=0,me=sel.day==o.day&&sel.room==o.room&&t===o.t;return '<button class="'+(t===sel.t?'on':'')+(me?' yours':'')+'" '+(ok?'':'disabled')+' onclick="sel.t='+t+';draw()">'+hm(t)+'</button>'}).join('');
  $('stnote').textContent='Times that would leave a gap too short for another booking are hidden.';
  var notes=[];$('hrs').innerHTML=[3,4,5,6].map(function(h){var w=why(sel.day,sel.room,sel.t,h),d=price(sel.room,sel.day,sel.t,h)-o.paid,lbl;
-  if(w){lbl={taken:fits(sel.day,sel.room,sel.t,h)==='past'?'past closing':'taken from '+hm(fits(sel.day,sel.room,sel.t,h)),gap:'leaves a gap',upgrade:'not an upgrade',lock:'3+ days only',sameday:'same day only',soon:'too soon'}[w];return '<button class="hr no" disabled><b>'+h+'h</b><small>'+lbl+'</small></button>'}
+  if(w){lbl={taken:fits(sel.day,sel.room,sel.t,h)==='past'?'past closing':'taken from '+hm(fits(sel.day,sel.room,sel.t,h)),gap:'leaves a gap',same:'your booking',upgrade:'not an upgrade',lock:'3+ days only',sameday:'same day only',soon:'too soon'}[w];return '<button class="hr no" disabled><b>'+h+'h</b><small>'+lbl+'</small></button>'}
   if(h<o.h)notes.push(h+'h is shorter than your '+o.h+'h booking: the hour you lose isn’t refunded.');
   return '<button class="hr'+(h==sel.h?' on':'')+'" onclick="sel.h='+h+';draw()"><b>'+h+'h</b><small class="'+(d>0.004?'up':d<-0.004?'dn':'eq')+'">'+(d>0.004?'+'+money(d):d<-0.004?'no refund':'same')+'</small></button>'}).join('');
- if(why(sel.day,sel.room,sel.t,sel.h)){var hs=[3,4,5,6].filter(function(h){return !why(sel.day,sel.room,sel.t,h)});sel.h=hs[0]||3;return draw()}
+ var isMine=sel.day==o.day&&sel.room==o.room&&sel.t==o.t&&sel.h==o.h;
+ if(!isMine&&why(sel.day,sel.room,sel.t,sel.h)){var hs=[3,4,5,6].filter(function(h){return !why(sel.day,sel.room,sel.t,h)});if(hs.length){sel.h=hs[0];return draw()}}
  $('hrnote').innerHTML=notes.join(' ');
  $('feeb').className='feeb'+(fee(sel.t)?'':' free');$('feeb').textContent=fee(sel.t)?'MOVE '+(S.moves+1)+'/2 · $'+fee(sel.t)+' FEE':'FREE CHANGE · 12:43';
- $('live').innerHTML=tickets(true);$('toSum').disabled=sel.t==null}
+ if(isMine){$('live').innerHTML='<div class="note">This is your current slot. Pick a different day, room, time or length.</div>';$('toSum').disabled=true;$('toSum').style.opacity=.4}else{$('live').innerHTML=tickets(true);$('toSum').disabled=sel.t==null;$('toSum').style.opacity=1}}
 function pickH(hr){var st=starts(sel.day,sel.room).filter(function(t){return Math.floor(t/60)===hr});if(st.length)sel.t=st.indexOf(hr*60)>=0?hr*60:st[0];draw()}
 function calc(){var o=O(),T0=ROOMS[o.room][1],T1=ROOMS[sel.room][1],r0=rate(o.day,o.t),r1=rate(sel.day,sel.t),a=o.paid,b=price(sel.room,o.day,o.t,o.h),c=price(sel.room,sel.day,sel.t,o.h),dd=price(sel.room,sel.day,sel.t,sel.h),L=[],F=fee(sel.t),st=stage();
  L.push(['Change fee',F?((st==='early'?'3+ days ahead':'under 3 days')+(o.eb&&sel.t>=LOCK?' · early bird to 2:15pm+':'')+(S.moves?' · 2nd move':'')):'free · within 15 min',F]);
