@@ -157,3 +157,14 @@ Move a booking (staff):
 - Taking payment for fee + difference: (a) show a HitPay QR on the staff screen for the guest to scan and pay, or
   (b) take it on HitPay's Tap to Pay on iPhone, then tick "Paid in shop" with the amount. The move goes through once paid
   (or straight away if waived / nothing to pay).
+
+## LIVE 12 Nov: staff Move a booking (control centre first; guest side stays in the demo)
+Engine (gm, staff code): mvday (guest bookings of a shop night) · mvfree (free starts per room for the booking's length; the
+day's bookings + notes, no extra availability calls) · mvquote (clash check + demand fee + price difference) · mvpay (HitPay
+PayNow QR: payment_methods[]=paynow_online, generate_qr → qr_code_data.qr_code) · mvlink (normal HitPay link for WhatsApp) ·
+mvstatus (the page polls; completes the move when paid) · mvnow (waived / nothing to pay / paid in shop) · mvlog.
+Webhook /move/hitpay (signed) completes paid moves even if the page is closed. The move: cancel its own Vale/Atlas block →
+SimplyBook editBook (new service for off-peak/peak/early bird, unit, times, same guest + fields) → mirror re-blocks → guest
+messages follow (onSb) → Auto wrap-up → the guest's online booking record shows the new room/time (paid amount kept) →
+mvlog. Paid but failed → staff alert (move by hand or refund). Bookings with +h EXT notes: undo first (not handled yet).
+Control centre: top tab "In session" renamed Bookings; pages In session · Add a session · Move a booking · Rescheduling.
