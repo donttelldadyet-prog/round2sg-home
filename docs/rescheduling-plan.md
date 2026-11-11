@@ -43,3 +43,17 @@ booking and the TV-message button. Rescheduling stays on WhatsApp until the owne
 - Owner stats: Bookings › Changes (reschedules, fees, grace moves, staff moves, TV message edits, cap hits, reasons).
 - Later (keep in mind): put the guest's NAME in the SimplyBook confirmation email; receipt line; new rules text everywhere (T&C, booking page, FAQ, email, Wix terms).
 - Demo: branch my-booking-demo, demo/manage.html and index.html?demo=save.
+
+## FINAL RULES (owner + admin, 11 Nov 2026, 11:47pm) – these replace the fee/cut-off lines above
+Data behind it (SimplyBook 1 Aug–10 Nov, 655 bookings, notes not included): 69% of bookings are made within 3 days of the
+date (44% within 1 day); a slot still free 3 days before sells later ~20–28% of the time; slots sell 24–34% overall,
+early bird 33% weekday / 44% weekend (most filled). Engine read: gm `bookstats` (staff, read-only).
+- Max 2 moves. Under 3 h before, during and after: closed. Under 24 h: same-day upgrades only (later time, bigger room, more hours).
+- Protected window: starts 11am–2pm (early bird + its block). Moving INTO it only 3+ days ahead. 2:15pm+ any time (rules above).
+- Fee = share of what they paid (incl. extension hours), rounded to $5: 30% if 3+ days ahead, 40% under 3 days;
+  cap $30 / $40; 2nd move +$10 (cap $40 / $50).
+  1st move: EB $10/$15 · Netflix off $15/$20, peak $20/$30 · Deluxe off $25/$30, peak $30/$40 · VIP $30/$40.
+- Early bird nudge: an EB booking moving to 2:15pm or later pays $10 even under 3 days.
+- Price: new slot dearer → pay the difference (net, option a); cheaper → no refund. EB price kept only if it stays at 11am.
+- 15-min grace: no fee within 15 min of booking or of the last move; differences still paid.
+- Waiting list, S$10 release incentive, 55/45 split fees, "reverse" fee: discussed and rejected.
