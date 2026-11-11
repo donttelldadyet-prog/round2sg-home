@@ -56,6 +56,8 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 .act.main{background:var(--rc)}.act.main b,.act.main span{color:var(--ri)!important}.act.main::after{color:var(--ri)}.act.main .beta{background:#000;color:#F2C21B!important}
 .act[disabled]{background:transparent;border:1px dashed var(--ln);box-shadow:none;opacity:1}.act[disabled]::after{content:''}.act[disabled] b,.act[disabled] span{color:var(--mu)!important}
 .card{background:transparent;border-color:rgba(244,241,251,.08)}
+.mine{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:15px;margin:2px 0 10px}.mine .lead{grid-column:1/-1;font-size:13px;color:var(--mu)}.mine .w{font:8px 'Press Start 2P',monospace;padding:6px;border:1px solid;white-space:nowrap;letter-spacing:.02em}.mine .sub{grid-column:1/-1;font-size:13px;color:#d6d0e3}
+.more summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--ln);background:#15111f;font:700 14px 'Chakra Petch',sans-serif;letter-spacing:.06em;text-transform:uppercase}.more summary::-webkit-details-marker{display:none}.more summary:after{content:'▾';color:var(--mu)}.more[open] summary:after{content:'▴'}
 </style></head><body><main>
 <div class="demo">DEMO · nothing is real here.
 <label>Their booking: <select id="bk">
@@ -81,10 +83,13 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 <button class="act" onclick="alert('Opens the payment receipt (built: /receipt)')"><b>RECEIPT</b><span id="a-rc">Paid with PayNow · save PDF</span></button>
 <button class="act" onclick="alert('Downloads the calendar entry')"><b>CALENDAR</b><span>Add to your phone</span></button></div>
 <div class="card"><h2>RESCHEDULE RULES <span class="beta">BETA</span></h2>
-<p class="fine" style="margin:0 0 6px!important">How long before your session are you changing it?</p>
+<div class="mine" id="myrule"></div>
+<details class="more"><summary>See all rules</summary>
+<p class="fine" style="margin:10px 0 6px!important">Counted from <b>now</b> to your <b>current</b> booking's start, at the moment you make the change:</p>
 <div class="rl"><span class="w g">3+ DAYS</span><span>Any free slot, any day</span><span class="w y">UNDER 3 DAYS</span><span>Any day, but start <b>2:15pm or later</b></span><span class="w o">UNDER 24 HRS</span><span>Same day only: later time, bigger room or more hours</span><span class="w r">UNDER 3 HRS</span><span>No changes</span></div>
 <table class="ft"><tr><th>Change fee</th><th>3+ days</th><th>Under 3 days</th></tr><tr><td>Share of what you paid</td><td><b>30%</b> · max $30</td><td><b>40%</b> · max $40</td></tr><tr><td>Early bird → 2:15pm+</td><td colspan="2"><b>$10</b></td></tr><tr><td>2nd move</td><td colspan="2"><b>+$10</b></td></tr></table>
-<ul class="ic"><li><i style="color:#F2C21B">2×</i><span>Up to 2 moves per booking</span></li><li><i style="color:#ffb070">+$</i><span>New slot costs more: pay the difference</span></li><li><i style="color:#ff9b9b">−$</i><span>Costs less: no refund. Bookings can’t be cancelled.</span></li><li><i style="color:#9be38f">15m</i><span>No change fee within 15 min of booking</span></li></ul>
+<ul class="ic"><li><i style="color:#F2C21B">2×</i><span>Up to 2 moves per booking</span></li><li><i style="color:#7fd3ff">3h</i><span>Your new time must start at least 3 hours from now</span></li><li><i style="color:#ffb070">+$</i><span>New slot costs more: pay the difference</span></li><li><i style="color:#ff9b9b">−$</i><span>Costs less: no refund. Bookings can’t be cancelled.</span></li><li><i style="color:#9be38f">15m</i><span>No change fee within 15 min of booking</span></li></ul>
+</details>
 <p class="fine">Rescheduling is new. Tell us on WhatsApp if anything’s unclear.</p></div>
 <div class="card"><h2>YOUR SAVE HISTORY</h2><ul class="hist" id="hist"></ul></div>
 <div class="card"><h2>ADDRESS</h2><p style="margin:0"><b>20 Haji Lane, #02-00</b><br><span class="fine" style="font-size:14px">Singapore 189213 · Bugis MRT Exit B · 6 min walk</span></p></div>
@@ -175,6 +180,8 @@ function state(){var o=O(),st=stage();go('home');
  $('a-rc').textContent=S.wa?'Booked with our team':'Paid with PayNow · save PDF';
  var L=leadH(),c='';if(S.grace)c+='<span class="chip ok">Free change · 12:43 left</span>';c+='<span class="chip '+(S.moves>=2?'no':'')+'">Moves used '+S.moves+' / 2</span>';
  c+='<span class="chip '+(st==='closed'?'warn':'')+'">Starts in '+(L>=48?Math.round(L/24)+' days':Math.round(L)+'h')+'</span>';if(S.wa)c+='<span class="chip">Booked with our team</span>';$('chips').innerHTML=c;
+ var R={early:['g','3+ DAYS','Any free slot, any day'],late:['y','UNDER 3 DAYS','Any day, but start 2:15pm or later'],day:['o','UNDER 24 HRS','Same day only: later time, bigger room or more hours'],closed:['r','UNDER 3 HRS','No changes']}[st];
+ $('myrule').innerHTML='<span class="lead">Your session starts in '+(L>=48?Math.round(L/24)+' days':Math.round(L)+' hours')+', so right now:</span><span class="w '+R[0]+'">'+R[1]+'</span><span>'+R[2]+'</span>'+(st==='closed'?'':'<span class="sub">Change fee '+(S.grace?'<b>free</b> (within 15 min)':'<b>'+money(fee(null))+'</b>')+' · new time at least 3 hours from now</span>');
  var b=$('a-move'),sub=$('a-move-sub');b.disabled=false;b.onclick=function(){sel={day:o.day,room:o.room,t:o.t,h:o.h,wk:null};go('pick');draw()};
  if(st==='closed'){b.disabled=true;sub.textContent='Closed 3 hours before your start'}
  else if(S.moves>=2){b.disabled=true;sub.textContent='No moves left (2 of 2 used)'}
