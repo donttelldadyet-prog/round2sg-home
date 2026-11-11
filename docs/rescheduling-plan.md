@@ -50,10 +50,10 @@ date (44% within 1 day); a slot still free 3 days before sells later ~20–28% o
 early bird 33% weekday / 44% weekend (most filled). Engine read: gm `bookstats` (staff, read-only).
 - Max 2 moves. Under 3 h before, during and after: closed. Under 24 h: same-day upgrades only (later time, bigger room, more hours).
 - Protected window: starts 11am–2pm (early bird + its block). Moving INTO it only 3+ days ahead. 2:15pm+ any time (rules above).
-- Fee = share of what they paid (incl. extension hours), rounded to $5: 30% if 3+ days ahead, 40% under 3 days;
-  cap $30 / $40; 2nd move +$10 (cap $40 / $50).
-  1st move: EB $10/$15 · Netflix off $15/$20, peak $20/$30 · Deluxe off $25/$30, peak $30/$40 · VIP $30/$40.
-- Early bird nudge: an EB booking moving to 2:15pm or later pays $10 even under 3 days.
+- Fee (12 Nov, replaces 30%/40%): $5 (3+ days ahead) or $10 (under 3 days) + 10% of the 3-hour price of the current booking
+  (extra hours not counted), rounded to $5; +$5 if the current booking is Fri–Sun and the move is under 3 days; early bird
+  $10 flat; 2nd move +$10. In dollars (3+ days / under 3 days, Fri–Sun under 3 days): Early bird $10/$10 · Netflix $10/$15
+  ($20) · Deluxe $15/$20 ($25) · VIP $15 (Fri–Sun $20)/$20 ($30). Every move profits by the measured resale figures below.
 - Price: new slot dearer → pay the difference (net, option a); cheaper → no refund. EB price kept only if it stays at 11am.
 - 15-min grace: no fee within 15 min of booking or of the last move; differences still paid.
 - Which rule applies is set by how far away the CURRENT booking is at the moment of the change (not where it moves to).
@@ -66,10 +66,6 @@ early bird 33% weekday / 44% weekend (most filled). Engine read: gm `bookstats` 
   (1 day 16%, 12 h 7%). Peak ~3–5 points higher than off-peak. Rough (counts any later booking overlapping the slot).
   Cost of a move ≈ (resale chance of the NEW slot − resale chance of the OLD slot) × price: 3+ days ≈ 0–8%,
   under 3 days ≈ 5–14%, under 24 h (same-day only) ≈ 0 – the old and new slots are equally hard to resell.
-- FEE ON TRIAL (12 Nov, demo): hybrid – $5 (3+ days) or $10 (under 3 days) + 10% of the 3-hour price (extra hours not
-  counted), rounded to $5; early bird $10 flat; 2nd move +$10; first 15 min free. Netflix $10/$15, Deluxe $15/$20,
-  VIP off $15/$20, VIP peak $20/$25. Covers the worst-case cost above in every room. Replaces the 30%/40% lines once agreed.
-  + $5 when a peak-day (Fri–Sun) booking is moved under 3 days (owner, 12 Nov): Netflix $20, Deluxe $25, VIP $30 – at least
-  ~$7 profit per move even in the worst case. Early bird stays $10. Trip-wires in owner stats (15% moved, 50% late, 33% into
-  Fri–Sun evenings, freed-slot resale 15%, profit per move > $0).
-- Waiting list, S$10 release incentive, 55/45 split fees, "reverse" fee: discussed and rejected.
+- Trip-wires (owner stats; review the rules if one is hit): over 15% of bookings moved · over 50% of moves under 3 days ·
+  over 33% of moves into Fri–Sun evenings · freed-slot resale under 15% · average profit per move at or below $0.
+- Waiting list, S$10 release incentive, 55/45 split fees: discussed and rejected. Flat % fees (30/40, 20/30) replaced by the hybrid.
