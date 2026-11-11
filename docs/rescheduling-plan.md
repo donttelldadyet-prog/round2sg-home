@@ -144,3 +144,16 @@ add it now) was postponed until the request count is back to normal; it must com
   Rescheduling (count + $ waived this month).
 - Staff can move inside the online limits (under 3 h, same-day-only, 11am–2pm lock) with a warning, since they can see the
   room is free – e.g. the wrong-date guest at the door moved into a free room right now.
+
+## Control centre (owner, 12 Nov – for the build)
+Top tab "In session" → renamed **Bookings**: Today (was In session) · Add a session · **Move a booking** (new, staff) ·
+**Rescheduling** (new, owner: switch, beta stats, trip-wires, demand grid, Vale/Atlas view, stress test). Rename + both pages
+ship together.
+Move a booking (staff):
+- Same picker as guests, showing the same demand-based fee on every room and time.
+- Staff decide: charge the fee, or waive it (any staff – owner, 12 Nov). Waives are logged (who, why, amount) and shown in
+  the owner's Rescheduling stats.
+- Use case: a guest booked the wrong date and turns up at the door.
+- Taking payment for fee + difference: (a) show a HitPay QR on the staff screen for the guest to scan and pay, or
+  (b) take it on HitPay's Tap to Pay on iPhone, then tick "Paid in shop" with the amount. The move goes through once paid
+  (or straight away if waived / nothing to pay).
