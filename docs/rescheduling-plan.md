@@ -85,6 +85,8 @@ Bella 32%, Max 27%, Atlas 12% (Atlas also blocked by Vale). Max has 2+ bookings 
 Time of day matters in busy rooms: 12 h before, evening (5:15–8:15pm) still sells 38%, 2:15–5pm 29%, 11am 6%; in quiet rooms
 ~11–12% at any time. So demand level = room × day type × time band. Costliest moves: quiet room → busy room late ($14–35),
 busy-room morning → evening same day ($16–32; early bird covered by the price difference). Same room new date: $5–9.
+Why it wins (owner, 12 Nov): genuine moves are treated fairly – someone who got busy 2 days before and moves to a quiet date
+pays $15; moving into a busier time costs more, automatically. Same-room time changes in quiet rooms (Max, Bella) stay $15.
 Demand must follow trends:
 - Nightly recalculation from the last ~8 weeks, recent weeks weighted more (last week ≈ 2× week 8).
 - Unit: room × day type (Mon–Thu, Fri, Sat, Sun, public holiday + eve; school holidays optional) × time band.
