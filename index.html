@@ -871,7 +871,7 @@ class Component extends DCLogic {
 /* ===== DEMO ONLY (branch my-booking-demo): "Load save" under the two buttons + compact "Save found" strip under the header =====
    ?demo=save shows the returning-guest strip (a phone that has opened its booking before). */
 (function () {
-  var save = /demo=save/.test(location.search) ? { room: 'Vale', color: '#E8436A', ink: '#0b0914', when: 'Fri 13 Nov · 4pm – 7pm' } : null;
+  var save = /demo=save/.test(location.search) ? { room: 'Vale', color: '#E8436A', ink: '#0b0914', when: 'Sat 21 Nov · 4pm – 7pm' } : null;
   var PX = "font-family:'Press Start 2P',monospace;";
   function apply() {
     var stage = document.getElementById('r2-stage'); if (!stage) return;
@@ -879,14 +879,14 @@ class Component extends DCLogic {
     stage.querySelectorAll('button').forEach(function (b) {
       if (!/^\s*pick a room\s*$/i.test(b.textContent)) return;
       var row = b.parentElement; if (row.nextElementSibling && row.nextElementSibling.className === 'r2-ls') return;
-      var a = document.createElement('a'); a.className = 'r2-ls'; a.href = 'https://book.round2.sg/find'; a.target = '_top';
+      var a = document.createElement('a'); a.className = 'r2-ls'; a.href = 'demo/manage.html?bk=0'; a.target = '_top';
       a.style.cssText = 'display:flex;justify-content:center;align-items:center;gap:10px;margin-top:' + (mob ? 10 : 14) + 'px;padding:' + (mob ? 8 : 10) + 'px 0;text-decoration:none;color:#b9b0cf;font-size:' + (mob ? 12 : 13) + 'px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;border-top:1px dashed rgba(244,241,251,.18)';
       a.innerHTML = '<span>Already booked?</span><span style="' + PX + 'font-size:' + (mob ? 8 : 9) + 'px;color:var(--r2-accent)">▣ LOAD SAVE ›</span>';
       row.parentNode.insertBefore(a, row.nextSibling);
     });
     if (save && !stage.querySelector('.r2-sf')) {
       var hd = stage.querySelector('header'); if (!hd) return;
-      var c = document.createElement('a'); c.className = 'r2-sf'; c.href = 'https://book.round2.sg/find'; c.target = '_top';
+      var c = document.createElement('a'); c.className = 'r2-sf'; c.href = 'demo/manage.html?bk=1'; c.target = '_top';
       var top = hd.offsetTop + hd.offsetHeight + (mob ? 10 : 14);
       c.style.cssText = 'position:absolute;z-index:5;top:' + top + 'px;' + (mob ? 'left:16px;right:16px;' : 'left:56px;width:620px;') +
         'display:flex;align-items:center;gap:' + (mob ? 10 : 16) + 'px;padding:' + (mob ? '8px 8px 8px 12px' : '10px 10px 10px 16px') + ';background:rgba(10,8,18,.82);backdrop-filter:blur(10px);border:1px solid ' + save.color + ';border-left-width:4px;text-decoration:none;color:#f4f1fb;font-family:"Chakra Petch",sans-serif';
