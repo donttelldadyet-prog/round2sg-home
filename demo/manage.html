@@ -58,6 +58,7 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 .card{background:transparent;border-color:rgba(244,241,251,.08)}
 .mine{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:15px;margin:2px 0 10px}.mine .lead{grid-column:1/-1;font-size:13px;color:var(--mu)}.mine .w{font:8px 'Press Start 2P',monospace;padding:6px;border:1px solid;white-space:nowrap;letter-spacing:.02em}.mine .sub{grid-column:1/-1;font-size:13px;color:#d6d0e3}
 .more summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--ln);background:#15111f;font:700 14px 'Chakra Petch',sans-serif;letter-spacing:.06em;text-transform:uppercase}.more summary::-webkit-details-marker{display:none}.more summary:after{content:'▾';color:var(--mu)}.more[open] summary:after{content:'▴'}
+.tw{list-style:none;margin:0;padding:0;display:grid;gap:6px}.tw li{display:grid;grid-template-columns:64px 1fr auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--ln);border-left:5px solid #4DB848;font-size:14px}.tw li.warn{border-left-color:#ff6b6b;background:rgba(255,107,107,.08)}.tw b{font-size:18px}.tw li.warn b{color:#ff9b9b}.tw em{font-style:normal;font-size:12px;color:var(--mu);white-space:nowrap}
 </style></head><body><main>
 <div class="demo">DEMO · nothing is real here.
 <label>Their booking: <select id="bk">
@@ -126,10 +127,12 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 <section id="s-owner" class="hidden"><button class="back" onclick="state()">‹ BACK TO GUEST VIEW</button><div class="px kick">CONTROL CENTRE · RESCHEDULE BETA</div><h1>FIRST 4 WEEKS</h1>
 <div class="card" style="margin-top:0"><h2>SWITCH</h2><p style="margin:0">Online rescheduling: <b style="color:#9be38f">ON (beta)</b> · stage: <b>3+ days ahead only</b></p><p class="fine">One tap turns it off; guests then see “WhatsApp us”.</p></div>
 <div class="stat" style="margin-top:14px"><div class="st"><b>14</b><span>Moves</span></div><div class="st"><b>S$318</b><span>Fees + differences</span></div><div class="st"><b>6 / 14</b><span>Old slot rebooked</span></div><div class="st"><b>3</b><span>“Ben” moments*</span></div><div class="st"><b>+4%</b><span>Bookings vs 4 wks before</span></div><div class="st"><b>−2</b><span>No-shows vs before</span></div></div>
+<div class="card"><h2>TRIP-WIRES</h2><p class="fine" style="margin:0 0 8px!important">If one turns red we review the rules. You also get an alert.</p>
+<ul class="tw"><li class="ok"><b>8%</b><span>of bookings moved</span><em>limit 15%</em></li><li class="ok"><b>36%</b><span>of moves were under 3 days</span><em>limit 50%</em></li><li class="warn"><b>43%</b><span>of moves went into Fri–Sun evenings</span><em>limit 33%</em></li><li class="ok"><b>43%</b><span>of freed slots were rebooked</span><em>at least 15%</em></li><li class="ok"><b>+S$9</b><span>average profit per move (fee + difference − estimated lost sales)</span><em>above $0</em></li></ul></div>
 <p class="fine">*Someone searched for a slot a mover had just taken and didn’t book another.</p>
 <div class="card"><h2>LATEST MOVES</h2><ul class="hist">
-<li>Amanda · Vale Tue 4pm → Sat 4pm <small>· $15 fee + $20 · old slot rebooked ✓</small></li>
-<li>Jun Wei · Kai Sat 4pm → Sat 7:30pm <small>· same-day · $40 fee · old slot empty</small></li>
+<li>Amanda · Vale Tue 4pm → Sat 4pm <small>· $10 fee + $20 · old slot rebooked ✓</small></li>
+<li>Jun Wei · Kai Sat 4pm → Sat 7:30pm <small>· same-day · $20 fee · old slot empty</small></li>
 <li>Priya · EB Sat 11am → Sat 3pm <small>· $10 + $34 · 11am rebooked ✓</small></li></ul></div></section>
 </main>
 <script>
