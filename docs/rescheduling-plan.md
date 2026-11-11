@@ -119,3 +119,12 @@ none by more than $5. Build: the same test becomes a System check step for the e
   E.g. Sun 15, 11am guest in Vale: 2:15pm Vale $25, Atlas $15 (or Upgrade $5 + $30 for a Netflix guest). Engine reads which
   twin each booking is really in from SimplyBook (the public free-slot feed doesn't say).
 - "Quiet rooms" in the stress test are worked out from the data each run (not a fixed list) – if nudging fills Bella, Bella can reach $35.
+
+### SimplyBook request budget – lesson (12 Nov, 5am)
+System check failed "SimplyBook requests today": 8,637 by 5am (limit ~5,000; yesterday 5,201). 7,562 were /day
+(getAvailableTimeIntervals + getToken) from the reschedule demo's live calendar – each reload pulled 14 days × 7 rooms, and
+the engine only remembers a day for 60 s. Demo fixed: live calendar off by default, next 2 weeks only, cached 30 min per
+browser. For the build: the reschedule picker must not call /day per day viewed without a longer cache (e.g. 5–10 min for
+dates 2+ days out) – one guest browsing a month would cost ~200 requests. The Vale/Atlas "which twin" info (owner chose to
+add it now) was postponed until the request count is back to normal; it must come from the engine's own mirror records
+(kv mir:<bid>), not extra SimplyBook calls.
