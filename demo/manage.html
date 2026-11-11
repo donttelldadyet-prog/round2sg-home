@@ -15,7 +15,9 @@ dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:14px 0 4px}dt
 .wk{display:flex;align-items:center;gap:6px;margin-bottom:8px}.wk .mon{flex:1;text-align:center;margin:0}.nav{background:transparent;border:1px solid var(--ln);color:#f4f1fb;font:9px 'Press Start 2P',monospace;padding:8px 10px;cursor:pointer}.nav[disabled]{opacity:.3}.nav.on{border-color:var(--rc);color:var(--rc)}
 .days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.day{padding:7px 0;padding:8px 10px;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:13px;cursor:pointer;text-align:center}.day.on{border-color:var(--rc);background:rgba(232,67,106,.12)}
 .rooms{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}.rm small{display:block;font-size:11px;color:var(--mu)}.rm.on small{color:#3a3450}.rm[disabled]{opacity:.35;cursor:default}.mon{font:8px 'Press Start 2P',monospace;color:var(--mu);margin:0 0 6px}.calv{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.calv .h{font-size:11px;color:var(--mu);text-align:center}.cd{padding:8px 0;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:13px;cursor:pointer}.cd.on{border-color:var(--rc);background:rgba(232,67,106,.12)}.cd.full{opacity:.3;text-decoration:line-through}.cd[disabled]{visibility:hidden}.day.full{opacity:.3}.dateb{margin-top:8px;display:flex;gap:8px;align-items:center;font-size:13px;color:var(--mu)}.dateb input{background:#0b0914;color:#f4f1fb;border:1px solid var(--ln);padding:6px 8px;font:inherit;color-scheme:dark}.rm{text-align:left;padding:8px 10px;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:13px;cursor:pointer}.rm.on{border-color:#f4f1fb;background:#f4f1fb;color:#0b0914}
-.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.sl{padding:9px 0;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:14px;cursor:pointer}.sl.on{background:var(--rc);color:var(--ri);border-color:var(--rc)}.sl[disabled]{opacity:.3;text-decoration:line-through;cursor:default}
+.slots{display:grid;grid-template-columns:44px repeat(4,1fr);gap:4px;align-items:center}.slots .hl{font-size:12px;color:var(--mu)}.sl.mine{outline:1px dashed var(--rc);outline-offset:-3px}
+.hr small,.rm em,.day i{display:block;font-size:11px;font-style:normal;color:var(--mu)}.hr{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px}.hr.no{opacity:.4;text-decoration:none;cursor:default}.hr.no b{text-decoration:line-through}.up{color:#F2C21B!important}.dn{color:#ff9b9b!important}.eq{color:#9be38f!important}
+.leg{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--mu);margin-top:8px}.bd td small{display:block;color:var(--mu);font-size:12px}.bd tr.nr td{color:#ff9b9b}.sl{padding:9px 0;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:14px;cursor:pointer}.sl.on{background:var(--rc);color:var(--ri);border-color:var(--rc)}.sl[disabled]{opacity:.3;text-decoration:line-through;cursor:default}
 .hrs{display:flex;gap:6px;margin-top:10px}.hr{flex:1;padding:9px 0;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:14px;cursor:pointer}.hr.on{border-color:var(--rc);color:var(--rc)}.hr[disabled]{opacity:.3}
 table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px dashed var(--ln);vertical-align:top}td:last-child{text-align:right;font-weight:600}tr.tot td{border:0;font-size:20px;font-weight:700}tr.tot td:last-child{color:var(--rc)}
 .old{text-decoration:line-through;color:var(--mu)}.chk{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:#d6d0e3;margin-top:12px}.back{display:inline-flex;align-items:center;gap:8px;background:transparent;border:1px solid var(--ln);color:#f4f1fb;font:9px 'Press Start 2P',monospace;letter-spacing:.08em;cursor:pointer;padding:10px 12px;margin-bottom:14px}.back:hover{border-color:var(--rc)}
@@ -23,7 +25,7 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 .bar{display:grid;grid-template-columns:110px 1fr 36px;gap:8px;align-items:center;font-size:13px;margin:6px 0}.bar i{display:block;height:10px;background:var(--rc)}
 .hidden{display:none}</style></head><body><main>
 <div class="demo">DEMO · nothing is real here. Guest's situation:<select id="state">
-<option value="grace">Just booked (free change, 12 min left)</option><option value="normal" selected>Booked days ago, 0 moves used</option><option value="one">Moved once (next move S$25)</option><option value="none">Moved twice (no moves left)</option><option value="late">Starts in 2 hours (too late to move)</option><option value="staff">Booked by WhatsApp/staff</option><option value="owner">— Owner view: control centre stats —</option></select></div>
+<option value="grace">Just booked (free change, 12 min left)</option><option value="normal" selected>Booked days ago, 0 moves used</option><option value="one">Moved once (next move S$25)</option><option value="none">Moved twice (no moves left)</option><option value="late">Starts in 2 hours (too late to move)</option><option value="staff">Booked by WhatsApp/staff</option><option value="owner">— Owner view: control centre stats —</option></select><br>Their booking: <select id="olen"><option value="3">Vale · Fri 13 · 4pm–7pm · 3h · $69</option><option value="4">Vale · Fri 13 · 4pm–8pm · 4h · $92</option></select></div>
 
 <section id="s-home">
 <div class="px kick">SAVE FILE LOADED</div><h1>YOUR BOOKING</h1>
@@ -46,13 +48,14 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 <div class="card" style="margin-top:0"><h2>DAY</h2><div class="wk"><button class="nav" id="wprev" aria-label="Previous week">‹</button><div class="mon" id="mon"></div><button class="nav" id="wnext" aria-label="Next week">›</button><button class="nav cal" id="calb">▦ MONTH</button></div><div class="days" id="days"></div><div class="calv hidden" id="calv"></div>
 <h2 style="margin-top:14px">ROOM</h2><div class="rooms" id="rooms"></div>
 <h2 style="margin-top:6px">START</h2><div class="slots" id="slots"></div>
-<h2 style="margin-top:14px">HOURS</h2><div class="hrs" id="hrs"></div>
-<p class="fine">Only free times show. Your current slot stays yours until you’ve paid for the new one.</p></div>
+<h2 style="margin-top:14px">HOURS</h2><div class="hrs" id="hrs"></div><p class="fine" id="hrnote"></p>
+<div class="leg"><span class="up">+$ you pay more</span><span class="eq">same price</span><span class="dn">cheaper · no refund</span><span>dashed = your current slot</span></div>
+<p class="fine">Your current slot stays yours until you’ve paid for the new one.</p></div>
 <button class="btn" id="toSum">Continue</button></section>
 
 <section id="s-sum" class="hidden"><button class="back" onclick="go('pick')">‹ CHANGE SLOT</button>
 <div class="px kick">STEP 2 OF 2</div><h1>CONFIRM THE MOVE</h1>
-<div class="card" style="margin-top:0"><table id="sum"></table>
+<div class="card" style="margin-top:0"><table id="sum" class="bd"></table>
 <label class="chk"><input type="checkbox" id="agree"> I understand this booking still can’t be cancelled or refunded, and this uses move <span id="mvn"></span> of 2.</label></div>
 <button class="btn" id="pay">Pay</button><p class="fine">We hold the new slot for 10 minutes while you pay. Nothing changes until payment goes through.</p></section>
 
@@ -76,53 +79,79 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 <p class="fine">Each booking card in the Bookings tab also shows "moves 1/2" and "message edited 2×".</p></div></section>
 </main>
 <script>
-var S={},sel={day:1,room:'Vale',t:'16:00',h:3};
+var S={},sel={day:1,room:'Vale',t:960,h:3,wk:null};
 var ROOMS={Vale:['#E8436A','netflix'],Kaeden:['#4DB848','netflix'],Scarlett:['#F2C21B','netflix'],Kai:['#24B49A','deluxe'],Bella:['#7A5BE0','deluxe'],Atlas:['#E9E7EF','deluxe'],Maximillion:['#E0402F','vip']};
-var BASE={netflix:[69,23,40.25,55.2],deluxe:[99,33,49.5,59.4],vip:[129,43,64.5,77.4]};
-function price(r,h){var p=BASE[ROOMS[r][1]];return h==3?p[0]:p[0]+p[h-3];}
+var TYPE={netflix:'Netflix room',deluxe:'Deluxe room',vip:'VIP room'};
+var PR={netflix:{off:[49,16.30,28.58,39.20],peak:[69,23,40.25,55.20],eb:{off:[16.33,32.67,49],peak:[23,46,69]}},deluxe:{off:[79,26.30,39.50,47.40],peak:[99,33,49.50,59.40],eb:{off:[26.33,52.67,79],peak:[33,66,99]}},vip:{off:[109,36.30,54.50,65.40],peak:[129,43,64.50,77.40],eb:{off:[36.33,72.67,109],peak:[43,86,129]}}};
+var OPEN=660,LAST=1215,CLOSE=1395,BUF=15;
 var D0=new Date('2026-11-12T12:00:00Z'),days=[];for(var k=0;k<60;k++){var dd=new Date(D0.getTime()+k*864e5);days.push(['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][dd.getUTCDay()]+' '+dd.getUTCDate())}
-var TS=['11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','19:30','20:00','20:15'];
-function busy(day,room){if(room==='Kaeden')return TS.slice();var h=0,s=room+day;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))%9973;var n=(h%5),out=[];if(h%11===0)return TS.slice();for(var j=0;j<n;j++)out.push(TS[(h>>j)%TS.length]);return out}
-function dayFull(i){return Object.keys(ROOMS).every(function(r){return busy(i,r).length===TS.length})}
-function drawCal(){var c=$('calv');if(c.classList.contains('hidden'))return;var m0=new Date(D0.getTime()+sel.wk*864e5),first=new Date(Date.UTC(m0.getUTCFullYear(),m0.getUTCMonth(),1,12)),pad=(first.getUTCDay()+6)%7,n=new Date(Date.UTC(m0.getUTCFullYear(),m0.getUTCMonth()+1,0)).getUTCDate(),h=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(x){return '<div class="h">'+x+'</div>'}).join('');for(var k=0;k<pad;k++)h+='<button class="cd" disabled></button>';for(var d=1;d<=n;d++){var i=Math.round((Date.UTC(first.getUTCFullYear(),first.getUTCMonth(),d,12)-D0)/864e5),ok=i>=0&&i<60,full=ok&&dayFull(i);h+='<button class="cd'+(i==sel.day?' on':'')+(full||!ok?' full':'')+'" '+(ok&&!full?'onclick="sel.day='+i+';sel.wk=Math.floor('+i+'/7)*7;toggleCal(false);draw()"':'')+'>'+d+'</button>'}c.innerHTML=h}
-function toggleCal(on){$('calv').classList.toggle('hidden',!on);$('days').classList.toggle('hidden',on);$('calb').classList.toggle('on',on);drawCal()}
-function monthOf(i){return new Date(D0.getTime()+i*864e5).toLocaleDateString('en-SG',{month:'long',year:'numeric',timeZone:'UTC'}).toUpperCase()}
+function dow(i){return new Date(D0.getTime()+i*864e5).getUTCDay()}
+function peak(i){var w=dow(i);return w===5||w===6||w===0}
+function rate(i,t){return t===OPEN?'eb':peak(i)?'peak':'off'}
+function rateName(r){return {eb:'Early bird',peak:'Peak (Fri–Sun)',off:'Off-peak (Mon–Thu)'}[r]}
+function price(room,i,t,h){var T=ROOMS[room][1],r=rate(i,t),P=PR[T];if(r==='eb'){var pk=peak(i)?'peak':'off';return 35+(h>3?P.eb[pk][h-4]:0)}return P[r][0]+(h>3?P[r][h-3]:0)}
+function money(x){return '$'+Math.abs(x).toFixed(2)}
+function hm(m){m=((m%1440)+1440)%1440;var h=Math.floor(m/60),mm=m%60;return ((h+11)%12+1)+(mm?':'+String(mm).padStart(2,'0'):'')+(h<12?'am':'pm')}
+function O(){var h=+$('olen').value;return {room:'Vale',day:1,t:960,h:h,paid:price('Vale',1,960,h)}}
+/* demo bookings: [start,end incl. cleaning) per room/day; Kaeden full; the guest's own booking is never in the way */
+function taken(i,room){if(room==='Kaeden')return [[OPEN,CLOSE+BUF]];var h=0,str=room+i;for(var k=0;k<str.length;k++)h=(h*31+str.charCodeAt(k))%9973;if(h%13===0)return [[OPEN,CLOSE+BUF]];var out=[],n=h%3;for(var j=0;j<n;j++){var st=OPEN+15*((h>>(j*3))%20)+j*360;if(st>LAST)continue;out.push([st,st+180+BUF])}
+ if(room==='Vale'&&i===1)out=out.filter(function(x){return !(x[0]<1200&&x[1]>960)});return out}
+function fits(i,room,t,h){var e=t+h*60;if(e>CLOSE)return 'past';var bz=taken(i,room);for(var k=0;k<bz.length;k++){if(t<bz[k][1]&&e+BUF>bz[k][0])return bz[k][0]}return true}
+function dayFull(i){return Object.keys(ROOMS).every(function(r){return !starts(i,r).length})}
+function starts(i,room){var a=[];for(var t=OPEN;t<=LAST;t+=15)if(fits(i,room,t,3)===true)a.push(t);return a}
 function $(i){return document.getElementById(i)}
 function go(s){['home','pick','sum','done','tv','owner'].forEach(function(x){$('s-'+x).classList.toggle('hidden',x!==s)});scrollTo(0,0)}
-function state(){var v=$('state').value;
- if(v==='owner'){go('owner');return}go('home');
+function monthOf(i){return new Date(D0.getTime()+i*864e5).toLocaleDateString('en-SG',{month:'long',year:'numeric',timeZone:'UTC'}).toUpperCase()}
+function tag(d){return d>0.004?'<em class="up">+'+money(d)+'</em>':d<-0.004?'<em class="dn">cheaper · no refund</em>':'<em class="eq">same price</em>'}
+function state(){var v=$('state').value;if(v==='owner'){go('owner');return}go('home');var o=O();
  S={moves:{grace:0,normal:0,one:1,none:2,late:0,staff:0}[v],grace:v==='grace',late:v==='late',staff:v==='staff'};
- var c='';if(S.grace)c+='<span class="chip ok">Free change · 12:43 left</span>';
- c+='<span class="chip '+(S.moves>=2?'no':'')+'">Moves used '+S.moves+' / 2</span>';
- if(S.late)c+='<span class="chip warn">Starts in 2h · moves closed</span>';if(S.staff)c+='<span class="chip">Booked with our team</span>';
- c+='<span class="chip">TV message edited 2×</span>';$('chips').innerHTML=c;
+ $('t-time').textContent=hm(o.t)+' – '+hm(o.t+o.h*60);$('t-len').textContent=o.h+' hours';$('t-paid').textContent=money(o.paid);
+ var c='';if(S.grace)c+='<span class="chip ok">Free change · 12:43 left</span>';c+='<span class="chip '+(S.moves>=2?'no':'')+'">Moves used '+S.moves+' / 2</span>';
+ if(S.late)c+='<span class="chip warn">Starts in 2h · moves closed</span>';if(S.staff)c+='<span class="chip">Booked with our team</span>';c+='<span class="chip">TV message edited 2×</span>';$('chips').innerHTML=c;
  var b=$('a-move'),sub=$('a-move-sub');b.disabled=false;
  if(S.staff){sub.textContent='WhatsApp us to move this booking';b.onclick=function(){alert('Opens WhatsApp with the booking ref')}}
  else if(S.late){b.disabled=true;sub.textContent='Closed 3 hours before your start'}
  else if(S.moves>=2){sub.textContent='No moves left · WhatsApp us';b.onclick=function(){alert('Opens WhatsApp with the booking ref')}}
- else{sub.textContent=S.grace?'Free right now · price difference only':(S.moves?'Next move S$25 + any difference':'S$15 + any price difference');b.onclick=function(){go('pick');draw()}}
- var h=['<li>Booked online · Tue 10 Nov, 8:02pm <small>· paid $69.00 PayNow</small></li>'];
- if(S.moves>=1)h.push('<li>Moved Thu 12 → Fri 13 Nov · 8:10pm <small>· free (within 15 min)</small></li>');
- if(S.moves>=2)h.push('<li>Moved 2pm → 4pm · Wed 11 Nov <small>· S$15 fee</small></li>');
- h.push('<li>TV message added, edited 2× <small>· pops up 30 min in</small></li>');$('hist').innerHTML=h.join('');}
-function draw(){
- $('mon').textContent=monthOf(sel.day);
- var w0=Math.floor(sel.day/7)*7;if(sel.wk!=null)w0=sel.wk;sel.wk=w0;$('mon').textContent=monthOf(w0);$('wprev').disabled=w0<=0;$('wnext').disabled=w0+7>=60;
- $('days').innerHTML=days.slice(w0,w0+7).map(function(d,k){var i=w0+k,full=dayFull(i);return '<button class="day'+(i==sel.day?' on':'')+(full?' full':'')+'" onclick="sel.day='+i+';draw()">'+d.split(' ')[0]+'<br><b>'+d.split(' ')[1]+'</b></button>'}).join('');
- drawCal();
- if(busy(sel.day,sel.room).length===TS.length){var f=Object.keys(ROOMS).filter(function(r){return busy(sel.day,r).length<TS.length});if(f.length)sel.room=f[0]}
- $('rooms').innerHTML=Object.keys(ROOMS).map(function(r){var b=busy(sel.day,r),free=TS.length-b.length,why=free?free+' start times free · from $'+price(r,3):'Fully booked';return '<button class="rm'+(r==sel.room?' on':'')+'" '+(free?'':'disabled')+' onclick="sel.room=\''+r+'\';draw()" style="border-left:4px solid '+ROOMS[r][0]+'">'+r+'<small>'+why+'</small></button>'}).join('');
- var ts=TS,bz=busy(sel.day,sel.room);if(bz.indexOf(sel.t)>=0)sel.t=TS.filter(function(t){return bz.indexOf(t)<0})[0];
- $('slots').innerHTML=ts.map(function(t){var b=bz.indexOf(t)>=0;var n=+t.slice(0,2);var lab=((n+11)%12+1)+(t.slice(3)!='00'?':'+t.slice(3):'')+(n<12?'am':'pm');return '<button class="sl'+(t==sel.t?' on':'')+'" '+(b?'disabled':'')+' onclick="sel.t=\''+t+'\';draw()">'+lab+'</button>'}).join('');
- var mx=sel.t>='20:15'?3:sel.t>='19:00'?4:6;if(sel.h>mx)sel.h=mx;
- $('hrs').innerHTML=[3,4,5,6].map(function(h){return '<button class="hr'+(h==sel.h?' on':'')+'" '+(h>mx?'disabled':'')+' onclick="sel.h='+h+';draw()">'+h+'h</button>'}).join('');}
-function lab(t,h){var a=+t.slice(0,2),m=t.slice(3),e=a+h;function f(x,mm){return ((x+11)%12+1)+(mm!='00'?':'+mm:'')+(x%24<12?'am':'pm')}return f(a,m)+' – '+f(e%24,m)}
-$('toSum').onclick=function(){var fee=S.grace?0:(S.moves?25:15),np=price(sel.room,sel.h),diff=Math.max(0,np-69),tot=fee+diff;
- $('sum').innerHTML='<tr><td>From</td><td class="old">Vale · Fri 13 · 4pm – 7pm</td></tr><tr><td>To</td><td>'+sel.room+' · '+days[sel.day]+' · '+lab(sel.t,sel.h)+'</td></tr>'+
- '<tr><td>Change fee'+(S.grace?' <small style="color:#9be38f">(free · within 15 min)</small>':'')+'</td><td>$'+fee.toFixed(2)+'</td></tr><tr><td>Price difference<br><small style="color:var(--mu)">new $'+np.toFixed(2)+' − paid $69.00'+(np<69?' (no refund)':'')+'</small></td><td>$'+diff.toFixed(2)+'</td></tr><tr class="tot"><td>To pay</td><td>$'+tot.toFixed(2)+'</td></tr>';
- $('mvn').textContent=S.moves+1;$('pay').textContent=tot>0?'Pay $'+tot.toFixed(2)+' with HitPay':'Confirm move (free)';$('agree').checked=false;go('sum')};
-$('pay').onclick=function(){if(!$('agree').checked){alert('Tick the box first');return}$('d-room').textContent=sel.room;$('d-date').textContent=days[sel.day]+' '+monthOf(sel.day).charAt(0)+monthOf(sel.day).slice(1).toLowerCase();$('d-time').textContent=lab(sel.t,sel.h);
+ else{sub.textContent=S.grace?'Free right now · price difference only':(S.moves?'Next move S$25 + any difference':'S$15 + any price difference');b.onclick=function(){sel={day:o.day,room:o.room,t:o.t,h:o.h,wk:null};go('pick');draw()}}
+ var h=['<li>Booked online · Tue 10 Nov, 8:02pm <small>· paid '+money(o.paid)+' PayNow</small></li>'];
+ if(S.moves>=1)h.push('<li>Moved Thu 12 → Fri 13 Nov · 8:10pm <small>· free (within 15 min)</small></li>');if(S.moves>=2)h.push('<li>Moved 2pm → 4pm · Wed 11 Nov <small>· S$15 fee</small></li>');
+ h.push('<li>TV message added, edited 2× <small>· pops up 30 min in</small></li>');$('hist').innerHTML=h.join('')}
+function draw(){var o=O();
+ var w0=sel.wk==null?Math.floor(sel.day/7)*7:sel.wk;sel.wk=w0;$('mon').textContent=monthOf(w0);$('wprev').disabled=w0<=0;$('wnext').disabled=w0+7>=60;
+ $('days').innerHTML=days.slice(w0,w0+7).map(function(d,k){var i=w0+k,full=dayFull(i);return '<button class="day'+(i==sel.day?' on':'')+(full?' full':'')+'" onclick="sel.day='+i+';draw()">'+d.split(' ')[0]+'<br><b>'+d.split(' ')[1]+'</b><i>'+(full?'full':peak(i)?'peak':'off-peak')+'</i></button>'}).join('');drawCal();
+ if(!starts(sel.day,sel.room).length){var f=Object.keys(ROOMS).filter(function(r){return starts(sel.day,r).length});if(f.length)sel.room=f[0]}
+ $('rooms').innerHTML=Object.keys(ROOMS).map(function(r){var n=starts(sel.day,r).length,d=price(r,sel.day,sel.t===OPEN?OPEN:sel.t,o.h)-o.paid;
+  return '<button class="rm'+(r==sel.room?' on':'')+'" '+(n?'':'disabled')+' onclick="sel.room=\''+r+'\';draw()" style="border-left:4px solid '+ROOMS[r][0]+'">'+r+(r==o.room?' · yours':'')+'<small>'+(n?TYPE[ROOMS[r][1]]+' · '+n+' start times':'Fully booked')+'</small>'+(n?tag(d):'')+'</button>'}).join('');
+ var st=starts(sel.day,sel.room);if(st.indexOf(sel.t)<0)sel.t=st[0];
+ var html='';for(var hr=11;hr<=20;hr++){html+='<span class="hl">'+hm(hr*60)+'</span>';for(var q=0;q<4;q++){var t=hr*60+q*15;if(t>LAST){html+='<span></span>';continue}var ok=st.indexOf(t)>=0,mine=sel.day==o.day&&sel.room==o.room&&t==o.t;
+  html+='<button class="sl'+(t==sel.t?' on':'')+(mine?' mine':'')+'" '+(ok?'':'disabled')+' onclick="sel.t='+t+';draw()" title="'+hm(t)+'">:'+String(q*15).padStart(2,'0')+(t===OPEN?'<br><small style="font-size:10px">EB</small>':'')+'</button>'}}
+ $('slots').innerHTML=html;
+ var notes=[];$('hrs').innerHTML=[3,4,5,6].map(function(h){var f=fits(sel.day,sel.room,sel.t,h),d=price(sel.room,sel.day,sel.t,h)-o.paid,lbl;
+  if(f!==true){lbl=f==='past'?'past closing':'taken from '+hm(f);return '<button class="hr no" disabled><b>'+h+'h</b><small>'+lbl+'</small></button>'}
+  if(h<o.h)notes.push(h+'h is shorter than your '+o.h+'h booking: the hour you lose isn’t refunded.');
+  if(sel.h===h&&f!==true)sel.h=3;
+  return '<button class="hr'+(h==sel.h?' on':'')+'" onclick="sel.h='+h+';draw()"><b>'+h+'h</b><small class="'+(d>0.004?'up':d<-0.004?'dn':'eq')+'">'+(d>0.004?'+'+money(d):d<-0.004?'no refund':'same')+'</small></button>'}).join('');
+ if(fits(sel.day,sel.room,sel.t,sel.h)!==true)sel.h=3;
+ $('hrnote').innerHTML=(notes.length?notes.join(' '):'')+(sel.t===OPEN?' 11am start = Early bird rate.':'')}
+function drawCal(){var c=$('calv');if(c.classList.contains('hidden'))return;var m0=new Date(D0.getTime()+sel.wk*864e5),first=new Date(Date.UTC(m0.getUTCFullYear(),m0.getUTCMonth(),1,12)),pad=(first.getUTCDay()+6)%7,n=new Date(Date.UTC(m0.getUTCFullYear(),m0.getUTCMonth()+1,0)).getUTCDate(),h=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(x){return '<div class="h">'+x+'</div>'}).join('');for(var k=0;k<pad;k++)h+='<button class="cd" disabled></button>';for(var d=1;d<=n;d++){var i=Math.round((Date.UTC(first.getUTCFullYear(),first.getUTCMonth(),d,12)-D0)/864e5),ok=i>=0&&i<60,full=ok&&dayFull(i);h+='<button class="cd'+(i==sel.day?' on':'')+(full||!ok?' full':'')+'" '+(ok&&!full?'onclick="sel.day='+i+';sel.wk=Math.floor('+i+'/7)*7;toggleCal(false);draw()"':'')+'>'+d+'</button>'}c.innerHTML=h}
+function toggleCal(on){$('calv').classList.toggle('hidden',!on);$('days').classList.toggle('hidden',on);$('calb').classList.toggle('on',on);drawCal()}
+$('toSum').onclick=function(){var o=O(),fee=S.grace?0:(S.moves?25:15);
+ var T0=ROOMS[o.room][1],T1=ROOMS[sel.room][1],r0=rate(o.day,o.t),r1=rate(sel.day,sel.t);
+ var a=price(o.room,o.day,o.t,o.h),b=price(sel.room,o.day,o.t,o.h),c=price(sel.room,sel.day,sel.t,o.h),dd=price(sel.room,sel.day,sel.t,sel.h);
+ var rows=[],net=dd-a;
+ function line(label,sub,v){rows.push('<tr'+(v<-0.004?' class="nr"':'')+'><td>'+label+'<small>'+sub+'</small></td><td>'+(v>0.004?'+'+money(v):v<-0.004?'−'+money(v):'$0.00')+'</td></tr>')}
+ rows.push('<tr><td>From<small>'+o.room+' · '+days[o.day]+' · '+hm(o.t)+' – '+hm(o.t+o.h*60)+' · '+o.h+'h · paid '+money(o.paid)+'</small></td><td></td></tr>');
+ rows.push('<tr><td>To<small>'+sel.room+' · '+days[sel.day]+' · '+hm(sel.t)+' – '+hm(sel.t+sel.h*60)+' · '+sel.h+'h</small></td><td></td></tr>');
+ line('Change fee',S.grace?'free · within 15 min of booking':(S.moves?'2nd move':'1st move'),fee);
+ if(T0!==T1)line('Room: '+TYPE[T0]+' → '+TYPE[T1],b<a?'smaller room · not refunded':'bigger room',b-a);
+ if(r0!==r1||Math.abs(c-b)>0.004)line('Rate: '+rateName(r0)+' → '+rateName(r1),c<b?'cheaper day/time · not refunded':'dearer day/time',c-b);
+ if(sel.h!==o.h)line('Length: '+o.h+'h → '+sel.h+'h',sel.h<o.h?'shorter · not refunded':'extra time',dd-c);
+ var diff=Math.max(0,net),tot=fee+diff;
+ rows.push('<tr><td>Price difference overall<small>new '+money(dd)+' − paid '+money(o.paid)+(net<-0.004?' · cheaper overall, nothing refunded':'')+'</small></td><td>'+money(diff)+'</td></tr>');
+ rows.push('<tr class="tot"><td>To pay</td><td>'+money(tot)+'</td></tr>');
+ $('sum').innerHTML=rows.join('');$('mvn').textContent=S.moves+1;$('pay').textContent=tot>0?'Pay '+money(tot)+' with HitPay':'Confirm move (free)';$('agree').checked=false;go('sum')};
+$('pay').onclick=function(){if(!$('agree').checked){alert('Tick the box first');return}$('d-room').textContent=sel.room;$('d-date').textContent=days[sel.day]+' '+monthOf(sel.day).charAt(0)+monthOf(sel.day).slice(1).toLowerCase();$('d-time').textContent=hm(sel.t)+' – '+hm(sel.t+sel.h*60);
  $('d-left').textContent=S.moves+1>=2?'That was your last move. For anything else, WhatsApp us.':'You have 1 move left (S$25). Changes in the next 15 minutes are free of the change fee.';go('done')};
 $('wprev').onclick=function(){sel.wk=Math.max(0,sel.wk-7);draw()};$('wnext').onclick=function(){sel.wk=Math.min(56,sel.wk+7);draw()};$('calb').onclick=function(){toggleCal($('calv').classList.contains('hidden'))};
-$('state').onchange=state;state();
+$('state').onchange=state;$('olen').onchange=state;state();
 </script></body></html>
