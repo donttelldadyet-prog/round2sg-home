@@ -108,3 +108,12 @@ bookings never get $5. First run failed (8,624 losing moves, up to $51; 221 quie
 - Upgrade tolerance: a pricier slot counts as an upgrade if the move costs the shop ≤ $5.
 After: all checks pass (live calendar, 738k moves): fees $5 29% · $15 61% · $25 6% · $35 4%; 329 moves a few dollars short,
 none by more than $5. Build: the same test becomes a System check step for the engine.
+
+### Early bird by room + staff load (owner, 12 Nov – in the demo)
+- 11am early bird is the same price in every room, so guests take the big rooms first: filled on Max 74% of days, Kai 57%,
+  Atlas 41%, Bella 38%, Scarlett 33%, Vale 15% (Max booked first on most multi-booking mornings). Demand at 11am is per room.
+- 40% of all bookings end 2–2:30pm (the cleaning crunch after early birds). Staff-load nudge: a move whose session ends
+  while 2+ other rooms are turning over (+$6 per extra room) or lands back-to-back in its room (+$5) costs more; an end time
+  with nothing else turning over costs $5 less. Counted separately from lost sales (the "never loses money" check ignores it).
+  Aim (owner): spread turnovers so the team can clean the other rooms first and leave Vale/Atlas last.
+- "Quiet rooms" in the stress test are worked out from the data each run (not a fixed list) – if nudging fills Bella, Bella can reach $35.
