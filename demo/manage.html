@@ -116,7 +116,7 @@ $('toSum').onclick=function(){var fee=S.grace?0:(S.moves?25:15),np=price(sel.roo
  $('sum').innerHTML='<tr><td>From</td><td class="old">Vale · Fri 13 · 4pm – 7pm</td></tr><tr><td>To</td><td>'+sel.room+' · '+days[sel.day]+' · '+lab(sel.t,sel.h)+'</td></tr>'+
  '<tr><td>Change fee'+(S.grace?' <small style="color:#9be38f">(free · within 15 min)</small>':'')+'</td><td>$'+fee.toFixed(2)+'</td></tr><tr><td>Price difference<br><small style="color:var(--mu)">new $'+np.toFixed(2)+' − paid $69.00'+(np<69?' (no refund)':'')+'</small></td><td>$'+diff.toFixed(2)+'</td></tr><tr class="tot"><td>To pay</td><td>$'+tot.toFixed(2)+'</td></tr>';
  $('mvn').textContent=S.moves+1;$('pay').textContent=tot>0?'Pay $'+tot.toFixed(2)+' with HitPay':'Confirm move (free)';$('agree').checked=false;go('sum')};
-$('pay').onclick=function(){if(!$('agree').checked){alert('Tick the box first');return}$('d-room').textContent=sel.room;$('d-date').textContent=days[sel.day]+' November 2026';$('d-time').textContent=lab(sel.t,sel.h);
+$('pay').onclick=function(){if(!$('agree').checked){alert('Tick the box first');return}$('d-room').textContent=sel.room;$('d-date').textContent=days[sel.day]+' '+monthOf(sel.day).charAt(0)+monthOf(sel.day).slice(1).toLowerCase();$('d-time').textContent=lab(sel.t,sel.h);
  $('d-left').textContent=S.moves+1>=2?'That was your last move. For anything else, WhatsApp us.':'You have 1 move left (S$25). Changes in the next 15 minutes are free of the change fee.';go('done')};
 $('dpick').min='2026-11-12';$('dpick').max='2027-01-10';$('dpick').onchange=function(){var i=Math.round((new Date(this.value+'T12:00:00Z')-D0)/864e5);if(i>=0&&i<60){sel.day=i;draw()}};
 $('state').onchange=state;state();
