@@ -1,0 +1,116 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Manage booking · demo · Round2</title><meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>:root{--rc:#E8436A;--ri:#0b0914;--mu:#a79fbd;--ln:rgba(244,241,251,.14)}*{box-sizing:border-box}body{margin:0;background:#06050a;color:#f4f1fb;font:16px/1.5 'Chakra Petch',system-ui,sans-serif}
+main{max-width:520px;margin:0 auto;padding:18px 16px 60px}.px{font-family:'Press Start 2P',monospace;letter-spacing:.08em}.kick{font-size:9px;color:var(--mu)}
+h1{font-family:'Press Start 2P',monospace;font-size:17px;line-height:1.5;margin:8px 0 16px}h2{font:10px 'Press Start 2P',monospace;letter-spacing:.1em;color:var(--rc);margin:0 0 10px}
+.demo{background:#F2C21B;color:#0b0914;padding:8px 10px;font-size:13px;font-weight:600;margin-bottom:14px}.demo select{font:inherit;margin-left:6px;max-width:100%}
+.ticket{border:1px solid var(--ln);border-top:4px solid var(--rc);background:#0b0914;padding:16px 18px 12px}.room{font-size:26px;font-weight:700;color:var(--rc);margin:0}.type{font-size:12px;color:var(--mu);text-transform:uppercase;letter-spacing:.1em}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:14px 0 4px}dt{color:var(--mu);font-size:13px}dd{margin:0;font-weight:600}.big{font-size:20px}.ref{font:10px 'Press Start 2P',monospace}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.chip{font-size:12px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--ln);padding:3px 8px;color:#d6d0e3}.chip.ok{border-color:#4DB848;color:#9be38f}.chip.warn{border-color:#F2C21B;color:#F2C21B}.chip.no{border-color:#ff6b6b;color:#ff9b9b}
+.card{margin-top:14px;border:1px solid var(--ln);background:#0b0914;padding:16px 18px}.card p{margin:0 0 10px}.fine{font-size:12px;color:var(--mu);margin:8px 0 0!important}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.act{display:flex;flex-direction:column;gap:4px;text-align:left;padding:14px;border:1px solid var(--ln);background:#0b0914;color:#f4f1fb;font:inherit;cursor:pointer}
+.act b{font:9px 'Press Start 2P',monospace;letter-spacing:.08em;color:var(--rc)}.act span{font-size:13px;color:var(--mu)}.act.main{border-color:var(--rc)}.act[disabled]{opacity:.45;cursor:default}
+.btn{display:block;width:100%;text-align:center;padding:13px 14px;font:10px 'Press Start 2P',monospace;letter-spacing:.08em;background:var(--rc);color:var(--ri);border:0;margin-top:10px;cursor:pointer;text-decoration:none}.btn.ghost{background:transparent;color:#f4f1fb;border:1px solid var(--rc)}
+.hist li{margin:6px 0;font-size:14px}.hist{padding-left:18px;margin:0}.hist small{color:var(--mu)}
+.days{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}.day{flex:0 0 auto;padding:8px 10px;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:13px;cursor:pointer;text-align:center}.day.on{border-color:var(--rc);background:rgba(232,67,106,.12)}
+.rooms{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}.rm{padding:6px 10px;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:13px;cursor:pointer}.rm.on{border-color:#f4f1fb;background:#f4f1fb;color:#0b0914}
+.slots{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}.sl{padding:9px 0;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:14px;cursor:pointer}.sl.on{background:var(--rc);color:var(--ri);border-color:var(--rc)}.sl[disabled]{opacity:.3;text-decoration:line-through;cursor:default}
+.hrs{display:flex;gap:6px;margin-top:10px}.hr{flex:1;padding:9px 0;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:14px;cursor:pointer}.hr.on{border-color:var(--rc);color:var(--rc)}.hr[disabled]{opacity:.3}
+table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px dashed var(--ln);vertical-align:top}td:last-child{text-align:right;font-weight:600}tr.tot td{border:0;font-size:20px;font-weight:700}tr.tot td:last-child{color:var(--rc)}
+.old{text-decoration:line-through;color:var(--mu)}.chk{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:#d6d0e3;margin-top:12px}.back{background:none;border:0;color:var(--mu);font:inherit;cursor:pointer;padding:0;margin-bottom:8px}
+.stat{display:grid;grid-template-columns:1fr 1fr;gap:10px}.st{border:1px solid var(--ln);padding:12px}.st b{display:block;font-size:26px}.st span{font-size:12px;color:var(--mu);text-transform:uppercase;letter-spacing:.06em}
+.bar{display:grid;grid-template-columns:110px 1fr 36px;gap:8px;align-items:center;font-size:13px;margin:6px 0}.bar i{display:block;height:10px;background:var(--rc)}
+.hidden{display:none}</style></head><body><main>
+<div class="demo">DEMO · nothing is real here. Guest's situation:<select id="state">
+<option value="grace">Just booked (free change, 12 min left)</option><option value="normal" selected>Booked days ago, 0 moves used</option><option value="one">Moved once (next move S$25)</option><option value="none">Moved twice (no moves left)</option><option value="late">Starts in 2 hours (too late to move)</option><option value="staff">Booked by WhatsApp/staff</option><option value="owner">— Owner view: control centre stats —</option></select></div>
+
+<section id="s-home">
+<div class="px kick">SAVE FILE LOADED</div><h1>YOUR BOOKING</h1>
+<div class="ticket"><p class="room" id="t-room">Vale</p><div class="type">Netflix room</div>
+<dl><dt>Date</dt><dd id="t-date">Friday 13 November 2026</dd><dt>Time</dt><dd class="big" id="t-time">4pm – 7pm</dd><dt>Length</dt><dd id="t-len">3 hours</dd><dt>Name</dt><dd>Amanda</dd><dt>Guests</dt><dd>2</dd><dt>Paid</dt><dd id="t-paid">$69.00</dd><dt>Ref</dt><dd class="ref">R2B7Q4K2M9</dd></dl>
+<div class="chips" id="chips"></div></div>
+<div class="grid">
+<button class="act main" id="a-move"><b>RESCHEDULE</b><span id="a-move-sub">Change day, time, room or hours</span></button>
+<button class="act" onclick="go('tv')"><b>TV MESSAGE</b><span id="a-tv-sub">Happy birthday Jess! · edit</span></button>
+<button class="act" onclick="alert('Opens the payment receipt (built today: /receipt)')"><b>RECEIPT</b><span>Paid with PayNow · save PDF</span></button>
+<button class="act" onclick="alert('Downloads the calendar entry')"><b>CALENDAR</b><span>Add to your phone</span></button></div>
+<div class="card"><h2>RESCHEDULE RULES</h2><p style="font-size:14px">Bookings can’t be cancelled or refunded. You can reschedule up to <b>2 times</b>, until <b>3 hours before</b> your start, to any free slot: <b>S$15</b> the first time, <b>S$25</b> the second, plus any price difference. Changes within <b>15 minutes</b> of booking or of your last change have no change fee.</p></div>
+<div class="card"><h2>YOUR SAVE HISTORY</h2><ul class="hist" id="hist"></ul></div>
+<div class="card"><h2>ADDRESS</h2><p style="margin:0"><b>20 Haji Lane, #02-00</b><br><span class="fine" style="font-size:14px">Singapore 189213 · Bugis MRT Exit B · 6 min walk</span></p></div>
+<a class="btn ghost" href="#" onclick="return false">WhatsApp us</a>
+</section>
+
+<section id="s-pick" class="hidden"><button class="back" onclick="go('home')">‹ Back to your booking</button>
+<div class="px kick">STEP 1 OF 2</div><h1>PICK A NEW SLOT</h1>
+<div class="card" style="margin-top:0"><h2>DAY</h2><div class="days" id="days"></div>
+<h2 style="margin-top:14px">ROOM</h2><div class="rooms" id="rooms"></div>
+<h2 style="margin-top:6px">START</h2><div class="slots" id="slots"></div>
+<h2 style="margin-top:14px">HOURS</h2><div class="hrs" id="hrs"></div>
+<p class="fine">Only free times show. Your current slot stays yours until you’ve paid for the new one.</p></div>
+<button class="btn" id="toSum">Continue</button></section>
+
+<section id="s-sum" class="hidden"><button class="back" onclick="go('pick')">‹ Change slot</button>
+<div class="px kick">STEP 2 OF 2</div><h1>CONFIRM THE MOVE</h1>
+<div class="card" style="margin-top:0"><table id="sum"></table>
+<label class="chk"><input type="checkbox" id="agree"> I understand this booking still can’t be cancelled or refunded, and this uses move <span id="mvn"></span> of 2.</label></div>
+<button class="btn" id="pay">Pay</button><p class="fine">We hold the new slot for 10 minutes while you pay. Nothing changes until payment goes through.</p></section>
+
+<section id="s-done" class="hidden"><div class="px kick">SAVE FILE UPDATED</div><h1>YOU’RE MOVED!</h1>
+<div class="ticket"><p class="room" id="d-room"></p><dl><dt>Date</dt><dd id="d-date"></dd><dt>Time</dt><dd class="big" id="d-time"></dd></dl></div>
+<div class="card"><p>Your TV message moved with your booking. A new confirmation email is on its way.</p><p class="fine" id="d-left"></p></div>
+<button class="btn" onclick="go('home')">Back to your booking</button></section>
+
+<section id="s-tv" class="hidden"><button class="back" onclick="go('home')">‹ Back to your booking</button><div class="px kick">TV MESSAGE</div><h1>ON THE BIG SCREEN</h1>
+<div class="card" style="margin-top:0"><p><b>Happy birthday Jess!</b><br><span class="fine" style="font-size:14px">Pops up 30 minutes after you start · edited 2 times</span></p><button class="btn ghost">Change the message</button><p class="fine">You can change it until it pops up.</p></div></section>
+
+<section id="s-owner" class="hidden"><div class="px kick">CONTROL CENTRE · BOOKINGS › CHANGES</div><h1>LAST 30 DAYS</h1>
+<div class="stat"><div class="st"><b>14</b><span>Reschedules</span></div><div class="st"><b>S$273</b><span>Fees + differences</span></div><div class="st"><b>5</b><span>Free (15-min grace)</span></div><div class="st"><b>3</b><span>Moved by staff</span></div><div class="st"><b>38</b><span>TV message edits</span></div><div class="st"><b>2</b><span>Hit the 2-move cap</span></div></div>
+<div class="card"><h2>WHY THEY MOVED</h2>
+<div class="bar"><span>Later time</span><i style="width:80%"></i><span>6</span></div><div class="bar"><span>Other day</span><i style="width:53%"></i><span>4</span></div><div class="bar"><span>Bigger room</span><i style="width:27%"></i><span>2</span></div><div class="bar"><span>More hours</span><i style="width:27%"></i><span>2</span></div></div>
+<div class="card"><h2>LATEST CHANGES</h2><ul class="hist">
+<li>Amanda · Vale Fri 4pm → Kai Fri 5pm, 4h <small>· move 1 · S$15 + S$26.30 · guest</small></li>
+<li>Jun Wei · Bella Sat 2pm → Sat 8:15pm <small>· free (grace) · guest</small></li>
+<li>Priya · Atlas Sun → Max Sun <small>· move 1 · fee waived · staff (Aliff)</small></li>
+<li>Karen · TV message edited <small>· 3rd edit</small></li></ul>
+<p class="fine">Each booking card in the Bookings tab also shows "moves 1/2" and "message edited 2×".</p></div></section>
+</main>
+<script>
+var S={},sel={day:1,room:'Vale',t:'16:00',h:3};
+var ROOMS={Vale:['#E8436A','netflix'],Kai:['#24B49A','deluxe'],Bella:['#7A5BE0','deluxe'],Maximillion:['#E0402F','vip']};
+var BASE={netflix:[69,23,40.25,55.2],deluxe:[99,33,49.5,59.4],vip:[129,43,64.5,77.4]};
+function price(r,h){var p=BASE[ROOMS[r][1]];return h==3?p[0]:p[0]+p[h-3];}
+var days=['Thu 12','Fri 13','Sat 14','Sun 15','Mon 16','Tue 17','Wed 18'];
+function $(i){return document.getElementById(i)}
+function go(s){['home','pick','sum','done','tv','owner'].forEach(function(x){$('s-'+x).classList.toggle('hidden',x!==s)});scrollTo(0,0)}
+function state(){var v=$('state').value;
+ if(v==='owner'){go('owner');return}go('home');
+ S={moves:{grace:0,normal:0,one:1,none:2,late:0,staff:0}[v],grace:v==='grace',late:v==='late',staff:v==='staff'};
+ var c='';if(S.grace)c+='<span class="chip ok">Free change · 12:43 left</span>';
+ c+='<span class="chip '+(S.moves>=2?'no':'')+'">Moves used '+S.moves+' / 2</span>';
+ if(S.late)c+='<span class="chip warn">Starts in 2h · moves closed</span>';if(S.staff)c+='<span class="chip">Booked with our team</span>';
+ c+='<span class="chip">TV message edited 2×</span>';$('chips').innerHTML=c;
+ var b=$('a-move'),sub=$('a-move-sub');b.disabled=false;
+ if(S.staff){sub.textContent='WhatsApp us to move this booking';b.onclick=function(){alert('Opens WhatsApp with the booking ref')}}
+ else if(S.late){b.disabled=true;sub.textContent='Closed 3 hours before your start'}
+ else if(S.moves>=2){sub.textContent='No moves left · WhatsApp us';b.onclick=function(){alert('Opens WhatsApp with the booking ref')}}
+ else{sub.textContent=S.grace?'Free right now · price difference only':(S.moves?'Next move S$25 + any difference':'S$15 + any price difference');b.onclick=function(){go('pick');draw()}}
+ var h=['<li>Booked online · Tue 10 Nov, 8:02pm <small>· paid $69.00 PayNow</small></li>'];
+ if(S.moves>=1)h.push('<li>Moved Thu 12 → Fri 13 Nov · 8:10pm <small>· free (within 15 min)</small></li>');
+ if(S.moves>=2)h.push('<li>Moved 2pm → 4pm · Wed 11 Nov <small>· S$15 fee</small></li>');
+ h.push('<li>TV message added, edited 2× <small>· pops up 30 min in</small></li>');$('hist').innerHTML=h.join('');}
+function draw(){
+ $('days').innerHTML=days.map(function(d,i){return '<button class="day'+(i==sel.day?' on':'')+'" onclick="sel.day='+i+';draw()">'+d.split(' ')[0]+'<br><b>'+d.split(' ')[1]+'</b></button>'}).join('');
+ $('rooms').innerHTML=Object.keys(ROOMS).map(function(r){return '<button class="rm'+(r==sel.room?' on':'')+'" onclick="sel.room=\''+r+'\';draw()">'+r+'</button>'}).join('');
+ var ts=['11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','19:30','20:00','20:15'],busy={1:['13:00','14:00'],2:['17:00','18:00','19:00']};
+ $('slots').innerHTML=ts.map(function(t){var b=(busy[(sel.day+sel.room.length)%3]||[]).indexOf(t)>=0;var n=+t.slice(0,2);var lab=((n+11)%12+1)+(t.slice(3)!='00'?':'+t.slice(3):'')+(n<12?'am':'pm');return '<button class="sl'+(t==sel.t?' on':'')+'" '+(b?'disabled':'')+' onclick="sel.t=\''+t+'\';draw()">'+lab+'</button>'}).join('');
+ var mx=sel.t>='20:15'?3:sel.t>='19:00'?4:6;if(sel.h>mx)sel.h=mx;
+ $('hrs').innerHTML=[3,4,5,6].map(function(h){return '<button class="hr'+(h==sel.h?' on':'')+'" '+(h>mx?'disabled':'')+' onclick="sel.h='+h+';draw()">'+h+'h</button>'}).join('');}
+function lab(t,h){var a=+t.slice(0,2),m=t.slice(3),e=a+h;function f(x,mm){return ((x+11)%12+1)+(mm!='00'?':'+mm:'')+(x%24<12?'am':'pm')}return f(a,m)+' – '+f(e%24,m)}
+$('toSum').onclick=function(){var fee=S.grace?0:(S.moves?25:15),np=price(sel.room,sel.h),diff=Math.max(0,np-69),tot=fee+diff;
+ $('sum').innerHTML='<tr><td>From</td><td class="old">Vale · Fri 13 · 4pm – 7pm</td></tr><tr><td>To</td><td>'+sel.room+' · '+days[sel.day]+' · '+lab(sel.t,sel.h)+'</td></tr>'+
+ '<tr><td>Change fee'+(S.grace?' <small style="color:#9be38f">(free · within 15 min)</small>':'')+'</td><td>$'+fee.toFixed(2)+'</td></tr><tr><td>Price difference<br><small style="color:var(--mu)">new $'+np.toFixed(2)+' − paid $69.00'+(np<69?' (no refund)':'')+'</small></td><td>$'+diff.toFixed(2)+'</td></tr><tr class="tot"><td>To pay</td><td>$'+tot.toFixed(2)+'</td></tr>';
+ $('mvn').textContent=S.moves+1;$('pay').textContent=tot>0?'Pay $'+tot.toFixed(2)+' with HitPay':'Confirm move (free)';$('agree').checked=false;go('sum')};
+$('pay').onclick=function(){if(!$('agree').checked){alert('Tick the box first');return}$('d-room').textContent=sel.room;$('d-date').textContent=days[sel.day]+' November 2026';$('d-time').textContent=lab(sel.t,sel.h);
+ $('d-left').textContent=S.moves+1>=2?'That was your last move. For anything else, WhatsApp us.':'You have 1 move left (S$25). Changes in the next 15 minutes are free of the change fee.';go('done')};
+$('state').onchange=state;state();
+</script></body></html>
