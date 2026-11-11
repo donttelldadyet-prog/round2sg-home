@@ -94,8 +94,8 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 <p class="fine" style="margin:10px 0 6px!important">Counted from <b>now</b> to your <b>current</b> booking's start, at the moment you make the change:</p>
 <div class="rl"><span class="w g">3+ DAYS</span><span>Any free slot, any day</span><span class="w y">UNDER 3 DAYS</span><span>Any day, but start <b>2:15pm or later</b></span><span class="w o">UNDER 24 HRS</span><span>Same day only: later time, bigger room or more hours</span><span class="w r">UNDER 3 HRS</span><span>No changes</span></div>
 <p class="fine" style="margin:4px 0 6px!important">The change fee depends on how in demand your <b>new</b> slot is. You’ll see it on every room and time before you choose.</p>
-<div class="lvrow"><span class="lv" style="color:#4DB848;border-color:#4DB848">QUIET $15</span><span class="lv" style="color:#F2C21B;border-color:#F2C21B">REGULAR $25</span><span class="lv" style="color:#ff6b6b;border-color:#ff6b6b">PRIME $35</span></div>
-<p class="fine" style="margin:6px 0 8px!important">Busy rooms, evenings and dates that are filling fast are Prime. 2nd move <b>+$10</b>. Extra hours don’t change the fee.</p>
+<div class="lvrow"><span class="lv" style="color:#7fd3ff;border-color:#7fd3ff">UPGRADE $5</span><span class="lv" style="color:#4DB848;border-color:#4DB848">QUIET $15</span><span class="lv" style="color:#F2C21B;border-color:#F2C21B">REGULAR $25</span><span class="lv" style="color:#ff6b6b;border-color:#ff6b6b">PRIME $35</span></div>
+<p class="fine" style="margin:6px 0 8px!important"><b>Upgrade</b> = a pricier slot that’s quiet: $5 plus the difference. Busy rooms, evenings and dates that are filling fast are Prime. 2nd move <b>+$10</b>. Extra hours don’t change the fee.</p>
 <ul class="ic"><li><i style="color:#F2C21B">2×</i><span>Up to 2 moves per booking</span></li><li><i style="color:#7fd3ff">3h</i><span>Your new time must start at least 3 hours from now</span></li><li><i style="color:#ffb070">+$</i><span>New slot costs more: pay the difference</span></li><li><i style="color:#ff9b9b">−$</i><span>Costs less: no refund. Bookings can’t be cancelled.</span></li><li><i style="color:#9be38f">15m</i><span>No change fee within 15 min of booking</span></li></ul>
 </details>
 <p class="fine">Rescheduling is new. Tell us on WhatsApp if anything’s unclear.</p></div>
@@ -198,13 +198,15 @@ function r5(x){return Math.round(x/5)*5}
 var GRP={Vale:'busy',Scarlett:'busy',Kai:'busy',Bella:'quiet',Maximillion:'quiet',Atlas:'quiet',Kaeden:'quiet'};
 var RF={Vale:58/52.7,Scarlett:58/52.7,Kai:42/52.7,Bella:32/23.7,Maximillion:27/23.7,Atlas:12/23.7,Kaeden:1};   /* room vs its group (Kaeden: medium until it has data) */
 var PT={busy:{eb:[3,6,18,35],mid:[10,13,31,49],aft:[26,29,42,52],eve:[32,38,48,56]},quiet:{eb:[5,12,22,38],mid:[8,12,26,41],aft:[12,12,16,20],eve:[10,11,15,17]}};   /* at 6h,12h,24h,72h */
-var LV=[['QUIET',15,'#4DB848'],['REGULAR',25,'#F2C21B'],['PRIME',35,'#ff6b6b']];
+var LV=[['QUIET',15,'#4DB848'],['REGULAR',25,'#F2C21B'],['PRIME',35,'#ff6b6b'],['UPGRADE',5,'#7fd3ff']];
 function band(t){return t===OPEN?'eb':t<855?'mid':t<1035?'aft':'eve'}
 function pace(i){if(!useReal()||!REAL[i]||REAL[i]==='x')return [1,''];var tot=0,bz=0;['Vale','Scarlett','Kai','Bella','Maximillion','Atlas'].forEach(function(r){tot+=CLOSE+BUF-OPEN;REAL[i][r].forEach(function(x){bz+=Math.min(x[1],CLOSE+BUF)-Math.max(x[0],OPEN)})});var f=bz/tot,ld=i*1440+OPEN-NOW;if(ld>7*1440)return [1,''];return f>=.5?[1.25,'filling fast']:f<=.12?[.8,'quiet day']:[1,'']}
 function sellP(room,i,t,leadH){var a=PT[GRP[room]][band(t)],x=[6,12,24,72],p;if(leadH<=6)p=a[0]*Math.max(.5,leadH/6);else if(leadH>=72)p=a[3]*Math.min(1.19,1+.19*(leadH-72)/96);else{for(var k=0;k<3;k++)if(leadH<=x[k+1]){p=a[k]+(a[k+1]-a[k])*(leadH-x[k])/(x[k+1]-x[k]);break}}
  return Math.min(.95,p/100*RF[room]*(peak(i)?1.06:.97)*pace(i)[0])}
 function demand(i,room,t){var o=O(),lN=(i*1440+t-NOW)/60,lO=leadH(),vN=price(room,i,t,3),vO=price(o.room,o.day,o.t,3),cost=sellP(room,i,t,lN)*vN-sellP(o.room,o.day,o.t,lO)*vO-Math.max(0,vN-vO),lv=cost<=10?0:cost<=20?1:2;return {lv:lv,cost:cost,p:sellP(room,i,t,lN),why:pace(i)[1]}}
-function fee(t,i,room){if(S.grace)return 0;var f=t==null?15:LV[demand(i==null?sel.day:i,room||sel.room,t).lv][1];return f+(S.moves===1?10:0)}
+/* upgrade: the new slot costs more AND the move costs the shop nothing (they pay the difference) → $5. Early-bird bookings keep $15+ (owner: discourage). */
+function lvOf(i,room,t,h){var o=O(),d=demand(i,room,t);if(d.cost<=0&&!o.eb&&price(room,i,t,h||o.h)>o.paid+.004)return 3;return d.lv}
+function fee(t,i,room){if(S.grace)return 0;var f=t==null?(O().eb?15:5):LV[lvOf(i==null?sel.day:i,room||sel.room,t,sel.h)][1];return f+(S.moves===1?10:0)}
 function go(s){['home','pick','sum','done','tv','owner'].forEach(function(x){$('s-'+x).classList.toggle('hidden',x!==s)});scrollTo(0,0)}
 function tag(d){return d>0.004?'<em class="up">+'+money(d)+'</em>':d<-0.004?'<em class="dn">cheaper · no refund</em>':'<em class="eq">same price</em>'}
 function state(){var o=O(),st=stage();go('home');
@@ -225,7 +227,7 @@ function state(){var o=O(),st=stage();go('home');
  if(S.moves>=1)h.push('<li>Moved once · Wed 11 Nov <small>· fee paid</small></li>');if(S.moves>=2)h.push('<li>Moved again · Wed 11 Nov <small>· fee paid</small></li>');
  h.push('<li>TV message added <small>· pops up 30 min in</small></li>');$('hist').innerHTML=h.join('')}
 function want(){return sel.want!=null?sel.want:O().t}
-function lvchip(i,r,t){var d=demand(i,r,t),L=LV[d.lv];return '<span class="lv" style="color:'+L[2]+';border-color:'+L[2]+'">'+L[0]+' $'+L[1]+'</span>'}
+function lvchip(i,r,t){var L=LV[lvOf(i,r,t)];return '<span class="lv" style="color:'+L[2]+';border-color:'+L[2]+'">'+L[0]+' $'+L[1]+'</span>'}
 function near(a,t){if(!a.length)return null;if(t==null)return a[0];return a.reduce(function(b,x){return Math.abs(x-t)<Math.abs(b-t)?x:b},a[0])}
 function draw(){var o=O(),st=stage();
  $('rulenote').innerHTML={early:'Your session is <b>3+ days away</b>: any free slot.',late:'Your session is <b>under 3 days away</b>: new times from <b>2:15pm</b> only. 11am–2pm slots need 3+ days notice.',day:'Your session is <b>under 24 hours away</b>: <b>same-day upgrades only</b> (later time, bigger room or more hours).'}[st];
@@ -236,7 +238,7 @@ function draw(){var o=O(),st=stage();
   return '<button class="rm'+(r==sel.room?' on':'')+'" '+(n?'':'disabled')+' onclick="sel.room=\''+r+'\';draw()" style="border-left:4px solid '+ROOMS[r][0]+'">'+r+(r==o.room?' <span class="ytag">YOURS</span>':'')+'<small>'+(n?TYPE[ROOMS[r][1]]+' · '+n+' start times':'Fully booked')+'</small>'+(n?'<em class="at">at '+hm(tt)+'</em> '+lvchip(sel.day,r,tt)+' '+tag(d):'')+'</button>'}).join('');
  var stt=starts(sel.day,sel.room),lk=locked(sel.day,sel.room);if(stt.indexOf(sel.t)<0||sel.t!==near(stt,want()))sel.t=near(stt,want());
  var H=Math.floor((sel.t||OPEN)/60),hh='';for(var hr=11;hr<=20;hr++){var any=stt.some(function(t){return Math.floor(t/60)===hr}),lkh=!any&&lk.some(function(t){return Math.floor(t/60)===hr}),me=sel.day==o.day&&sel.room==o.room&&Math.floor(o.t/60)===hr;
-  var hs=stt.filter(function(t){return Math.floor(t/60)===hr}),hl=hs.length?demand(sel.day,sel.room,hs[0]).lv:-1;hh+='<button class="hc'+(hr===H?' on':'')+(me?' yours':'')+'" '+(hl>=0?'style="box-shadow:inset 0 -3px 0 '+LV[hl][2]+'" ':'')+(any?'':'disabled')+' onclick="pickH('+hr+')">'+hm(hr*60)+'<small>'+(lkh?'⌂ 3+ days':hr===11?'early bird':any?'':'full')+'</small></button>'}$('hrow').innerHTML=hh;
+  var hs=stt.filter(function(t){return Math.floor(t/60)===hr}),hl=hs.length?lvOf(sel.day,sel.room,hs[0]):-1;hh+='<button class="hc'+(hr===H?' on':'')+(me?' yours':'')+'" '+(hl>=0?'style="box-shadow:inset 0 -3px 0 '+LV[hl][2]+'" ':'')+(any?'':'disabled')+' onclick="pickH('+hr+')">'+hm(hr*60)+'<small>'+(lkh?'⌂ 3+ days':hr===11?'early bird':any?'':'full')+'</small></button>'}$('hrow').innerHTML=hh;
  var on=$('hrow').querySelector('.on');if(on)on.scrollIntoView({block:'nearest',inline:'center'});
  $('mins').innerHTML=[0,15,30,45].map(function(m){var t=H*60+m,ok=t<=LAST&&stt.indexOf(t)>=0,me=sel.day==o.day&&sel.room==o.room&&t===o.t;return '<button class="'+(t===sel.t?'on':'')+(me?' yours':'')+'" '+(ok?'':'disabled')+' onclick="sel.t=sel.want='+t+';draw()">'+hm(t)+'</button>'}).join('');
  $('stnote').textContent='';
@@ -251,7 +253,7 @@ function draw(){var o=O(),st=stage();
  if(isMine){$('live').innerHTML='<div class="note">This is your current slot. Pick a different day, room, time or length.</div>';$('toSum').disabled=true;$('toSum').style.opacity=.4}else{$('live').innerHTML=tickets(true);$('toSum').disabled=sel.t==null;$('toSum').style.opacity=1}}
 function pickH(hr){var st=starts(sel.day,sel.room).filter(function(t){return Math.floor(t/60)===hr});if(st.length)sel.t=sel.want=st.indexOf(hr*60)>=0?hr*60:st[0];draw()}
 function calc(){var o=O(),T0=ROOMS[o.room][1],T1=ROOMS[sel.room][1],r0=rate(o.day,o.t),r1=rate(sel.day,sel.t),a=o.paid,b=price(sel.room,o.day,o.t,o.h),c=price(sel.room,sel.day,sel.t,o.h),dd=price(sel.room,sel.day,sel.t,sel.h),L=[],F=fee(sel.t),st=stage();
- var DM=demand(sel.day,sel.room,sel.t);L.push(['Change fee',F?(LV[DM.lv][0].toLowerCase()+' slot'+(DM.why?' · '+DM.why:'')+(S.moves?' · 2nd move':'')):'free · within 15 min',F]);
+ var DM=demand(sel.day,sel.room,sel.t),LI=lvOf(sel.day,sel.room,sel.t,sel.h);L.push(['Change fee',F?((LI===3?'upgrade':LV[LI][0].toLowerCase()+' slot')+(DM.why?' · '+DM.why:'')+(S.moves?' · 2nd move':'')):'free · within 15 min',F]);
  if(T0!==T1)L.push(['Room: '+TYPE[T0]+' → '+TYPE[T1],b<a?'smaller room · not refunded':'bigger room',b-a]);
  if(r0!==r1||Math.abs(c-b)>0.004)L.push(['Rate: '+rateName(r0)+' → '+rateName(r1),c<b?'cheaper · not refunded':'this day/time costs more',c-b]);
  if(sel.h!==o.h)L.push(['Length: '+o.h+'h → '+sel.h+'h',sel.h<o.h?'shorter · not refunded':'extra time',dd-c]);
