@@ -715,6 +715,11 @@ export class HoldBook extends DurableObject {
   /* cancelled in SimplyBook → no longer shown in "View your booking", its /done and /b pages say so */
   /* the online booking behind a SimplyBook booking id: what the guest paid for */
   holdOfBid(bid) { const r = this.rows(`SELECT ref, data FROM holds WHERE status = 'paid' AND CAST(json_extract(data, '$.done.bookingId') AS TEXT) = ? LIMIT 1`, String(bid))[0]; return r ? { ref: r.ref, data: JSON.parse(r.data) } : null; }
+  holdMove(bid, q, rec) {   /* staff moved this booking: its booking page shows the new room and time (what was paid stays) */
+    const r = this.holdOfBid(bid); if (!r) return false; const d = r.data;
+    d.qWas = d.qWas || d.q; d.moves = (d.moves || []).concat([rec]); d.q = Object.assign({}, q, { total: d.q.total });
+    this.sql.exec(`UPDATE holds SET data = ?, date = ?, unit = ? WHERE ref = ?`, JSON.stringify(d), q.date, q.unit, r.ref); return true;
+  }
   cancelBid(bid) { this.sql.exec(`UPDATE holds SET status = 'cancelled' WHERE status = 'paid' AND CAST(json_extract(data, '$.done.bookingId') AS TEXT) = ?`, String(bid)); }
   /* SimplyBook told us a booking was made, changed or cancelled (/sb/notify): act now instead of waiting for a check */
   async onSb(bid, type) {
@@ -1847,6 +1852,201 @@ async function linkPair(env, hb, code, room, start, pair) {
   await hb.lPair(code, String(room || '').toLowerCase().replace('maximillion', 'max'), start, start + 3 * 3600e3, p);
   return pick ? pick.kind : 'waiting';
 }
+/* ===== Move a booking (owner, 12 Nov): staff move a guest's booking to another room / day / time from the control centre.
+   The fee is the same demand-based fee guests will see online (rescheduling plan, docs/rescheduling-plan.md): it depends on
+   how likely someone else would have booked the NEW slot (room × day × time × hours before × how full that room already is),
+   minus how likely the freed slot sells again, minus any price difference the guest pays. Levels: Upgrade $5 / $15 / $25 / $35;
+   the Vale/Atlas twin back-to-back in the same room goes one level up (owner: lets the used room be cleaned last).
+   Staff may lower or waive the fee (logged). Payment: PayNow QR shown in the control centre, a normal HitPay link to send on
+   WhatsApp, or "paid in shop" (Tap to Pay). The move itself = SimplyBook editBook, then the usual chain (Vale/Atlas block,
+   guest messages, Auto wrap-up) runs at once. Figures measured 12 Nov from bookings 1 Aug–10 Nov. */
+const MV_GRP = { 5: 'busy', 8: 'busy', 9: 'busy', 10: 'quiet', 11: 'quiet', 12: 'quiet', 7: 'quiet' };
+const MV_RF = { 5: 58 / 52.7, 8: 58 / 52.7, 9: 42 / 52.7, 10: 32 / 23.7, 11: 27 / 23.7, 12: 12 / 23.7, 7: 1 };
+const MV_RFEB = { 5: 15 / 35, 8: 33 / 35, 9: 57 / 35, 10: 38 / 51, 11: 74 / 51, 12: 41 / 51, 7: 1 };
+const MV_PT = { busy: { eb: [3, 6, 18, 35], mid: [10, 13, 31, 49], aft: [26, 29, 42, 52], eve: [32, 38, 48, 56] }, quiet: { eb: [5, 12, 22, 38], mid: [8, 12, 26, 41], aft: [12, 12, 16, 20], eve: [10, 11, 15, 17] } };
+const MV_AVGD = { 5: 1.36, 8: 1.54, 9: 1.14, 10: 0.83, 11: 0.98, 12: 0.57, 7: 0.9 };
+const MV_LV = [['quiet', 15], ['busy', 25], ['very busy', 35], ['upgrade', 5]];
+function mvBand(m) { return m === EB_START ? 'eb' : m < 855 ? 'mid' : m < 1035 ? 'aft' : 'eve'; }
+function mvShareBy(h) { const P = [[0, 1], [12, 0.7], [24, 0.56], [72, 0.31], [168, 0.15]]; if (h >= 168) return 0.15; for (let k = 0; k < 4; k++) if (h <= P[k + 1][0]) return P[k][1] + (P[k + 1][1] - P[k][1]) * (h - P[k][0]) / (P[k + 1][0] - P[k][0]); return 0.15; }
+/* how many guest bookings a room already has that day vs normal by now → ×1.25 (filling fast) / ×0.8 (quiet day) */
+function mvPace(D, unit, date, peak, now) {
+  const ld = (sgMs0(date + ' 11:00') - now) / 3600e3; if (ld > 7 * 24) return [1, ''];
+  const tw = unit === 5 || unit === 12, n = D.sessions.filter((S) => S.k === 'b' && !S.sys && (tw ? S.unit === 5 || S.unit === 12 : S.unit === unit)).length;
+  const exp = (tw ? MV_AVGD[5] + MV_AVGD[12] : MV_AVGD[unit]) * (peak ? 1.2 : 0.9) * mvShareBy(Math.max(0, ld)), r = (n + 0.5) / (exp + 0.5);
+  return n >= 1 && r >= 1.8 ? [1.25, ROOMS[unit][0] + ' filling fast'] : r <= 0.4 ? [0.8, 'quiet day for ' + ROOMS[unit][0]] : [1, ''];
+}
+function mvSell(unit, m, leadH, peak, pace, bd) {
+  const a = MV_PT[MV_GRP[unit]][bd || mvBand(m)], x = [6, 12, 24, 72]; let p;
+  if (leadH <= 6) p = a[0] * Math.max(0.5, leadH / 6); else if (leadH >= 72) p = a[3] * Math.min(1.19, 1 + 0.19 * (leadH - 72) / 96);
+  else for (let k = 0; k < 3; k++) if (leadH <= x[k + 1]) { p = a[k] + (a[k + 1] - a[k]) * (leadH - x[k]) / (x[k + 1] - x[k]); break; }
+  return Math.min(0.95, p / 100 * ((bd || mvBand(m)) === 'eb' ? MV_RFEB[unit] : MV_RF[unit]) * (peak ? 1.06 : 0.97) * pace);
+}
+const mvPrice3 = (type, peak, m) => { const P = PRICES[type]; return m === EB_START ? P.eb.base : P[peak ? 'peak' : 'off'].base; };
+/* expected value of a sale in that slot (11am = early bird; 11:15am–2pm part early bird, part afternoon; Vale+Atlas = one space) */
+function mvExpV1(unit, m, leadH, peak, pace) {
+  const t = ROOMS[unit][1], b = mvBand(m), eb = mvPrice3(t, peak, EB_START), full = mvPrice3(t, peak, Math.max(m, 855));
+  if (b === 'eb') { const q = mvSell(unit, m, leadH, peak, pace, 'eb'); return [q * eb, q]; }
+  if (b === 'mid') { const w = (m - 675) / (840 - 675), q1 = mvSell(unit, m, leadH, peak, pace, 'eb'), q2 = mvSell(unit, m, leadH, peak, pace, 'aft'); return [(1 - w) * q1 * eb + w * q2 * full, (1 - w) * q1 + w * q2]; }
+  const q = mvSell(unit, m, leadH, peak, pace); return [q * mvPrice3(t, peak, m), q];
+}
+function mvExpV(unit, m, leadH, peak, pace) { if (unit === 5 || unit === 12) { const v = mvExpV1(5, m, leadH, peak, pace), a = mvExpV1(12, m, leadH, peak, pace); return v[0] + (1 - v[1]) * a[0]; } return mvExpV1(unit, m, leadH, peak, pace)[0]; }
+/* the Vale/Atlas session just before or after the new one: in the same twin room (rushed turnaround) or the other one */
+function mvTwin(D, unit, s, e, skipKeys) {
+  if (unit !== 5 && unit !== 12) return '';
+  let same = false, other = false;
+  for (const x of D.items) {
+    if (x.k !== 'b' || x.sys || (x.unit !== 5 && x.unit !== 12) || skipKeys.has('b' + x.id)) continue;
+    const before = x.e <= s && s - x.e <= 30 * 60e3, after = x.s >= e && x.s - e <= 30 * 60e3;
+    if (before || after) { if (x.unit === unit) same = true; else other = true; }
+  }
+  return same ? 'same' : other ? 'other' : '';
+}
+async function mvBooking(env, bid) {
+  const b = await (await admin(env))('getBookingDetails', [String(bid)]).catch((e) => ({ err: String(e.message || e).slice(0, 120) }));
+  if (!b || b.err || !b.unit_id) throw new Error('Couldn’t read that booking from SimplyBook' + (b && b.err ? ': ' + b.err : '.'));
+  const st = String(b.start_date_time || ''), en = String(b.end_date_time || '');
+  if (String(b.is_confirm) === '0' && /cancel/i.test(String(b.status || ''))) throw new Error('That booking is cancelled.');
+  if (SYS_CLIENTS.includes(String(b.client_id))) throw new Error('That’s a Vale/Atlas SYSTEM BLOCK, not a guest booking.');
+  const s = sgMs0(st), e = sgMs0(en), hours = Math.round((e - s - BUF * 60e3) / 3600e3);
+  const fields = {}; for (const x of [].concat(b.additional_fields || [])) if (x && x.field_name) fields[x.field_name] = String(x.value != null ? x.value : '');
+  return { bid: String(b.id), code: String(b.code || ''), unit: +b.unit_id, cid: String(b.client_id), name: String(b.client_name || ''), event: String(b.event_id), date: st.slice(0, 10), time: st.slice(11, 16), s, e, hours, fields };
+}
+async function mvQuote(env, f) {
+  const hb = book(env), now = Date.now(), B = await mvBooking(env, f.bid);
+  if (B.s < now - 15 * 60e3) throw new Error('That session has already started.');
+  const hours = +f.hours || B.hours, unit = +f.unit || B.unit, date = /^\d{4}-\d\d-\d\d$/.test(f.date || '') ? f.date : B.date, time = /^\d\d:\d\d$/.test(f.time || '') ? f.time : B.time;
+  const q = await quote(env, { unit, date, time, hours });
+  const s = sgMs0(date + ' ' + time), e = s + hours * 3600e3 + BUF * 60e3;
+  if (s < now) throw new Error('That time has passed.');
+  if (unit === B.unit && date === B.date && time === B.time && hours === B.hours) throw new Error('That’s the booking as it is now.');
+  const D0 = await sessDay(env, sgDay(B.s - SHADOW_TILL * 60e3)), D1 = await sessDay(env, sgDay(s - SHADOW_TILL * 60e3));
+  const S = D0.sessions.find((x) => x.key === 'b' + B.bid);
+  if (S && S.ext.length) throw new Error('This booking has extension (EXT) notes – undo the +1h first (In session), move it, then add the hours again.');
+  /* anything in the way at the new time, apart from this booking and its own Vale/Atlas block */
+  const mir = await hb.kvGet('mir:' + B.bid), skip = new Set(['b' + B.bid].concat(mir && mir.blk ? ['b' + mir.blk] : []));
+  const twinBlk = (x) => x.k === 'b' && x.sys && (x.unit === 5 || x.unit === 12) && D0.items.concat(D1.items).some((y) => y.k === 'b' && y.id === B.bid && Math.abs(y.s - x.s) <= 5 * 60e3);
+  const tw = MIRROR[unit], clash = [];
+  for (const x of D1.items) {
+    if (x.unit !== unit && x.unit !== tw) continue;
+    if (skip.has(x.k + x.id) || twinBlk(x)) continue;
+    if (x.s < e && x.e > s) clash.push(ROOMS[x.unit][0] + ': ' + (x.k === 'b' ? (x.sys ? 'twin room booking' : 'booking ' + (x.name || 'guest')) : HOLD_RE.test(x.name || '') ? 'an online guest is paying for this time' : (x.blk ? 'room blocked' : 'note: ' + String(x.name || '').slice(0, 40))) + ' ' + clock12(x.s) + '–' + clock12(x.e));
+  }
+  const closeT = sgMs0(sgDay(s - SHADOW_TILL * 60e3) + ' ' + hhmm(CLOSE)); if (e - BUF * 60e3 > closeT + 60e3) clash.push('past closing time (11:15pm)');
+  /* the fee */
+  const ph = await holidays(), pk = (d) => { const w = new Date(d + 'T00:00:00Z').getUTCDay(); return w === 0 || w === 5 || w === 6 || ph.has(d); };
+  const oPeak = pk(B.date), held = await hb.holdOfBid(B.bid), oq = await quote(env, { unit: B.unit, date: B.date, time: B.time, hours: Math.min(6, Math.max(3, B.hours)) }).catch(() => null);
+  const paid = held && held.data && held.data.q ? +held.data.q.total : oq ? oq.total : 0;
+  const pN = mvPace(D1, unit, date, q.peak, now)[0], why = mvPace(D1, unit, date, q.peak, now)[1], pO = mvPace(D0, B.unit, B.date, oPeak, now)[0];
+  const lN = (s - now) / 3600e3, lO = (B.s - now) / 3600e3, m = mins(time), mO = mins(B.time);
+  const v3N = mvPrice3(ROOMS[unit][1], q.peak, m), v3O = mvPrice3(ROOMS[B.unit][1], oPeak, mO);
+  const money = mvExpV(unit, m, lN, q.peak, pN) - mvExpV(B.unit, mO, lO, oPeak, pO) - Math.max(0, v3N - v3O);
+  const twin = mvTwin(D1, unit, s, e, skip), eb = mO === EB_START;
+  let lv = money <= 10 ? 0 : money <= 20 ? 1 : 2;
+  if (twin === 'same') lv = Math.min(2, lv + 1);
+  else if (money <= (twin === 'other' ? 10 : 5) && !eb && q.total > paid + 0.004) lv = 3;
+  const diff = Math.max(0, Math.round((q.total - paid) * 100) / 100), fee = MV_LV[lv][1];
+  return { ok: !clash.length, clash, from: { bid: B.bid, code: B.code, room: ROOMS[B.unit][0], unit: B.unit, date: B.date, time: B.time, hours: B.hours, name: B.name, paid, online: !!held },
+    to: { room: q.room, unit, date, time, hours, end: q.end, price: q.total, peak: q.peak, earlyBird: q.earlyBird },
+    level: MV_LV[lv][0], fee, diff, total: Math.round((fee + diff) * 100) / 100, reason: [why, twin === 'same' ? 'same Vale/Atlas room straight after another session' : twin === 'other' ? 'other Vale/Atlas room – easy turnaround' : ''].filter(Boolean).join(' · '),
+    lostSales: Math.round(money * 100) / 100 };
+}
+/* do the move in SimplyBook (after payment, or waived / paid in shop) */
+async function mvExecute(env, mv, how) {
+  const hb = book(env);
+  if (!(await hb.claim('mvlock:' + mv.from.bid, 120e3))) return { error: 'Someone is moving this booking right now.' };
+  try {
+    const Q = await mvQuote(env, { bid: mv.from.bid, unit: mv.to.unit, date: mv.to.date, time: mv.to.time, hours: mv.to.hours });
+    if (!Q.ok) return { error: 'That time isn’t free any more: ' + Q.clash.join('; '), clash: Q.clash };
+    const B = await mvBooking(env, mv.from.bid), q = await quote(env, { unit: mv.to.unit, date: mv.to.date, time: mv.to.time, hours: mv.to.hours });
+    const a = await admin(env), eB = mins(q.time) + q.hours * 60 + BUF;
+    /* its own Vale/Atlas block goes first (else SimplyBook sees the twin room busy); put back if the move fails */
+    const mir = await hb.kvGet('mir:' + B.bid);
+    if (mir && mir.blk) { await a('cancelBooking', [mir.blk]).catch(() => null); await hb.kvSet('mir:' + B.bid, null); await hb.kvSet('mirb:' + mir.blk, null); }
+    const ed = await a('editBook', [B.bid, q.eventId, q.unit, B.cid, q.date, q.time + ':00', eB >= 1440 ? addDays(q.date, 1) : q.date, hhmm(eB % 1440) + ':00', 0, B.fields]).then(() => true).catch((e) => String(e.message || e).slice(0, 160));
+    await mirrorOnSb(env, B.bid, 'change').catch(() => null);   /* new block in the other twin (or the old one put back) */
+    if (ed !== true) return { error: 'SimplyBook didn’t take the move – the booking is unchanged: ' + ed };
+    const rec = { t: Date.now(), bid: B.bid, name: B.name, from: mv.from, to: { room: q.room, unit: q.unit, date: q.date, time: q.time, hours: q.hours }, level: mv.level, feeWas: mv.feeWas, fee: mv.fee, diff: mv.diff, total: mv.total, how, by: mv.by || '', why: mv.why || '', ref: mv.ref || '' };
+    await hb.holdMove(B.bid, q, rec).catch(() => null);   /* the guest's booking page shows the new room and time */
+    await hb.kvSet('gapc', {}).catch(() => null);
+    await hb.onSb(B.bid, 'change').catch(() => null);   /* guest TV messages follow */
+    await autoRun(env, 'moved').catch(() => null);
+    const L = (await hb.kvGet('mvlog')) || []; L.unshift(rec); await hb.kvSet('mvlog', L.slice(0, 300));
+    return { ok: true, moved: rec };
+  } finally { await hb.kvSet('mvlock:' + mv.from.bid, 0); }
+}
+async function mvPayStatus(env, mv) {
+  for (const p of mv.prs || []) {
+    const pr = await hitpay(envFor(env, 'live'), 'GET', '/payment-requests/' + p.id).catch(() => null);
+    const pays = (pr && pr.payments) || [], want = Math.round(mv.total * 100);
+    if (pr && (pr.status === 'completed' || pays.some((x) => /^(succeeded|completed|paid)$/i.test(String(x.status || '')) && Math.round(+x.amount * 100) === want))) return { paid: true, via: p.kind };
+  }
+  return { paid: false };
+}
+async function mvComplete(env, ref, source) {
+  const hb = book(env), mv = await hb.kvGet('mv:' + ref);
+  if (!mv) return { error: 'unknown move' };
+  if (mv.status === 'done') return { ok: true, already: true, moved: mv.result };
+  if (!(await hb.claim('mvdone:' + ref, 120e3))) return { busy: true };
+  const st = await mvPayStatus(env, mv); if (!st.paid) { await hb.kvSet('mvdone:' + ref, 0); return { paid: false }; }
+  const r = await mvExecute(env, mv, 'paid ' + (st.via || 'HitPay'));
+  mv.status = r.ok ? 'done' : 'failed'; mv.result = r.moved || null; mv.err = r.error || ''; await hb.kvSet('mv:' + ref, mv);
+  if (!r.ok) await humanAlert(env, 'move-' + ref, 'Paid move didn’t go through', `${mv.from.name || 'Guest'} paid $${mv.total.toFixed(2)} to move ${mv.from.room} ${mv.from.date} ${mv.from.time} → ${mv.to.room} ${mv.to.date} ${mv.to.time}, but: ${r.error}. Move it by hand or refund (HitPay). Ref ${ref}.`).catch(() => null);
+  return r;
+}
+async function mvApi(env, hb, f, origin) {
+  const act = f.action;
+  if (act === 'mvday') {   /* the guest bookings on a day (shop night) */
+    const day = /^\d{4}-\d\d-\d\d$/.test(f.day || '') ? f.day : sgDay(Date.now() - SHADOW_TILL * 60e3), D = await sessDay(env, day);
+    return { ok: true, day, list: D.sessions.filter((S) => S.k === 'b' && !S.sys).sort((a, b) => a.s - b.s).map((S) => ({ bid: S.key.slice(1), room: ROOMS[S.unit][0], unit: S.unit, name: S.name, s: S.s, guestEnd: S.guestEnd, ext: S.ext.length, started: S.s < Date.now() })) };
+  }
+  if (act === 'mvquote') return Object.assign({ ok: true }, await mvQuote(env, f));
+  if (act === 'mvfree') {   /* the free start times on a day for this booking (no extra SimplyBook calls: the day's notes + bookings) */
+    const B = await mvBooking(env, f.bid), hours = +f.hours || B.hours, date = f.date, D = await sessDay(env, date), mir = await hb.kvGet('mir:' + B.bid), out = {};
+    const skip = new Set(['b' + B.bid].concat(mir && mir.blk ? ['b' + mir.blk] : [])), now = Date.now();
+    for (const u of Object.keys(ROOMS).map(Number)) {
+      const tw = MIRROR[u], L = [];
+      for (let m = 660; m <= 1215; m += 15) {
+        const s = sgMs0(date + ' ' + hhmm(m)), e = s + hours * 3600e3 + BUF * 60e3; if (s < now + 15 * 60e3) continue;
+        if (m + hours * 60 > CLOSE) continue;
+        if (D.items.some((x) => (x.unit === u || x.unit === tw) && !skip.has(x.k + x.id) && !(x.k === 'b' && x.sys && D.items.some((y) => y.id === B.bid && Math.abs(y.s - x.s) <= 5 * 60e3)) && x.s < e && x.e > s)) continue;
+        L.push(m);
+      }
+      out[ROOMS[u][0]] = L;
+    }
+    return { ok: true, date, hours, free: out };
+  }
+  if (act === 'mvpay' || act === 'mvlink') {   /* PayNow QR (mvpay) or a normal payment link for WhatsApp (mvlink) */
+    const Q = await mvQuote(env, f); if (!Q.ok) return { error: 'Not free: ' + Q.clash.join('; ') };
+    const fee = f.fee != null && f.fee !== '' ? Math.max(0, Math.min(Q.fee, Math.round(+f.fee))) : Q.fee, total = Math.round((fee + Q.diff) * 100) / 100;
+    if (total < 1) return { error: 'Nothing to pay – use “Move now”.' };
+    let ref = String(f.ref || '').replace(/[^A-Z0-9]/g, ''), mv = ref ? await hb.kvGet('mv:' + ref) : null;
+    if (!mv || mv.status !== 'pending' || mv.total !== total || mv.to.unit !== Q.to.unit || mv.to.date !== Q.to.date || mv.to.time !== Q.to.time) {
+      ref = 'MV' + crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase();
+      mv = { ref, status: 'pending', t: Date.now(), from: Q.from, to: Q.to, level: Q.level, feeWas: Q.fee, fee, diff: Q.diff, total, by: String(f.by || '').slice(0, 30), why: String(f.why || '').slice(0, 120), prs: [] };
+    }
+    const e = envFor(env, 'live'), when = new Date(Q.to.date + 'T00:00:00Z').toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+    const form = { amount: total.toFixed(2), currency: 'SGD', purpose: `Round2 move → ${Q.to.room} · ${when} ${Q.to.time} (fee $${fee}${Q.diff ? ' + $' + Q.diff.toFixed(2) + ' difference' : ''})`, reference_number: ref + (act === 'mvpay' ? 'Q' : 'L'), webhook: `${origin}/move/hitpay`, name: Q.from.name || 'Round2 guest' };
+    if (act === 'mvpay') { form['payment_methods[]'] = 'paynow_online'; form.generate_qr = 'true'; }
+    const pr = await hitpay(e, 'POST', '/payment-requests', form);
+    mv.prs.push({ id: pr.id, kind: act === 'mvpay' ? 'PayNow QR' : 'link' }); await hb.kvSet('mv:' + ref, mv);
+    return { ok: true, ref, total, fee, diff: Q.diff, url: pr.url, qr: act === 'mvpay' ? (pr.qr_code_data && pr.qr_code_data.qr_code) || null : null };
+  }
+  if (act === 'mvstatus') {   /* the control centre asks every few seconds while the QR is up */
+    const ref = String(f.ref || '').replace(/[^A-Z0-9]/g, ''), mv = await hb.kvGet('mv:' + ref); if (!mv) return { error: 'Unknown move.' };
+    if (mv.status === 'pending') { const r = await mvComplete(env, ref, 'poll'); const m2 = await hb.kvGet('mv:' + ref); return { ok: true, status: m2.status, moved: m2.result, err: m2.err || r.error || '' }; }
+    return { ok: true, status: mv.status, moved: mv.result, err: mv.err || '' };
+  }
+  if (act === 'mvnow') {   /* waived, nothing to pay, or paid in shop (Tap to Pay) */
+    const Q = await mvQuote(env, f); if (!Q.ok) return { error: 'Not free: ' + Q.clash.join('; ') };
+    const fee = f.fee != null && f.fee !== '' ? Math.max(0, Math.min(Q.fee, Math.round(+f.fee))) : Q.fee, total = Math.round((fee + Q.diff) * 100) / 100;
+    const how = f.how === 'shop' ? 'paid in shop' : total < 0.01 ? (Q.fee && !fee ? 'waived' : 'nothing to pay') : '';
+    if (!how) return { error: 'There’s $' + total.toFixed(2) + ' to pay – show the QR, send a link, or tick “Paid in shop”.' };
+    if (f.how !== 'shop' && fee < Q.fee && !String(f.why || '').trim()) return { error: 'Say why the fee is waived (one line).' };
+    return mvExecute(env, { from: Q.from, to: Q.to, level: Q.level, feeWas: Q.fee, fee, diff: Q.diff, total, by: String(f.by || '').slice(0, 30), why: String(f.why || '').slice(0, 120) }, how);
+  }
+  if (act === 'mvlog') return { ok: true, list: ((await hb.kvGet('mvlog')) || []).slice(0, Math.min(300, +f.n || 100)) };
+  return null;
+}
 async function gm(env, req) {
   const f = Object.fromEntries(new URLSearchParams(await req.text()));
   const act = String(f.action || ''), who = req.headers.get('cf-connecting-ip') || 'x', hb = book(env); sbWho = 'gm ' + act.slice(0, 16);
@@ -1854,6 +2054,10 @@ async function gm(env, req) {
   /* wrong staff codes are counted for every staff action (overnight review 5 Nov: only some were). The right code is never
      slowed down, so a phone with an old code can't lock anyone else out on the shop wifi. */
   if (!guest && (!env.GM_STAFF || f.staff !== env.GM_STAFF) && !(await hb.gmRate('gmbad:' + who, 60))) return gmJ({ error: 'Too many wrong staff codes from here. Wait 10 minutes.' });
+  if (/^mv(day|quote|free|pay|link|status|now|log)$/.test(act)) {   /* staff: Move a booking (control centre › Bookings) */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    try { return gmJ(await mvApi(env, hb, f, new URL(req.url).origin)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
+  }
   if (act === 'queue') {   /* staff: what the timer will send, and the last send */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     if (f.sync) await gmList(env, hb);
@@ -3187,6 +3391,13 @@ const HANDLER = {
       if (u.pathname === '/checkout' && req.method === 'POST') return J(await checkout(env, await req.json(), u.origin));
       if (u.pathname === '/agree' && req.method === 'POST') { const { ref } = await req.json(); return J({ ok: await book(env).agree(String(ref || '').replace(/[^A-Z0-9]/g, '')) }); }
       if (u.pathname === '/release' && req.method === 'POST') { const { ref, why } = await req.json(); const r = await safeRelease(env, String(ref || '').replace(/[^A-Z0-9]/g, ''), ['payback', 'cancel', 'timeout'].includes(why) ? why : 'left'); return J(r); }
+      if (u.pathname === '/move/hitpay' && req.method === 'POST') {   /* a staff move paid by PayNow QR or link */
+        const raw = await req.text(), sig = req.headers.get('Hitpay-Signature') || '';
+        if ((await hmacHex(envFor(env, 'live').HITPAY_SALT, raw)) !== sig && (await hmacHex(envFor(env, 'test').HITPAY_SALT, raw)) !== sig) return J({ error: 'bad signature' }, 401);
+        const p = JSON.parse(raw), ref = String(p.reference_number || '').replace(/[QL]$/, '');
+        if (p.status === 'completed' && /^MV[A-Z0-9]{8}$/.test(ref)) return J(await mvComplete(env, ref, 'webhook'));
+        return J({ ignored: p.status });
+      }
       if (u.pathname === '/hitpay' && req.method === 'POST') {
         const raw = await req.text(), sig = req.headers.get('Hitpay-Signature') || '';
         if ((await hmacHex(envFor(env, 'live').HITPAY_SALT, raw)) !== sig && (await hmacHex(envFor(env, 'test').HITPAY_SALT, raw)) !== sig) return J({ error: 'bad signature' }, 401);
