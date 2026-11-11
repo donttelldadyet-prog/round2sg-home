@@ -69,6 +69,7 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 <option value="5">Maximillion (VIP) · Thu 12 Nov · 8:15pm · $109 · 2 hours away</option>
 </select></label>
 <label>Moves so far: <select id="mv"><option value="0">None</option><option value="g">Just booked (free 15 min)</option><option value="1">Moved once</option><option value="2">Moved twice</option></select></label>
+<label><input type="checkbox" id="real" checked onchange="refresh()"> Real calendar (read-only) <small id="realst" style="opacity:.7">Loading…</small></label>
 <label><input type="checkbox" id="wa"> Booked by WhatsApp (staff sent the link)</label>
 <label><button id="ownerb" style="font:inherit;margin-top:4px">Owner view: beta stats</button></label></div>
 
@@ -152,7 +153,19 @@ function O(){var b=BK[+$('bk').value];return {room:b.room,day:b.day,t:b.t,h:b.h,
 function leadH(){var o=O();return (o.day*1440+o.t-NOW)/60}
 function stage(){var L=leadH();return L<3?'closed':L<24?'day':L<72?'late':'early'}
 /* demo bookings (with cleaning) per room/day; Kaeden full; the guest's own booking never in the way */
-function taken(i,room){if(room==='Kaeden')return [[OPEN,CLOSE+BUF]];var h=0,str=room+i;for(var k=0;k<str.length;k++)h=(h*31+str.charCodeAt(k))%9973;if(h%13===0)return [[OPEN,CLOSE+BUF]];var out=[],n=h%3;for(var j=0;j<n;j++){var st=OPEN+15*((h>>(j*3))%20)+j*360;if(st>LAST)continue;out.push([st,st+180+BUF])}
+function fakeTaken(i,room){if(room==='Kaeden')return [[OPEN,CLOSE+BUF]];var h=0,str=room+i;for(var k=0;k<str.length;k++)h=(h*31+str.charCodeAt(k))%9973;if(h%13===0)return [[OPEN,CLOSE+BUF]];var out=[],n=h%3;for(var j=0;j<n;j++){var st=OPEN+15*((h>>(j*3))%20)+j*360;if(st>LAST)continue;out.push([st,st+180+BUF])}
+ var o=O();if(room===o.room&&i===o.day)out=out.filter(function(x){return !(x[0]<o.t+o.h*60+BUF&&x[1]>o.t)});if(i===0)out.push([OPEN,NOW+180]);return out.sort(function(a,b){return a[0]-b[0]})}
+/* REAL CALENDAR: read-only free starts from the engine's public /day (same as book.round2.sg), turned into busy blocks */
+var ENG='https://round2-book.donttelldadyet.workers.dev',UNIT={5:'Vale',7:'Kaeden',8:'Scarlett',9:'Kai',10:'Bella',12:'Atlas',11:'Maximillion'},REAL={},RQ={},RT=null;
+function useReal(){var c=$('real');return !c||c.checked}
+function iso(i){return new Date(D0.getTime()+i*864e5).toISOString().slice(0,10)}
+function busyFrom(starts){var free=[],cur=null;(starts||[]).map(function(x){return x.m}).sort(function(a,b){return a-b}).forEach(function(m){if(cur&&m===cur[2]+15)cur[2]=m;else{cur=[m,0,m];free.push(cur)}});
+ var busy=[],pe=OPEN;free.forEach(function(f){var a=f[0],b=f[2]+180+BUF;if(a>pe)busy.push([pe,a]);pe=b});if(pe<CLOSE+BUF)busy.push([pe,CLOSE+BUF]);return busy}
+function loadDay(i){if(REAL[i]||RQ[i])return;RQ[i]=1;fetch(ENG+'/day?date='+iso(i)).then(function(r){return r.json()}).then(function(d){if(d.failed||!d.rooms)throw 0;var o={};for(var u in UNIT)o[UNIT[u]]=busyFrom(d.rooms[u]);REAL[i]=o;RT=new Date()}).catch(function(){REAL[i]='x'}).then(function(){clearTimeout(loadDay.t);loadDay.t=setTimeout(refresh,120)})}
+function refresh(){var h=$('realst');if(h){var n=Object.keys(REAL).length,bad=Object.keys(REAL).filter(function(k){return REAL[k]==='x'}).length;h.textContent=useReal()?(n?'Live · '+(n-bad)+' days loaded'+(bad?' · '+bad+' failed':'')+(RT?' · '+RT.toLocaleTimeString('en-SG',{hour:'numeric',minute:'2-digit',timeZone:'Asia/Singapore'}):''):'Loading…'):'Made-up bookings'}
+ var vis=function(id){var e=$(id);return e&&!e.classList.contains('hidden')};if(vis('s-pick'))draw();else if(vis('s-home'))state()}
+for(var k0=0;k0<14;k0++)loadDay(k0);
+function taken(i,room){var out;if(useReal()){if(REAL[i]&&REAL[i]!=='x')out=REAL[i][room].map(function(x){return x.slice()});else{loadDay(i);return [[OPEN,CLOSE+BUF]]}}else return fakeTaken(i,room);
  var o=O();if(room===o.room&&i===o.day)out=out.filter(function(x){return !(x[0]<o.t+o.h*60+BUF&&x[1]>o.t)});if(i===0)out.push([OPEN,NOW+180]);return out.sort(function(a,b){return a[0]-b[0]})}
 function fits(i,room,t,h){var e=t+h*60;if(e>CLOSE)return 'past';var bz=taken(i,room);for(var k=0;k<bz.length;k++){if(t<bz[k][1]&&e+BUF>bz[k][0])return bz[k][0]}return true}
 function deadGap(i,room,t,h){/* blocks a move only if it leaves fewer sellable 3h sessions than that free stretch could hold before */var bz=taken(i,room),e=t+h*60+BUF,pe=OPEN,ns=CLOSE+BUF,U=180+BUF;bz.forEach(function(x){if(x[1]<=t&&x[1]>pe)pe=x[1];if(x[0]>=e&&x[0]<ns)ns=x[0]});var before=Math.floor((ns-pe)/U),after=1+Math.floor((t-pe)/U)+Math.floor((ns-e)/U);return after<before}
