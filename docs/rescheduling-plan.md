@@ -51,9 +51,10 @@ early bird 33% weekday / 44% weekend (most filled). Engine read: gm `bookstats` 
 - Max 2 moves. Under 3 h before, during and after: closed. Under 24 h: same-day upgrades only (later time, bigger room, more hours).
 - Protected window: starts 11am–2pm (early bird + its block). Moving INTO it only 3+ days ahead. 2:15pm+ any time (rules above).
 - Fee (12 Nov, replaces 30%/40%): $5 (3+ days ahead) or $10 (under 3 days) + 10% of the 3-hour price of the current booking
-  (extra hours not counted), rounded to $5; +$5 if the current booking is Fri–Sun and the move is under 3 days; early bird
-  $10 flat; 2nd move +$10. In dollars (3+ days / under 3 days, Fri–Sun under 3 days): Early bird $10/$10 · Netflix $10/$15
-  ($20) · Deluxe $15/$20 ($25) · VIP $15 (Fri–Sun $20)/$20 ($30). Every move profits by the measured resale figures below.
+  (extra hours not counted), rounded to $5; +$5 if the current booking is Fri–Sun and the move is under 3 days; lowest fee
+  $15 (owner, 12 Nov – early bird $15 flat, to discourage early-bird moves); 2nd move +$10. In dollars (3+ days / under 3 days,
+  Fri–Sun under 3 days in brackets): Early bird $15/$15 · Netflix $15/$15 ($20) · Deluxe $15/$20 ($25) · VIP $15 (Fri–Sun
+  $20)/$20 ($30). Every move profits by the measured resale figures below.
 - Price: new slot dearer → pay the difference (net, option a); cheaper → no refund. EB price kept only if it stays at 11am.
 - 15-min grace: no fee within 15 min of booking or of the last move; differences still paid.
 - Which rule applies is set by how far away the CURRENT booking is at the moment of the change (not where it moves to).
