@@ -757,6 +757,7 @@ class Component extends DCLogic {
       css.textContent = def.css;
       document.documentElement.className = m === 'd' ? 'r2-desktop' : 'r2-mobile';
       stage.innerHTML = '';
+      stage.style.transform = '';   /* the desktop zoom must not stay on when the window shrinks to the phone layout */
       unmount = mount(def, stage);
     }
     fit();
