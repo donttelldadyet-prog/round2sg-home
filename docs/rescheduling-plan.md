@@ -166,5 +166,7 @@ mvstatus (the page polls; completes the move when paid) · mvnow (waived / nothi
 Webhook /move/hitpay (signed) completes paid moves even if the page is closed. The move: cancel its own Vale/Atlas block →
 SimplyBook editBook (new service for off-peak/peak/early bird, unit, times, same guest + fields) → mirror re-blocks → guest
 messages follow (onSb) → Auto wrap-up → the guest's online booking record shows the new room/time (paid amount kept) →
-mvlog. Paid but failed → staff alert (move by hand or refund). Bookings with +h EXT notes: undo first (not handled yet).
+mvlog. Paid but failed → staff alert (move by hand or refund). +h (EXT) extensions move with the booking (owner, 12 Nov):
+free check covers the extra time, the EXT note moves to the new room/time with its text rewritten ("EXT till … · name"),
+the Vale/Atlas twin EXT note is redone; if the note can't follow, the move stands and staff get an alert.
 Control centre: top tab "In session" renamed Bookings; pages In session · Add a session · Move a booking · Rescheduling.
