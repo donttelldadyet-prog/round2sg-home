@@ -867,5 +867,50 @@ class Component extends DCLogic {
   addEventListener('pagehide', function () { flush(true); live(true); });
 })();
 </script>
+<script>
+/* ===== LOAD SAVE + SAVE FOUND (owner, 12 Nov 2026; live) =====
+   "Already booked? ▣ LOAD SAVE ›" under the two buttons → the guest's booking (this phone remembers it) or View your booking.
+   A room-coloured "SAVE FOUND · Vale · Sat 28 Nov · 4:30pm – 7:30pm · Manage ›" strip under the header when this phone has
+   opened an upcoming booking before (book.round2.sg › save.html keeps it in this phone's storage). */
+(function () {
+  var BOOK = 'https://book.round2.sg', PX = "font-family:'Press Start 2P',monospace;";
+  function hm(t) { var h = +t.slice(0, 2), m = +t.slice(3, 5); return ((h + 11) % 12 + 1) + (m ? ':' + String(m).padStart(2, '0') : '') + (h % 24 < 12 ? 'am' : 'pm'); }
+  function save() {
+    try { var all = JSON.parse(localStorage.getItem('r2.saves') || '{}'), now = Date.now(), best = null;
+      for (var k in all) { var x = all[k]; if (x && x.endMs > now && (!best || x.startMs < best.startMs)) best = x; }
+      return best; } catch (e) { return null; }
+  }
+  function apply() {
+    var stage = document.getElementById('r2-stage'); if (!stage) return;
+    var mob = document.documentElement.className === 'r2-mobile', sv = save();
+    var href = sv ? BOOK + '/done?ref=' + sv.ref : BOOK + '/find';
+    stage.querySelectorAll('button').forEach(function (b) {
+      if (!/^\s*pick a room\s*$/i.test(b.textContent)) return;
+      var row = b.parentElement; if (row.nextElementSibling && row.nextElementSibling.className === 'r2-ls') { row.nextElementSibling.href = href; return; }
+      var a = document.createElement('a'); a.className = 'r2-ls'; a.href = href; a.target = '_top';
+      a.style.cssText = 'display:flex;justify-content:center;align-items:center;gap:10px;margin-top:' + (mob ? 10 : 14) + 'px;padding:' + (mob ? 8 : 10) + 'px 0;text-decoration:none;color:#b9b0cf;font-size:' + (mob ? 12 : 13) + 'px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;border-top:1px dashed rgba(244,241,251,.18)';
+      a.innerHTML = '<span>Already booked?</span><span style="' + PX + 'font-size:' + (mob ? 8 : 9) + 'px;color:var(--r2-accent)">▣ LOAD SAVE ›</span>';
+      row.parentNode.insertBefore(a, row.nextSibling);
+    });
+    if (sv && !stage.querySelector('.r2-sf')) {
+      var hd = stage.querySelector('header'); if (!hd) return;
+      var d = new Date(sv.date + 'T12:00:00Z'), day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getUTCMonth()];
+      var esc = function (x) { return String(x).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+      var col = /^#[0-9a-f]{6}$/i.test(sv.c) ? sv.c : '#F2C21B', ink = /^#[0-9a-f]{6}$/i.test(sv.i) ? sv.i : '#0b0914';
+      var c = document.createElement('a'); c.className = 'r2-sf'; c.href = BOOK + '/done?ref=' + sv.ref; c.target = '_top';
+      var top = hd.offsetTop + hd.offsetHeight + (mob ? 10 : 14);
+      c.style.cssText = 'position:absolute;z-index:5;top:' + top + 'px;' + (mob ? 'left:16px;right:16px;' : 'left:56px;width:620px;') +
+        'display:flex;align-items:center;gap:' + (mob ? 10 : 16) + 'px;padding:' + (mob ? '8px 8px 8px 12px' : '10px 10px 10px 16px') + ';background:rgba(10,8,18,.82);backdrop-filter:blur(10px);border:1px solid ' + col + ';border-left-width:4px;text-decoration:none;color:#f4f1fb;font-family:"Chakra Petch",sans-serif';
+      c.innerHTML = '<div style="flex:1;min-width:0"><div style="' + PX + 'font-size:' + (mob ? 7 : 8) + 'px;letter-spacing:.14em;color:' + col + '">SAVE FOUND</div>' +
+        '<div style="font-size:' + (mob ? 14 : 16) + 'px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px">' + esc(sv.room) + ' <span style="font-weight:500;color:#d6d0e3;text-transform:none">· ' + day + ' · ' + hm(sv.time) + ' – ' + hm(sv.end) + '</span></div></div>' +
+        '<span style="flex:0 0 auto;display:flex;align-items:center;height:' + (mob ? 36 : 40) + 'px;padding:0 ' + (mob ? 12 : 18) + 'px;background:' + col + ';color:' + ink + ';font-weight:700;font-size:' + (mob ? 12 : 13) + 'px;letter-spacing:.12em;text-transform:uppercase">Manage ›</span>';
+      stage.appendChild(c);
+    }
+  }
+  var st = document.getElementById('r2-stage'); if (!st) return;
+  new MutationObserver(function () { clearTimeout(apply.t); apply.t = setTimeout(apply, 30); }).observe(st, { childList: true, subtree: true });
+  apply();
+})();
+</script>
 </body>
 </html>
