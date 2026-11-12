@@ -33,6 +33,46 @@
 > **7. Checks.** System check steps: "Guest rescheduling: page, rules and fees" and "Add a session: daytime with a mobile = real
 >   booking, late = note". Deploy: r2-deploy-helper cron fetches the commit into KV, verify SHA-256, PUT with keep_bindings.
 
+> ## Session log – 12 Nov 2026 (owner + Claude): guest rescheduling launch, start to finish
+> In order, so the next person sees why things are the way they are:
+> 1. **SimplyBook emails** (Settings › Email & SMS › templates, edited in the browser): Booking confirmation, Booking change and
+>    Reminder (client email) now use the MANAGE YOUR BOOKING button picture (email/btn-manage.png) and a big **Name** row at the top
+>    of the details box. Confirmation also says "Tap Manage your booking above to reschedule – up to 2 times, until 3 hours before
+>    your session. A small change fee applies." + "Your receipt: book.round2.sg/r/[code]". (A WhatsApp link was tried first and
+>    removed – owner: it made rescheduling look WhatsApp-only.) Checked: SimplyBook's Client Rescheduling and Client login are OFF,
+>    Cancellation Policy = "Do not allow to cancel appointment".
+> 2. **Fee decision:** the demo's fee goes live (MOVE $15 / UPGRADE $5 / PEAK TIME $5 + difference + POPULAR +$5…+$20 in $5 steps,
+>    "$5 OFF", Vale/Atlas twin rule, 2nd move +$10, free first 15 min). Launch **fully open, BETA tag kept** (no first-month cap).
+> 3. **Engine** (worker/round2-book.js): `gLogic` (one rules file, also served as /move/logic.js), `gCtx`/`gCalItems` (month calendar
+>    from 1 getBookings + 1 notes read, 3-min memory `gcal`), `gApi` (/move/api), guest pay via HitPay `MV…G` → `/move/hitpay` →
+>    `mvExecute`; `holdMove` keeps `paid` and each move (`guest`, `moveNo`, `cost`); staff Move a booking fee now in $5 steps too.
+> 4. **Add a session = real booking first** (owner corrected me: I first said it only made notes – it did, the booking path was new).
+>    Needs the guest's mobile (email optional); daytime 3–6 h, nothing in the way. Shows Copy link / WhatsApp it. Late/clash/odd
+>    length/no mobile → note as before. Email stored in small letters so "View your booking" (email + mobile) finds it.
+> 5. **T&Cs** (Wix, page "NEW TNC", HTML block, round2.sg/tnc): clause 2.4 + "Before you pay" = 2 moves, until 3 hours before,
+>    change fee + difference, no refunds for cheaper. Owner published. The older "t&c" page (/r2tnc) was NOT changed.
+> 6. **Homepage LOAD SAVE / SAVE FOUND** (phone remembers the booking) – built, then REMOVED the same hour (owner: a forwarded link
+>    would show on someone else's phone; more risk than reward). Homepage clears anything it stored (`r2.saves`).
+> 7. **One booking page everywhere** (owner: "keep everything consistent"): the 4-button page `/move?ref=` (Reschedule · TV message ·
+>    Receipt · Calendar, rules, save history, when you arrive, address). `/b/<code>`, `/find`, payment return (`/done` → "YOU'RE
+>    BOOKED!" for 30 min), receipt "back" all land there; test bookings too (TEST banner). Old `/done` only with `&classic=1`.
+>    No login – the link is the key (a "last 4 digits before rescheduling" check was offered, not built).
+> 8. **The page keeps itself current**: free-change countdown ticks on the engine clock (/time); when it ends, or the tab comes back /
+>    is 5 min stale, prices reload and the screen redraws; reopened under 3 h or with no moves left → back to the booking, closed.
+> 9. **Staff**: Bookings › Move a booking shows each booking's 🔗 guest link (Copy / Open); Add a session › Upcoming lists the
+>    bookings made there with Copy link / WhatsApp it. Every move sends a staff push "🔁 RESCHEDULED online by the guest / by <staff> ·
+>    was · now · paid $X (fee + difference)" (opens Rescheduling) and SimplyBook's plain "MOVED" alert is skipped for those.
+> 10. **Rescheduling page** (Bookings › Rescheduling): trip-wires for the last 4 weeks – % of online bookings moved (≤15%), % moved
+>    under 3 days (≤50%), % into Fri–Sun evenings (≤33%), % freed slots rebooked (≥15%), average gain per move (>$0); red after 5+
+>    moves → one push alert a day per wire (`mvStats`). Demo with made-up moves: staff.round2.sg/?rsdemo=1&tab=resched.
+> 11. **System check** (before: 33 ✅; after: 34 ✅) – new steps "Guest rescheduling: page, rules and fees" and "Add a session:
+>    daytime with a mobile = real booking, late = note". Red both times: **SimplyBook requests 12.9k–13.5k today** (mostly the
+>    booking page's /day before the 12 Nov caching; watch tomorrow's number).
+> **Still open (12 Nov evening):** the owner's real test move (test booking "test", Scarlett Thu 19 Nov 11:15am, ref R2BEE8C55C26 –
+>    pay with 4242…, then cancel it in SimplyBook; earlier test bookings got cancelled before the test – the "CANCEL IT" note);
+>    engine commit 1620aed (move alerts + live trip-wires) waiting for the deploy helper when this was written – check
+>    `deploy:have` in KV; the old /r2tnc T&C page; the optional "last 4 digits" check.
+
 > ## TV notifications (31 Oct 2026) – read round2-tv-launcher `docs/notifications.md` first
 > Flow charts of every timer and priority on the room TVs (guest > Round2 > +N CREDITS ADDED; food first), the 10 → 5 min → That's a wrap
 > sequence, cut-offs, In session extensions (EXT notes, Vale/Atlas SYSTEM BLOCK) and a code map. The engine parts are in this repo's
