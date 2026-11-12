@@ -1633,7 +1633,7 @@ async function lateBooking(env, hb, x) {
   const ref = 'R2B' + crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase();
   await a('setBookingComment', [b0.id, `Booked by staff (control centre › Add a session${x.by ? ', ' + x.by : ''}) · ref ${ref}\nBooked as: ${x.name} · ${x.phone}${x.email ? ' · ' + x.email : ''} · ${x.pax} pax\nBooking page: ${PUBLIC_BOOK}/b/${b0.code}` + (how.length ? '\nContact: ' + how.join(', ') : '')]).catch(() => null);
   const s = mins(q.time), e = s + q.hours * 60;
-  await hb.addPaid({ ref, date: q.date, unit: q.unit, s, e, phone: x.phone.replace(/\D/g, '').slice(-8), email: x.email || '', data: { q, name: x.name, email: x.email || '', phone: x.phone, pax: x.pax, pay: 'staff', by: x.by || '', done: { bookingId: String(b0.id), code: String(b0.code || ''), at: Date.now(), source: 'Add a session' } } });
+  await hb.addPaid({ ref, date: q.date, unit: q.unit, s, e, phone: x.phone.replace(/\D/g, '').slice(-8), email: (x.email || '').toLowerCase(), data: { q, name: x.name, email: x.email || '', phone: x.phone, pax: x.pax, pay: 'staff', by: x.by || '', done: { bookingId: String(b0.id), code: String(b0.code || ''), at: Date.now(), source: 'Add a session' } } });
   await hb.kvSet('gapc', {}).catch(() => null); await hb.kvSet('gcal', null).catch(() => null);
   if ((await hb.getMode()).mirror === 'engine') await mirrorOnSb(env, String(b0.id), 'create').catch(() => null);   /* Vale/Atlas: the twin blocked straight away (SimplyBook's callback would too; the lock stops doubles) */
   await hb.onSb(String(b0.id), 'create').catch(() => null);
