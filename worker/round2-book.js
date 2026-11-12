@@ -2046,7 +2046,7 @@ async function mvExecute(env, mv, how) {
     await hb.kvSet('mvpush:' + B.bid, Date.now() + 10 * 60e3).catch(() => null);   /* set BEFORE SimplyBook hears of it: its own 'changed' alert is skipped, ours (with who + what was paid) goes instead */
     const ed = await a('editBook', [B.bid, q.eventId, q.unit, B.cid, q.date, q.time + ':00', eB >= 1440 ? addDays(q.date, 1) : q.date, hhmm(eB % 1440) + ':00', 0, B.fields]).then(() => true).catch((e) => String(e.message || e).slice(0, 160));
     await mirrorOnSb(env, B.bid, 'change').catch(() => null);   /* new block in the other twin (or the old one put back) */
-    if (ed !== true) return { error: 'SimplyBook didn’t take the move – the booking is unchanged: ' + ed };
+    if (ed !== true) { await hb.kvSet('mvpush:' + B.bid, 0).catch(() => null); return { error: 'SimplyBook didn’t take the move – the booking is unchanged: ' + ed }; }
     /* its +h (EXT) notes follow: same length after the new end, new room, text rewritten; the Vale/Atlas twin note is redone */
     let extProb = '';
     if (X0.min) {
