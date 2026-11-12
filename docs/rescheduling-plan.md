@@ -170,3 +170,12 @@ mvlog. Paid but failed → staff alert (move by hand or refund). +h (EXT) extens
 free check covers the extra time, the EXT note moves to the new room/time with its text rewritten ("EXT till … · name"),
 the Vale/Atlas twin EXT note is redone; if the note can't follow, the move stands and staff get an alert.
 Control centre: top tab "In session" renamed Bookings; pages In session · Add a session · Move a booking · Rescheduling.
+
+### Guest side after a move (owner, 12 Nov – in the demo; for the build)
+- Same kind of room, pricier only because it's peak → "PEAK TIME $5" (not "Upgrade"); bigger room → "UPGRADE $5". Staff
+  page says "moving to a peak time" / "upgrade to a bigger room".
+- After a move the booking page IS the new slot: new room, date, time and the new room's colour (live: holdMove updates the
+  booking record the page draws from, so staff moves already do this).
+- "Your save history" lists the booking and every move (from → to, when, fee + difference) with a Receipt for each.
+- Reschedule receipt: From → To in the room colours, change fee, price difference, total, ref, Save as PDF. The booking's
+  own receipt lists the original payment plus each paid move. Build: /receipt and /r/<code> show the moves (d.moves).
