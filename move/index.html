@@ -159,6 +159,7 @@ function graceTxt(){var ms=Math.max(0,INFO.graceEnd-enow()),m=Math.floor(ms/60e3
 function vis(id){var e=$(id);return e&&!e.classList.contains('hidden')}
 var SUMTOT=0,RQT=0;
 function refresh(why){if(!REF||!C||vis('s-load')||Date.now()-RQT<8000)return;RQT=Date.now();load(true).then(function(j){if(!j.C)return;var was=S.grace;use(j);
+ if(stage()==='closed'||S.moves>=2){if(vis('s-pick')||vis('s-sum')||vis('s-home'))state();return}
  if(vis('s-home'))state();else if(vis('s-pick')){draw()}else if(vis('s-sum')){var k=calc();if(Math.abs(k.tot-SUMTOT)>.004){$('toSum').onclick();$('payerr').textContent='The price was updated to '+money(k.tot)+' – check it before you pay.'}}
  if(was&&!S.grace){var n=$('rulenote');if(n)n.innerHTML='<b>Your free 15 minutes have ended</b> – the prices now include the change fee. '+n.innerHTML}}).catch(function(){})}
 setInterval(function(){if(!INFO||document.hidden)return;var g=$('gchip');if(S.grace){if(g)g.textContent=graceTxt();if(enow()>=INFO.graceEnd+1500)refresh('grace')}
