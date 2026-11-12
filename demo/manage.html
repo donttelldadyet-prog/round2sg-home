@@ -68,7 +68,7 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 @media print{.noprint,.demo,#demo{display:none!important}body{background:#fff;color:#000}.rcpt{background:#fff;color:#000}}
 .rooms{display:block!important;margin:6px 0}.tier{margin:14px 0 4px}.tier::before{content:'';display:block;height:3px;margin:0 0 8px;background:var(--tg)}.tier>header{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-bottom:6px}.tier>header .px{font:10px 'Press Start 2P',monospace;color:#f4f1fb}.tier>header span{font-size:13px;color:var(--mu)}.tier>header .pic{width:12px;height:12px;margin-right:8px;vertical-align:-1px}
 .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.pic{display:inline-block;width:1em;height:1em;vertical-align:-.12em}.rm .rnm .pic{width:14px;height:14px;margin-right:7px;vertical-align:-2px}.rm .rnm{font-weight:700}.rm:disabled .rnm{color:inherit!important}
-.rm{position:relative}.pcol{display:block;margin-top:8px;border-top:1px dashed rgba(255,255,255,.14);padding-top:6px}.pl{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:3px 0;font-size:12px;color:#d6d0e3}.pl b{font-size:13px;font-weight:600;color:#f4f1fb}.pl .lv{font-size:7px}.pl.pd span{color:var(--mu)}.pl.pd b{color:#ffcf5a}.pl.pt{margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,.14)}.pl.pt span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)}.pl.pt b{font-size:16px}
+.pc{display:block;margin-top:6px}.pc1{display:flex;flex-wrap:wrap;align-items:center;gap:4px}.pc1 b{margin-left:auto;font-size:15px;color:#f4f1fb}.pc2{display:block;font-size:11px;color:#ffcf5a;margin-top:3px}
 </style></head><body><main>
 <div class="demo">DEMO · nothing is real here.
 <label>Their booking: <select id="bk">
@@ -101,9 +101,9 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 <details class="more"><summary>See all rules</summary>
 <p class="fine" style="margin:10px 0 6px!important">Counted from <b>now</b> to your <b>current</b> booking's start, at the moment you make the change:</p>
 <div class="rl"><span class="w g">3+ DAYS</span><span>Any free slot, any day</span><span class="w y">UNDER 3 DAYS</span><span>Any day, but start <b>2:15pm or later</b></span><span class="w o">UNDER 24 HRS</span><span>Same day only: later time, bigger room or more hours</span><span class="w r">UNDER 3 HRS</span><span>No rescheduling allowed</span></div>
-<p class="fine" style="margin:4px 0 6px!important">Every move has a fee, shown on each room and time before you choose:</p>
-<div class="lvrow"><span class="lv" style="color:#b9b2cc;border-color:#b9b2cc">MOVE $15</span><span class="lv" style="color:#7fd3ff;border-color:#7fd3ff">UPGRADE $5</span><span class="lv" style="color:#c08cff;border-color:#c08cff">PEAK TIME $5</span><span class="lv" style="color:#F2C21B;border-color:#F2C21B">+$10 / +$20 POPULAR</span></div>
-<p class="fine" style="margin:6px 0 8px!important">Upgrades and peak times are just $5 (you pay the price difference). Popular times add $10 or $20. 2nd move <b>+$10</b>.</p>
+<p class="fine" style="margin:4px 0 6px!important">You pay a change fee, the price difference if the new slot costs more, and an add-on for popular times. Each room shows the total.</p>
+<div class="lvrow"><span class="lv" style="color:#b9b2cc;border-color:#b9b2cc">MOVE $15</span><span class="lv" style="color:#7fd3ff;border-color:#7fd3ff">UPGRADE $5</span><span class="lv" style="color:#c08cff;border-color:#c08cff">PEAK TIME $5</span><span class="lv" style="color:#F2C21B;border-color:#F2C21B">POPULAR +$5–20</span></div>
+<p class="fine" style="margin:6px 0 8px!important">Bigger room or peak day/time: $5 change fee. Popular times: +$5 to +$20. 2nd move <b>+$10</b>.</p>
 <ul class="ic"><li><i style="color:#F2C21B">2×</i><span>Up to 2 moves per booking</span></li><li><i style="color:#7fd3ff">3h</i><span>Your new time must start at least 3 hours from now</span></li><li><i style="color:#ffb070">+$</i><span>New slot costs more: pay the difference</span></li><li><i style="color:#ff9b9b">−$</i><span>Costs less: no refund. Bookings can’t be cancelled.</span></li><li><i style="color:#9be38f">15m</i><span>No change fee within 15 min of booking</span></li></ul>
 </details>
 <p class="fine">Rescheduling is new. Tell us on WhatsApp if anything’s unclear.</p></div>
@@ -248,7 +248,7 @@ function demand(i,room,t){var o=O(),lN=(i*1440+t-NOW)/60,lO=leadH(),vN=price(roo
    (what's left of the expected lost sale after the move part). Vale/Atlas: straight after a session in the same twin room +$10;
    the other twin room −$10. Early-bird bookings: always MOVE $15 (owner: discourage). */
 function feeOf(i,room,t,h){var o=O(),d=demand(i,room,t),up=!o.eb&&price(room,i,t,h||o.h)>o.paid+.004,base=up?5:15,name=up?(ROOMS[room][1]===ROOMS[o.room][1]?'PEAK TIME':'UPGRADE'):'MOVE';
- var x=d.money-base,add=x<=5?0:x<=15?10:20;if(d.load.same)add=Math.min(20,add+10);else if(d.load.other&&add&&base+add-10>=d.money-5)add-=10;   /* the discount only where the fee still covers the cost */return {base:base,name:name,add:add,total:base+add,d:d}}
+ var x=d.money-base,add=x<=5?0:Math.min(20,Math.ceil((x-5)/5)*5);if(d.load.same)add=Math.min(20,add+10);   /* popular in $5 steps, +$5 to +$20 */else if(d.load.other&&add&&base+add-10>=d.money-5)add-=10;   /* the discount only where the fee still covers the cost */return {base:base,name:name,add:add,total:base+add,d:d}}
 function lvOf(i,room,t,h){var F=feeOf(i,room,t,h);return F.add?(F.add===10?1:2):(F.base===5?3:0)}
 function fee(t,i,room){if(S.grace)return 0;var f=t==null?(O().eb?15:5):feeOf(i==null?sel.day:i,room||sel.room,t,sel.h).total;return f+(S.moves===1?10:0)}
 function go(s){['home','pick','sum','done','tv','owner','rc'].forEach(function(x){$('s-'+x).classList.toggle('hidden',x!==s)});scrollTo(0,0)}
@@ -304,10 +304,10 @@ function draw(){var o=O(),st=stage();
  if(isMine){$('live').innerHTML='<div class="note">This is your current slot. Pick a different day, room, time or length.</div>';$('toSum').disabled=true;$('toSum').style.opacity=.4}else{$('live').innerHTML=tickets(true);$('toSum').disabled=sel.t==null;$('toSum').style.opacity=1}}
 function pickH(hr){var st=starts(sel.day,sel.room).filter(function(t){return Math.floor(t/60)===hr});if(st.length)sel.t=sel.want=st.indexOf(hr*60)>=0?hr*60:st[0];draw()}
 function calc(){var o=O(),T0=ROOMS[o.room][1],T1=ROOMS[sel.room][1],r0=rate(o.day,o.t),r1=rate(sel.day,sel.t),a=o.paid,b=price(sel.room,o.day,o.t,o.h),c=price(sel.room,sel.day,sel.t,o.h),dd=price(sel.room,sel.day,sel.t,sel.h),L=[],F=fee(sel.t),st=stage();
- var FF=feeOf(sel.day,sel.room,sel.t,sel.h);if(!F)L.push(['Change fee','free · within 15 min',0]);else{L.push(['Change fee',(FF.name==='UPGRADE'?'upgrade to a bigger room':FF.name==='PEAK TIME'?'moving to a peak time':'move')+(S.moves?' · 2nd move +$10':''),FF.base+(S.moves===1?10:0)]);if(FF.add)L.push(['Popular time','this slot is likely to be booked'+(FF.d.why?' · '+FF.d.why:''),FF.add]);}
- if(T0!==T1)L.push(['Room: '+TYPE[T0]+' → '+TYPE[T1],b<a?'smaller room · not refunded':'bigger room',b-a]);
- if(r0!==r1||Math.abs(c-b)>0.004)L.push(['Rate: '+rateName(r0)+' → '+rateName(r1),c<b?'cheaper · not refunded':'this day/time costs more',c-b]);
- if(sel.h!==o.h)L.push(['Length: '+o.h+'h → '+sel.h+'h',sel.h<o.h?'shorter · not refunded':'extra time',dd-c]);
+ var FF=feeOf(sel.day,sel.room,sel.t,sel.h);if(!F)L.push(['Change fee','free · within 15 min',0]);else{L.push(['Change fee · '+FF.name.toLowerCase(),(FF.name==='UPGRADE'?'moving to a bigger room':FF.name==='PEAK TIME'?'moving to a peak day or time':'moving your booking')+(S.moves?' · 2nd move +$10':''),FF.base+(S.moves===1?10:0)]);if(FF.add)L.push(['Popular time add-on','this slot is likely to be booked'+(FF.d.why?' · '+FF.d.why:''),FF.add]);}
+ if(T0!==T1)L.push([b<a?'Smaller room':TYPE[T1].replace(' room','')+' room',TYPE[T0]+' → '+TYPE[T1]+(b<a?' · not refunded':''),b-a]);
+ if(r0!==r1||Math.abs(c-b)>0.004)L.push([c<b?'Cheaper time':o.eb?'Full-price time':'Peak '+(r1==='peak'?'day':'time'),rateName(r0)+' → '+rateName(r1)+(c<b?' · not refunded':''),c-b]);
+ if(sel.h!==o.h)L.push([sel.h<o.h?'Shorter':'Extra hours',o.h+'h → '+sel.h+'h'+(sel.h<o.h?' · not refunded':''),dd-c]);
  var net=dd-o.paid,diff=Math.max(0,net);return {o:o,L:L,net:net,diff:diff,tot:F+diff,newp:dd}}
 function row(l){var v=l[2];return '<tr'+(v<-0.004?' class="nr"':'')+'><td>'+l[0]+'<small>'+l[1]+'</small></td><td>'+(v>0.004?'+'+money(v):v<-0.004?'−'+money(v):'$0.00')+'</td></tr>'}
 function tickets(bd){var k=calc(),o=k.o,c0=ROOMS[o.room][0],c1=ROOMS[sel.room][0];
@@ -339,12 +339,14 @@ var PIX={sofa:['............','............','..########..','.#........#.','.#..
 function pic(n){var p=PIX[n],r='';for(var y=0;y<p.length;y++)for(var x=0;x<p[y].length;x++)if(p[y][x]==='#')r+='M'+x+' '+y+'h1v1h-1z';return '<svg class="pic" viewBox="0 0 '+p[0].length+' '+p.length+'" aria-hidden="true" shape-rendering="crispEdges"><path d="'+r+'" fill="currentColor"/></svg>'}
 var CHARIC={Vale:'cat',Kaeden:'leaf',Scarlett:'saturn',Kai:'mount',Bella:'book',Atlas:'boat',Maximillion:'car'};
 var TIERS=[['NETFLIX ROOMS',['Vale','Kaeden','Scarlett'],'sofa'],['DELUXE ROOMS',['Kai','Bella','Atlas'],'gem'],['VIP ROOM',['Maximillion'],'crown']];
-/* the price column on each room card (owner, 12 Nov: a bare "+$30" next to "UPGRADE $5" looks like a scam) – every part named, then the total */
-function paycol(i,r,t,d){var F=feeOf(i,r,t),f=fee(t,i,r),add=S.grace?0:F.add,base=f-add,c=F.name==='PEAK TIME'?PEAKC:F.name==='UPGRADE'?'#7fd3ff':'#b9b2cc',a=F.add===20?'#ffb070':'#F2C21B',dd=Math.max(0,d);
- return '<span class="pcol"><span class="pl"><span class="lv" style="color:'+c+';border-color:'+c+'">'+(S.grace?'FREE CHANGE':F.name)+'</span><b>'+money(base)+'</b></span>'+
-  (add?'<span class="pl"><span class="lv" style="color:'+a+';border-color:'+a+'">POPULAR</span><b>+'+money(add)+'</b></span>':'')+
-  '<span class="pl pd"><span>'+(d>0.004?'price difference':d<-0.004?'cheaper · no refund':'same price')+'</span><b>'+(d>0.004?'+'+money(d):'$0')+'</b></span>'+
-  '<span class="pl pt"><span>you pay</span><b>'+money(base+add+dd)+'</b></span></span>'}
+/* the price difference split into its reasons – the same words on the cards, the summary and the receipt */
+function diffParts(i,r,t,h){var o=O(),a=o.paid,b=price(r,o.day,o.t,o.h),c=price(r,i,t,o.h),dd=price(r,i,t,h||o.h),P=[];
+ if(b-a>0.004)P.push([TYPE[ROOMS[r][1]].replace(' room','')+' room',b-a]);
+ if(c-b>0.004)P.push([o.eb?'full-price time':'peak '+(rate(i,t)==='peak'?'day':'time'),c-b]);
+ if(dd-c>0.004)P.push(['extra hours',dd-c]);return P}
+function paycol(i,r,t,d){var F=feeOf(i,r,t),f=fee(t,i,r),add=S.grace?0:F.add,base=f-add,c=F.name==='PEAK TIME'?PEAKC:F.name==='UPGRADE'?'#7fd3ff':'#b9b2cc',a=F.add>=15?'#ffb070':'#F2C21B',dd=Math.max(0,d),P=diffParts(i,r,t);
+ return '<span class="pc"><span class="pc1"><span class="lv" style="color:'+c+';border-color:'+c+'">'+(S.grace?'FREE CHANGE':F.name+' $'+base)+'</span>'+(add?'<span class="lv" style="color:'+a+';border-color:'+a+'">POPULAR +$'+add+'</span>':'')+'<b>'+money(base+add+dd)+'</b></span>'+
+  '<span class="pc2">'+(d>0.004?'incl. '+P.map(function(x){return x[0]+' +'+money(x[1]).replace('.00','')}).join(' · '):d<-0.004?'cheaper slot · no refund':'same price')+'</span></span>'}
 function rn(r){return r==='Maximillion'?'Max':r}
 /* RECEIPT: the booking (k = -1) or one move; same look as the live /receipt page; Save as PDF = the phone's print */
 function rcpt(k){var o=O(),M=o.mvs,first=M.length?M[0].from:{room:o.room,day:o.day,t:o.t,h:o.h},rows,title,tot;
