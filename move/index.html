@@ -94,7 +94,7 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 </details>
 <p class="fine">Rescheduling is new. Tell us on WhatsApp if anything’s unclear.</p></div>
 <div class="card"><h2>YOUR SAVE HISTORY</h2><p class="fine" style="margin:0 0 6px!important">Your booking and every move, with a receipt for each.</p><ul class="hist" id="hist"></ul></div>
-<div class="card"><h2>WHEN YOU ARRIVE</h2><ul class="hist" style="margin:0"><li>Come in and take a seat in our lobby. We’ll know you’ve arrived and come to show you to <b id="w-room"></b>.</li><li>Your booking is under <b id="w-name"></b>.</li><li>Please be on time: your session ends at <span id="w-end"></span>.</li></ul><a class="btn ghost" id="a-wa" href="#" target="_blank" rel="noopener">Questions? WhatsApp us</a></div>
+<div class="card"><h2>WHEN YOU ARRIVE</h2><ul class="hist" style="margin:0"><li>Come in and take a seat in our lobby. We’ll know you’ve arrived and come to show you to <b id="w-room"></b>.</li><li>Your booking is under <b id="w-name"></b>.</li><li>Running late? Your room stays yours – we’ll message you about 30 minutes in to check you’re still coming. Your session still ends at <span id="w-end"></span>.</li></ul><a class="btn ghost" id="a-wa" href="#" target="_blank" rel="noopener">Questions? WhatsApp us</a></div>
 <div class="card"><h2>ADDRESS</h2><p style="margin:0"><b>20 Haji Lane, #02-00</b><br><span class="fine" style="font-size:14px">Singapore 189213 · Bugis MRT Exit B · 6 min walk</span></p></div>
 </section>
 
@@ -236,6 +236,8 @@ function draw(){var o=O(),st=stage();setTimeout(deals,0);
  if(!isMine&&why(sel.day,sel.room,sel.t,sel.h)){var hs=[3,4,5,6].filter(function(h){return !why(sel.day,sel.room,sel.t,h)}).sort(function(a,b){return Math.abs(a-o.h)-Math.abs(b-o.h)||b-a});if(hs.length){sel.h=hs[0];return draw()}}
  /* owner, 13 Nov: a 4h guest tapped 4pm, only 3h fitted, the page switched quietly and he lost an hour – now it's said loudly */
  $('hrnote').innerHTML=sel.h<o.h&&!isMine?'<div class="note" style="border-color:#F2C21B;background:rgba(242,194,27,.12);color:#fff"><b>⚠ Only '+sel.h+' hours here</b> – your booking is <b>'+o.h+' hours</b>. Moving here, you’d lose '+(o.h-sel.h)+(o.h-sel.h>1?' hours':' hour')+' and it isn’t refunded. Pick a time without “max” to keep all '+o.h+' hours.</div>':(sel.h>o.h&&!isMine?'<div class="note">Longer than your '+o.h+'h booking: the extra time is in the price.</div>':'');
+ /* owner, 13 Nov: a guest paid $15 to start later only because he thought his slot would be released – it isn't */
+ if(!isMine&&sel.day==o.day&&sel.room==o.room&&sel.t>o.t&&sel.t+sel.h*60<=o.t+o.h*60)$('hrnote').innerHTML+='<div class="note" style="border-color:#4DB848"><b>Just arriving later?</b> You don’t need to move: your room stays yours for your whole booking – we’ll message you about 30 minutes in to check you’re still coming. It still ends at '+hm(o.t+o.h*60)+'.</div>';
  $('feeb').className='feeb'+(S.grace?' free':'');$('feeb').textContent=S.grace?'FREE CHANGE':'MOVE '+(S.moves+1)+' OF 2';
  if(isMine){$('live').innerHTML='<div class="note">This is your current slot. Pick a different day, room, time or length.</div>';$('toSum').disabled=true;$('toSum').style.opacity=.4}else{$('live').innerHTML=tickets(true);$('toSum').disabled=sel.t==null;$('toSum').style.opacity=1}}
 /* does the guest's own length fit at t (this day/room)? the longest that does */
