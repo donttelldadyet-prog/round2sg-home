@@ -3540,7 +3540,7 @@ function mirSvc(ev, from, to) {
 }
 async function mirrorOnSb(env, bid, type, tries = 0) {
   const hb = book(env), rec = await hb.kvGet('mir:' + bid), a = await admin(env);
-  if (!(await hb.lock('mirlock:' + bid, 60e3))) { if (tries < 3) { await new Promise((r) => setTimeout(r, 5000)); return mirrorOnSb(env, bid, type, tries + 1); } return { busy: true }; }
+  if (!(await hb.lock('mirlock:' + bid, 60e3))) { if (tries < 3) { await new Promise((r) => setTimeout(r, 5000)); return mirrorOnSb(env, bid, type, tries + 1); } await humanAlert(env, 'mirror-' + bid, 'Vale/Atlas block not checked – look', `Booking #${bid} changed (${type}) but the twin block couldn’t be checked (busy 3 times). Check its twin room in SimplyBook, or System check › Moves and Vale/Atlas blocks.`).catch(() => null); return { busy: true }; }
   try {
     const drop = async (why) => {
       if (!rec || !rec.blk) return { none: why };
@@ -3716,7 +3716,15 @@ const HANDLER = {
     if (ten || quarter) go(soonRun(env));
     go(paidSweep(env).catch(() => null));
     /* paid moves that never ran (HitPay's message missed and the guest closed the page): finish them, or alert staff */
-    go((async () => { for (const m of await hb.mvRecent(Date.now() - 48 * 3600e3)) if (m.status === 'pending' && Date.now() - m.t > 60e3) await mvComplete(env, m.ref, 'sweep').catch(() => null); })());
+    go((async () => { for (const m of await hb.mvRecent(Date.now() - 48 * 3600e3)) if (m.status === 'pending' && Date.now() - m.t > 60e3) {
+      const r = await mvComplete(env, m.ref, 'sweep').catch((e) => ({ error: String(e.message || e) }));
+      /* paid but still not moved after 15 min (any reason) → a Round2 alert, once */
+      const m2 = await hb.kvGet('mv:' + m.ref);
+      if (m2 && m2.status === 'pending' && Date.now() - m.t > 15 * 60e3 && (await mvPayStatus(env, m2).catch(() => ({}))).paid && !(await hb.kvGet('mvstuck:' + m.ref))) {
+        await hb.kvSet('mvstuck:' + m.ref, 1);
+        await humanAlert(env, 'move-' + m.ref, 'Paid move not done yet', `${m.from.name || 'Guest'} paid $${(+m.total).toFixed(2)} to move ${m.from.room} ${m.from.date} ${m.from.time} → ${m.to.room} ${m.to.date} ${m.to.time}, still not moved after 15 min (${(r && (r.error || (r.busy ? 'busy' : ''))) || 'no answer'}). Bookings › Rescheduling, or ask Claude (mvfinish ${m.ref}).`).catch(() => null);
+      }
+    } })());
     go(pushRetry(env).then(() => pushDiag(env)).catch(() => null));
     go(diagReq(env).catch(() => null));   /* staff questions left in KV (diag:req → diag:res) */   /* resend alerts a phone hasn't shown; delivery report copy (KV diag:push) */   /* paid at HitPay but not booked? book it (every 5 min) */
     /* a SimplyBook change a few minutes ago: Auto wrap-up looks again on the next 5-min tick (owner, 3 Nov: a quick fix was
