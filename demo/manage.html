@@ -66,6 +66,8 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 .mvdot{display:inline-block;width:8px;height:8px;border-radius:2px;margin:0 4px 1px 0;vertical-align:middle}.rlink{background:none;border:1px solid var(--ln);color:#d6d0e3;font:inherit;font-size:12px;padding:2px 8px;margin-left:4px;cursor:pointer}
 .rcpt{border-top:6px solid var(--rc);background:#0e0b16;padding:16px;margin:8px 0 14px}.rcmv{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin:4px 0 12px}.rcmv small{display:block;color:var(--mu);font-size:11px;letter-spacing:.1em}.rcmv b{display:block;font-size:18px}.rcmv span{font-size:13px;color:#d6d0e3}.rcmv .arr{font-size:22px;color:var(--mu)}
 @media print{.noprint,.demo,#demo{display:none!important}body{background:#fff;color:#000}.rcpt{background:#fff;color:#000}}
+.rooms{display:block!important;margin:6px 0}.tier{margin:14px 0 4px}.tier::before{content:'';display:block;height:3px;margin:0 0 8px;background:var(--tg)}.tier>header{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-bottom:6px}.tier>header .px{font:10px 'Press Start 2P',monospace;color:#f4f1fb}.tier>header span{font-size:13px;color:var(--mu)}.tier>header .pic{width:12px;height:12px;margin-right:8px;vertical-align:-1px}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.pic{display:inline-block;width:1em;height:1em;vertical-align:-.12em}.rm .rnm .pic{width:14px;height:14px;margin-right:7px;vertical-align:-2px}.rm .rnm{font-weight:700}.rm:disabled .rnm{color:inherit!important}
 </style></head><body><main>
 <div class="demo">DEMO · nothing is real here.
 <label>Their booking: <select id="bk">
@@ -98,9 +100,9 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 <details class="more"><summary>See all rules</summary>
 <p class="fine" style="margin:10px 0 6px!important">Counted from <b>now</b> to your <b>current</b> booking's start, at the moment you make the change:</p>
 <div class="rl"><span class="w g">3+ DAYS</span><span>Any free slot, any day</span><span class="w y">UNDER 3 DAYS</span><span>Any day, but start <b>2:15pm or later</b></span><span class="w o">UNDER 24 HRS</span><span>Same day only: later time, bigger room or more hours</span><span class="w r">UNDER 3 HRS</span><span>No rescheduling allowed</span></div>
-<p class="fine" style="margin:4px 0 6px!important">Popular times cost more to move into. You’ll see the fee on every room and time before you choose.</p>
-<div class="lvrow"><span class="lv" style="color:#7fd3ff;border-color:#7fd3ff">UPGRADE $5</span><span class="lv" style="color:#c08cff;border-color:#c08cff">PEAK TIME $5</span><span class="lv" style="color:#b9b2cc;border-color:#b9b2cc">$15</span><span class="lv" style="color:#F2C21B;border-color:#F2C21B">$25</span><span class="lv" style="color:#ffb070;border-color:#ffb070">$35</span></div>
-<p class="fine" style="margin:6px 0 8px!important">Moving to a bigger room or a peak time is often just $5 plus the difference. 2nd move <b>+$10</b>.</p>
+<p class="fine" style="margin:4px 0 6px!important">Every move has a fee, shown on each room and time before you choose:</p>
+<div class="lvrow"><span class="lv" style="color:#b9b2cc;border-color:#b9b2cc">MOVE $15</span><span class="lv" style="color:#7fd3ff;border-color:#7fd3ff">UPGRADE $5</span><span class="lv" style="color:#c08cff;border-color:#c08cff">PEAK TIME $5</span><span class="lv" style="color:#F2C21B;border-color:#F2C21B">+$10 / +$20 POPULAR</span></div>
+<p class="fine" style="margin:6px 0 8px!important">Upgrades and peak times are just $5 (you pay the price difference). Popular times add $10 or $20. 2nd move <b>+$10</b>.</p>
 <ul class="ic"><li><i style="color:#F2C21B">2×</i><span>Up to 2 moves per booking</span></li><li><i style="color:#7fd3ff">3h</i><span>Your new time must start at least 3 hours from now</span></li><li><i style="color:#ffb070">+$</i><span>New slot costs more: pay the difference</span></li><li><i style="color:#ff9b9b">−$</i><span>Costs less: no refund. Bookings can’t be cancelled.</span></li><li><i style="color:#9be38f">15m</i><span>No change fee within 15 min of booking</span></li></ul>
 </details>
 <p class="fine">Rescheduling is new. Tell us on WhatsApp if anything’s unclear.</p></div>
@@ -240,9 +242,14 @@ function load(i,room,t,h){var r={adj:0,same:false,other:false};if(room!=='Vale'&
  r.adj=0;return r}   /* applied as a fee level in lvOf, not as money */
 function demand(i,room,t){var o=O(),lN=(i*1440+t-NOW)/60,lO=leadH(),vN=price(room,i,t,3),vO=price(o.room,o.day,o.t,3),cost=expV(room,i,t,lN)-expV(o.room,o.day,o.t,lO)-Math.max(0,vN-vO);var money=cost,L0=load(i,room,t,sel&&sel.h||3);var lv=cost<=10?0:cost<=20?1:2;return {lv:lv,cost:cost,money:money,load:L0,p:sellP(room,i,t,lN),why:pace(i,room)[1]}}
 /* upgrade: the new slot costs more AND the move costs the shop nothing (they pay the difference) → $5. Early-bird bookings keep $15+ (owner: discourage). */
-function lvOf(i,room,t,h){var o=O(),d=demand(i,room,t);if(d.load.same)return Math.min(2,d.lv+1);   /* same twin back-to-back: one level up, never an upgrade */
- if(d.cost<=(d.load.other?10:5)&&!o.eb&&price(room,i,t,h||o.h)>o.paid+.004)return 3;return d.lv}
-function fee(t,i,room){if(S.grace)return 0;var f=t==null?(O().eb?15:5):LV[lvOf(i==null?sel.day:i,room||sel.room,t,sel.h)][1];return f+(S.moves===1?10:0)}
+/* FEE (owner, 12 Nov): two clear parts. The move: UPGRADE $5 (bigger room) / PEAK TIME $5 (same kind of room, peak) – they pay
+   the difference – or MOVE $15. Plus POPULAR TIME +$10 / +$20 when the new slot is likely to be booked by someone else
+   (what's left of the expected lost sale after the move part). Vale/Atlas: straight after a session in the same twin room +$10;
+   the other twin room −$10. Early-bird bookings: always MOVE $15 (owner: discourage). */
+function feeOf(i,room,t,h){var o=O(),d=demand(i,room,t),up=!o.eb&&price(room,i,t,h||o.h)>o.paid+.004,base=up?5:15,name=up?(ROOMS[room][1]===ROOMS[o.room][1]?'PEAK TIME':'UPGRADE'):'MOVE';
+ var x=d.money-base,add=x<=5?0:x<=15?10:20;if(d.load.same)add=Math.min(20,add+10);else if(d.load.other&&add&&base+add-10>=d.money-5)add-=10;   /* the discount only where the fee still covers the cost */return {base:base,name:name,add:add,total:base+add,d:d}}
+function lvOf(i,room,t,h){var F=feeOf(i,room,t,h);return F.add?(F.add===10?1:2):(F.base===5?3:0)}
+function fee(t,i,room){if(S.grace)return 0;var f=t==null?(O().eb?15:5):feeOf(i==null?sel.day:i,room||sel.room,t,sel.h).total;return f+(S.moves===1?10:0)}
 function go(s){['home','pick','sum','done','tv','owner','rc'].forEach(function(x){$('s-'+x).classList.toggle('hidden',x!==s)});scrollTo(0,0)}
 function tag(d){return d>0.004?'<em class="up">+'+money(d)+'</em>':d<-0.004?'<em class="dn">cheaper · no refund</em>':'<em class="eq">same price</em>'}
 function state(){var o=O(),st=stage();go('home');
@@ -266,18 +273,22 @@ function state(){var o=O(),st=stage();go('home');
 function want(){return sel.want!=null?sel.want:O().t}
 function upName(r){return ROOMS[r][1]===ROOMS[O().room][1]?'PEAK TIME':'UPGRADE'}   /* Vale off-peak → Vale peak isn't an "upgrade" to a guest */
 var PEAKC='#c08cff';
-function lvchip(i,r,t){var k=lvOf(i,r,t),L=LV[k],pk=k===3&&upName(r)==='PEAK TIME',c=pk?PEAKC:L[2];return '<span class="lv" style="color:'+c+';border-color:'+c+'">'+(k===3?upName(r)+' $5':GL[k])+'</span>'}
+function lvchip(i,r,t){var F=feeOf(i,r,t),c=F.name==='PEAK TIME'?PEAKC:F.name==='UPGRADE'?'#7fd3ff':'#b9b2cc',a=F.add===20?'#ffb070':'#F2C21B';
+ return '<span class="lv" style="color:'+c+';border-color:'+c+'">'+F.name+' $'+F.base+'</span>'+(F.add?' <span class="lv" style="color:'+a+';border-color:'+a+'">+$'+F.add+' POPULAR</span>':'')}
 function near(a,t){if(!a.length)return null;if(t==null)return a[0];return a.reduce(function(b,x){return Math.abs(x-t)<Math.abs(b-t)?x:b},a[0])}
 function draw(){var o=O(),st=stage();
  $('rulenote').innerHTML={early:'Your session is <b>3+ days away</b>: any free slot.',late:'Your session is <b>under 3 days away</b>: new times from <b>2:15pm</b> only. 11am–2pm slots need 3+ days notice.',day:'Your session is <b>under 24 hours away</b>: <b>same-day upgrades only</b> (later time, bigger room or more hours).'}[st];
  var w0=sel.wk==null?Math.floor(sel.day/7)*7:sel.wk;sel.wk=w0;$('mon').textContent=monthOf(w0);$('wprev').disabled=w0<=0;$('wnext').disabled=w0+7>=60;
  $('days').innerHTML=days.slice(w0,w0+7).map(function(d,k){var i=w0+k,full=dayFull(i),past=i*1440+LAST-NOW<180;return '<button class="day'+(i==sel.day?' on':'')+(full||past?' full':'')+(i==o.day?' yours':'')+'" '+(past?'disabled':'')+' onclick="sel.day='+i+';draw()">'+d.split(' ')[0]+'<br><b>'+d.split(' ')[1]+'</b><i>'+(past?(i*1440+LAST-NOW>-1440&&i*1440+OPEN-NOW>-1440&&Math.floor(NOW/1440)===i?'too soon':'—'):full?'full':peak(i)?'peak':'off')+'</i></button>'}).join('');drawCal();
  if(!starts(sel.day,sel.room).length){var f=Object.keys(ROOMS).filter(function(r){return starts(sel.day,r).length});if(f.length)sel.room=f[0]}
- $('rooms').innerHTML=Object.keys(ROOMS).map(function(r){var ss=starts(sel.day,r),n=ss.length,tt=near(ss,want()),d=n?price(r,sel.day,tt,o.h)-o.paid:0;
-  return '<button class="rm'+(r==sel.room?' on':'')+'" '+(n?'':'disabled')+' onclick="sel.room=\''+r+'\';draw()" style="border-left:4px solid '+ROOMS[r][0]+';--c:'+ROOMS[r][0]+'">'+r+(r==o.room?' <span class="ytag">YOURS</span>':'')+'<small>'+(n?TYPE[ROOMS[r][1]]+' · '+n+' start times':'Fully booked')+'</small>'+(n?'<em class="at">at '+hm(tt)+'</em> '+lvchip(sel.day,r,tt)+' '+tag(d):'')+'</button>'}).join('');
+ var card=function(r){var ss=starts(sel.day,r),n=ss.length,tt=near(ss,want()),d=n?price(r,sel.day,tt,o.h)-o.paid:0;
+  return '<button class="rm'+(r==sel.room?' on':'')+'" '+(n?'':'disabled')+' onclick="sel.room=\''+r+'\';draw()" style="border-left:4px solid '+ROOMS[r][0]+';--c:'+ROOMS[r][0]+'"><span class="rnm" style="color:'+(n?ROOMS[r][0]:'')+'">'+pic(CHARIC[r])+r+'</span>'+(r==o.room?' <span class="ytag">YOURS</span>':'')+'<small>'+(n?n+' start times':'Fully booked')+'</small>'+(n?'<em class="at">at '+hm(tt)+'</em> '+lvchip(sel.day,r,tt)+' '+tag(d):'')+'</button>'};
+ /* tiers like the booking page: icon + name, the rooms' names in their colours, a bar of the rooms' colours */
+ $('rooms').innerHTML=TIERS.map(function(g){var n=g[1].length,bar='linear-gradient(90deg,'+g[1].map(function(r,i){return ROOMS[r][0]+' '+(100*i/n).toFixed(1)+'% '+(100*(i+1)/n).toFixed(1)+'%'}).join(',')+')';
+  return '<section class="tier" style="--tg:'+bar+'"><header><span class="px">'+pic(g[2])+g[0]+'</span><span>'+g[1].map(function(r){return '<span style="color:'+ROOMS[r][0]+'">'+r+'</span>'}).join(' · ')+'</span></header><div class="tgrid">'+g[1].map(card).join('')+'</div></section>'}).join('');
  var stt=starts(sel.day,sel.room),lk=locked(sel.day,sel.room);if(stt.indexOf(sel.t)<0||sel.t!==near(stt,want()))sel.t=near(stt,want());
  var H=Math.floor((sel.t||OPEN)/60),hh='';for(var hr=11;hr<=20;hr++){var any=stt.some(function(t){return Math.floor(t/60)===hr}),lkh=!any&&lk.some(function(t){return Math.floor(t/60)===hr}),me=sel.day==o.day&&sel.room==o.room&&Math.floor(o.t/60)===hr;
-  var hs=stt.filter(function(t){return Math.floor(t/60)===hr}),hl=hs.length?lvOf(sel.day,sel.room,hs[0]):-1;hh+='<button class="hc'+(hr===H?' on':'')+(me?' yours':'')+'" '+(hl>=0?'style="box-shadow:inset 0 -3px 0 '+(hl===3&&upName(sel.room)==='PEAK TIME'?PEAKC:LV[hl][2])+'" ':'')+(any?'':'disabled')+' onclick="pickH('+hr+')">'+hm(hr*60)+'<small>'+(lkh?'⌂ 3+ days':hr===11?'early bird':any?'':'full')+'</small></button>'}$('hrow').innerHTML=hh;
+  var hs=stt.filter(function(t){return Math.floor(t/60)===hr}),hl=hs.length?lvOf(sel.day,sel.room,hs[0]):-1;hh+='<button class="hc'+(hr===H?' on':'')+(me?' yours':'')+'" '+(hl>=0?'style="box-shadow:inset 0 -3px 0 '+(hl===1?'#F2C21B':hl===2?'#ffb070':hl===3?(upName(sel.room)==='PEAK TIME'?PEAKC:'#7fd3ff'):'#b9b2cc')+'" ':'')+(any?'':'disabled')+' onclick="pickH('+hr+')">'+hm(hr*60)+'<small>'+(lkh?'⌂ 3+ days':hr===11?'early bird':any?'':'full')+'</small></button>'}$('hrow').innerHTML=hh;
  var on=$('hrow').querySelector('.on');if(on)on.scrollIntoView({block:'nearest',inline:'center'});
  $('mins').innerHTML=[0,15,30,45].map(function(m){var t=H*60+m,ok=t<=LAST&&stt.indexOf(t)>=0,me=sel.day==o.day&&sel.room==o.room&&t===o.t;return '<button class="'+(t===sel.t?'on':'')+(me?' yours':'')+'" '+(ok?'':'disabled')+' onclick="sel.t=sel.want='+t+';draw()">'+hm(t)+'</button>'}).join('');
  $('stnote').textContent='';
@@ -292,7 +303,7 @@ function draw(){var o=O(),st=stage();
  if(isMine){$('live').innerHTML='<div class="note">This is your current slot. Pick a different day, room, time or length.</div>';$('toSum').disabled=true;$('toSum').style.opacity=.4}else{$('live').innerHTML=tickets(true);$('toSum').disabled=sel.t==null;$('toSum').style.opacity=1}}
 function pickH(hr){var st=starts(sel.day,sel.room).filter(function(t){return Math.floor(t/60)===hr});if(st.length)sel.t=sel.want=st.indexOf(hr*60)>=0?hr*60:st[0];draw()}
 function calc(){var o=O(),T0=ROOMS[o.room][1],T1=ROOMS[sel.room][1],r0=rate(o.day,o.t),r1=rate(sel.day,sel.t),a=o.paid,b=price(sel.room,o.day,o.t,o.h),c=price(sel.room,sel.day,sel.t,o.h),dd=price(sel.room,sel.day,sel.t,sel.h),L=[],F=fee(sel.t),st=stage();
- var DM=demand(sel.day,sel.room,sel.t),LI=lvOf(sel.day,sel.room,sel.t,sel.h);L.push(['Change fee',F?(((LI===3?(upName(sel.room)==='PEAK TIME'?'moving to a peak time':'upgrade'):GW[LI]||'change fee'))+(DM.why?' · '+DM.why:'')+(S.moves?' · 2nd move':'')):'free · within 15 min',F]);
+ var FF=feeOf(sel.day,sel.room,sel.t,sel.h);if(!F)L.push(['Change fee','free · within 15 min',0]);else{L.push(['Change fee',(FF.name==='UPGRADE'?'upgrade to a bigger room':FF.name==='PEAK TIME'?'moving to a peak time':'move')+(S.moves?' · 2nd move +$10':''),FF.base+(S.moves===1?10:0)]);if(FF.add)L.push(['Popular time','this slot is likely to be booked'+(FF.d.why?' · '+FF.d.why:''),FF.add]);}
  if(T0!==T1)L.push(['Room: '+TYPE[T0]+' → '+TYPE[T1],b<a?'smaller room · not refunded':'bigger room',b-a]);
  if(r0!==r1||Math.abs(c-b)>0.004)L.push(['Rate: '+rateName(r0)+' → '+rateName(r1),c<b?'cheaper · not refunded':'this day/time costs more',c-b]);
  if(sel.h!==o.h)L.push(['Length: '+o.h+'h → '+sel.h+'h',sel.h<o.h?'shorter · not refunded':'extra time',dd-c]);
@@ -313,6 +324,20 @@ $('pay').onclick=function(){if(!$('agree').checked){alert('Tick the box first');
  if(B.paid0==null)B.paid0=o.paid;B.paid=Math.max(o.paid,price(sel.room,sel.day,sel.t,sel.h));B.room=sel.room;B.day=sel.day;B.t=sel.t;B.h=sel.h;
  $('mv').value=String(Math.min(2,(S.moves||0)+1));$('d-rc').onclick=function(){rcpt(B.mvs.length-1)};$('d-room').textContent=sel.room;$('d-tk').style.borderTopColor=ROOMS[sel.room][0];$('d-room').style.color=ROOMS[sel.room][0];$('d-date').textContent=longDate(sel.day);$('d-time').textContent=hm(sel.t)+' – '+hm(sel.t+sel.h*60);
  $('d-left').textContent=S.moves+1>=2?'That was your last move. For anything else, WhatsApp us.':'You have 1 move left. Changes in the next 15 minutes have no change fee.';go('done')};
+/* booking-page pixel icons (slots page): tiers sofa / gem / crown; each character's own icon */
+var PIX={sofa:['............','............','..########..','.#........#.','.#........#.','##........##','#.########.#','#..........#','############','.#........#.','.#........#.','............'],
+ gem:['............','..########..','.#..#..#..#.','#..#....#..#','############','.#..#..#..#.','..#..##..#..','...#.##.#...','....#..#....','.....##.....','............','............'],
+ crown:['............','.#...##...#.','.##..##..##.','.###.##.###.','.##########.','.##########.','.##.####.##.','.##########.','............','.##########.','............','............'],
+ cat:['............','.#.......#..','.##.....##..','.#.#####.#..','.#.......#..','#..#...#..#.','#.........#.','#....#....#.','.#..#.#..#..','..#.....#...','...#####....','............'],
+ leaf:['.........###','......######','....#####..#','...####...#.','..####...#..','..###...#...','.###...#....','.##...#.....','.#.###......','.###........','#...........','............'],
+ saturn:['..............','..............','.....####.....','....######..##','...#########.#','...#######.##.','...#####..#...','...##...###...','.##..######...','#.#########...','##..######....','.....####.....','..............','..............'],
+ mount:['............','............','.....#......','....#.#.....','...#...#.#..','..#.#.#.#.#.','..#..#..#..#','.#.........#','.#.........#','#...........','############','............'],
+ book:['............','.####..####.','#....##....#','#.##.##.##.#','#....##....#','#.##.##.##.#','#....##....#','#.##.##.##.#','#....##....#','.####..####.','.....##.....','............'],
+ boat:['.....#......','.....##.....','.....###....','.....####...','.....#####..','.....######.','.....#......','############','.##########.','..########..','............','#.##.##.##.#'],
+ car:['............','............','...######...','..#..#...#..','.#...#....#.','############','#..........#','#.##....##.#','############','.##......##.','.##......##.','............']};
+function pic(n){var p=PIX[n],r='';for(var y=0;y<p.length;y++)for(var x=0;x<p[y].length;x++)if(p[y][x]==='#')r+='M'+x+' '+y+'h1v1h-1z';return '<svg class="pic" viewBox="0 0 '+p[0].length+' '+p.length+'" aria-hidden="true" shape-rendering="crispEdges"><path d="'+r+'" fill="currentColor"/></svg>'}
+var CHARIC={Vale:'cat',Kaeden:'leaf',Scarlett:'saturn',Kai:'mount',Bella:'book',Atlas:'boat',Maximillion:'car'};
+var TIERS=[['NETFLIX ROOMS',['Vale','Kaeden','Scarlett'],'sofa'],['DELUXE ROOMS',['Kai','Bella','Atlas'],'gem'],['VIP ROOM',['Maximillion'],'crown']];
 function rn(r){return r==='Maximillion'?'Max':r}
 /* RECEIPT: the booking (k = -1) or one move; same look as the live /receipt page; Save as PDF = the phone's print */
 function rcpt(k){var o=O(),M=o.mvs,first=M.length?M[0].from:{room:o.room,day:o.day,t:o.t,h:o.h},rows,title,tot;
@@ -340,28 +365,28 @@ function dgrid(){var R=['Vale','Scarlett','Kai','Bella','Maximillion','Atlas','K
 async function stress(){var out=$('stout');out.textContent='Running…';await new Promise(function(r){setTimeout(r,30)});
  var save=JSON.stringify(BK),sNOW=NOW,sS=JSON.stringify(S),sSel=JSON.stringify(sel),R=['Vale','Scarlett','Kai','Bella','Maximillion','Atlas'],QR={};
  R.forEach(function(r){if(r==='Vale'||r==='Atlas')return;if(sellP(r,7,1170,72)<.25)QR[r]=1});   /* 'quiet' = whatever the data says this week (evening 3 days out sells under 25%), not a fixed list */
- var tw=[0,0,0,0],n=0,lv=[0,0,0,0],byStage={},prof=0,loss=[],jump=[],quietVB=[],upBad=[],ebUp=0,worst=null,best=null,t0=Date.now();S={moves:0,grace:false,wa:false};
+ var fs=0,tb={},tw=[0,0,0,0],n=0,lv=[0,0,0,0],byStage={},prof=0,loss=[],jump=[],quietVB=[],upBad=[],ebUp=0,worst=null,best=null,t0=Date.now();S={moves:0,grace:false,wa:false};
  for(const now of [600,1080]){NOW=now;
   for(const r0 of R)for(let d0=0;d0<=10;d0++)for(const t0_ of [660,840,960,1170]){BK[1]={room:r0,day:d0,t:t0_,h:3};$('bk').value='1';var st=stage();if(st==='closed'||d0*1440+t0_-NOW<0)continue;var o=O();
    for(let i=0;i<=10;i++)for(const r of R){var prevL=null,prevT=null;for(let t=OPEN;t<=LAST;t+=15){if(why(i,r,t,3)){prevL=null;continue}
-     var d=demand(i,r,t),k=lvOf(i,r,t,3),f=LV[k][1],diff=Math.max(0,price(r,i,t,3)-o.paid),pr=f+Math.max(0,price(r,i,t,3)-price(o.room,o.day,o.t,3))-(d.cost+Math.max(0,price(r,i,t,3)-price(o.room,o.day,o.t,3)));n++;lv[k]++;if(d.load.same){tw[0]++;tw[1]+=f}else if(d.load.other){tw[2]++;tw[3]+=f}byStage[st]=byStage[st]||[0,0,0,0,0];byStage[st][k]++;byStage[st][4]++;prof+=f-d.money;
+     var FF=feeOf(i,r,t,3),d=FF.d,k=lvOf(i,r,t,3),f=FF.total,diff=Math.max(0,price(r,i,t,3)-o.paid),pr=f+Math.max(0,price(r,i,t,3)-price(o.room,o.day,o.t,3))-(d.cost+Math.max(0,price(r,i,t,3)-price(o.room,o.day,o.t,3)));n++;lv[k]++;fs+=f;tb[f]=(tb[f]||0)+1;if(d.load.same){tw[0]++;tw[1]+=f}else if(d.load.other){tw[2]++;tw[3]+=f}byStage[st]=byStage[st]||[0,0,0,0,0];byStage[st][k]++;byStage[st][4]++;prof+=f-d.money;
      var lab=r0+' '+days[d0]+' '+hm(t0_)+' → '+r+' '+days[i]+' '+hm(t)+' (clock '+hm(now)+')';
      if(f-d.money<0)loss.push([f-d.money,lab+': fee $'+f+', lost sales $'+d.money.toFixed(0)]);
-     if(prevL!=null&&Math.abs((k===3?-1:k)-(prevL===3?-1:prevL))>=2)jump.push(lab+': '+GL[prevL]+' at '+hm(prevT)+' → '+GL[k]);
-     if(QR[r]&&k===2)quietVB.push(lab+': cost $'+d.cost.toFixed(0));
-     if(k===3&&d.money>10)upBad.push(lab);
-     if(k===3&&o.eb)ebUp++;
+     if(prevL!=null&&Math.abs(f-prevL)>=20)jump.push(lab+': $'+prevL+' at '+hm(prevT)+' → $'+f);
+     if(QR[r]&&f>=35)quietVB.push(lab+': cost $'+d.cost.toFixed(0));
+     if(FF.base===5&&!FF.add&&d.money>10)upBad.push(lab);
+     if(FF.base===5&&o.eb)ebUp++;
      if(!worst||f-d.money<worst[0])worst=[f-d.money,lab+': fee $'+f+', lost sales $'+d.money.toFixed(0)];
-     prevL=k;prevT=t}}}}
+     prevL=f;prevT=t}}}}
  BK=JSON.parse(save);NOW=sNOW;S=JSON.parse(sS);sel=JSON.parse(sSel);$('bk').value='1';
  loss.sort(function(a,b){return a[0]-b[0]});var pct=function(x){return Math.round(100*x/n)+'%'},ok=function(c){return c?'<b style="color:#9be38f">PASS</b>':'<b style="color:#ff9b9b">CHECK</b>'};
- var avgFee=(lv[3]*5+lv[0]*15+lv[1]*25+lv[2]*35)/n;var h='<b>'+n.toLocaleString()+'</b> moves tested in '+((Date.now()-t0)/1000).toFixed(1)+'s · average change fee <b>$'+avgFee.toFixed(2)+'</b> · average gain per move <b>$'+(prof/n).toFixed(2)+'</b> (fee + price difference paid + the old slot’s resale chance − the new slot’s lost sale)<br>';
- h+='Fees: Upgrade $5 '+pct(lv[3])+' · $15 '+pct(lv[0])+' · $25 '+pct(lv[1])+' · $35 '+pct(lv[2])+'<br>';
- Object.keys(byStage).forEach(function(k){var b=byStage[k];h+='&nbsp;· '+{early:'3+ days',late:'under 3 days',day:'under 24 h'}[k]+': '+b[4].toLocaleString()+' moves – $5 '+Math.round(100*b[3]/b[4])+'%, $15 '+Math.round(100*b[0]/b[4])+'%, $25 '+Math.round(100*b[1]/b[4])+'%, $35 '+Math.round(100*b[2]/b[4])+'%<br>'});
+ var avgFee=fs/n;var h='<b>'+n.toLocaleString()+'</b> moves tested in '+((Date.now()-t0)/1000).toFixed(1)+'s · average change fee <b>$'+avgFee.toFixed(2)+'</b> · average gain per move <b>$'+(prof/n).toFixed(2)+'</b> (fee + price difference paid + the old slot’s resale chance − the new slot’s lost sale)<br>';
+ h+='Fees: '+Object.keys(tb).sort(function(a,b){return a-b}).map(function(x){return '$'+x+' '+pct(tb[x])}).join(' · ')+' · popular add-on on '+pct(lv[1]+lv[2])+' (+$10 '+pct(lv[1])+', +$20 '+pct(lv[2])+')<br>';
+ Object.keys(byStage).forEach(function(k){var b=byStage[k];h+='&nbsp;· '+{early:'3+ days',late:'under 3 days',day:'under 24 h'}[k]+': '+b[4].toLocaleString()+' moves – upgrade/peak $5 '+Math.round(100*b[3]/b[4])+'%, move $15 '+Math.round(100*b[0]/b[4])+'%, +$10 popular '+Math.round(100*b[1]/b[4])+'%, +$20 popular '+Math.round(100*b[2]/b[4])+'%<br>'});
  var big=loss.filter(function(x){return x[0]<-5}).length;h+='Vale/Atlas turnaround: '+tw[0].toLocaleString()+' moves back-to-back in the same twin room (avg fee $'+(tw[1]/Math.max(1,tw[0])).toFixed(0)+') · '+tw[2].toLocaleString()+' into the other twin (avg fee $'+(tw[3]/Math.max(1,tw[2])).toFixed(0)+')<br>';h+='<br>'+ok(!big)+' Never loses money: '+loss.length+' moves where the fee is below the expected lost sale, '+big+' by more than $5'+(loss.length?' (worst: '+loss[0][1]+')':'')+'<br>';
  h+=ok(jump.length<n*.002)+' No big jumps between neighbouring times: '+jump.length+' times a 15-min step jumps two fee levels'+(jump.length?' (e.g. '+jump[0]+')':'')+'<br>';
- h+=ok(!quietVB.length)+' Rooms that are quiet right now ('+Object.keys(QR).map(function(r){return r==='Maximillion'?'Max':r}).join(', ')+') never $35: '+quietVB.length+(quietVB.length?' (e.g. '+quietVB[0]+')':'')+'<br>';
- h+=ok(!upBad.length)+' Upgrades never lose over $5 after their $5 fee: '+upBad.length+'<br>'+ok(!tw[0]||!tw[2]||tw[1]/tw[0]>tw[3]/tw[2])+' Back-to-back in the same twin costs more than switching twin<br>';
+ h+=ok(!quietVB.length)+' Rooms that are quiet right now ('+Object.keys(QR).map(function(r){return r==='Maximillion'?'Max':r}).join(', ')+') never $35 or more: '+quietVB.length+(quietVB.length?' (e.g. '+quietVB[0]+')':'')+'<br>';
+ h+=ok(!upBad.length)+' Upgrades/peak times at $5 never lose over $5: '+upBad.length+'<br>'+ok(!tw[0]||!tw[2]||tw[1]/tw[0]>tw[3]/tw[2])+' Back-to-back in the same twin costs more than switching twin<br>';
  h+=ok(!ebUp)+' Early-bird bookings never get $5: '+ebUp+'<br>';
  h+='Closest call: '+worst[1];
  out.innerHTML=h;state();go('owner')}
