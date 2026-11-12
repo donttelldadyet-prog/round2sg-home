@@ -59,7 +59,9 @@ async function rpc(path, method, params, headers = {}) {
 let pubTok = null, admTok = null;
 const tokBad = (e) => /token|denied|auth|login|expired|signature/i.test(String(e && e.message || e));
 async function pub(env) {
-  const get = async () => { pubTok = { k: await rpc('/login', 'getToken', [env.SB_COMPANY, env.SB_PUBLIC_KEY]), t: Date.now() + 20 * 60e3 }; return pubTok.k; };
+  /* 12 Nov: the booking board's public login is shared through the engine's storage too (it was ~1,200 logins a day) */
+  const get = async () => { pubTok = { k: await rpc('/login', 'getToken', [env.SB_COMPANY, env.SB_PUBLIC_KEY]), t: Date.now() + 20 * 60e3 }; await tokPut(env, 'tokPub', pubTok); return pubTok.k; };
+  if (!(pubTok && pubTok.t > Date.now())) pubTok = (await tokGet(env, 'tokPub')) || pubTok;
   let tok = pubTok && pubTok.t > Date.now() ? pubTok.k : await get();
   return async (m, p) => { try { return await rpc('', m, p, { 'X-Company-Login': env.SB_COMPANY, 'X-Token': tok }); } catch (e) { if (!tokBad(e)) throw e; tok = await get(); return rpc('', m, p, { 'X-Company-Login': env.SB_COMPANY, 'X-Token': tok }); } };
 }
@@ -82,6 +84,7 @@ async function sb2(env) {
     if (r.status === 401 && !again) { sb2tok = { k: '', t: 0 }; await tokPut(env, 'tokRest', null); await sb2(env); return go(method, path, body, true); }   /* a shared login gone stale: log in once more */
     const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch (e) {}
     if (!r.ok) throw new Error('SimplyBook ' + method + ' ' + path.split('?')[0] + ' ' + r.status + ': ' + t.slice(0, 200));
+    if (method !== 'GET' && /calendar-notes/.test(path)) await book(env).kvSet('gapc', {}).catch(() => null);   /* a note changed (late session, block, extension): the booking board asks again */
     return j;
   };
   return (method, path, body) => go(method, path, body);
@@ -159,11 +162,14 @@ async function dayBoard(env, date) {
      requests – 14 per day looked at – and SimplyBook allows ~5,000 a day). Our own holds are always fresh (below), checkout
      always asks SimplyBook again, and any SimplyBook change (/sb/notify) clears the memory at once. */
   const ck = date + ':' + dt, C = (await hb.kvGet('gapc').catch(() => null)) || {};
-  let gaps = C[ck] && Date.now() - C[ck].t < 60e3 ? C[ck].g : null;
+  /* 12 Nov: 60 s → 10 min for later days, 2 min for today (the board was ~75% of all SimplyBook requests). Safe because every
+     SimplyBook change (/sb/notify), our own bookings and staff moves clear this memory at once, and checkout asks again. */
+  const ttl = date === today ? 2 * 60e3 : 10 * 60e3;
+  let gaps = C[ck] && Date.now() - C[ck].t < ttl ? C[ck].g : null;
   if (!gaps) {
     const p = await pub(env);
     gaps = await Promise.all(units.map((u) => gapsFor(p, date, u, dt).catch(() => null)));
-    if (!gaps.some((g) => g === null)) { const n = {}; for (const k in C) if (Date.now() - C[k].t < 60e3) n[k] = C[k]; n[ck] = { t: Date.now(), g: gaps }; await hb.kvSet('gapc', n).catch(() => null); }
+    if (!gaps.some((g) => g === null)) { const n = {}; for (const k in C) if (Date.now() - C[k].t < 10 * 60e3) n[k] = C[k]; n[ck] = { t: Date.now(), g: gaps }; await hb.kvSet('gapc', n).catch(() => null); }
   }
   const holds = await hb.list(date);
   const rooms = {};
@@ -1163,7 +1169,7 @@ async function finalize(env, ref, source) {
      Max on 11 Dec, booked online, didn't block Bella) */
   if (result.bookingId && !result.dryRun && +d.pax >= NOISE_PAX && NOISE[q.unit]) await noiseSync(env, [q.date], 'online booking').catch((e) => console.log('[noise] online ' + String(e.message || e).slice(0, 120)));
   await hb.done(ref, result);   /* first, so the guest's page shows the outcome straight away */
-  await hb.kvSet('gapc', {}).catch(() => null);   /* the booking board asks SimplyBook afresh (its 60-s memory) */
+  await hb.kvSet('gapc', {}).catch(() => null);   /* the booking board asks SimplyBook afresh (its 2–10 min memory) */
   /* paid but not in SimplyBook (slot gone, SimplyBook down…): tell staff straight away so they can call / refund */
   const T = d.pay === 'test' ? 'TEST · ' : '';
   const who = `${q.unit === 11 ? 'Maximillion' : q.room} · ${q.date} ${q.time}–${q.end} (${q.hours}h) · paid $${q.total.toFixed(2)}\n${d.name} · ${d.phone} · ${d.email} · ref ${ref}`;
