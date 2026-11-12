@@ -2413,10 +2413,12 @@ async function mvApi(env, hb, f, origin) {
     const ref = String(f.ref || '').replace(/[^A-Z0-9]/g, ''), mv = await hb.kvGet('mv:' + ref); if (!mv) return { error: 'Unknown move.' };
     if (mv.status === 'done') return { ok: true, already: true, moved: mv.result };
     const st = await mvPayStatus(env, mv); if (!st.paid) return { error: 'HitPay doesn’t show it paid yet.', st };
+    const lk0 = await hb.kvGet('mvlock:' + mv.from.bid);
     await hb.kvSet('mvdone:' + ref, Date.now() + 120e3); await hb.kvSet('mvlock:' + mv.from.bid, 0);
+    const lk1 = await hb.kvGet('mvlock:' + mv.from.bid), now0 = Date.now();
     let r; try { r = await mvExecute(env, mv, 'paid ' + (st.via || 'HitPay') + ' (finished by staff)'); } catch (e) { r = { error: 'threw: ' + String(e && e.stack || e).slice(0, 600) }; }
     mv.status = r.ok ? 'done' : 'failed'; mv.result = r.moved || null; mv.err = r.error || ''; await hb.kvSet('mv:' + ref, mv);
-    return Object.assign({ step: 'executed' }, r);
+    return Object.assign({ step: 'executed', lk0, lk1, now0, bid: mv.from.bid, lk2: await hb.kvGet('mvlock:' + mv.from.bid) }, r);
   }
   if (act === 'mvpaycheck') {   /* what HitPay says about a move's payment (staff diagnosis) */
     const mv = await hb.kvGet('mv:' + String(f.ref || '').replace(/[^A-Z0-9]/g, '')); if (!mv) return { error: 'Unknown move.' };
