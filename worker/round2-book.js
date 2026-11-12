@@ -421,6 +421,8 @@ export class HoldBook extends DurableObject {
   sbAdd(n, by) { this.qInit(); const day = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10), k = 'sbn:' + day; this.kvSet(k, (this.kvGet(k) || 0) + n);   /* day-ok: SimplyBook's limit is per calendar day */
     if (by) { const kb = 'sbb:' + day, m = this.kvGet(kb) || {}; for (const x in by) if (m[x] || Object.keys(m).length < 120) m[x] = (m[x] || 0) + by[x]; this.kvSet(kb, m);
       const old = 'sbb:' + new Date(Date.now() + 8 * 3600e3 - 3 * 86400e3).toISOString().slice(0, 10); this.sql.exec(`DELETE FROM kv WHERE k = ?`, old); } }
+  /* recent moves (owner, 13 Nov 2am: a paid guest move never ran and nobody knew) – for the sweep and staff */
+  mvRecent(since) { this.qInit(); return this.rows(`SELECT k, v FROM kv WHERE k LIKE 'mv:MV%'`).map((r) => JSON.parse(r.v)).filter((m) => m && m.t >= since).sort((a, b) => b.t - a.t).slice(0, 60); }
   kvGet(k) { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = ?`, k)[0]; return r ? JSON.parse(r.v) : null; }
   kvSet(k, v) { this.qInit(); this.sql.exec(`INSERT OR REPLACE INTO kv VALUES (?, ?)`, k, JSON.stringify(v)); }
   /* one worker at a time on a key (no await between the look and the write, so two SimplyBook callbacks can't both win) */
@@ -2407,6 +2409,7 @@ async function mvApi(env, hb, f, origin) {
   }
   if (act === 'mvlog') return { ok: true, list: ((await hb.kvGet('mvlog')) || []).slice(0, Math.min(300, +f.n || 100)) };
   if (act === 'mvstats') return await mvStats(env, false);
+  if (act === 'mvrecent') return { ok: true, list: (await hb.mvRecent(Date.now() - (+f.h || 48) * 3600e3)).map((m) => ({ ref: m.ref, t: m.t, status: m.status, guest: !!m.guest, guestRef: m.guestRef || '', total: m.total, fee: m.fee, diff: m.diff, from: m.from, to: m.to, err: m.err || '', prs: (m.prs || []).map((x) => x.kind + ':' + (x.env || 'live')) })) };
   return null;
 }
 async function gm(env, req) {
@@ -2416,7 +2419,7 @@ async function gm(env, req) {
   /* wrong staff codes are counted for every staff action (overnight review 5 Nov: only some were). The right code is never
      slowed down, so a phone with an old code can't lock anyone else out on the shop wifi. */
   if (!guest && (!env.GM_STAFF || f.staff !== env.GM_STAFF) && !(await hb.gmRate('gmbad:' + who, 60))) return gmJ({ error: 'Too many wrong staff codes from here. Wait 10 minutes.' });
-  if (/^mv(day|quote|free|pay|link|status|now|log|stats)$/.test(act)) {   /* staff: Move a booking (control centre › Bookings) */
+  if (/^mv(day|quote|free|pay|link|status|now|log|stats|recent)$/.test(act)) {   /* staff: Move a booking (control centre › Bookings) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await mvApi(env, hb, f, new URL(req.url).origin)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
@@ -3688,6 +3691,8 @@ const HANDLER = {
     /* the reminder only needs the 10-min ticks plus :15 and :45 (bookings start on the quarter hour) */
     if (ten || quarter) go(soonRun(env));
     go(paidSweep(env).catch(() => null));
+    /* paid moves that never ran (HitPay's message missed and the guest closed the page): finish them, or alert staff */
+    go((async () => { for (const m of await hb.mvRecent(Date.now() - 48 * 3600e3)) if (m.status === 'pending' && Date.now() - m.t > 60e3) await mvComplete(env, m.ref, 'sweep').catch(() => null); })());
     go(pushRetry(env).then(() => pushDiag(env)).catch(() => null));
     go(diagReq(env).catch(() => null));   /* staff questions left in KV (diag:req → diag:res) */   /* resend alerts a phone hasn't shown; delivery report copy (KV diag:push) */   /* paid at HitPay but not booked? book it (every 5 min) */
     /* a SimplyBook change a few minutes ago: Auto wrap-up looks again on the next 5-min tick (owner, 3 Nov: a quick fix was
