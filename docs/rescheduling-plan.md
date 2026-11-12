@@ -179,3 +179,12 @@ Control centre: top tab "In session" renamed Bookings; pages In session · Add a
 - "Your save history" lists the booking and every move (from → to, when, fee + difference) with a Receipt for each.
 - Reschedule receipt: From → To in the room colours, change fee, price difference, total, ref, Save as PDF. The booking's
   own receipt lists the original payment plus each paid move. Build: /receipt and /r/<code> show the moves (d.moves).
+
+### Fee shown in two parts (owner, 12 Nov – demo + live staff page; replaces the $15/$25/$35 levels)
+"A $25 fee on a Deluxe room looks random; it should read as an upgrade plus an in-demand fee."
+- The move: MOVE $15 · UPGRADE $5 (bigger room, pays the difference) · PEAK TIME $5 (same kind of room at a peak time,
+  pays the difference; purple, upgrade blue). Early-bird bookings: always MOVE $15.
+- POPULAR TIME +$10 / +$20: what the move part doesn't cover of the expected lost sale (> $5 over → +$10, > $15 over → +$20).
+  Vale/Atlas straight after a session in the same twin room +$10; the other twin room −$10 only where that still covers it.
+- Totals stay $5–$35. Stress test (821,692 moves): $5 29% · $15 68% · $25 3% · $35 1%; never loses more than $5; all pass.
+- Picker rooms grouped by tier like the booking page (sofa / gem / crown, names in room colours, colour bar, room icons).
