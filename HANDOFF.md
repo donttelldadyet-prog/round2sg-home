@@ -1,5 +1,18 @@
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
 
+> ## Guest rescheduling + Add a session bookings (LIVE 12 Nov 2026, beta) – read docs/rescheduling-plan.md first
+> - Guest page: `book.round2.sg/move?ref=<R2B…>` (engine `/move` serves round2sg-home `move/index.html` from GitHub main, 60 s cache).
+>   Linked from the booking page (`/done`, "Change of plans?" card) and the emails' MANAGE YOUR BOOKING button (`/b/[code]`).
+> - ONE rules file: `gLogic(C)` in the engine. The engine charges with it and serves the same function as `/move/logic.js` to the
+>   page, so the price shown = the price charged. Change fees/rules ONLY there. `gCtx` builds C (booking + month calendar from one
+>   getBookings + one calendar-notes read, kept 3 min in kv `gcal`, wiped with `gapc`). `gApi` = `/move/api` (read / pay / status).
+> - Pay: HitPay payment request (ref `MV…G`, webhook `/move/hitpay`), then `mvComplete` → `mvExecute` (fresh `mvQuote` clash check,
+>   SimplyBook editBook, twin, EXT, TV messages, `holdMove` adds the move to the booking record with `guest:true`; `d.paid` grows by
+>   each price difference). Switch off: engine mode `gResched = false`.
+> - Add a session (`late`): daytime 3–6h with a mobile → `lateBooking` = real SimplyBook booking + booking record (`pay:'staff'`) +
+>   link `book.round2.sg/b/<code>`; late / odd length / clash / no mobile / Change → note as before. Upcoming list still lists notes
+>   only; booking-made sessions are changed with Bookings › Move a booking or in SimplyBook.
+
 > ## TV notifications (31 Oct 2026) – read round2-tv-launcher `docs/notifications.md` first
 > Flow charts of every timer and priority on the room TVs (guest > Round2 > +N CREDITS ADDED; food first), the 10 → 5 min → That's a wrap
 > sequence, cut-offs, In session extensions (EXT notes, Vale/Atlas SYSTEM BLOCK) and a code map. The engine parts are in this repo's
