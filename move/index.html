@@ -235,7 +235,7 @@ $('pay').onclick=function(){if(!$('agree').checked){$('payerr').textContent='Tic
   if(j.changed){if(j.C)use({C:j.C,info:INFO});$('toSum').onclick();$('payerr').textContent='The price just changed to '+money(j.total)+' (the calendar moved). Check it and tap again.';return}
   if(j.error){if(j.C)use({C:j.C,info:INFO});$('payerr').textContent=j.error;b.textContent='Try again';return}
   if(j.done)return poll(j.mv,0);
-  if(j.url){b.textContent='Opening HitPay…';try{window.top.location.href=j.url}catch(e){location.href=j.url}}}).catch(function(){b.disabled=false;b.textContent='Try again';$('payerr').textContent='No connection – try again.'})};
+  if(j.url){b.textContent='Opening HitPay…';$('payerr').innerHTML='Nothing happening? <a href="'+j.url+'" target="_top" style="color:#F2C21B">Tap here to pay</a>';try{window.top.location.href=j.url}catch(e){location.href=j.url}}}).catch(function(){b.disabled=false;b.textContent='Try again';$('payerr').textContent='No connection – try again.'})};
 /* booking-page pixel icons (slots page): tiers sofa / gem / crown; each character's own icon */
 var PIX={sofa:['............','............','..########..','.#........#.','.#........#.','##........##','#.########.#','#..........#','############','.#........#.','.#........#.','............'],
  gem:['............','..########..','.#..#..#..#.','#..#....#..#','############','.#..#..#..#.','..#..##..#..','...#.##.#...','....#..#....','.....##.....','............','............'],

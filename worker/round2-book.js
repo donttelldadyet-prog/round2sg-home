@@ -3688,14 +3688,14 @@ const HANDLER = {
       if (u.pathname === '/agree' && req.method === 'POST') { const { ref } = await req.json(); return J({ ok: await book(env).agree(String(ref || '').replace(/[^A-Z0-9]/g, '')) }); }
       if (u.pathname === '/release' && req.method === 'POST') { const { ref, why } = await req.json(); const r = await safeRelease(env, String(ref || '').replace(/[^A-Z0-9]/g, ''), ['payback', 'cancel', 'timeout'].includes(why) ? why : 'left'); return J(r); }
       /* guest rescheduling (owner, 12 Nov): the page (round2sg-home move/index.html), its rules (the engine's own gLogic) and API */
-      if (u.pathname === '/move/logic.js') return new Response('/* Round2 rescheduling rules – the same code the engine charges with */\n' + gLogic.toString(), { headers: { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'no-store' } });
+      if (u.pathname === '/move/logic.js') return new Response('/* Round2 rescheduling rules – the same code the engine charges with */\n' + gLogic.toString(), { headers: { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'no-store', 'access-control-allow-origin': '*' } });
       if (u.pathname === '/move/api') { const f = req.method === 'POST' ? await req.json().catch(() => ({})) : Object.fromEntries(u.searchParams); try { return J(await gApi(env, f, u.origin)); } catch (e) { return J({ error: 'Something went wrong – try again, or WhatsApp us.', detail: String(e.message || e).slice(0, 160) }); } }
       if (u.pathname === '/move' || u.pathname === '/move/') {
         const c = caches.default, key = new Request('https://r2-cache/move-page'), hit = await c.match(key);
         if (hit) return new Response(hit.body, hit);
         const r = await fetch('https://raw.githubusercontent.com/donttelldadyet-prog/round2sg-home/main/move/index.html', { cf: { cacheTtl: 60 } });
         if (!r.ok) return H(PAGE('<h1>Reschedule</h1><p>This page didn’t load – try again in a minute, or <a href="https://wa.me/6591625767">WhatsApp us</a>.</p>'));
-        const out = new Response(await r.text(), { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=60' } });
+        const out = new Response(await r.text(), { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=60', 'access-control-allow-origin': '*' } });
         ctx.waitUntil(c.put(key, out.clone()));
         return out;
       }
