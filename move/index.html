@@ -97,7 +97,7 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 <div class="card"><h2>ADDRESS</h2><p style="margin:0"><b>20 Haji Lane, #02-00</b><br><span class="fine" style="font-size:14px">Singapore 189213 · Bugis MRT Exit B · 6 min walk</span></p></div>
 </section>
 
-<section id="s-pick" class="hidden"><button class="back" onclick="toBooking()">‹ BACK TO BOOKING</button>
+<section id="s-pick" class="hidden"><button class="back" onclick="go('home')">‹ BACK TO BOOKING</button>
 <div class="kickrow"><span class="px kick">STEP 1 OF 2 <span class="beta">BETA</span></span><span class="feeb" id="feeb"></span></div><h1>PICK A NEW SLOT</h1>
 <div class="note" id="rulenote"></div>
 <div class="card"><h2>DAY</h2><div class="wk"><button class="nav" id="wprev" aria-label="Previous week">‹</button><div class="mon" id="mon"></div><button class="nav" id="wnext" aria-label="Next week">›</button><button class="nav cal" id="calb">▦ MONTH</button></div><div class="days" id="days"></div><div class="calv hidden" id="calv"></div>
@@ -118,9 +118,9 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 <section id="s-done" class="hidden"><div class="px kick">SAVE FILE UPDATED</div><h1>YOU’RE MOVED!</h1>
 <div class="ticket" id="d-tk"><p class="room" id="d-room"></p><dl><dt>Date</dt><dd id="d-date"></dd><dt>Time</dt><dd class="big" id="d-time"></dd></dl></div>
 <div class="card"><p>Your TV message moved with your booking. A new confirmation email is on its way.</p><p class="fine" id="d-left"></p></div>
-<button class="btn ghost" id="d-rc">Download receipt</button> <button class="btn" onclick="toBooking()">Back to your booking</button></section>
+<button class="btn ghost" id="d-rc">Download receipt</button> <button class="btn" onclick="state()">Back to your booking</button></section>
 
-<section id="s-rc" class="hidden"><button class="back noprint" onclick="toBooking()">‹ BACK TO BOOKING</button><div id="rcBody"></div><button class="btn noprint" onclick="window.print()">Save as PDF / print</button></section>
+<section id="s-rc" class="hidden"><button class="back noprint" onclick="go('home')">‹ BACK TO BOOKING</button><div id="rcBody"></div><button class="btn noprint" onclick="window.print()">Save as PDF / print</button></section>
 
 
 </main>
@@ -147,14 +147,14 @@ function go(s){['load','home','pick','sum','done','rc'].forEach(function(x){var 
 function tag(d){return d>0.004?'<em class="up">+'+money(d)+'</em>':d<-0.004?'<em class="dn">cheaper · no refund</em>':'<em class="eq">same price</em>'}
 function toBooking(){location.href='/done?ref='+REF}
 function stop(h,p){go('load');$('ld-h').textContent=h;$('ld-p').innerHTML=p;$('ld-wa').classList.remove('hidden')}
-var STOP={notfound:['BOOKING NOT FOUND','We can’t find this booking. Open the link in your confirmation email again, or message us.'],cancelled:['BOOKING CANCELLED','This booking is no longer in our calendar. If that’s not right, message us.'],notbooked:['NOT ONLINE YET','This booking can’t be changed online. Message us on WhatsApp and we’ll help.'],gone:['CHECK WITH US','We can’t see this booking in our calendar right now. Message us on WhatsApp and we’ll sort it out.'],past:['SESSION OVER','This session has already happened. Hope you had fun!'],off:['RESCHEDULE PAUSED','Online rescheduling is paused for now. Message us on WhatsApp and we’ll move your booking.']};
+var STOP={notfound:['BOOKING NOT FOUND','We can’t find this booking. Open the link in your confirmation email again, or message us.'],cancelled:['BOOKING CANCELLED','This booking is no longer in our calendar. If that’s not right, message us.'],notbooked:['NOT ONLINE YET','This booking can’t be changed online. Message us on WhatsApp and we’ll help.'],gone:['CHECK WITH US','We can’t see this booking in our calendar right now. Message us on WhatsApp and we’ll sort it out.'],past:['SESSION OVER','This session has already happened. Hope you had fun! <a href="/receipt?ref='+REF+'" style="color:#F2C21B">Your receipt</a> · <a href="/done?ref='+REF+'" style="color:#F2C21B">Booking details</a>'],off:['RESCHEDULE PAUSED','Online rescheduling is paused for now. Message us on WhatsApp and we’ll move your booking.']};
 function load(fresh){return fetch('/move/api?ref='+REF+(fresh?'&t='+Date.now():'')).then(function(r){return r.json()})}
 function use(j){C=j.C;INFO=j.info;LG=gLogic(C);ROOMS=LG.ROOMS;OPEN=LG.OPEN;LAST=LG.LAST;CLOSE=LG.CLOSE;BUF=LG.BUF;LOCK=LG.LOCK;price=LG.price;rate=LG.rate;peak=LG.peak;taken=LG.taken;fits=LG.fits;why=LG.why;starts=LG.starts;locked=LG.locked;dayFull=LG.dayFull;feeOf=LG.feeOf;pace=LG.pace;leadH=LG.leadH;stage=LG.stage;
  NOW=C.now;ND=C.days.length;D0=new Date(C.days[0].date+'T12:00:00Z');days=C.days.map(function(x){var d=new Date(x.date+'T12:00:00Z');return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getUTCDay()]+' '+d.getUTCDate()});
  S={moves:C.moves,grace:C.grace,wa:INFO.staff}}
 function boot(){go('load');load().then(function(j){if(j.stop){var s=STOP[j.stop]||STOP.gone;return stop(s[0],s[1])}if(!j.C)return stop('SOMETHING WENT WRONG',(j.error||'Try again in a minute.'));use(j);
  $('a-book').href='/done?ref='+REF;$('a-wa').href='https://wa.me/6591625767?text='+encodeURIComponent('Hi Round2, about my booking '+REF+' ('+(INFO.name||'')+')');
- if(MV){var m=MV;MV='';return poll(m,0)}state();var mb=$('a-move');if(!mb.disabled)mb.onclick()}).catch(function(){stop('NO CONNECTION','We couldn’t load your booking. Check your connection and try again.')})}
+ if(MV){var m=MV;MV='';return poll(m,0)}state()}).catch(function(){stop('NO CONNECTION','We couldn’t load your booking. Check your connection and try again.')})}
 function poll(m,n){go('load');$('ld-h').textContent='CONFIRMING YOUR MOVE…';$('ld-p').textContent='Your payment came through. We’re moving your booking – this takes a few seconds.';
  fetch('/move/api?ref='+REF+'&mv='+m).then(function(r){return r.json()}).then(function(j){
   if(j.status==='done'){try{history.replaceState(null,'','?ref='+REF)}catch(e){}return load(true).then(function(k){if(k.C)use(k);doneScreen()})}

@@ -2882,7 +2882,6 @@ ${test ? '<div class="test">TEST BOOKING · nothing was really charged</div>' : 
 <div class="ticket"><p class="room">${esc(room)}</p><div class="type">${esc(look[2])}${q.earlyBird ? ' · Early bird' : ''}</div>
 <dl><dt>Date</dt><dd>${esc(dayTxt)}</dd><dt>Time</dt><dd class="big">${esc(clock(q.time))} – ${esc(clock(q.end))}</dd><dt>Length</dt><dd>${q.hours} hours</dd>
 <dt>Name</dt><dd>${esc(d.name)}</dd><dt>Guests</dt><dd>${esc(d.pax)}</dd><dt>Paid</dt><dd>$${q.total.toFixed(2)}</dd><dt>Ref</dt><dd class="ref">${esc(ref)}</dd></dl></div>
-${done.bookingId && !done.dryRun ? `<div class="card"><div class="k">CHANGE OF PLANS? <span style="background:#F2C21B;color:#000;padding:2px 4px;margin-left:6px">BETA</span></div><p>Move to another day, time or room – up to 2 times, until 3 hours before your session. A small change fee applies; every slot shows the total.</p><a class="btn" href="${origin}/move?ref=${esc(ref)}">Reschedule</a></div>` : ''}
 ${msgBox}
 <div class="card"><div class="k">WHEN YOU ARRIVE</div><ul><li>Come in and take a seat in our lobby. We’ll know you’ve arrived and come to show you to ${esc(room)}.</li><li>Your booking is under <b>${esc(d.name)}</b>.</li><li>Please be on time: your session ends at ${esc(clock(q.end))}.</li><li>${done.note || !done.bookingId || (done.fallback || []).some((x) => /shared/.test(x)) || (done.email && done.email !== 'ok') ? `We’ll WhatsApp you on ${esc(d.phone)} to confirm the details.` : `A confirmation email is on its way to ${esc(d.email)}.`}</li></ul></div>
 <div class="card"><div class="k">ADDRESS</div><a class="loc" href="${MAPS_URL}" target="_blank" rel="noopener"><span class="pin"><svg width="20" height="24" viewBox="0 0 10 12" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M3 0h4v1h1v1h1v4H8v2H7v2H6v2H4v-2H3V8H2V6H1V2h1V1h1zm1 3v2h2V3z"/></svg></span><span><span class="ad">20 Haji Lane, #02-00</span><br><span class="sg">Singapore 189213</span></span><span class="go">MAP ›</span></a><span class="mrt"><b>EW12</b>Bugis MRT · Exit B · 6 min walk</span></div>
@@ -3758,7 +3757,7 @@ const HANDLER = {
       /* SimplyBook's confirmation email links here with its booking code → that booking's page (see it, add/change the TV message) */
       if (u.pathname.startsWith('/b/')) {
         const code = u.pathname.slice(3).replace(/[^a-z0-9]/gi, '').slice(0, 20), r = code ? await book(env).byCode(code) : null;
-        if (r) return Response.redirect(u.origin + '/done?ref=' + r.ref, 302);
+        if (r) return Response.redirect(u.origin + '/move?ref=' + r.ref, 302);   /* the 4-button booking page (owner, 12 Nov) */
         return H(PAGE(`<h1>Your booking</h1><p>We can’t show this booking here. For anything about it – its details, a change, or a message on the big screen in your Round2 room – message us on WhatsApp and we’ll sort it out.</p><a class="btn" href="https://wa.me/6591625767?text=${encodeURIComponent('Hi Round2, about my booking ' + code)}">WhatsApp us</a>`));
       }
       /* "Find my booking": email + mobile → the confirmation page again (to see it or add/change the TV message) */
@@ -3783,9 +3782,9 @@ const HANDLER = {
           } catch (e) {}
         }
         if (!list.length) return form('We couldn’t find an upcoming online booking with that email and mobile. Check for typos, or WhatsApp us.', em);
-        if (list.length === 1) return Response.redirect(u.origin + '/done?ref=' + list[0].ref, 303);
+        if (list.length === 1) return Response.redirect(u.origin + '/move?ref=' + list[0].ref, 303);
         const rows = [];
-        for (const r of list) { const h = await hb.get(r.ref), q = h.data.q; rows.push(`<a class="btn ghost" style="margin-top:10px" href="/done?ref=${r.ref}">${esc(q.unit === 11 ? 'Maximillion' : q.room)} · ${esc(q.date)} · ${esc(q.time)}</a>`); }
+        for (const r of list) { const h = await hb.get(r.ref), q = h.data.q; rows.push(`<a class="btn ghost" style="margin-top:10px" href="/move?ref=${r.ref}">${esc(q.unit === 11 ? 'Maximillion' : q.room)} · ${esc(q.date)} · ${esc(q.time)}</a>`); }
         return H(PAGE(`<h1>Your bookings</h1><p>Pick one:</p>${rows.join('')}`));
       }
       /* "Add a message for the TV" on the confirmation page: make the guest-message link only when it's wanted */
