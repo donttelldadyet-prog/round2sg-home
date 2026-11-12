@@ -1871,7 +1871,7 @@ const MV_RF = { 5: 58 / 52.7, 8: 58 / 52.7, 9: 42 / 52.7, 10: 32 / 23.7, 11: 27 
 const MV_RFEB = { 5: 15 / 35, 8: 33 / 35, 9: 57 / 35, 10: 38 / 51, 11: 74 / 51, 12: 41 / 51, 7: 1 };
 const MV_PT = { busy: { eb: [3, 6, 18, 35], mid: [10, 13, 31, 49], aft: [26, 29, 42, 52], eve: [32, 38, 48, 56] }, quiet: { eb: [5, 12, 22, 38], mid: [8, 12, 26, 41], aft: [12, 12, 16, 20], eve: [10, 11, 15, 17] } };
 const MV_AVGD = { 5: 1.36, 8: 1.54, 9: 1.14, 10: 0.83, 11: 0.98, 12: 0.57, 7: 0.9 };
-const MV_LV = [['quiet', 15], ['busy', 25], ['very busy', 35], ['upgrade', 5]];
+/* (fee levels replaced 12 Nov by move + popular time – see mvQuote) */
 function mvBand(m) { return m === EB_START ? 'eb' : m < 855 ? 'mid' : m < 1035 ? 'aft' : 'eve'; }
 function mvShareBy(h) { const P = [[0, 1], [12, 0.7], [24, 0.56], [72, 0.31], [168, 0.15]]; if (h >= 168) return 0.15; for (let k = 0; k < 4; k++) if (h <= P[k + 1][0]) return P[k][1] + (P[k + 1][1] - P[k][1]) * (h - P[k][0]) / (P[k + 1][0] - P[k][0]); return 0.15; }
 /* how many guest bookings a room already has that day vs normal by now → ×1.25 (filling fast) / ×0.8 (quiet day) */
@@ -1954,13 +1954,16 @@ async function mvQuote(env, f) {
   const v3N = mvPrice3(ROOMS[unit][1], q.peak, m), v3O = mvPrice3(ROOMS[B.unit][1], oPeak, mO);
   const money = mvExpV(unit, m, lN, q.peak, pN) - mvExpV(B.unit, mO, lO, oPeak, pO) - Math.max(0, v3N - v3O);
   const twin = mvTwin(D1, unit, s, e, skip), eb = mO === EB_START;
-  let lv = money <= 10 ? 0 : money <= 20 ? 1 : 2;
-  if (twin === 'same') lv = Math.min(2, lv + 1);
-  else if (money <= (twin === 'other' ? 10 : 5) && !eb && q.total > paid + 0.004) lv = 3;
-  const diff = Math.max(0, Math.round((q.total - paid) * 100) / 100), fee = MV_LV[lv][1];
+  /* the fee in two parts (owner, 12 Nov): the move – upgrade $5 (bigger room) / peak time $5 (same kind of room) / move $15 –
+     plus "popular time" +$10/+$20 for what the move part doesn't cover; Vale/Atlas straight after a session in the same twin
+     room +$10, the other twin room −$10 where that still covers the cost. Early-bird bookings: always move $15. */
+  const up = !eb && q.total > paid + 0.004, base = up ? 5 : 15, name = up ? (ROOMS[unit][1] === ROOMS[B.unit][1] ? 'peak time' : 'upgrade') : 'move';
+  const xs = money - base; let add = xs <= 5 ? 0 : xs <= 15 ? 10 : 20;
+  if (twin === 'same') add = Math.min(20, add + 10); else if (twin === 'other' && add && base + add - 10 >= money - 5) add -= 10;
+  const diff = Math.max(0, Math.round((q.total - paid) * 100) / 100), fee = base + add;
   return { ok: !clash.length, clash, ext: X.min, from: { bid: B.bid, code: B.code, room: ROOMS[B.unit][0], unit: B.unit, date: B.date, time: B.time, hours: B.hours, name: B.name, paid, online: !!held },
     to: { room: q.room, unit, date, time, hours, end: q.end, price: q.total, peak: q.peak, earlyBird: q.earlyBird },
-    level: MV_LV[lv][0], fee, diff, total: Math.round((fee + diff) * 100) / 100, reason: [why, twin === 'same' ? 'same Vale/Atlas room straight after another session' : twin === 'other' ? 'other Vale/Atlas room – easy turnaround' : ''].filter(Boolean).join(' · '),
+    level: name, base, add, fee, diff, total: Math.round((fee + diff) * 100) / 100, reason: [why, twin === 'same' ? 'same Vale/Atlas room straight after another session' : twin === 'other' ? 'other Vale/Atlas room – easy turnaround' : ''].filter(Boolean).join(' · '),
     lostSales: Math.round(money * 100) / 100 };
 }
 /* do the move in SimplyBook (after payment, or waived / paid in shop) */
