@@ -2066,6 +2066,13 @@ async function mvExecute(env, mv, how) {
     await autoRun(env, 'moved').catch(() => null);
     const L = (await hb.kvGet('mvlog')) || []; L.unshift(rec); await hb.kvSet('mvlog', L.slice(0, 300));
     await mvStats(env, true).catch(() => null);   /* trip-wires: a push alert when one turns red */
+    /* staff phones (owner, 12 Nov): who moved it and what was paid – same tag as the booking's own alert, so it replaces "MOVED" */
+    await hb.kvSet('mvpush:' + B.bid, Date.now() + 10 * 60e3).catch(() => null);   /* SimplyBook's own 'changed' alert for this move is skipped (below) */
+    if (env.VAPID_JWK) {
+      const sp = (x) => (x.room === 'Max' || +x.unit === 11 ? 'Max' : x.room) + ' ' + new Date(x.date + 'T12:00:00Z').toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).replace(/,/g, '') + ', ' + clock12(sgMs0(x.date + ' ' + x.time));
+      const paid = +mv.total > 0 ? 'paid $' + (+mv.total).toFixed(2).replace(/\.00$/, '') + ' (fee $' + (+mv.fee) + (+mv.diff > 0 ? ' + $' + (+mv.diff).toFixed(2).replace(/\.00$/, '') + ' difference' : '') + ')' : 'no charge' + (mv.grace ? ' (free 15 min)' : '');
+      await pushAll(env, 'booking', { title: roomTitle(q.unit) + ' · ' + (B.name || 'Guest'), body: '🔁 RESCHEDULED ' + (mv.guest ? 'online by the guest' + (mv.moveNo === 2 ? ' (2nd move)' : '') : 'by ' + (mv.by || 'staff')) + '\nwas ' + sp(mv.from) + '\nnow ' + sp({ room: q.room, unit: q.unit, date: q.date, time: q.time }) + ' · ' + q.hours + 'h\n' + paid, tag: 'bk' + B.bid, url: '/?tab=resched' }).catch(() => null);
+    }
     return { ok: true, moved: rec };
   } finally { await hb.kvSet('mvlock:' + mv.from.bid, 0); }
 }
@@ -3415,6 +3422,8 @@ async function paidLengthCheck(env, bid, type) {
 async function bookingPush(env, bid, type) {
   if (!SB_ALERT[type] || !env.VAPID_JWK) return null;
   const hb = book(env), prev = await hb.bkGet(String(bid)).catch(() => null);
+  const mvp = type === 'change' ? await hb.kvGet('mvpush:' + bid).catch(() => null) : null;
+  if (mvp && mvp > Date.now()) { const r0 = await bookingAlert(env, bid, type, prev); if (r0 && r0.now) await hb.bkPut(String(bid), r0.now).catch(() => null); return { skipped: 'moved through Round2 – its own alert was sent' }; }
   const r = await bookingAlert(env, bid, type, prev);
   if (r && r.now) await (type === 'cancel' ? hb.bkDel(String(bid)) : hb.bkPut(String(bid), r.now)).catch(() => null);
   if (type === 'cancel') await hb.vDel(String(bid)).catch(() => null);   /* a cancelled booking isn't a visit */
