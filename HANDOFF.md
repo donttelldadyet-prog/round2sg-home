@@ -132,14 +132,13 @@ Since 30 Oct the engine books the same way and notes "Guest session HH:MM–HH:M
   and SimplyBook keeps sending staff app alerts and guest confirmation emails. Prices, holds, payment and the guest page are ours.
 - **If we edit/move/cancel a booking in SimplyBook, does the board follow?** Yes – the board asks SimplyBook for free time every time it loads.
 - **Vale/Atlas (Atlas is above Vale, wooden floor):** before payment, our system holds BOTH rooms in its own hold store only (nothing written
-  to SimplyBook), so it can't clash with Make. After payment the booking is written to SimplyBook on the normal services (28/29/32 Netflix,
-  33/35/37 Deluxe) and the existing Make scenario "[BACKEND] SYSTEM BLOCKS MIRROR ROOMS" (id 6990225) blocks the other room as today.
-  That scenario hard-codes service ids – any new service must be added there. If mirroring is ever moved into the Worker, turn that Make branch off first.
+  to SimplyBook). After payment the booking is written to SimplyBook on the normal services (28/29/32 Netflix,
+  33/35/37 Deluxe) and the engine blocks the other room – see "Vale ↔ Atlas mirror runs in the engine" below.
 
 ## Decision 30 Oct: Early Bird extensions WITHOUT new SimplyBook services
 The Worker books Early Bird on the existing live services 32/33/34 with an explicit end time (e.g. 11:00–15:00 for 3 h + 1 h),
-the same way the Make mirror scenario creates its blocker bookings (admin `book()` with start AND end, no payment step).
-Make already mirrors 32 (Vale) and 33 (Atlas) and copies the booking's start/end, so the extended time is blocked too.
+the same way the mirror creates its blocker bookings (admin `book()` with start AND end, no payment step).
+The mirror (Make until 11 Nov, now the engine) copies the booking's start/end, so the extended time is blocked too.
 So the hidden services 39–44 and add-ons 38–55 are NOT needed – leave hidden, delete later with the owner.
 To confirm in to-do #1 (real test booking): SimplyBook accepts the longer end time on 32/33/34.
 
@@ -159,10 +158,20 @@ To confirm in to-do #1 (real test booking): SimplyBook accepts the longer end ti
 - Engine `noiseSync`: runs on every SimplyBook callback, after In session / Add a session actions, every 10 min (tonight +
   tomorrow) and hourly (week ahead). Read-out: gm action `noise` (day, sync=1). System check step "Noise rule".
 
+## Vale ↔ Atlas mirror runs in the engine (LIVE since 11 Nov 2026) – Make is off
+- Make "[BACKEND] SYSTEM BLOCKS MIRROR ROOMS" (6990225) was switched off 11 Nov 2026, 8:18pm SGT; kept, not deleted (fallback).
+- Engine `mirrorOnSb` (worker/round2-book.js), run from `/sb/notify` when engine mode `mirror === 'engine'`: a guest booking in Vale
+  makes a SYSTEM BLOCK booking in Atlas (client 2472) and the other way round (client 2476), with the booking's exact SimplyBook
+  start and end (cleaning included). It moves and cancels with the booking. Any service: the same kind (off-peak / peak / early
+  bird) in the twin, else its off-peak service (`mirSvc`) – no hard-coded service list any more. A failed block alerts staff phones.
+- Record per booking: kv `mir:<booking>` = { blk }; Make's old blocks were adopted at switch-over (`mirAdopt`).
+- gm action `mirror`: do=status (mode + last 20 log lines) · adopt (fix=1 makes missing blocks) · run&bid= · on / off.
+  **Going back to Make = do=off AND switch the Make scenario on again** – with the mode on `make` and Make off, nothing mirrors.
+
 ## SimplyBook callback goes through the engine (30 Oct 2026)
 SimplyBook's callback URL (Custom features › API) should be `https://round2-book.donttelldadyet.workers.dev/sb/notify/<SB_NOTIFY_KEY>`
-(the full address is with the owner; the key is a Cloudflare secret). The engine passes every callback on unchanged to Make's
-"[BACKEND] SYSTEM BLOCKS MIRROR ROOMS" (secret `MIRROR_HOOK_URL`), then: cancelled → the online booking drops off "View your
+(the full address is with the owner; the key is a Cloudflare secret). Since 11 Nov the engine mirrors Vale ↔ Atlas itself (section
+above); it only passes the callback on to Make's mirror scenario (secret `MIRROR_HOOK_URL`) when engine mode `mirror` is `make`. Then: cancelled → the online booking drops off "View your
 booking" and its pages say "cancelled"; any create/change/cancel → guest messages follow their booking straight away.
 The engine's own SimplyBook check is now only a 6-hour backstop plus a check right before each message shows.
 "View your booking" also asks SimplyBook for cancellations when a guest searches, so bookings cancelled before this existed
