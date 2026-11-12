@@ -875,14 +875,16 @@ class Component extends DCLogic {
 (function () {
   var BOOK = 'https://book.round2.sg', PX = "font-family:'Press Start 2P',monospace;";
   function hm(t) { var h = +t.slice(0, 2), m = +t.slice(3, 5); return ((h + 11) % 12 + 1) + (m ? ':' + String(m).padStart(2, '0') : '') + (h % 24 < 12 ? 'am' : 'pm'); }
-  function save() {
-    try { var all = JSON.parse(localStorage.getItem('r2.saves') || '{}'), now = Date.now(), best = null;
-      for (var k in all) { var x = all[k]; if (x && x.endMs > now && (!best || x.startMs < best.startMs)) best = x; }
-      return best; } catch (e) { return null; }
+  /* every upcoming booking this phone has opened, soonest first (Wendy's several Max sessions: owner, 12 Nov) */
+  function saves() {
+    try { var all = JSON.parse(localStorage.getItem('r2.saves') || '{}'), now = Date.now(), L = [];
+      for (var k in all) { var x = all[k]; if (x && x.endMs > now && /^R2B[A-Z0-9]{6,12}$/.test(x.ref)) L.push(x); }
+      return L.sort(function (a, b) { return a.startMs - b.startMs; }); } catch (e) { return []; }
   }
+  function dayOf(x) { var d = new Date(x.date + 'T12:00:00Z'); return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getUTCMonth()]; }
   function apply() {
     var stage = document.getElementById('r2-stage'); if (!stage) return;
-    var mob = document.documentElement.className === 'r2-mobile', sv = save();
+    var mob = document.documentElement.className === 'r2-mobile', SV = saves(), sv = SV[0] || null;
     var href = sv ? BOOK + '/done?ref=' + sv.ref : BOOK + '/find';
     stage.querySelectorAll('button').forEach(function (b) {
       if (!/^\s*pick a room\s*$/i.test(b.textContent)) return;
@@ -894,17 +896,25 @@ class Component extends DCLogic {
     });
     if (sv && !stage.querySelector('.r2-sf')) {
       var hd = stage.querySelector('header'); if (!hd) return;
-      var d = new Date(sv.date + 'T12:00:00Z'), day = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getUTCMonth()];
+      var day = dayOf(sv), more = SV.length - 1;
       var esc = function (x) { return String(x).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
       var col = /^#[0-9a-f]{6}$/i.test(sv.c) ? sv.c : '#F2C21B', ink = /^#[0-9a-f]{6}$/i.test(sv.i) ? sv.i : '#0b0914';
       var c = document.createElement('a'); c.className = 'r2-sf'; c.href = BOOK + '/done?ref=' + sv.ref; c.target = '_top';
       var top = hd.offsetTop + hd.offsetHeight + (mob ? 10 : 14);
       c.style.cssText = 'position:absolute;z-index:5;top:' + top + 'px;' + (mob ? 'left:16px;right:16px;' : 'left:56px;width:620px;') +
         'display:flex;align-items:center;gap:' + (mob ? 10 : 16) + 'px;padding:' + (mob ? '8px 8px 8px 12px' : '10px 10px 10px 16px') + ';background:rgba(10,8,18,.82);backdrop-filter:blur(10px);border:1px solid ' + col + ';border-left-width:4px;text-decoration:none;color:#f4f1fb;font-family:"Chakra Petch",sans-serif';
-      c.innerHTML = '<div style="flex:1;min-width:0"><div style="' + PX + 'font-size:' + (mob ? 7 : 8) + 'px;letter-spacing:.14em;color:' + col + '">SAVE FOUND</div>' +
-        '<div style="font-size:' + (mob ? 14 : 16) + 'px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px">' + esc(sv.room) + ' <span style="font-weight:500;color:#d6d0e3;text-transform:none">· ' + day + ' · ' + hm(sv.time) + ' – ' + hm(sv.end) + '</span></div></div>' +
+      c.innerHTML = '<div style="flex:1;min-width:0"><div style="' + PX + 'font-size:' + (mob ? 7 : 8) + 'px;letter-spacing:.14em;color:' + col + '">SAVE FOUND' + (more ? ' <span style="color:#b9b0cf">· +' + more + ' MORE</span>' : '') + '</div>' +
+        '<div style="font-size:' + (mob ? 14 : 16) + 'px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px">' + esc(mob && sv.room === 'Maximillion' ? 'Max' : sv.room) + ' <span style="font-weight:500;color:#d6d0e3;text-transform:none">· ' + day + ' · ' + hm(sv.time) + ' – ' + hm(sv.end) + '</span></div></div>' +
         '<span style="flex:0 0 auto;display:flex;align-items:center;height:' + (mob ? 36 : 40) + 'px;padding:0 ' + (mob ? 12 : 18) + 'px;background:' + col + ';color:' + ink + ';font-weight:700;font-size:' + (mob ? 12 : 13) + 'px;letter-spacing:.12em;text-transform:uppercase">Manage ›</span>';
       stage.appendChild(c);
+      /* more than one booking: the strip opens a short list (tap a booking to manage it); Manage › still goes to the next one */
+      if (more) {
+        var box = document.createElement('div'); box.className = 'r2-sfl';
+        box.style.cssText = 'position:absolute;z-index:6;display:none;top:' + (top + c.offsetHeight + 4) + 'px;' + (mob ? 'left:16px;right:16px;' : 'left:56px;width:620px;') + 'background:rgba(10,8,18,.94);backdrop-filter:blur(10px);border:1px solid rgba(244,241,251,.18);font-family:"Chakra Petch",sans-serif';
+        box.innerHTML = SV.map(function (x) { var cc = /^#[0-9a-f]{6}$/i.test(x.c) ? x.c : '#F2C21B'; return '<a href="' + BOOK + '/done?ref=' + x.ref + '" target="_top" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-left:4px solid ' + cc + ';border-bottom:1px solid rgba(244,241,251,.08);text-decoration:none;color:#f4f1fb;font-size:' + (mob ? 14 : 15) + 'px"><b style="color:' + cc + ';text-transform:uppercase">' + esc(x.room) + '</b><span style="flex:1;color:#d6d0e3">' + dayOf(x) + ' · ' + hm(x.time) + ' – ' + hm(x.end) + '</span><span style="color:#b9b0cf">›</span></a>'; }).join('');
+        stage.appendChild(box);
+        c.addEventListener('click', function (e) { if (e.target.closest('span') && /Manage/.test(e.target.textContent)) return; e.preventDefault(); box.style.display = box.style.display === 'none' ? 'block' : 'none'; });
+      }
     }
   }
   var st = document.getElementById('r2-stage'); if (!st) return;
