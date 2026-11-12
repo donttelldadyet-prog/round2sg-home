@@ -426,7 +426,9 @@ export class HoldBook extends DurableObject {
   kvGet(k) { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = ?`, k)[0]; return r ? JSON.parse(r.v) : null; }
   kvSet(k, v) { this.qInit(); this.sql.exec(`INSERT OR REPLACE INTO kv VALUES (?, ?)`, k, JSON.stringify(v)); }
   /* one worker at a time on a key (no await between the look and the write, so two SimplyBook callbacks can't both win) */
-  claim(k, ms) { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = ?`, k)[0], now = Date.now(); if (r && JSON.parse(r.v) > now) return false; this.sql.exec(`INSERT OR REPLACE INTO kv VALUES (?, ?)`, k, JSON.stringify(now + ms)); return true; }
+  /* a short lock in kv (was also called claim() – the holds claim(ref) further down silently replaced it, so every lock said
+     "busy": moves and Vale/Atlas blocks never ran. Found 13 Nov 2am.) */
+  lock(k, ms) { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = ?`, k)[0], now = Date.now(); if (r && JSON.parse(r.v) > now) return false; this.sql.exec(`INSERT OR REPLACE INTO kv VALUES (?, ?)`, k, JSON.stringify(now + ms)); return true; }
   /* every phone alert, with what it was about (owner, 5 Nov: tapping an alert opens its own page in the control centre).
      The control centre lists the last 24 hours; kept 3 days so a notification tapped late still opens. Newest first, at most 400. */
   alogAdd(e) { const L = (this.kvGet('alog') || []).filter((x) => x.t > Date.now() - 3 * 86400e3); L.unshift(e); this.kvSet('alog', L.slice(0, 400)); }
@@ -2035,7 +2037,7 @@ async function mvQuote(env, f) {
 /* do the move in SimplyBook (after payment, or waived / paid in shop) */
 async function mvExecute(env, mv, how) {
   const hb = book(env);
-  if (!(await hb.claim('mvlock:' + mv.from.bid, 120e3))) return { error: 'Someone is moving this booking right now.' };
+  if (!(await hb.lock('mvlock:' + mv.from.bid, 120e3))) return { error: 'Someone is moving this booking right now.' };
   try {
     const Q = await mvQuote(env, { bid: mv.from.bid, unit: mv.to.unit, date: mv.to.date, time: mv.to.time, hours: mv.to.hours });
     if (!Q.ok) return { error: 'That time isn’t free any more: ' + Q.clash.join('; '), clash: Q.clash };
@@ -2090,7 +2092,7 @@ async function mvComplete(env, ref, source) {
   const hb = book(env), mv = await hb.kvGet('mv:' + ref);
   if (!mv) return { error: 'unknown move' };
   if (mv.status === 'done') return { ok: true, already: true, moved: mv.result };
-  if (!(await hb.claim('mvdone:' + ref, 120e3))) return { busy: true };
+  if (!(await hb.lock('mvdone:' + ref, 120e3))) return { busy: true };
   const st = await mvPayStatus(env, mv); if (!st.paid) { await hb.kvSet('mvdone:' + ref, 0); return { paid: false }; }
   const r = await mvExecute(env, mv, 'paid ' + (st.via || 'HitPay'));
   mv.status = r.ok ? 'done' : 'failed'; mv.result = r.moved || null; mv.err = r.error || ''; await hb.kvSet('mv:' + ref, mv);
@@ -3533,7 +3535,7 @@ function mirSvc(ev, from, to) {
 }
 async function mirrorOnSb(env, bid, type, tries = 0) {
   const hb = book(env), rec = await hb.kvGet('mir:' + bid), a = await admin(env);
-  if (!(await hb.claim('mirlock:' + bid, 60e3))) { if (tries < 3) { await new Promise((r) => setTimeout(r, 5000)); return mirrorOnSb(env, bid, type, tries + 1); } return { busy: true }; }
+  if (!(await hb.lock('mirlock:' + bid, 60e3))) { if (tries < 3) { await new Promise((r) => setTimeout(r, 5000)); return mirrorOnSb(env, bid, type, tries + 1); } return { busy: true }; }
   try {
     const drop = async (why) => {
       if (!rec || !rec.blk) return { none: why };
