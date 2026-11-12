@@ -33,6 +33,20 @@
 > **7. Checks.** System check steps: "Guest rescheduling: page, rules and fees" and "Add a session: daytime with a mobile = real
 >   booking, late = note". Deploy: r2-deploy-helper cron fetches the commit into KV, verify SHA-256, PUT with keep_bindings.
 
+> ## INCIDENT 13 Nov 2am – first real guest move didn't run; Atlas not blocked (FIXED)
+> - Ranen Tan paid $15 (PayNow, 2:04am, MV39355CBD) to move Vale Tue 17 Nov 3:30pm 4h → 4pm 3h. Nothing moved, no alert, Atlas free.
+> - Cause: the HoldBook class had TWO methods named `claim` – the kv lock `claim(k, ms)` (added 11 Nov with the engine mirror) and
+>   the holds `claim(ref)` further down, which silently replaced it. Every lock returned "busy": `mvExecute` ("Someone is moving
+>   this booking"), `mvComplete`, and `mirrorOnSb` (Vale/Atlas twin blocks gave up). Renamed the kv lock to `lock(k, ms)`.
+> - Done: move finished by staff action `mvfinish` (recorded as paid online); missing twin block added (izzati, Vale 13 Nov 2:15pm,
+>   via `mirror adopt fix=1`); all 9 Vale/Atlas bookings now blocked.
+> - Added: a 5-min sweep that finishes paid moves still pending (or alerts); staff actions `mvrecent`, `mvpaycheck`, `mvfinish`;
+>   System check step "Moves and Vale/Atlas blocks can run" (`mvselftest`: lock locks, no missing twin blocks, no stuck moves).
+>   System check after the fix: 35 ✅ (the red was the check's own under-3h test time – fixed).
+> - Deploys: the helper's cron had stopped firing for hours. r2-deploy-helper now ALSO fetches on demand:
+>   GET https://r2-deploy-helper.donttelldadyet.workers.dev/?k=<KV deploy:key> → pulls `deploy:want` into `deploy:src`.
+> - Lesson: never reuse a method name in HoldBook; the self-test now proves the lock works.
+
 > ## Session log – 12 Nov 2026 (owner + Claude): guest rescheduling launch, start to finish
 > In order, so the next person sees why things are the way they are:
 > 1. **SimplyBook emails** (Settings › Email & SMS › templates, edited in the browser): Booking confirmation, Booking change and
