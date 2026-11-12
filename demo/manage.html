@@ -344,9 +344,9 @@ function diffParts(i,r,t,h){var o=O(),a=o.paid,b=price(r,o.day,o.t,o.h),c=price(
  if(b-a>0.004)P.push([TYPE[ROOMS[r][1]].replace(' room','')+' room',b-a]);
  if(c-b>0.004)P.push([o.eb?'full-price time':'peak '+(rate(i,t)==='peak'?'day':'time'),c-b]);
  if(dd-c>0.004)P.push(['extra hours',dd-c]);return P}
-function paycol(i,r,t,d){var F=feeOf(i,r,t),f=fee(t,i,r),add=S.grace?0:F.add,base=f-add,c=F.name==='PEAK TIME'?PEAKC:F.name==='UPGRADE'?'#7fd3ff':'#b9b2cc',a=F.add>=15?'#ffb070':'#F2C21B',dd=Math.max(0,d),P=diffParts(i,r,t);
- return '<span class="pc"><span class="pc1"><span class="lv" style="color:'+c+';border-color:'+c+'">'+(S.grace?'FREE CHANGE':F.name+' $'+base)+'</span>'+(add?'<span class="lv" style="color:'+a+';border-color:'+a+'">POPULAR +$'+add+'</span>':'')+'<b>'+money(base+add+dd)+'</b></span>'+
-  '<span class="pc2">'+(d>0.004?'incl. '+P.map(function(x){return x[0]+' +'+money(x[1]).replace('.00','')}).join(' · '):d<-0.004?'cheaper slot · no refund':'same price')+'</span></span>'}
+function paycol(i,r,t,d){var F=feeOf(i,r,t),f=fee(t,i,r),add=S.grace?0:F.add,base=f-add,c=add?(add>=15?'#ffb070':'#F2C21B'):F.name==='PEAK TIME'?PEAKC:F.name==='UPGRADE'?'#7fd3ff':'#b9b2cc',P=diffParts(i,r,t);
+ return '<span class="lv" style="color:'+c+';border-color:'+c+'">'+(S.grace?'FREE CHANGE':F.name+' $'+base+(add?' + $'+add+' popular':''))+'</span>'+
+  (d>0.004?'<em class="up">+'+money(d).replace('.00','')+' '+P.map(function(x){return x[0]}).join(' & ')+'</em>':d<-0.004?'<em class="dn">cheaper · no refund</em>':'<em class="eq">same price</em>')}
 function rn(r){return r==='Maximillion'?'Max':r}
 /* RECEIPT: the booking (k = -1) or one move; same look as the live /receipt page; Save as PDF = the phone's print */
 function rcpt(k){var o=O(),M=o.mvs,first=M.length?M[0].from:{room:o.room,day:o.day,t:o.t,h:o.h},rows,title,tot;
