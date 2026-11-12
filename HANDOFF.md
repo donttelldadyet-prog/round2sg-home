@@ -70,8 +70,7 @@
 >    booking page's /day before the 12 Nov caching; watch tomorrow's number).
 > **Still open (12 Nov evening):** the owner's real test move (test booking "test", Scarlett Thu 19 Nov 11:15am, ref R2BEE8C55C26 –
 >    pay with 4242…, then cancel it in SimplyBook; earlier test bookings got cancelled before the test – the "CANCEL IT" note);
->    engine commit 1620aed (move alerts + live trip-wires) waiting for the deploy helper when this was written – check
->    `deploy:have` in KV; the old /r2tnc T&C page; the optional "last 4 digits" check.
+>    engine commit 1620aed (move alerts + live trip-wires) DEPLOYED 12 Nov ~8pm (mvstats answers: 0 moves, 111 online bookings in 4 weeks); the old /r2tnc T&C page; the optional "last 4 digits" check.
 
 > ## TV notifications (31 Oct 2026) – read round2-tv-launcher `docs/notifications.md` first
 > Flow charts of every timer and priority on the room TVs (guest > Round2 > +N CREDITS ADDED; food first), the 10 → 5 min → That's a wrap
