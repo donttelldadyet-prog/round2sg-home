@@ -150,9 +150,7 @@ var STOP={notfound:['BOOKING NOT FOUND','We can’t find this booking. Open the 
 function load(fresh){return fetch('/move/api?ref='+REF+(fresh?'&t='+Date.now():'')).then(function(r){return r.json()})}
 function use(j){C=j.C;INFO=j.info;LG=gLogic(C);ROOMS=LG.ROOMS;OPEN=LG.OPEN;LAST=LG.LAST;CLOSE=LG.CLOSE;BUF=LG.BUF;LOCK=LG.LOCK;price=LG.price;rate=LG.rate;peak=LG.peak;taken=LG.taken;fits=LG.fits;why=LG.why;starts=LG.starts;locked=LG.locked;dayFull=LG.dayFull;feeOf=LG.feeOf;pace=LG.pace;leadH=LG.leadH;stage=LG.stage;
  NOW=C.now;ND=C.days.length;D0=new Date(C.days[0].date+'T12:00:00Z');days=C.days.map(function(x){var d=new Date(x.date+'T12:00:00Z');return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getUTCDay()]+' '+d.getUTCDate()});
- S={moves:C.moves,grace:C.grace,wa:INFO.staff};
- /* SAVE FOUND on round2.sg: book.round2.sg keeps the booking (as it is now) on this phone */
- try{var o=LG.O(),hh=function(m){return String(Math.floor(m/60)%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0')},st=Date.parse(C.days[o.day].date+'T'+hh(o.t)+':00+08:00');if(window.top!==window)parent.postMessage({r2:'save',save:{ref:REF,room:o.room,c:ROOMS[o.room][0],i:'#0b0914',date:C.days[o.day].date,time:hh(o.t),end:hh(o.t+o.h*60),startMs:st,endMs:st+o.h*36e5}},'https://book.round2.sg')}catch(e){}}
+ S={moves:C.moves,grace:C.grace,wa:INFO.staff}}
 function boot(){go('load');load().then(function(j){if(j.stop){var s=STOP[j.stop]||STOP.gone;return stop(s[0],s[1])}if(!j.C)return stop('SOMETHING WENT WRONG',(j.error||'Try again in a minute.'));use(j);
  $('a-book').href='/done?ref='+REF;$('a-wa').href='https://wa.me/6591625767?text='+encodeURIComponent('Hi Round2, about my booking '+REF+' ('+(INFO.name||'')+')');
  if(MV){var m=MV;MV='';return poll(m,0)}state()}).catch(function(){stop('NO CONNECTION','We couldn’t load your booking. Check your connection and try again.')})}
