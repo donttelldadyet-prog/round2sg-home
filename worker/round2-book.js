@@ -84,7 +84,7 @@ async function sb2(env) {
     if (r.status === 401 && !again) { sb2tok = { k: '', t: 0 }; await tokPut(env, 'tokRest', null); await sb2(env); return go(method, path, body, true); }   /* a shared login gone stale: log in once more */
     const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch (e) {}
     if (!r.ok) throw new Error('SimplyBook ' + method + ' ' + path.split('?')[0] + ' ' + r.status + ': ' + t.slice(0, 200));
-    if (method !== 'GET' && /calendar-notes/.test(path)) await book(env).kvSet('gapc', {}).catch(() => null);   /* a note changed (late session, block, extension): the booking board asks again */
+    if (method !== 'GET' && /calendar-notes/.test(path)) await book(env).kvSet('gcal', null).catch(() => null); await book(env).kvSet('gapc', {}).catch(() => null);   /* a note changed (late session, block, extension): the booking board asks again */
     return j;
   };
   return (method, path, body) => go(method, path, body);
@@ -723,7 +723,7 @@ export class HoldBook extends DurableObject {
   holdOfBid(bid) { const r = this.rows(`SELECT ref, data FROM holds WHERE status = 'paid' AND CAST(json_extract(data, '$.done.bookingId') AS TEXT) = ? LIMIT 1`, String(bid))[0]; return r ? { ref: r.ref, data: JSON.parse(r.data) } : null; }
   holdMove(bid, q, rec) {   /* staff moved this booking: its booking page shows the new room and time (what was paid stays) */
     const r = this.holdOfBid(bid); if (!r) return false; const d = r.data;
-    d.qWas = d.qWas || d.q; d.moves = (d.moves || []).concat([rec]); d.q = Object.assign({}, q, { total: d.q.total });
+    d.qWas = d.qWas || d.q; d.paid = (d.paid != null ? +d.paid : +d.q.total) + (+rec.diff || 0); d.moves = (d.moves || []).concat([rec]); d.q = Object.assign({}, q, { total: d.q.total });
     this.sql.exec(`UPDATE holds SET data = ?, date = ?, unit = ? WHERE ref = ?`, JSON.stringify(d), q.date, q.unit, r.ref); return true;
   }
   cancelBid(bid) { this.sql.exec(`UPDATE holds SET status = 'cancelled' WHERE status = 'paid' AND CAST(json_extract(data, '$.done.bookingId') AS TEXT) = ?`, String(bid)); }
@@ -737,6 +737,7 @@ export class HoldBook extends DurableObject {
   /* the guest ticked the terms + "non-cancellable, non-refundable" boxes on the hold step */
   agree(ref) { const h = this.get(ref); if (!h || h.status !== 'pending' || h.data.agreed) return false; h.data.agreed = Date.now(); this.sql.exec(`UPDATE holds SET data = ? WHERE ref = ?`, JSON.stringify(h.data), ref); return true; }
   /* the link in SimplyBook's confirmation email: …/b/<SimplyBook booking code> */
+  addPaid(h) { this.sql.exec(`INSERT INTO holds VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, h.ref, h.date, h.unit, h.s, h.e, 0, '', h.phone, h.email, 'paid', JSON.stringify(h.data), Date.now()); return true; }
   byCode(code) { return this.rows(`SELECT ref FROM holds WHERE status IN ('paid', 'cancelled') AND json_extract(data, '$.done.code') = ? ORDER BY status = 'paid' DESC LIMIT 1`, code)[0] || null; }   /* cancelled too, so its /done page says it was cancelled */
   setTv(ref, tv) { const h = this.get(ref); if (!h || !h.data.done) return; h.data.done.tv = tv; this.sql.exec(`UPDATE holds SET data = ? WHERE ref = ?`, JSON.stringify(h.data), ref); }
   done(ref, result) {
@@ -1169,7 +1170,7 @@ async function finalize(env, ref, source) {
      Max on 11 Dec, booked online, didn't block Bella) */
   if (result.bookingId && !result.dryRun && +d.pax >= NOISE_PAX && NOISE[q.unit]) await noiseSync(env, [q.date], 'online booking').catch((e) => console.log('[noise] online ' + String(e.message || e).slice(0, 120)));
   await hb.done(ref, result);   /* first, so the guest's page shows the outcome straight away */
-  await hb.kvSet('gapc', {}).catch(() => null);   /* the booking board asks SimplyBook afresh (its 2–10 min memory) */
+  await hb.kvSet('gapc', {}).catch(() => null); await hb.kvSet('gcal', null).catch(() => null);   /* the booking board asks SimplyBook afresh (its 2–10 min memory) */
   /* paid but not in SimplyBook (slot gone, SimplyBook down…): tell staff straight away so they can call / refund */
   const T = d.pay === 'test' ? 'TEST · ' : '';
   const who = `${q.unit === 11 ? 'Maximillion' : q.room} · ${q.date} ${q.time}–${q.end} (${q.hours}h) · paid $${q.total.toFixed(2)}\n${d.name} · ${d.phone} · ${d.email} · ref ${ref}`;
@@ -1552,8 +1553,33 @@ async function late(env, hb, f) {
   const wantMsgs = f.msgs !== 'no' && !autoOn, soonEnough = s - Date.now() < 24 * 3600e3 && guestEnd > Date.now() + 10 * 60e3;
   const plan = { room, twin: tw ? ROOMS[tw][0] : null, name, pax, arrives: clock12(s), guestEnd: clock12(guestEnd), blockEnd: clock12(blockEnd), hours: Math.round(hrs * 100) / 100,
     nextDay: sgDay(guestEnd) !== day, arrivesDay: sgDayName(s), leavesDay: sgDayName(guestEnd), text, clash, msgs: f.msgs === 'no' ? 'off' : autoOn ? 'auto' : wantMsgs ? (soonEnough ? { wrapup: clock12(guestEnd - 10 * 60e3), timeup: clock12(guestEnd) } : 'later') : 'off' };
+  /* REAL BOOKING FIRST (owner, 12 Nov): inside opening hours (start 11am–8:15pm, guest leaves by 11:15pm the same day), 3–6 whole
+     hours, nothing in the way and the guest's mobile typed → a proper SimplyBook booking: it gets a booking code, the guest's
+     booking page (/b/<code>: TV message, receipt, rescheduling) and – with an email – SimplyBook's confirmation email.
+     Anything else (late, odd lengths, clashes, Change) stays a note, exactly as before. */
+  const phone = String(f.phone || '').replace(/[^\d+]/g, ''), email = String(f.email || '').trim().slice(0, 80), p8 = phone.replace(/\D/g, '').slice(-8);
+  const stM = (s - sgMs0(day + ' 00:00')) / 60e3, geM = (guestEnd - sgMs0(day + ' 00:00')) / 60e3;
+  const noteWhy = f.replace ? 'change of a session' : f.kind === 'note' ? 'staff chose a note' : p8.length < 8 ? 'no mobile number' : ![3, 4, 5, 6].includes(hrs) ? 'not 3–6 whole hours' : stM < 660 || stM > 1215 || geM > CLOSE ? 'outside opening hours (late)' : clash.length ? 'something in the way' : email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? 'email doesn’t look right' : '';
+  plan.as = noteWhy ? 'note' : 'booking'; plan.whyNote = noteWhy;
+  if (!noteWhy) { try { const q0 = await quote(env, { unit, date: day, time: st, hours: hrs }); plan.price = q0.total; } catch (e) { plan.as = 'note'; plan.whyNote = String(e.message || e).slice(0, 60); } }
   if (f.dry) return { ok: true, dry: true, plan };
   if (clash.length && f.force !== 'yes') return { ok: false, clash: true, plan };
+  if (plan.as === 'booking') {
+    const r = await lateBooking(env, hb, { unit, day, st, hrs, name, pax, phone, email, by: String(f.by || '').slice(0, 30), msgs: f.msgs }).catch((e) => ({ error: String(e.message || e).slice(0, 160) }));
+    if (r.ok) {
+      const msgs = [];
+      if (wantMsgs && soonEnough) {
+        for (const kind of ['wrapup', 'timeup']) {
+          const at = kind === 'wrapup' ? guestEnd - 10 * 60e3 : guestEnd;
+          try { const t = await gmFwd(env, { staff: env.GM_STAFF, action: 'r2', room: GM_ROOM[unit], kind, to: '', from: 'The Round2 team', title: R2_TXT[kind].title, text: R2_TXT[kind].text, ack: 'yes', at }); let j = null; try { j = JSON.parse(t); } catch (e) {} msgs.push(j && !j.error ? { kind, at, ok: true } : { kind, at, problem: (j && j.error) || 'Make didn’t answer' }); } catch (e) { msgs.push({ kind, at, problem: String(e.message || e).slice(0, 80) }); }
+        }
+        await hb.gmDrop('__LIST__'); await gmList(env, hb).catch(() => null);
+      }
+      return { ok: true, plan, booking: r, msgs, notes: [] };
+    }
+    plan.as = 'note'; plan.whyNote = 'SimplyBook refused the booking (' + (r.error || 'no answer') + ') – saved as a note instead';
+  }
+
   const s2 = await sb2(env), done = [];
   const body = (u, txt) => ({ provider_id: u, service_id: null, start_date_time: sgStr(s), end_date_time: sgStr(blockEnd), note_type_id: 1, note: txt, mode: 'provider', time_blocked: true });
   if (old) {
@@ -1589,6 +1615,32 @@ async function late(env, hb, f) {
   const nights = new Set(); for (const t of [s, old && old.S.s].filter(Boolean)) nights.add(sgDay(t - SHADOW_TILL * 60e3));   /* AFTER 12AM and TILL labels */
   await shadowSync(env, [...nights]).catch(() => null);
   return { ok: true, plan, notes: done, msgs, replaced: !!old, tied };
+}
+/* Add a session as a real SimplyBook booking (see late): its own contact (the name typed – never an old contact's name), booked
+   like an online booking (end + 15 min cleaning, pax), then a booking record so /b/<code> and /done work and the guest can
+   reschedule online. Returns the link for staff to copy and send on WhatsApp. */
+async function lateBooking(env, hb, x) {
+  const q = await quote(env, { unit: x.unit, date: x.day, time: x.st, hours: x.hrs }), a = await admin(env), how = [];
+  let cid = null, late = false;
+  const c = await sbContact(a, x.name, x.email || undefined, x.phone, []).catch(() => null); if (c) { cid = c.cid; late = c.late; }
+  if (!cid) { const p8 = x.phone.replace(/\D/g, '').slice(-8); const found = Object.values((await a('getClientList', [p8, 1]).catch(() => null)) || {})[0]; if (found) { cid = found.id; how.push('their existing SimplyBook contact'); } }
+  if (!cid) { cid = await sbGeneric(env, a).catch(() => null); if (cid) how.push('the shared "Round2 online guest" contact'); }
+  if (!cid) throw new Error('SimplyBook wouldn’t make a contact');
+  const eB = mins(q.time) + q.hours * 60 + BUF, endDate = eB >= 1440 ? addDays(q.date, 1) : q.date;
+  let bErr = ''; const bk = await a('book', [q.eventId, q.unit, cid, q.date, q.time + ':00', endDate, hhmm(eB % 1440) + ':00', 0, { [PAX_FIELD]: String(x.pax) }]).catch((e) => { bErr = String(e.message || e).slice(0, 100); return null; });
+  const b0 = bk && bk.bookings && bk.bookings[0]; if (!b0 || !b0.id) throw new Error(bErr || 'no booking id');
+  if (late && x.email) await a('editClient', [cid, { name: x.name, email: x.email, phone: x.phone }]).catch(() => null);
+  const ref = 'R2B' + crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase();
+  await a('setBookingComment', [b0.id, `Booked by staff (control centre › Add a session${x.by ? ', ' + x.by : ''}) · ref ${ref}\nBooked as: ${x.name} · ${x.phone}${x.email ? ' · ' + x.email : ''} · ${x.pax} pax\nBooking page: ${PUBLIC_BOOK}/b/${b0.code}` + (how.length ? '\nContact: ' + how.join(', ') : '')]).catch(() => null);
+  const s = mins(q.time), e = s + q.hours * 60;
+  await hb.addPaid({ ref, date: q.date, unit: q.unit, s, e, phone: x.phone.replace(/\D/g, '').slice(-8), email: x.email || '', data: { q, name: x.name, email: x.email || '', phone: x.phone, pax: x.pax, pay: 'staff', by: x.by || '', done: { bookingId: String(b0.id), code: String(b0.code || ''), at: Date.now(), source: 'Add a session' } } });
+  await hb.kvSet('gapc', {}).catch(() => null); await hb.kvSet('gcal', null).catch(() => null);
+  if ((await hb.getMode()).mirror === 'engine') await mirrorOnSb(env, String(b0.id), 'create').catch(() => null);   /* Vale/Atlas: the twin blocked straight away (SimplyBook's callback would too; the lock stops doubles) */
+  await hb.onSb(String(b0.id), 'create').catch(() => null);
+  if (+x.pax >= NOISE_PAX && NOISE[q.unit]) await noiseSync(env, [q.date], 'Add a session').catch(() => null);
+  if (x.msgs === 'no') { const m = await hb.getMode(), o = new Set(m.autoOff || []); o.add('b' + b0.id); m.autoOff = [...o].slice(-200); await hb.setMode(m); }
+  await autoRun(env, 'late session').catch(() => null);
+  return { ok: true, bid: String(b0.id), code: String(b0.code || ''), ref, link: PUBLIC_BOOK + '/b/' + b0.code, price: q.total, emailed: !!x.email, how };
 }
 /* ===== Upcoming late sessions (owner, 1 Nov): list / change / cancel from the Late session page =====
    A session starting after midnight is hidden in SimplyBook's calendar, so staff can't move or delete it there (the
@@ -1958,7 +2010,7 @@ async function mvQuote(env, f) {
      plus "popular time" +$10/+$20 for what the move part doesn't cover; Vale/Atlas straight after a session in the same twin
      room +$10, the other twin room −$10 where that still covers the cost. Early-bird bookings: always move $15. */
   const up = !eb && q.total > paid + 0.004, base = up ? 5 : 15, name = up ? (ROOMS[unit][1] === ROOMS[B.unit][1] ? 'peak time' : 'upgrade') : 'move';
-  const xs = money - base; let add = xs <= 5 ? 0 : xs <= 15 ? 10 : 20;
+  const xs = money - base; let add = xs <= 5 ? 0 : Math.min(20, Math.ceil((xs - 5) / 5) * 5);   /* $5 steps, same as the guest page (owner, 12 Nov) */
   if (twin === 'same') add = Math.min(20, add + 10); else if (twin === 'other' && add && base + add - 10 >= money - 5) add -= 10;
   const diff = Math.max(0, Math.round((q.total - paid) * 100) / 100), fee = base + add;
   return { ok: !clash.length, clash, ext: X.min, from: { bid: B.bid, code: B.code, room: ROOMS[B.unit][0], unit: B.unit, date: B.date, time: B.time, hours: B.hours, name: B.name, paid, online: !!held },
@@ -1995,9 +2047,9 @@ async function mvExecute(env, mv, how) {
         if (MIRROR[q.unit]) await s2('POST', '/admin/calendar-notes', body(MIRROR[q.unit], ns, ne, 'SYSTEM BLOCK · EXT ' + ROOMS[q.unit][0] + ' till ' + clock12(ne)));
       } catch (e) { extProb = String(e.message || e).slice(0, 120); await humanAlert(env, 'mvext-' + B.bid, 'Moved booking: its +h note didn’t follow', `${B.name || 'Guest'} moved to ${q.room} ${q.date} ${q.time}, but the extra-hours (EXT) note didn’t move: ${extProb}. Fix it in SimplyBook (or In session).`).catch(() => null); }
     }
-    const rec = { t: Date.now(), bid: B.bid, name: B.name, ext: X0.min, extProb, from: mv.from, to: { room: q.room, unit: q.unit, date: q.date, time: q.time, hours: q.hours }, level: mv.level, feeWas: mv.feeWas, fee: mv.fee, diff: mv.diff, total: mv.total, how, by: mv.by || '', why: mv.why || '', ref: mv.ref || '' };
+    const rec = { t: Date.now(), bid: B.bid, name: B.name, ext: X0.min, extProb, from: mv.from, to: { room: q.room, unit: q.unit, date: q.date, time: q.time, hours: q.hours }, level: mv.level, feeWas: mv.feeWas, fee: mv.fee, diff: mv.diff, total: mv.total, how, by: mv.by || '', why: mv.why || '', ref: mv.ref || '', guest: !!mv.guest, moveNo: mv.moveNo || 0, add: mv.add || 0, snug: !!mv.snug };
     await hb.holdMove(B.bid, q, rec).catch(() => null);   /* the guest's booking page shows the new room and time */
-    await hb.kvSet('gapc', {}).catch(() => null);
+    await hb.kvSet('gapc', {}).catch(() => null); await hb.kvSet('gcal', null).catch(() => null);
     await hb.onSb(B.bid, 'change').catch(() => null);   /* guest TV messages follow */
     await autoRun(env, 'moved').catch(() => null);
     const L = (await hb.kvGet('mvlog')) || []; L.unshift(rec); await hb.kvSet('mvlog', L.slice(0, 300));
@@ -2006,7 +2058,7 @@ async function mvExecute(env, mv, how) {
 }
 async function mvPayStatus(env, mv) {
   for (const p of mv.prs || []) {
-    const pr = await hitpay(envFor(env, 'live'), 'GET', '/payment-requests/' + p.id).catch(() => null);
+    const pr = await hitpay(envFor(env, p.env || 'live'), 'GET', '/payment-requests/' + p.id).catch(() => null);
     const pays = (pr && pr.payments) || [], want = Math.round(mv.total * 100);
     if (pr && (pr.status === 'completed' || pays.some((x) => /^(succeeded|completed|paid)$/i.test(String(x.status || '')) && Math.round(+x.amount * 100) === want))) return { paid: true, via: p.kind };
   }
@@ -2022,6 +2074,218 @@ async function mvComplete(env, ref, source) {
   mv.status = r.ok ? 'done' : 'failed'; mv.result = r.moved || null; mv.err = r.error || ''; await hb.kvSet('mv:' + ref, mv);
   if (!r.ok) await humanAlert(env, 'move-' + ref, 'Paid move didn’t go through', `${mv.from.name || 'Guest'} paid $${mv.total.toFixed(2)} to move ${mv.from.room} ${mv.from.date} ${mv.from.time} → ${mv.to.room} ${mv.to.date} ${mv.to.time}, but: ${r.error}. Move it by hand or refund (HitPay). Ref ${ref}.`).catch(() => null);
   return r;
+}
+/* ===== Guest rescheduling – the rules and the fee (owner, 12 Nov; docs/rescheduling-plan.md). ONE copy of the logic: the
+   engine runs it to charge, and serves the very same function to the guest page (/move/logic.js) to show prices, so the
+   price on the card is always the price charged. Plain JS on purpose (it runs in browsers too) – no engine helpers inside.
+   C = { now: minutes since midnight of day 0 (SG), days: [{date, peak}], cal: [{Room: [[start, end(+cleaning), physRoom]]}],
+         bk: {room, day, t, h, paid}, moves: guest moves used, grace: first 15 min after booking / the last move } */
+function gLogic(C) {
+  var ROOMS = { Vale: ['#E8436A', 'netflix'], Kaeden: ['#4DB848', 'netflix'], Scarlett: ['#F2C21B', 'netflix'], Kai: ['#24B49A', 'deluxe'], Bella: ['#7A5BE0', 'deluxe'], Atlas: ['#E9E7EF', 'deluxe'], Maximillion: ['#E0402F', 'vip'] };
+  var PR = { netflix: { off: [49, 16.30, 28.58, 39.20], peak: [69, 23, 40.25, 55.20], eb: { off: [16.33, 32.67, 49], peak: [23, 46, 69] } }, deluxe: { off: [79, 26.30, 39.50, 47.40], peak: [99, 33, 49.50, 59.40], eb: { off: [26.33, 52.67, 79], peak: [33, 66, 99] } }, vip: { off: [109, 36.30, 54.50, 65.40], peak: [129, 43, 64.50, 77.40], eb: { off: [36.33, 72.67, 109], peak: [43, 86, 129] } } };
+  var OPEN = 660, LAST = 1215, CLOSE = 1395, BUF = 15, LOCK = 855, NOW = C.now, ND = C.days.length;
+  function peak(i) { return !!(C.days[i] && C.days[i].peak); }
+  function rate(i, t) { return t === OPEN ? 'eb' : peak(i) ? 'peak' : 'off'; }
+  function price(room, i, t, h) { var T = ROOMS[room][1], r = rate(i, t), P = PR[T]; if (r === 'eb') { var pk = peak(i) ? 'peak' : 'off'; return 35 + (h > 3 ? P.eb[pk][h - 4] : 0); } return P[r][0] + (h > 3 ? P[r][h - 3] : 0); }
+  function O() { var b = C.bk; return { room: b.room, day: b.day, t: b.t, h: b.h, paid: b.paid, eb: b.t === OPEN }; }
+  function leadH() { var o = O(); return (o.day * 1440 + o.t - NOW) / 60; }
+  function stage() { var L = leadH(); return L < 3 ? 'closed' : L < 24 ? 'day' : L < 72 ? 'late' : 'early'; }
+  /* what's taken in a room on a day (bookings + cleaning, blocks, notes, people paying online); new times start 3h+ from now */
+  function taken(i, room) {
+    if (i < 0 || i >= ND || !C.cal[i]) return [[0, 2000]];
+    var out = (C.cal[i][room] || []).map(function (x) { return x.slice(); }), o = O();
+    if (room === o.room && i === o.day) out = out.filter(function (x) { return !(x[0] < o.t + o.h * 60 + BUF && x[1] > o.t); });
+    var cut = NOW + 180 - i * 1440; if (cut > OPEN) out.push([OPEN, Math.min(cut, CLOSE + BUF)]);
+    return out.sort(function (a, b) { return a[0] - b[0]; });
+  }
+  function fits(i, room, t, h) { var e = t + h * 60; if (e > CLOSE) return 'past'; var bz = taken(i, room); for (var k = 0; k < bz.length; k++) { if (t < bz[k][1] && e + BUF > bz[k][0]) return bz[k][0]; } return true; }
+  /* never leave fewer sellable 3h sessions in that free stretch than it could hold before */
+  function deadGap(i, room, t, h) { var bz = taken(i, room), e = t + h * 60 + BUF, pe = OPEN, ns = CLOSE + BUF, U = 180 + BUF; bz.forEach(function (x) { if (x[1] <= t && x[1] > pe) pe = x[1]; if (x[0] >= e && x[0] < ns) ns = x[0]; }); var before = Math.floor((ns - pe) / U), after = 1 + Math.floor((t - pe) / U) + Math.floor((ns - e) / U); return after < before; }
+  /* the rules: '' = allowed, else why not */
+  function why(i, room, t, h) {
+    var o = O(), st = stage();
+    if (st === 'closed') return 'closed';
+    if (!ROOMS[room] || [3, 4, 5, 6].indexOf(h) < 0 || t % 15 || t < OPEN || t > LAST) return 'taken';
+    if (fits(i, room, t, h) !== true) return 'taken';
+    if (i === o.day && room === o.room && t === o.t && h === o.h) return 'same';
+    if (i * 1440 + t - NOW < 180) return 'soon';
+    if (st === 'day') { if (i !== o.day) return 'sameday'; if (price(room, i, t, h) < price(o.room, o.day, o.t, o.h) || (t < o.t && room === o.room && h <= o.h)) return 'upgrade'; }
+    if (st === 'late' && t < LOCK) return 'lock';
+    if (deadGap(i, room, t, h)) return 'gap';
+    return '';
+  }
+  function okStart(i, room, t) { var o = O(); if (i === o.day && room === o.room && t === o.t) return true; return [3, 4, 5, 6].some(function (h) { return why(i, room, t, h) === ''; }); }
+  function starts(i, room) { var a = []; for (var t = OPEN; t <= LAST; t += 15) if (okStart(i, room, t)) a.push(t); return a; }
+  function locked(i, room) { if (stage() !== 'late') return []; var a = []; for (var t = OPEN; t < LOCK; t += 15) if (fits(i, room, t, 3) === true && i * 1440 + t - NOW >= 180) a.push(t); return a; }
+  function dayFull(i) { return Object.keys(ROOMS).every(function (r) { return !starts(i, r).length; }); }
+  /* DEMAND: how likely a free slot still sells, by room group × time band × hours before (measured 1 Aug–10 Nov) */
+  var GRP = { Vale: 'busy', Scarlett: 'busy', Kai: 'busy', Bella: 'quiet', Maximillion: 'quiet', Atlas: 'quiet', Kaeden: 'quiet' };
+  var RF = { Vale: 58 / 52.7, Scarlett: 58 / 52.7, Kai: 42 / 52.7, Bella: 32 / 23.7, Maximillion: 27 / 23.7, Atlas: 12 / 23.7, Kaeden: 1 };
+  var RFEB = { Vale: 15 / 35, Scarlett: 33 / 35, Kai: 57 / 35, Bella: 38 / 51, Maximillion: 74 / 51, Atlas: 41 / 51, Kaeden: 1 };
+  var PT = { busy: { eb: [3, 6, 18, 35], mid: [10, 13, 31, 49], aft: [26, 29, 42, 52], eve: [32, 38, 48, 56] }, quiet: { eb: [5, 12, 22, 38], mid: [8, 12, 26, 41], aft: [12, 12, 16, 20], eve: [10, 11, 15, 17] } };
+  var AVGD = { Vale: 1.36, Scarlett: 1.54, Kai: 1.14, Bella: .83, Maximillion: .98, Atlas: .57, Kaeden: .9 };
+  function band(t) { return t === OPEN ? 'eb' : t < 855 ? 'mid' : t < 1035 ? 'aft' : 'eve'; }
+  function shareBy(h) { var P = [[0, 1], [12, .7], [24, .56], [72, .31], [168, .15]]; if (h >= 168) return .15; for (var k = 0; k < 4; k++) if (h <= P[k + 1][0]) return P[k][1] + (P[k + 1][1] - P[k][1]) * (h - P[k][0]) / (P[k + 1][0] - P[k][0]); return .15; }
+  /* how that room's bookings that day compare with normal by now (Vale + Atlas counted together) */
+  function pace(i, room) {
+    if (!room || !C.cal[i]) return [1, '']; var ld = (i * 1440 + OPEN - NOW) / 60; if (ld > 7 * 24) return [1, ''];
+    var tw = room === 'Vale' || room === 'Atlas', bz = 0;
+    (C.cal[i][room] || []).forEach(function (x) { if (x[1] - x[0] > 720) return; bz += Math.max(0, Math.min(x[1], CLOSE + BUF) - Math.max(x[0], OPEN)); });
+    var n = Math.round(bz / 195), exp = (tw ? AVGD.Vale + AVGD.Atlas : AVGD[room]) * (peak(i) ? 1.2 : .9) * shareBy(Math.max(0, ld)), r = (n + .5) / (exp + .5);
+    var nm = room === 'Maximillion' ? 'Max' : room; return n >= 1 && r >= 1.8 ? [1.25, nm + ' filling fast'] : r <= .4 ? [.8, 'quiet day for ' + nm] : [1, ''];
+  }
+  function sellP(room, i, t, lh, bd) {
+    var a = PT[GRP[room]][bd || band(t)], x = [6, 12, 24, 72], p;
+    if (lh <= 6) p = a[0] * Math.max(.5, lh / 6); else if (lh >= 72) p = a[3] * Math.min(1.19, 1 + .19 * (lh - 72) / 96);
+    else { for (var k = 0; k < 3; k++) if (lh <= x[k + 1]) { p = a[k] + (a[k + 1] - a[k]) * (lh - x[k]) / (x[k + 1] - x[k]); break; } }
+    return Math.min(.95, p / 100 * ((bd || band(t)) === 'eb' ? RFEB[room] : RF[room]) * (peak(i) ? 1.06 : .97) * pace(i, room)[0]);
+  }
+  /* expected value of a sale in a slot: 11am = early bird; 11:15am–2pm part early bird, part afternoon; Vale + Atlas = one space */
+  function expV0(room, i, t, ld) { var b = band(t), eb = price(room, i, OPEN, 3), full = price(room, i, Math.max(t, 855), 3); if (b === 'eb') { var q = sellP(room, i, t, ld, 'eb'); return [q * eb, q]; } if (b === 'mid') { var w = (t - 675) / (840 - 675), q1 = sellP(room, i, t, ld, 'eb'), q2 = sellP(room, i, t, ld, 'aft'); return [(1 - w) * q1 * eb + w * q2 * full, (1 - w) * q1 + w * q2]; } var q3 = sellP(room, i, t, ld); return [q3 * price(room, i, t, 3), q3]; }
+  function expV(room, i, t, ld) { if (room === 'Vale' || room === 'Atlas') { var pv = expV0('Vale', i, t, ld), pa = expV0('Atlas', i, t, ld); return pv[0] + (1 - pv[1]) * pa[0]; } return expV0(room, i, t, ld)[0]; }
+  /* Vale/Atlas turnaround: the session just before/after in the SAME twin room (rushed) or the OTHER one (cleaned calmly) */
+  function load(i, room, t, h) {
+    var r = { same: false, other: false }; if (room !== 'Vale' && room !== 'Atlas') return r; var E = t + (h || 3) * 60;
+    ['Vale', 'Atlas'].forEach(function (src) { taken(i, src).forEach(function (x) { var before = x[1] <= t && t - x[1] <= 30 && x[0] > OPEN - 1 && x[1] - x[0] <= 420, after = x[0] >= E + BUF && x[0] - (E + BUF) <= 30 && x[1] - x[0] <= 420; if (!before && !after) return; var phys = x[2] || src; if (phys === room) r.same = true; else r.other = true; }); });
+    return r;
+  }
+  function demand(i, room, t, h) { var o = O(), lN = (i * 1440 + t - NOW) / 60, lO = leadH(), vN = price(room, i, t, 3), vO = price(o.room, o.day, o.t, 3); var cost = expV(room, i, t, lN) - expV(o.room, o.day, o.t, lO) - Math.max(0, vN - vO); return { cost: cost, money: cost, load: load(i, room, t, h || o.h), p: sellP(room, i, t, lN), why: pace(i, room)[1] }; }
+  function snug(i, room, t, h) { var e = t + (h || O().h) * 60 + BUF; return taken(i, room).some(function (x) { return (x[1] === t && x[0] > OPEN - 1 && !(i === 0 && x[0] === OPEN && x[1] === NOW + 180)) || x[0] === e; }); }
+  /* THE FEE: MOVE $15 / UPGRADE $5 (bigger room) / PEAK TIME $5 (same kind of room) – plus the price difference – plus POPULAR
+     +$5…+$20 in $5 steps; Vale/Atlas same twin back-to-back +$10, other twin −$10 where still covered; "$5 OFF" a popular slot
+     that fits snugly next to another booking (guests aren't told why). Early-bird bookings: always MOVE $15. */
+  function feeOf(i, room, t, h) {
+    var o = O(), hh = h || o.h, d = demand(i, room, t, hh), up = !o.eb && price(room, i, t, hh) > o.paid + .004, base = up ? 5 : 15, name = up ? (ROOMS[room][1] === ROOMS[o.room][1] ? 'PEAK TIME' : 'UPGRADE') : 'MOVE';
+    var x = d.money - base, add = x <= 5 ? 0 : Math.min(20, Math.ceil((x - 5) / 5) * 5);
+    if (d.load.same) add = Math.min(20, add + 10); else if (d.load.other && add && base + add - 10 >= d.money - 5) add -= 10;
+    var sn = !o.eb && !d.load.same && add > 0 && snug(i, room, t, hh) && base + add - 5 >= d.money - 5; if (sn) add -= 5;
+    return { base: base, name: name, add: add, total: base + add, d: d, snug: sn };
+  }
+  /* what the guest pays in change fee for this slot: free in the grace minutes; the 2nd move +$10 */
+  function fee(i, room, t, h) { if (C.grace) return 0; return feeOf(i, room, t, h).total + (C.moves === 1 ? 10 : 0); }
+  function diff(i, room, t, h) { return Math.max(0, Math.round((price(room, i, t, h) - O().paid) * 100) / 100); }
+  function total(i, room, t, h) { return Math.round((fee(i, room, t, h) + diff(i, room, t, h)) * 100) / 100; }
+  return { ROOMS: ROOMS, OPEN: OPEN, LAST: LAST, CLOSE: CLOSE, BUF: BUF, LOCK: LOCK, O: O, peak: peak, rate: rate, price: price, leadH: leadH, stage: stage, taken: taken, fits: fits, why: why, starts: starts, locked: locked, dayFull: dayFull, pace: pace, sellP: sellP, feeOf: feeOf, fee: fee, diff: diff, total: total, snug: snug };
+}
+/* ===== Guest rescheduling online (owner, 12 Nov: "launch all") – book.round2.sg/move?ref=… from the booking page.
+   The calendar for the guest page comes from ONE SimplyBook bookings read + ONE notes read for the next month, kept 3 min and
+   wiped on every change (same moments as the booking board's memory) – never the per-room free-time calls (SimplyBook limit).
+   The move itself is the staff move (mvExecute): after payment, re-checked fresh, then SimplyBook editBook + the usual chain. */
+const G_NAME = (u) => (+u === 11 ? 'Maximillion' : ROOMS[u][0]);
+const G_DAYS = 31, G_TTL = 3 * 60e3;
+async function gCalItems(env, from, to, fresh) {
+  const hb = book(env), C = fresh ? null : await hb.kvGet('gcal').catch(() => null);
+  if (C && C.from === from && C.to >= to && Date.now() - C.t < G_TTL) return C.items;
+  const a = await admin(env), s2 = await sb2(env);
+  const [bk, nt] = await Promise.all([
+    a('getBookings', [{ booking_type: 'non_cancelled', date_from: from, date_to: to }]),
+    s2('GET', '/admin/calendar-notes?filter[date_from]=' + from + '&filter[date_to]=' + to + '&on_page=500'),
+  ]);
+  const items = [];
+  for (const b of Object.values(bk || {})) {
+    const s = sgMs0(b.start_date || b.start_date_time), e = sgMs0(b.end_date || b.end_date_time), unit = +b.unit_id;
+    if (!s || !e || !ROOMS[unit]) continue;
+    const cid = String(b.client_id || ''), name = String(b.client || b.client_name || '');
+    items.push({ k: 'b', id: String(b.id), unit, s, e, sys: SYS_CLIENTS.includes(cid) || SYS_RE.test(name) });
+  }
+  for (const n of ((nt && nt.data) || [])) {
+    const s = sgMs0(n.start_date_time), e = sgMs0(n.end_date_time), unit = +n.provider_id;
+    if (!n.time_blocked || !s || !e || !ROOMS[unit]) continue;
+    const txt = String(n.note || '');
+    items.push({ k: 'n', id: String(n.id), unit, s, e, sys: SYS_RE.test(txt), ext: EXT_RE.test(txt) });
+  }
+  await hb.kvSet('gcal', { t: Date.now(), from, to, items }).catch(() => null);
+  return items;
+}
+/* everything the rules need for one booking (C for gLogic), or { stop: why } */
+async function gCtx(env, ref, fresh) {
+  const hb = book(env), h = await hb.get(String(ref || '').replace(/[^A-Z0-9]/g, ''));
+  if (!h || !h.data || !h.data.q) return { stop: 'notfound' };
+  if (h.status === 'cancelled') return { stop: 'cancelled' };
+  const d = h.data, bid = d.done && d.done.bookingId ? String(d.done.bookingId) : '';
+  if (h.status !== 'paid' || !bid || (d.done && d.done.dryRun)) return { stop: 'notbooked' };
+  const now = Date.now(), today = sgDay(now), d0 = sgMs0(today + ' 00:00');
+  const q = d.q, bS = sgMs0(q.date + ' ' + q.time), bDay = Math.round((sgMs0(q.date + ' 00:00') - d0) / 86400e3);
+  const ND = Math.min(70, Math.max(G_DAYS, bDay + 8)), to = addDays(today, ND);
+  const items = await gCalItems(env, addDays(today, -1), to, fresh);
+  /* the booking as SimplyBook has it now (staff may have changed it there) */
+  const me = items.find((x) => x.k === 'b' && x.id === bid);
+  if (!me) return { stop: bS < now ? 'past' : 'gone' };
+  const mir = await hb.kvGet('mir:' + bid), skip = new Set(['b' + bid].concat(mir && mir.blk ? ['b' + mir.blk] : []));
+  /* its +h (EXT) notes and the twin's copy of them: an extended booking is moved by staff (WhatsApp) */
+  let ext = 0, end = me.e; for (;;) { const nx = items.find((x) => x.k === 'n' && x.ext && x.unit === me.unit && Math.abs(x.s - end) <= 5 * 60e3 && !skip.has('n' + x.id)); if (!nx) break; skip.add('n' + nx.id); ext += nx.e - nx.s; end = nx.e; }
+  if (MIRROR[me.unit]) for (const x of items) if (x.k === 'n' && x.sys && x.unit === MIRROR[me.unit] && x.s >= me.s - 5 * 60e3 && x.e <= end + 5 * 60e3) skip.add('n' + x.id);
+  for (const x of items) if (x.k === 'b' && x.sys && (x.unit === 5 || x.unit === 12) && Math.abs(x.s - me.s) <= 5 * 60e3 && Math.abs(x.e - me.e) <= 5 * 60e3 && x.unit !== me.unit) skip.add('b' + x.id);
+  const ph = await holidays(), days = [], cal = [];
+  for (let i = 0; i < ND; i++) { const date = addDays(today, i), w = new Date(date + 'T00:00:00Z').getUTCDay(); days.push({ date, peak: w === 0 || w === 5 || w === 6 || ph.has(date) }); const o = {}; for (const u of Object.keys(ROOMS)) o[G_NAME(u)] = []; cal.push(o); }
+  const put = (unit, s, e, phys) => {
+    for (let i = Math.max(0, Math.floor((s - d0) / 86400e3) - 1); i < ND && i <= Math.floor((e - d0) / 86400e3); i++) {
+      const ds = d0 + i * 86400e3, a = Math.round((s - ds) / 60e3), b = Math.round((e - ds) / 60e3);
+      if (b <= 0 || a >= 2000) continue;
+      cal[i][G_NAME(unit)].push([Math.max(0, a), Math.min(2000, b), phys]);
+    }
+  };
+  for (const x of items) {
+    if (skip.has(x.k + x.id)) continue;
+    /* which Vale/Atlas room a session is really in: a SYSTEM BLOCK is the other twin's guests */
+    const phys = (x.unit === 5 || x.unit === 12) && x.sys ? G_NAME(MIRROR[x.unit]) : G_NAME(x.unit);
+    put(x.unit, x.s, x.e, phys);
+  }
+  /* people paying online right now (the board's holds) */
+  for (const r of await hb.rows(`SELECT unit, s, e, date FROM holds WHERE date >= ? AND ((status = 'pending' AND exp > ?) OR (status = 'booking' AND created > ?))`, today, now, now - 3 * 3600e3)) {
+    const dS = sgMs0(r.date + ' 00:00'); for (const u of [r.unit, MIRROR[r.unit]].filter(Boolean)) put(u, dS + r.s * 60e3, dS + (r.e + BUF) * 60e3, G_NAME(r.unit));
+  }
+  const moves = (d.moves || []).filter((m) => m.guest), last = Math.max((d.done && d.done.at) || h.created || 0, ...moves.map((m) => m.t || 0));
+  const hours = Math.round((me.e - me.s - BUF * 60e3) / 3600e3), t = Math.round((me.s - (d0 + bDay * 86400e3)) / 60e3);
+  const paid = d.paid != null ? +d.paid : +q.total;
+  const C = { now: Math.floor((now - d0) / 60e3), days, cal, bk: { room: G_NAME(me.unit), day: Math.round((sgMs0(sgDay(me.s) + ' 00:00') - d0) / 86400e3), t: sgMins(me.s), h: hours, paid }, moves: moves.length, grace: now - last < 15 * 60e3 };
+  return { h, d, bid, C, ext, today, graceEnd: last + 15 * 60e3, moves };
+}
+function sgMins(ms) { const x = new Date(ms + 8 * 3600e3); return x.getUTCHours() * 60 + x.getUTCMinutes(); }
+async function gApi(env, f, origin) {
+  const hb = book(env), ref = String(f.ref || '').replace(/[^A-Z0-9]/g, '');
+  const beta = await hb.getMode();
+  if (beta.gResched === false) return { stop: 'off' };
+  if (f.mv) {   /* after paying: did it go through? */
+    const mref = String(f.mv).replace(/[^A-Z0-9]/g, ''), mv = await hb.kvGet('mv:' + mref);
+    if (!mv || mv.guestRef !== ref) return { error: 'Unknown move.' };
+    if (mv.status === 'pending') await mvComplete(env, mref, 'guest page').catch(() => null);
+    const m2 = await hb.kvGet('mv:' + mref); return { ok: true, status: m2.status, moved: m2.result || null, err: m2.err ? 'not moved' : '' };
+  }
+  const X = await gCtx(env, ref, f.act === 'pay');
+  if (X.stop) return { stop: X.stop };
+  const info = { name: X.d.name || '', room: X.C.bk.room, code: (X.d.done && X.d.done.code) || '', ext: X.ext ? Math.round(X.ext / 60e3) : 0, graceEnd: X.graceEnd, made: (X.d.done && X.d.done.at) || X.h.created, paid0: +(X.d.qWas || X.d.q).total,
+    staff: X.d.pay === 'staff', moves: (X.d.moves || []).map((m) => ({ t: m.t, guest: !!m.guest, from: m.from, to: m.to, fee: m.fee, diff: m.diff, total: m.total, ref: m.ref || '', how: m.how })) };
+  if (f.act !== 'pay') return { ok: true, C: X.C, info };
+  /* PAY: the same rules and fee on fresh data */
+  if (X.ext) return { error: 'This booking has extra time added – WhatsApp us to move it.' };
+  if (X.C.moves >= 2) return { error: 'You’ve used both moves for this booking – WhatsApp us.' };
+  const L = gLogic(X.C), room = String(f.room || ''), i = X.C.days.findIndex((x) => x.date === f.date), t = +f.t, hrs = +f.h;
+  if (i < 0 || !L.ROOMS[room]) return { error: 'Pick a day and room again.' };
+  const w = L.why(i, room, t, hrs);
+  if (w) return { error: { taken: 'That time was just taken – pick another.', soon: 'New times must be at least 3 hours from now.', closed: 'No rescheduling within 3 hours of your session.', sameday: 'Under 24 hours before: same-day changes only.', upgrade: 'Under 24 hours before: upgrades only.', lock: 'Under 3 days before: new times from 2:15pm only.', gap: 'That time isn’t available.', same: 'That’s your booking as it is.' }[w] || 'That time isn’t available.', why: w, C: X.C };
+  const F = L.feeOf(i, room, t, hrs), fee = L.fee(i, room, t, hrs), diff = L.diff(i, room, t, hrs), total = L.total(i, room, t, hrs);
+  if (f.total != null && Math.abs(+f.total - total) > 0.004) return { changed: true, total, fee, diff, C: X.C };
+  const unit = +Object.keys(ROOMS).find((u) => G_NAME(u) === room), time = hhmm(t);
+  /* the staff move's own fresh check (SimplyBook read now, its +h, the twin) */
+  const Q = await mvQuote(env, { bid: X.bid, unit, date: f.date, time, hours: hrs });
+  if (!Q.ok) return { error: 'That time was just taken – pick another.', C: X.C };
+  const mref = 'MV' + crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase();
+  const mv = { ref: mref, status: 'pending', t: Date.now(), from: Q.from, to: Q.to, level: F.name.toLowerCase(), feeWas: fee, fee, diff, total, add: F.add, snug: F.snug, by: 'guest online', why: '', prs: [], guest: true, guestRef: ref, moveNo: X.C.moves + 1, grace: !!X.C.grace };
+  if (total < 0.01) {
+    await hb.kvSet('mv:' + mref, mv);
+    const r = await mvExecute(env, mv, 'guest · nothing to pay');
+    mv.status = r.ok ? 'done' : 'failed'; mv.result = r.moved || null; mv.err = r.error || ''; await hb.kvSet('mv:' + mref, mv);
+    return r.ok ? { ok: true, done: true, mv: mref } : { error: 'That time was just taken – pick another.', C: X.C };
+  }
+  const when = new Date(f.date + 'T00:00:00Z').toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+  const e = envFor(env, X.d.pay === 'test' ? 'test' : 'live');
+  const form = { amount: total.toFixed(2), currency: 'SGD', purpose: `Round2 reschedule → ${room === 'Maximillion' ? 'Max' : room} · ${when} ${clock12(sgMs0(f.date + ' ' + time))} (change fee $${fee}${diff ? ' + $' + diff.toFixed(2) + ' price difference' : ''})`,
+    reference_number: mref + 'G', webhook: `${origin}/move/hitpay`, redirect_url: `${PUBLIC_BOOK}/move?ref=${ref}&mv=${mref}`, name: X.d.name || 'Round2 guest' };
+  if (X.d.email && /@/.test(X.d.email)) form.email = X.d.email;
+  const pr = await hitpay(e, 'POST', '/payment-requests', form);
+  mv.prs.push({ id: pr.id, kind: 'online', env: X.d.pay === 'test' ? 'test' : 'live' }); await hb.kvSet('mv:' + mref, mv);
+  return { ok: true, url: pr.url, mv: mref, total };
 }
 async function mvApi(env, hb, f, origin) {
   const act = f.action;
@@ -2605,6 +2869,7 @@ ${test ? '<div class="test">TEST BOOKING · nothing was really charged</div>' : 
 <div class="ticket"><p class="room">${esc(room)}</p><div class="type">${esc(look[2])}${q.earlyBird ? ' · Early bird' : ''}</div>
 <dl><dt>Date</dt><dd>${esc(dayTxt)}</dd><dt>Time</dt><dd class="big">${esc(clock(q.time))} – ${esc(clock(q.end))}</dd><dt>Length</dt><dd>${q.hours} hours</dd>
 <dt>Name</dt><dd>${esc(d.name)}</dd><dt>Guests</dt><dd>${esc(d.pax)}</dd><dt>Paid</dt><dd>$${q.total.toFixed(2)}</dd><dt>Ref</dt><dd class="ref">${esc(ref)}</dd></dl></div>
+${done.bookingId && !test ? `<div class="card"><div class="k">CHANGE OF PLANS? <span style="background:#F2C21B;color:#000;padding:2px 4px;margin-left:6px">BETA</span></div><p>Move to another day, time or room – up to 2 times, until 3 hours before your session. A small change fee applies; every slot shows the total.</p><a class="btn" href="${origin}/move?ref=${esc(ref)}">Reschedule</a></div>` : ''}
 ${msgBox}
 <div class="card"><div class="k">WHEN YOU ARRIVE</div><ul><li>Come in and take a seat in our lobby. We’ll know you’ve arrived and come to show you to ${esc(room)}.</li><li>Your booking is under <b>${esc(d.name)}</b>.</li><li>Please be on time: your session ends at ${esc(clock(q.end))}.</li><li>${done.note || !done.bookingId || (done.fallback || []).some((x) => /shared/.test(x)) || (done.email && done.email !== 'ok') ? `We’ll WhatsApp you on ${esc(d.phone)} to confirm the details.` : `A confirmation email is on its way to ${esc(d.email)}.`}</li></ul></div>
 <div class="card"><div class="k">ADDRESS</div><a class="loc" href="${MAPS_URL}" target="_blank" rel="noopener"><span class="pin"><svg width="20" height="24" viewBox="0 0 10 12" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M3 0h4v1h1v1h1v4H8v2H7v2H6v2H4v-2H3V8H2V6H1V2h1V1h1zm1 3v2h2V3z"/></svg></span><span><span class="ad">20 Haji Lane, #02-00</span><br><span class="sg">Singapore 189213</span></span><span class="go">MAP ›</span></a><span class="mrt"><b>EW12</b>Bugis MRT · Exit B · 6 min walk</span></div>
@@ -3422,10 +3687,22 @@ const HANDLER = {
       if (u.pathname === '/checkout' && req.method === 'POST') return J(await checkout(env, await req.json(), u.origin));
       if (u.pathname === '/agree' && req.method === 'POST') { const { ref } = await req.json(); return J({ ok: await book(env).agree(String(ref || '').replace(/[^A-Z0-9]/g, '')) }); }
       if (u.pathname === '/release' && req.method === 'POST') { const { ref, why } = await req.json(); const r = await safeRelease(env, String(ref || '').replace(/[^A-Z0-9]/g, ''), ['payback', 'cancel', 'timeout'].includes(why) ? why : 'left'); return J(r); }
+      /* guest rescheduling (owner, 12 Nov): the page (round2sg-home move/index.html), its rules (the engine's own gLogic) and API */
+      if (u.pathname === '/move/logic.js') return new Response('/* Round2 rescheduling rules – the same code the engine charges with */\n' + gLogic.toString(), { headers: { 'content-type': 'application/javascript; charset=utf-8', 'cache-control': 'no-store' } });
+      if (u.pathname === '/move/api') { const f = req.method === 'POST' ? await req.json().catch(() => ({})) : Object.fromEntries(u.searchParams); try { return J(await gApi(env, f, u.origin)); } catch (e) { return J({ error: 'Something went wrong – try again, or WhatsApp us.', detail: String(e.message || e).slice(0, 160) }); } }
+      if (u.pathname === '/move' || u.pathname === '/move/') {
+        const c = caches.default, key = new Request('https://r2-cache/move-page'), hit = await c.match(key);
+        if (hit) return new Response(hit.body, hit);
+        const r = await fetch('https://raw.githubusercontent.com/donttelldadyet-prog/round2sg-home/main/move/index.html', { cf: { cacheTtl: 60 } });
+        if (!r.ok) return H(PAGE('<h1>Reschedule</h1><p>This page didn’t load – try again in a minute, or <a href="https://wa.me/6591625767">WhatsApp us</a>.</p>'));
+        const out = new Response(await r.text(), { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=60' } });
+        ctx.waitUntil(c.put(key, out.clone()));
+        return out;
+      }
       if (u.pathname === '/move/hitpay' && req.method === 'POST') {   /* a staff move paid by PayNow QR or link */
         const raw = await req.text(), sig = req.headers.get('Hitpay-Signature') || '';
         if ((await hmacHex(envFor(env, 'live').HITPAY_SALT, raw)) !== sig && (await hmacHex(envFor(env, 'test').HITPAY_SALT, raw)) !== sig) return J({ error: 'bad signature' }, 401);
-        const p = JSON.parse(raw), ref = String(p.reference_number || '').replace(/[QL]$/, '');
+        const p = JSON.parse(raw), ref = String(p.reference_number || '').replace(/[QLG]$/, '');
         if (p.status === 'completed' && /^MV[A-Z0-9]{8}$/.test(ref)) return J(await mvComplete(env, ref, 'webhook'));
         return J({ ignored: p.status });
       }
@@ -3531,7 +3808,7 @@ const HANDLER = {
         const mirE = (await book(env).getMode()).mirror === 'engine';   /* Vale ↔ Atlas: the engine (owner, 11 Nov) or still Make */
         if (!mirE && env.MIRROR_HOOK_URL) ctx.waitUntil(fetch(env.MIRROR_HOOK_URL, { method: 'POST', headers: { 'content-type': ct }, body: raw }).catch(() => null));
         if (mirE && bid) ctx.waitUntil(mirrorOnSb(env, bid, type).catch((e) => console.log('[mirror] ' + String(e.message || e).slice(0, 160))));
-        ctx.waitUntil(book(env).kvSet('gapc', {}).catch(() => null));   /* the booking board asks SimplyBook afresh */
+        ctx.waitUntil(book(env).kvSet('gapc', {}).catch(() => null)); ctx.waitUntil(book(env).kvSet('gcal', null).catch(() => null));   /* the booking board asks SimplyBook afresh */
         if (bid) ctx.waitUntil(book(env).onSb(bid, type).catch(() => null));
         if (bid) ctx.waitUntil(bookingPush(env, bid, type).catch(() => null));   /* staff phones: New booking / changed / cancelled */
         if (bid) ctx.waitUntil(paidLengthCheck(env, bid, type).catch(() => null));   /* an online booking cut shorter than paid */

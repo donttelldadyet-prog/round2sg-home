@@ -1,0 +1,282 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Reschedule · Round2</title><meta name="robots" content="noindex">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>:root{--rc:#E8436A;--ri:#0b0914;--mu:#a79fbd;--ln:rgba(244,241,251,.14)}*{box-sizing:border-box}body{margin:0;background:#06050a;color:#f4f1fb;font:16px/1.5 'Chakra Petch',system-ui,sans-serif}
+main{max-width:520px;margin:0 auto;padding:18px 16px 60px}.px{font-family:'Press Start 2P',monospace;letter-spacing:.08em}.kick{font-size:9px;color:var(--mu)}
+h1{font-family:'Press Start 2P',monospace;font-size:17px;line-height:1.5;margin:8px 0 16px}h2{font:10px 'Press Start 2P',monospace;letter-spacing:.1em;color:var(--rc);margin:0 0 10px}
+.demo{background:#F2C21B;color:#0b0914;padding:8px 10px;font-size:13px;font-weight:600;margin-bottom:14px}.demo select{font:inherit;margin-left:6px;max-width:100%}
+.ticket{border:1px solid var(--ln);border-top:4px solid var(--rc);background:#0b0914;padding:16px 18px 12px}.room{font-size:26px;font-weight:700;color:var(--rc);margin:0}.type{font-size:12px;color:var(--mu);text-transform:uppercase;letter-spacing:.1em}
+dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;margin:14px 0 4px}dt{color:var(--mu);font-size:13px}dd{margin:0;font-weight:600}.big{font-size:20px}.ref{font:10px 'Press Start 2P',monospace}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}.chip{font-size:12px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--ln);padding:3px 8px;color:#d6d0e3}.chip.ok{border-color:#4DB848;color:#9be38f}.chip.warn{border-color:#F2C21B;color:#F2C21B}.chip.no{border-color:#ff6b6b;color:#ff9b9b}
+.card{margin-top:14px;border:1px solid var(--ln);background:#0b0914;padding:16px 18px}.card p{margin:0 0 10px}.fine{font-size:12px;color:var(--mu);margin:8px 0 0!important}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.act{display:flex;flex-direction:column;gap:4px;text-align:left;padding:14px;border:1px solid var(--ln);background:#0b0914;color:#f4f1fb;font:inherit;cursor:pointer}
+.act b{font:9px 'Press Start 2P',monospace;letter-spacing:.08em;color:var(--rc)}.act span{font-size:13px;color:var(--mu)}.act.main{border-color:var(--rc)}.act[disabled]{opacity:.45;cursor:default}
+.btn{display:block;width:100%;text-align:center;padding:13px 14px;font:10px 'Press Start 2P',monospace;letter-spacing:.08em;background:var(--rc);color:var(--ri);border:0;margin-top:10px;cursor:pointer;text-decoration:none}.btn.ghost{background:transparent;color:#f4f1fb;border:1px solid var(--rc)}
+.hist li{margin:6px 0;font-size:14px}.hist{padding-left:18px;margin:0}.hist small{color:var(--mu)}
+.wk{display:flex;align-items:center;gap:6px;margin-bottom:8px}.wk .mon{flex:1;text-align:center;margin:0}.nav{background:transparent;border:1px solid var(--ln);color:#f4f1fb;font:9px 'Press Start 2P',monospace;padding:8px 10px;cursor:pointer}.nav[disabled]{opacity:.3}.nav.on{border-color:var(--rc);color:var(--rc)}
+.days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}.day{min-width:0;font-size:13px}.day{padding:7px 0;padding:8px 10px;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:13px;cursor:pointer;text-align:center}.day.on{border-color:var(--rc);background:rgba(232,67,106,.12)}
+.rooms{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:10px 0}.rm small{display:block;font-size:11px;color:var(--mu)}.rm[disabled]{opacity:.35;cursor:default}.mon{font:8px 'Press Start 2P',monospace;color:var(--mu);margin:0 0 6px}.calv{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}.calv .h{font-size:11px;color:var(--mu);text-align:center}.cd{padding:8px 0;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:13px;cursor:pointer}.cd.on{border-color:var(--rc);background:rgba(232,67,106,.12)}.cd.full{opacity:.3;text-decoration:line-through}.cd[disabled]{visibility:hidden}.day.full{opacity:.3}.dateb{margin-top:8px;display:flex;gap:8px;align-items:center;font-size:13px;color:var(--mu)}.dateb input{background:#0b0914;color:#f4f1fb;border:1px solid var(--ln);padding:6px 8px;font:inherit;color-scheme:dark}.rm{text-align:left;padding:8px 10px;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:13px;cursor:pointer}.rm.on{border-color:var(--c);background:color-mix(in srgb,var(--c) 16%,#0b0914);color:#f4f1fb;box-shadow:inset 0 0 0 1px var(--c)}
+.slots{display:grid;grid-template-columns:44px repeat(4,1fr);gap:4px;align-items:center}.slots .hl{font-size:12px;color:var(--mu)}.sl.mine{outline:1px dashed var(--rc);outline-offset:-3px}
+.hr small,.rm em,.day i{display:block;font-size:11px;font-style:normal;color:var(--mu)}.hr{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px}.hr.no{opacity:.4;text-decoration:none;cursor:default}.hr.no b{text-decoration:line-through}.up{color:#F2C21B!important}.dn{color:#ff9b9b!important}.eq{color:#9be38f!important}
+.ytag{font:6px 'Press Start 2P',monospace;letter-spacing:.06em;color:var(--rc);border:1px dashed var(--rc);padding:2px 3px;margin-left:4px;vertical-align:middle}.kickrow{display:flex;justify-content:space-between;align-items:center;gap:8px}.feeb{font:8px 'Press Start 2P',monospace;letter-spacing:.08em;color:var(--rc);border:1px solid var(--rc);padding:6px 8px;white-space:nowrap}.feeb.free{color:#9be38f;border-color:#4DB848}
+.yours{position:relative}.yours::after{content:'YOURS';position:absolute;top:-7px;left:50%;transform:translateX(-50%);font:6px 'Press Start 2P',monospace;letter-spacing:.06em;background:#06050a;color:var(--rc);padding:1px 3px;white-space:nowrap}.day.yours,.hc.yours,.mins button.yours{border-style:dashed;border-color:var(--rc)}.hrow{padding-top:8px}.days{padding-top:8px}.mins{padding-top:6px}
+.hrow{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin}.hc{flex:0 0 auto;min-width:58px;padding:8px 6px;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:14px;cursor:pointer}.hc small{display:block;font-size:10px;color:var(--mu)}.hc.on{border-color:var(--rc);background:rgba(232,67,106,.12)}.hc[disabled]{opacity:.3;cursor:default}
+.mins{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}.mins button{padding:10px 0;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:15px;cursor:pointer}.mins button.on{background:var(--rc);color:var(--ri);border-color:var(--rc)}.mins button[disabled]{opacity:.3;text-decoration:line-through;cursor:default}
+.live{margin-top:14px}.tk{border:1px solid var(--ln);border-left:6px solid;background:#0b0914;padding:10px 12px}.tk .k2{font:8px 'Press Start 2P',monospace;letter-spacing:.1em;color:var(--mu)}.tk .r{font-size:20px;font-weight:700;margin:2px 0}.tk .w{font-size:14px;color:#d6d0e3}.arr{text-align:center;font:10px 'Press Start 2P',monospace;color:var(--mu);margin:6px 0}.mini{border:1px solid var(--ln);border-top:0;background:#0b0914;padding:6px 12px 10px}.mini table td{padding:5px 0;font-size:14px}
+.leg{display:flex;flex-wrap:wrap;gap:10px;font-size:11px;color:var(--mu);margin-top:8px}.bd td small{display:block;color:var(--mu);font-size:12px}.bd tr.nr td{color:#ff9b9b}.sl{padding:9px 0;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:14px;cursor:pointer}.sl.on{background:var(--rc);color:var(--ri);border-color:var(--rc)}.sl[disabled]{opacity:.3;text-decoration:line-through;cursor:default}
+.hrs{display:flex;gap:6px;margin-top:10px}.hr{flex:1;padding:9px 0;border:1px solid var(--ln);background:transparent;color:#f4f1fb;font:inherit;font-size:14px;cursor:pointer}.hr.on{border-color:var(--rc);color:var(--rc)}.hr[disabled]{opacity:.3}
+table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px dashed var(--ln);vertical-align:top}td:last-child{text-align:right;font-weight:600}tr.tot td{border:0;font-size:20px;font-weight:700}tr.tot td:last-child{color:var(--rc)}
+.old{text-decoration:line-through;color:var(--mu)}.chk{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:#d6d0e3;margin-top:12px}.back{display:inline-flex;align-items:center;gap:8px;background:transparent;border:1px solid var(--ln);color:#f4f1fb;font:9px 'Press Start 2P',monospace;letter-spacing:.08em;cursor:pointer;padding:10px 12px;margin-bottom:14px}.back:hover{border-color:var(--rc)}
+.stat{display:grid;grid-template-columns:1fr 1fr;gap:10px}.st{border:1px solid var(--ln);padding:12px}.st b{display:block;font-size:26px}.st span{font-size:12px;color:var(--mu);text-transform:uppercase;letter-spacing:.06em}
+.bar{display:grid;grid-template-columns:110px 1fr 36px;gap:8px;align-items:center;font-size:13px;margin:6px 0}.bar i{display:block;height:10px;background:var(--rc)}
+.hidden{display:none}.beta{display:inline-block;font:700 11px/1 'Chakra Petch',sans-serif;letter-spacing:.14em;color:#000;background:#F2C21B;padding:3px 6px 2px;margin-left:8px;vertical-align:middle}
+.rl .w{font:8px 'Press Start 2P',monospace;letter-spacing:.06em;padding:6px 6px;text-align:center;border:1px solid}.g{color:#9be38f;border-color:#4DB848!important;background:rgba(77,184,72,.1)}.y{color:#F2C21B;border-color:#F2C21B!important;background:rgba(242,194,27,.1)}.o{color:#ffb070;border-color:#ff8a3d!important;background:rgba(255,138,61,.1)}.r{color:#ff9b9b;border-color:#ff6b6b!important;background:rgba(255,107,107,.1)}
+.ft{width:100%;border-collapse:collapse;font-size:13px;margin:4px 0 12px}.ft th{font-weight:400;color:var(--mu);text-align:left;padding:4px 6px;font-size:12px}.ft td{padding:6px;border-top:1px solid var(--ln)}.ft td b{color:#f4f1fb}
+.ic{list-style:none;padding:0;margin:0;font-size:14px}.ic li{display:flex;gap:10px;margin:6px 0}.ic i{font-style:normal;flex:0 0 22px;text-align:center;font-family:'Press Start 2P',monospace;font-size:10px;padding-top:3px}
+.note{font-size:13px;color:#d6d0e3;border:1px dashed var(--ln);padding:8px 10px;margin:10px 0 0}.note b{color:var(--rc)}
+.sl.lk{opacity:.45}.sl.lk::after{content:' ⌂';font-size:10px}
+.mins button.lk{opacity:.45;text-decoration:none}
+.dim{opacity:.35;pointer-events:none}
+.demo label{display:block;margin-top:4px}
+
+.tk .w{font-size:14px;color:#d6d0e3}
+.rl{display:grid;grid-template-columns:auto 1fr;gap:8px 10px;align-items:center;font-size:14px;margin:4px 0 12px}
+.rl .w{font:8px 'Press Start 2P',monospace;letter-spacing:.06em;padding:6px 6px;text-align:center;border:1px solid;white-space:nowrap;letter-spacing:.02em}
+.ft{width:100%;border-collapse:collapse;font-size:13px;margin:4px 0 12px}
+.ft th{font-weight:400;color:var(--mu);text-align:left;padding:4px 6px;font-size:12px}
+.ft td{padding:6px;border-top:1px solid var(--ln)}
+.ft td b{color:#f4f1fb}
+.ic{list-style:none;padding:0;margin:0;font-size:14px}
+.ic li{display:flex;gap:10px;margin:6px 0}
+.ic i{font-style:normal;flex:0 0 22px;text-align:center;font-family:'Press Start 2P',monospace;font-size:10px;padding-top:3px}
+.rl .w.g{color:#9be38f;border-color:#4DB848!important;background:rgba(77,184,72,.1)}.rl .w.y{color:#F2C21B;border-color:#F2C21B!important;background:rgba(242,194,27,.1)}.rl .w.o{color:#ffb070;border-color:#ff8a3d!important;background:rgba(255,138,61,.1)}.rl .w.r{color:#ff9b9b;border-color:#ff6b6b!important;background:rgba(255,107,107,.1)}
+/* pressable buttons look like buttons; info cards stay flat */
+.act{position:relative;background:color-mix(in srgb,var(--rc) 12%,#0b0914);border:1px solid var(--rc);box-shadow:0 4px 0 color-mix(in srgb,var(--rc) 45%,#000);padding-right:30px;transition:transform .08s,box-shadow .08s}
+.act::after{content:'›';position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:22px;color:var(--rc)}
+.act:active{transform:translateY(3px);box-shadow:0 1px 0 color-mix(in srgb,var(--rc) 45%,#000)}
+.act.main{background:var(--rc)}.act.main b,.act.main span{color:var(--ri)!important}.act.main::after{color:var(--ri)}.act .beta{font-size:9px;padding:3px 5px 2px;margin-left:8px;white-space:nowrap;vertical-align:2px;background:#F2C21B;color:#000!important;box-shadow:0 0 0 1px rgba(0,0,0,.35)}
+.act[disabled]{background:transparent;border:1px dashed var(--ln);box-shadow:none;opacity:1}.act[disabled]::after{content:''}.act[disabled] b,.act[disabled] span{color:var(--mu)!important}
+.card{background:transparent;border-color:rgba(244,241,251,.08)}
+.mine{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:15px;margin:2px 0 10px}.mine .lead{grid-column:1/-1;font-size:13px;color:var(--mu)}.mine .w{font:8px 'Press Start 2P',monospace;padding:6px;border:1px solid;white-space:nowrap;letter-spacing:.02em}.mine .sub{grid-column:1/-1;font-size:13px;color:#d6d0e3}
+.more summary{cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--ln);background:#15111f;font:700 14px 'Chakra Petch',sans-serif;letter-spacing:.06em;text-transform:uppercase}.more summary::-webkit-details-marker{display:none}.more summary:after{content:'▾';color:var(--mu)}.more[open] summary:after{content:'▴'}
+.tw{list-style:none;margin:0;padding:0;display:grid;gap:6px}.tw li{display:grid;grid-template-columns:64px 1fr auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--ln);border-left:5px solid #4DB848;font-size:14px}.tw li.warn{border-left-color:#ff6b6b;background:rgba(255,107,107,.08)}.tw b{font-size:18px}.tw li.warn b{color:#ff9b9b}.tw em{font-style:normal;font-size:12px;color:var(--mu);white-space:nowrap}
+.rm .at{font-style:normal;font-size:11px;color:var(--mu)}
+.ft td,.ft th{text-align:left!important}
+.lv{font:8px 'Press Start 2P',monospace;letter-spacing:.04em;border:1px solid;padding:3px 4px;white-space:nowrap;display:inline-block}.lvrow{display:flex;gap:6px;flex-wrap:wrap}.dg{border-collapse:collapse;width:100%;font-size:11px}.dg th{font-weight:400;color:var(--mu);padding:2px}.dg td{padding:3px 2px;white-space:nowrap}.dg i{display:inline-block;width:8px;height:14px;margin-right:1px}
+.how{margin:0 0 4px;padding-left:18px;font-size:13px;color:#d6d0e3}.how li{margin:2px 0}
+.mvdot{display:inline-block;width:8px;height:8px;border-radius:2px;margin:0 4px 1px 0;vertical-align:middle}.rlink{background:none;border:1px solid var(--ln);color:#d6d0e3;font:inherit;font-size:12px;padding:2px 8px;margin-left:4px;cursor:pointer}
+.rcpt{border-top:6px solid var(--rc);background:#0e0b16;padding:16px;margin:8px 0 14px}.rcmv{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:center;margin:4px 0 12px}.rcmv small{display:block;color:var(--mu);font-size:11px;letter-spacing:.1em}.rcmv b{display:block;font-size:18px}.rcmv span{font-size:13px;color:#d6d0e3}.rcmv .arr{font-size:22px;color:var(--mu)}
+@media print{.noprint,.demo,#demo{display:none!important}body{background:#fff;color:#000}.rcpt{background:#fff;color:#000}}
+.rooms{display:block!important;margin:6px 0}.tier{margin:14px 0 4px}.tier::before{content:'';display:block;height:3px;margin:0 0 8px;background:var(--tg)}.tier>header{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-bottom:6px}.tier>header .px{font:10px 'Press Start 2P',monospace;color:#f4f1fb}.tier>header span{font-size:13px;color:var(--mu)}.tier>header .pic{width:12px;height:12px;margin-right:8px;vertical-align:-1px}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.pic{display:inline-block;width:1em;height:1em;vertical-align:-.12em}.rm .rnm .pic{width:14px;height:14px;margin-right:7px;vertical-align:-2px}.rm .rnm{font-weight:700}.rm:disabled .rnm{color:inherit!important}
+.pc1{display:flex;align-items:center;gap:4px;margin-top:6px}.pc1 .lv{font-size:7px;padding:3px 4px}.pc1 b{margin-left:auto;font-size:16px;color:#f4f1fb}.pc2{display:block;margin-top:3px;font-size:11px;line-height:1.35;color:var(--mu)}.pc2 .pdf{color:#ffcf5a}.pc2 .pp{color:#F2C21B}.pc2 .psn{color:#9be38f}
+.deals{margin-top:14px}.deals h2{margin:0 0 6px}.deal{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#0e0b16;border:1px solid var(--ln);color:#f4f1fb;font:inherit;font-size:14px;padding:8px 10px;margin:4px 0;cursor:pointer}.deal i{font-style:normal;font-family:'Press Start 2P',monospace;font-size:11px;flex:0 0 18px;text-align:center}.deal span{flex:1}.deal small{display:block;color:var(--mu);font-size:12px}.deal em{font-style:normal;color:var(--mu)}
+</style></head><body><main>
+<section id="s-load"><div class="px kick">LOADING SAVE FILE…</div><h1 id="ld-h">ONE MOMENT</h1><div class="card" style="margin-top:0"><p id="ld-p">Getting your booking and the free times.</p><a class="btn ghost hidden" id="ld-wa" href="https://wa.me/6591625767" target="_blank" rel="noopener">WhatsApp us</a></div></section>
+<section id="s-home" class="hidden">
+<div class="px kick">SAVE FILE LOADED</div><h1>YOUR BOOKING</h1>
+<div class="ticket" id="tk"><p class="room" id="t-room"></p><div class="type" id="t-type"></div>
+<dl><dt>Name</dt><dd id="t-name"></dd><dt>Date</dt><dd id="t-date"></dd><dt>Time</dt><dd class="big" id="t-time"></dd><dt>Length</dt><dd id="t-len"></dd><dt>Paid</dt><dd id="t-paid"></dd><dt>Ref</dt><dd class="ref" id="t-ref"></dd></dl>
+<div class="chips" id="chips"></div></div>
+<div class="grid">
+<button class="act main" id="a-move"><b>RESCHEDULE<span class="beta">BETA</span></b><span id="a-move-sub"></span></button>
+<a class="act" id="a-book" href="#" style="text-decoration:none"><b>BOOKING PAGE</b><span>TV message, calendar</span></a>
+<button class="act" onclick="rcpt(-1)"><b>RECEIPT</b><span id="a-rc">Save as PDF</span></button>
+<a class="act" id="a-wa" href="#" target="_blank" rel="noopener" style="text-decoration:none"><b>WHATSAPP</b><span>Questions? Message us</span></a></div>
+<div class="card"><h2>RESCHEDULE RULES <span class="beta">BETA</span></h2>
+<div class="mine" id="myrule"></div>
+<details class="more"><summary>See all rules</summary>
+<p class="fine" style="margin:10px 0 6px!important">Counted from <b>now</b> to your <b>current</b> booking's start, at the moment you make the change:</p>
+<div class="rl"><span class="w g">3+ DAYS</span><span>Any free slot, any day</span><span class="w y">UNDER 3 DAYS</span><span>Any day, but start <b>2:15pm or later</b></span><span class="w o">UNDER 24 HRS</span><span>Same day only: later time, bigger room or more hours</span><span class="w r">UNDER 3 HRS</span><span>No rescheduling allowed</span></div>
+<p class="fine" style="margin:4px 0 6px!important">You pay a change fee, the price difference if the new slot costs more, and an add-on for popular times. Each room shows the total.</p>
+<div class="lvrow"><span class="lv" style="color:#b9b2cc;border-color:#b9b2cc">MOVE $15</span><span class="lv" style="color:#7fd3ff;border-color:#7fd3ff">UPGRADE $5</span><span class="lv" style="color:#c08cff;border-color:#c08cff">PEAK TIME $5</span><span class="lv" style="color:#F2C21B;border-color:#F2C21B">POPULAR +$5–20</span><span class="lv" style="color:#9be38f;border-color:#9be38f">$5 OFF</span></div>
+<p class="fine" style="margin:6px 0 8px!important">Bigger room or peak day/time: $5 change fee. Popular times: +$5 to +$20. 2nd move <b>+$10</b>.</p>
+<ul class="ic"><li><i style="color:#F2C21B">2×</i><span>Up to 2 moves per booking</span></li><li><i style="color:#7fd3ff">3h</i><span>Your new time must start at least 3 hours from now</span></li><li><i style="color:#ffb070">+$</i><span>New slot costs more: pay the difference</span></li><li><i style="color:#ff9b9b">−$</i><span>Costs less: no refund. Bookings can’t be cancelled.</span></li><li><i style="color:#F2C21B">★</i><span>Popular times: +$5 to +$20</span></li><li><i style="color:#9be38f">−5</i><span>Some popular times are $5 off – look for the green tag</span></li><li><i style="color:#9be38f">15m</i><span>No change fee within 15 min of booking</span></li></ul>
+</details>
+<p class="fine">Rescheduling is new. Tell us on WhatsApp if anything’s unclear.</p></div>
+<div class="card"><h2>YOUR SAVE HISTORY</h2><p class="fine" style="margin:0 0 6px!important">Your booking and every move, with a receipt for each.</p><ul class="hist" id="hist"></ul></div>
+<div class="card"><h2>ADDRESS</h2><p style="margin:0"><b>20 Haji Lane, #02-00</b><br><span class="fine" style="font-size:14px">Singapore 189213 · Bugis MRT Exit B · 6 min walk</span></p></div>
+</section>
+
+<section id="s-pick" class="hidden"><button class="back" onclick="go('home')">‹ BACK TO BOOKING</button>
+<div class="kickrow"><span class="px kick">STEP 1 OF 2 <span class="beta">BETA</span></span><span class="feeb" id="feeb"></span></div><h1>PICK A NEW SLOT</h1>
+<div class="note" id="rulenote"></div>
+<div class="card"><h2>DAY</h2><div class="wk"><button class="nav" id="wprev" aria-label="Previous week">‹</button><div class="mon" id="mon"></div><button class="nav" id="wnext" aria-label="Next week">›</button><button class="nav cal" id="calb">▦ MONTH</button></div><div class="days" id="days"></div><div class="calv hidden" id="calv"></div>
+<div class="deals" id="deals" style="display:none"></div><h2 style="margin-top:14px">ROOM</h2><div class="rooms" id="rooms"></div>
+<h2 style="margin-top:6px">START TIME</h2><div class="hrow" id="hrow"></div><div class="mins" id="mins"></div><p class="fine" id="stnote"></p>
+<h2 style="margin-top:14px">HOURS</h2><div class="hrs" id="hrs"></div><p class="fine" id="hrnote"></p>
+<div class="leg"><span class="up">+$ you pay more</span><span class="eq">same price</span><span class="dn">cheaper · no refund</span></div></div>
+<div class="live" id="live"></div>
+<button class="btn" id="toSum">Continue to confirm</button><p class="fine">Your current slot stays yours until you’ve paid for the new one.</p></section>
+
+<section id="s-sum" class="hidden"><button class="back" onclick="go('pick')">‹ CHANGE SLOT</button>
+<div class="px kick">STEP 2 OF 2 <span class="beta">BETA</span></div><h1>REVIEW AND AGREE</h1>
+<div id="sumT"></div>
+<div class="card"><table id="sum" class="bd"></table>
+<label class="chk"><input type="checkbox" id="agree"> I understand this booking still can’t be cancelled or refunded, and this uses move <span id="mvn"></span> of 2.</label></div>
+<button class="btn" id="pay">Pay</button><p class="fine" id="payerr" style="color:#ff9b9b"></p><p class="fine">You’ll pay on HitPay’s secure page (PayNow, card, Apple Pay…). Nothing changes until payment goes through – if the time is taken meanwhile, our team refunds you.</p></section>
+
+<section id="s-done" class="hidden"><div class="px kick">SAVE FILE UPDATED</div><h1>YOU’RE MOVED!</h1>
+<div class="ticket" id="d-tk"><p class="room" id="d-room"></p><dl><dt>Date</dt><dd id="d-date"></dd><dt>Time</dt><dd class="big" id="d-time"></dd></dl></div>
+<div class="card"><p>Your TV message moved with your booking. A new confirmation email is on its way.</p><p class="fine" id="d-left"></p></div>
+<button class="btn ghost" id="d-rc">Download receipt</button> <button class="btn" onclick="boot()">Back to your booking</button></section>
+
+<section id="s-rc" class="hidden"><button class="back noprint" onclick="go('home')">‹ BACK TO BOOKING</button><div id="rcBody"></div><button class="btn noprint" onclick="window.print()">Save as PDF / print</button></section>
+
+
+</main>
+<script src="/move/logic.js"></script>
+<script>
+/* LIVE (owner, 12 Nov): the rules and every price come from the engine's own code (/move/logic.js = gLogic, the same function
+   it charges with), fed with this booking and a 3-minute-fresh calendar from /move/api. Nothing here talks to SimplyBook. */
+var REF=(location.search.match(/[?&]ref=([A-Z0-9]+)/i)||[])[1]||'',MV=(location.search.match(/[?&]mv=([A-Z0-9]+)/i)||[])[1]||'';
+var C=null,LG=null,INFO=null,S={},sel={},days=[],D0=null,ND=31,NOW=0;
+var ROOMS,OPEN,LAST,CLOSE,BUF,LOCK,price,rate,peak,taken,fits,why,starts,locked,dayFull,feeOf,pace,leadH,stage;
+var TYPE={netflix:'Netflix room',deluxe:'Deluxe room',vip:'VIP room'};
+function $(i){return document.getElementById(i)}
+function money(x){return '$'+Math.abs(x).toFixed(2)}
+function hm(m){m=((m%1440)+1440)%1440;var h=Math.floor(m/60),mm=m%60;return ((h+11)%12+1)+(mm?':'+String(mm).padStart(2,'0'):'')+(h<12?'am':'pm')}
+function dd(i){return new Date(D0.getTime()+i*864e5)}
+function monthOf(i){return dd(i).toLocaleDateString('en-SG',{month:'long',year:'numeric',timeZone:'UTC'}).toUpperCase()}
+function longDate(i){return dd(i).toLocaleDateString('en-SG',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}).replace(/,/g,'')}
+function rateName(r){return {eb:'Early bird',peak:'Peak (Fri–Sun, holidays)',off:'Off-peak (Mon–Thu)'}[r]}
+function O(){var o=LG.O();o.mvs=INFO.moves;o.paid0=INFO.paid0;return o}
+function iOf(date){return Math.round((Date.parse(date+'T12:00:00Z')-D0)/864e5)}
+function lvOf(i,room,t,h){var F=feeOf(i,room,t,h||sel.h);return F.add?(F.add<=10?1:2):(F.base===5?3:0)}
+function fee(t,i,room){if(t==null)return S.grace?0:(O().eb?15:5)+(S.moves===1?10:0);return LG.fee(i==null?sel.day:i,room||sel.room,t,sel.h)}
+function go(s){['load','home','pick','sum','done','rc'].forEach(function(x){var e=$('s-'+x);if(e)e.classList.toggle('hidden',x!==s)});scrollTo(0,0)}
+function tag(d){return d>0.004?'<em class="up">+'+money(d)+'</em>':d<-0.004?'<em class="dn">cheaper · no refund</em>':'<em class="eq">same price</em>'}
+function stop(h,p){go('load');$('ld-h').textContent=h;$('ld-p').innerHTML=p;$('ld-wa').classList.remove('hidden')}
+var STOP={notfound:['BOOKING NOT FOUND','We can’t find this booking. Open the link in your confirmation email again, or message us.'],cancelled:['BOOKING CANCELLED','This booking is no longer in our calendar. If that’s not right, message us.'],notbooked:['NOT ONLINE YET','This booking can’t be changed online. Message us on WhatsApp and we’ll help.'],gone:['CHECK WITH US','We can’t see this booking in our calendar right now. Message us on WhatsApp and we’ll sort it out.'],past:['SESSION OVER','This session has already happened. Hope you had fun!'],off:['RESCHEDULE PAUSED','Online rescheduling is paused for now. Message us on WhatsApp and we’ll move your booking.']};
+function load(fresh){return fetch('/move/api?ref='+REF+(fresh?'&t='+Date.now():'')).then(function(r){return r.json()})}
+function use(j){C=j.C;INFO=j.info;LG=gLogic(C);ROOMS=LG.ROOMS;OPEN=LG.OPEN;LAST=LG.LAST;CLOSE=LG.CLOSE;BUF=LG.BUF;LOCK=LG.LOCK;price=LG.price;rate=LG.rate;peak=LG.peak;taken=LG.taken;fits=LG.fits;why=LG.why;starts=LG.starts;locked=LG.locked;dayFull=LG.dayFull;feeOf=LG.feeOf;pace=LG.pace;leadH=LG.leadH;stage=LG.stage;
+ NOW=C.now;ND=C.days.length;D0=new Date(C.days[0].date+'T12:00:00Z');days=C.days.map(function(x){var d=new Date(x.date+'T12:00:00Z');return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getUTCDay()]+' '+d.getUTCDate()});
+ S={moves:C.moves,grace:C.grace,wa:INFO.staff}}
+function boot(){go('load');load().then(function(j){if(j.stop){var s=STOP[j.stop]||STOP.gone;return stop(s[0],s[1])}if(!j.C)return stop('SOMETHING WENT WRONG',(j.error||'Try again in a minute.'));use(j);
+ $('a-book').href='/done?ref='+REF;$('a-wa').href='https://wa.me/6591625767?text='+encodeURIComponent('Hi Round2, about my booking '+REF+' ('+(INFO.name||'')+')');
+ if(MV){var m=MV;MV='';return poll(m,0)}state()}).catch(function(){stop('NO CONNECTION','We couldn’t load your booking. Check your connection and try again.')})}
+function poll(m,n){go('load');$('ld-h').textContent='CONFIRMING YOUR MOVE…';$('ld-p').textContent='Your payment came through. We’re moving your booking – this takes a few seconds.';
+ fetch('/move/api?ref='+REF+'&mv='+m).then(function(r){return r.json()}).then(function(j){
+  if(j.status==='done'){try{history.replaceState(null,'','?ref='+REF)}catch(e){}return load(true).then(function(k){if(k.C)use(k);doneScreen()})}
+  if(j.status==='failed')return stop('WE’LL SORT IT OUT','Your payment came through, but that time was taken just before. Your booking hasn’t changed – our team has been alerted and will WhatsApp you to move it or refund you.');
+  if(n<40)setTimeout(function(){poll(m,n+1)},3000);else stop('STILL CHECKING','We haven’t seen the payment yet. If you paid, our team will confirm on WhatsApp shortly.')}).catch(function(){setTimeout(function(){poll(m,n+1)},4000)})}
+function doneScreen(){var o=O(),last=INFO.moves[INFO.moves.length-1];$('d-room').textContent=o.room;$('d-tk').style.borderTopColor=ROOMS[o.room][0];$('d-room').style.color=ROOMS[o.room][0];$('d-date').textContent=longDate(o.day);$('d-time').textContent=hm(o.t)+' – '+hm(o.t+o.h*60);
+ document.documentElement.style.setProperty('--rc',ROOMS[o.room][0]);$('d-rc').onclick=function(){rcpt(INFO.moves.length-1)};
+ $('d-left').textContent=S.moves>=2?'That was your last move. For anything else, WhatsApp us.':'You have 1 move left. Changes in the next 15 minutes have no change fee.';go('done')}
+function state(){var o=O(),st=stage();go('home');
+ $('t-name').textContent=INFO.name;$('t-ref').textContent=REF;
+ document.documentElement.style.setProperty('--rc',ROOMS[o.room][0]);
+ $('t-room').textContent=o.room;$('t-type').textContent=TYPE[ROOMS[o.room][1]]+(o.eb?' · Early bird':'');$('t-date').textContent=longDate(o.day);$('t-time').textContent=hm(o.t)+' – '+hm(o.t+o.h*60);$('t-len').textContent=o.h+' hours';$('t-paid').textContent=money(o.paid);
+ $('a-rc').textContent=(S.wa?'Booked with our team':'Paid online')+(o.mvs.length?' · '+o.mvs.length+' move'+(o.mvs.length>1?'s':''):'')+' · save PDF';
+ var L=leadH(),c='';if(S.grace){var gl=Math.max(0,Math.round((INFO.graceEnd-(Date.now()))/60e3));c+='<span class="chip ok">Free change · '+gl+' min left</span>'}c+='<span class="chip '+(S.moves>=2?'no':'')+'">Moves used '+S.moves+' / 2</span>';
+ c+='<span class="chip '+(st==='closed'?'warn':'')+'">Starts in '+(L>=48?Math.round(L/24)+' days':Math.round(L)+'h')+'</span>';if(S.wa)c+='<span class="chip">Booked with our team</span>';$('chips').innerHTML=c;
+ var R={early:['g','3+ DAYS','Any free slot, any day'],late:['y','UNDER 3 DAYS','Any day, but start 2:15pm or later'],day:['o','UNDER 24 HRS','Same day only: later time, bigger room or more hours'],closed:['r','UNDER 3 HRS','No rescheduling allowed']}[st];
+ $('myrule').innerHTML='<span class="lead">Your session starts in '+(L>=48?Math.round(L/24)+' days':Math.round(L)+' hours')+', so right now:</span><span class="w '+R[0]+'">'+R[1]+'</span><span>'+R[2]+'</span>'+(st==='closed'?'':'<span class="sub">Change fee '+(S.grace?'<b>free</b> (within 15 min)':'<b>$5 for a bigger room or peak time, $15 otherwise</b>, plus any price difference. Each slot shows the total')+' · new time at least 3 hours from now</span>');
+ var b=$('a-move'),sub=$('a-move-sub');b.disabled=false;b.onclick=function(){sel={day:o.day,room:o.room,t:o.t,h:o.h,wk:null};go('pick');draw()};
+ if(st==='closed'){b.disabled=true;sub.textContent='No rescheduling within 3 hours of your start'}
+ else if(S.moves>=2){b.disabled=true;sub.textContent='No moves left (2 of 2 used)'}
+ else if(INFO.ext){b.disabled=true;sub.textContent='Extra time added – WhatsApp us to move it'}
+ else if(st==='day')sub.textContent='Today/tomorrow: same-day upgrades only';
+ else sub.textContent=S.grace?'Free right now · price difference only':('Change room, day or time · from $'+fee(null));
+ var fm=function(t){var d=new Date(t+8*36e5);return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getUTCDay()]+' '+d.getUTCDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()]+', '+hm(d.getUTCHours()*60+d.getUTCMinutes())};
+ var h=['<li>'+(S.wa?'Booked with our team':'Booked online')+(INFO.made?' · '+fm(INFO.made):'')+' <small>· '+money(o.paid0!=null?o.paid0:o.paid)+'</small></li>'];
+ o.mvs.forEach(function(m,k){var fr=G2(m.from),to=G2(m.to);h.push('<li><span class="mvdot" style="background:'+ROOMS[fr.room][0]+'"></span>'+rn(fr.room)+' '+fr.lbl+' → <span class="mvdot" style="background:'+ROOMS[to.room][0]+'"></span><b>'+rn(to.room)+' '+to.lbl+'</b><small> · moved '+fm(m.t)+(m.guest?'':' by our team')+' · '+(m.total>0?'paid '+money(m.total)+' ('+money(m.fee)+' fee'+(m.diff>0?' + '+money(m.diff)+' difference':'')+')':'no charge')+'</small>'+(m.total>0?' <button class="rlink" onclick="rcpt('+k+')">Receipt</button>':'')+'</li>')});
+ $('hist').innerHTML=h.join('')}
+function G2(x){var r=x.unit===11||x.room==='Max'?'Maximillion':x.room,i=iOf(x.date),t=+x.time.slice(0,2)*60+ +x.time.slice(3,5);return {room:r,day:i,t:t,h:x.hours,date:x.date,lbl:new Date(x.date+'T12:00:00Z').toLocaleDateString('en-SG',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'}).replace(/,/g,'')+' '+hm(t)}}
+function want(){return sel.want!=null?sel.want:O().t}
+function upName(r){return ROOMS[r][1]===ROOMS[O().room][1]?'PEAK TIME':'UPGRADE'}   /* Vale off-peak → Vale peak isn't an "upgrade" to a guest */
+var PEAKC='#c08cff';
+function lvchip(i,r,t){var F=feeOf(i,r,t),c=F.name==='PEAK TIME'?PEAKC:F.name==='UPGRADE'?'#7fd3ff':'#b9b2cc',a=F.add===20?'#ffb070':'#F2C21B';
+ return '<span class="lv" style="color:'+c+';border-color:'+c+'">'+F.name+' $'+F.base+'</span>'+(F.add?' <span class="lv" style="color:'+a+';border-color:'+a+'">+$'+F.add+' POPULAR</span>':'')}
+function near(a,t){if(!a.length)return null;if(t==null)return a[0];return a.reduce(function(b,x){return Math.abs(x-t)<Math.abs(b-t)?x:b},a[0])}
+function draw(){var o=O(),st=stage();setTimeout(deals,0);
+ $('rulenote').innerHTML={early:'Your session is <b>3+ days away</b>: any free slot.',late:'Your session is <b>under 3 days away</b>: new times from <b>2:15pm</b> only. 11am–2pm slots need 3+ days notice.',day:'Your session is <b>under 24 hours away</b>: <b>same-day upgrades only</b> (later time, bigger room or more hours).'}[st];
+ var w0=sel.wk==null?Math.floor(sel.day/7)*7:sel.wk;sel.wk=w0;$('mon').textContent=monthOf(w0);$('wprev').disabled=w0<=0;$('wnext').disabled=w0+7>=ND;
+ $('days').innerHTML=days.slice(w0,w0+7).map(function(d,k){var i=w0+k,full=dayFull(i),past=i*1440+LAST-NOW<180;return '<button class="day'+(i==sel.day?' on':'')+(full||past?' full':'')+(i==o.day?' yours':'')+'" '+(past?'disabled':'')+' onclick="sel.day='+i+';sel.picked=1;draw()">'+d.split(' ')[0]+'<br><b>'+d.split(' ')[1]+'</b><i>'+(past?(i*1440+LAST-NOW>-1440&&i*1440+OPEN-NOW>-1440&&Math.floor(NOW/1440)===i?'too soon':'—'):full?'full':peak(i)?'peak':'off')+'</i></button>'}).join('');drawCal();
+ if(!starts(sel.day,sel.room).length){var f=Object.keys(ROOMS).filter(function(r){return starts(sel.day,r).length});if(f.length)sel.room=f[0]}
+ var card=function(r){var ss=starts(sel.day,r),n=ss.length,tt=near(ss,want()),d=n?price(r,sel.day,tt,o.h)-o.paid:0;
+  return '<button class="rm'+(r==sel.room?' on':'')+'" '+(n?'':'disabled')+' onclick="sel.room=\''+r+'\';draw()" style="border-left:4px solid '+ROOMS[r][0]+';--c:'+ROOMS[r][0]+'"><span class="rnm" style="color:'+(n?ROOMS[r][0]:'')+'">'+pic(CHARIC[r])+r+'</span>'+(r==o.room?' <span class="ytag">YOURS</span>':'')+'<small>'+(n?hm(tt)+' · '+n+' start time'+(n>1?'s':''):'Fully booked')+'</small>'+(n?paycol(sel.day,r,tt,d):'')+'</button>'};
+ /* tiers like the booking page: icon + name, the rooms' names in their colours, a bar of the rooms' colours */
+ $('rooms').innerHTML=TIERS.map(function(g){var n=g[1].length,bar='linear-gradient(90deg,'+g[1].map(function(r,i){return ROOMS[r][0]+' '+(100*i/n).toFixed(1)+'% '+(100*(i+1)/n).toFixed(1)+'%'}).join(',')+')';
+  return '<section class="tier" style="--tg:'+bar+'"><header><span class="px">'+pic(g[2])+g[0]+'</span><span>'+g[1].map(function(r){return '<span style="color:'+ROOMS[r][0]+'">'+r+'</span>'}).join(' · ')+'</span></header><div class="tgrid">'+g[1].map(card).join('')+'</div></section>'}).join('');
+ var stt=starts(sel.day,sel.room),lk=locked(sel.day,sel.room);if(stt.indexOf(sel.t)<0||sel.t!==near(stt,want()))sel.t=near(stt,want());
+ var H=Math.floor((sel.t||OPEN)/60),hh='';for(var hr=11;hr<=20;hr++){var any=stt.some(function(t){return Math.floor(t/60)===hr}),lkh=!any&&lk.some(function(t){return Math.floor(t/60)===hr}),me=sel.day==o.day&&sel.room==o.room&&Math.floor(o.t/60)===hr;
+  var hs=stt.filter(function(t){return Math.floor(t/60)===hr}),hl=hs.length?lvOf(sel.day,sel.room,hs[0]):-1;hh+='<button class="hc'+(hr===H?' on':'')+(me?' yours':'')+'" '+(hl>=0?'style="box-shadow:inset 0 -3px 0 '+(hl===1?'#F2C21B':hl===2?'#ffb070':hl===3?(upName(sel.room)==='PEAK TIME'?PEAKC:'#7fd3ff'):'#b9b2cc')+'" ':'')+(any?'':'disabled')+' onclick="pickH('+hr+')">'+hm(hr*60)+'<small>'+(lkh?'⌂ 3+ days':hr===11?'early bird':any?'':'full')+'</small></button>'}$('hrow').innerHTML=hh;
+ var on=$('hrow').querySelector('.on');if(on)on.scrollIntoView({block:'nearest',inline:'center'});
+ $('mins').innerHTML=[0,15,30,45].map(function(m){var t=H*60+m,ok=t<=LAST&&stt.indexOf(t)>=0,me=sel.day==o.day&&sel.room==o.room&&t===o.t;return '<button class="'+(t===sel.t?'on':'')+(me?' yours':'')+'" '+(ok?'':'disabled')+' onclick="sel.t=sel.want='+t+';draw()">'+hm(t)+'</button>'}).join('');
+ $('stnote').textContent='';
+ var notes=[];$('hrs').innerHTML=[3,4,5,6].map(function(h){var w=why(sel.day,sel.room,sel.t,h),d=price(sel.room,sel.day,sel.t,h)-o.paid,lbl;
+  if(w){lbl={taken:fits(sel.day,sel.room,sel.t,h)==='past'?'past closing':'taken from '+hm(fits(sel.day,sel.room,sel.t,h)),gap:'not available',same:'your booking',upgrade:'not an upgrade',lock:'3+ days only',sameday:'same day only',soon:'too soon'}[w];return '<button class="hr no" disabled><b>'+h+'h</b><small>'+lbl+'</small></button>'}
+  if(h<o.h)notes.push(h+'h is shorter than your '+o.h+'h booking: the hour you lose isn’t refunded.');
+  return '<button class="hr'+(h==sel.h?' on':'')+'" onclick="sel.h='+h+';draw()"><b>'+h+'h</b><small class="'+(d>0.004?'up':d<-0.004?'dn':'eq')+'">'+(d>0.004?'+'+money(d):d<-0.004?'no refund':'same')+'</small></button>'}).join('');
+ var isMine=sel.day==o.day&&sel.room==o.room&&sel.t==o.t&&sel.h==o.h;
+ if(!isMine&&why(sel.day,sel.room,sel.t,sel.h)){var hs=[3,4,5,6].filter(function(h){return !why(sel.day,sel.room,sel.t,h)});if(hs.length){sel.h=hs[0];return draw()}}
+ $('hrnote').innerHTML=notes.join(' ');
+ $('feeb').className='feeb'+(S.grace?' free':'');$('feeb').textContent=S.grace?'FREE CHANGE':'MOVE '+(S.moves+1)+' OF 2';
+ if(isMine){$('live').innerHTML='<div class="note">This is your current slot. Pick a different day, room, time or length.</div>';$('toSum').disabled=true;$('toSum').style.opacity=.4}else{$('live').innerHTML=tickets(true);$('toSum').disabled=sel.t==null;$('toSum').style.opacity=1}}
+function pickH(hr){var st=starts(sel.day,sel.room).filter(function(t){return Math.floor(t/60)===hr});if(st.length)sel.t=sel.want=st.indexOf(hr*60)>=0?hr*60:st[0];draw()}
+function calc(){var o=O(),T0=ROOMS[o.room][1],T1=ROOMS[sel.room][1],r0=rate(o.day,o.t),r1=rate(sel.day,sel.t),a=o.paid,b=price(sel.room,o.day,o.t,o.h),c=price(sel.room,sel.day,sel.t,o.h),dd=price(sel.room,sel.day,sel.t,sel.h),L=[],F=fee(sel.t),st=stage();
+ var FF=feeOf(sel.day,sel.room,sel.t,sel.h);if(!F)L.push(['Change fee','free · within 15 min',0]);else{L.push(['Change fee · '+FF.name.toLowerCase(),(FF.name==='UPGRADE'?'moving to a bigger room':FF.name==='PEAK TIME'?'moving to a peak day or time':'moving your booking')+(S.moves?' · 2nd move +$10':''),FF.base+(S.moves===1?10:0)]);if(FF.add)L.push(['Popular time add-on','this slot is likely to be booked'+(FF.snug?' · $5 off':'')+(FF.d.why?' · '+FF.d.why:''),FF.add]);}
+ if(T0!==T1)L.push([b<a?'Smaller room':TYPE[T1].replace(' room','')+' room',TYPE[T0]+' → '+TYPE[T1]+(b<a?' · not refunded':''),b-a]);
+ if(r0!==r1||Math.abs(c-b)>0.004)L.push([c<b?'Cheaper time':o.eb?'Full-price time':'Peak '+(r1==='peak'?'day':'time'),rateName(r0)+' → '+rateName(r1)+(c<b?' · not refunded':''),c-b]);
+ if(sel.h!==o.h)L.push([sel.h<o.h?'Shorter':'Extra hours',o.h+'h → '+sel.h+'h'+(sel.h<o.h?' · not refunded':''),dd-c]);
+ var net=dd-o.paid,diff=Math.max(0,net);return {o:o,L:L,net:net,diff:diff,tot:F+diff,newp:dd}}
+function row(l){var v=l[2];return '<tr'+(v<-0.004?' class="nr"':'')+'><td>'+l[0]+'<small>'+l[1]+'</small></td><td>'+(v>0.004?'+'+money(v):v<-0.004?'−'+money(v):'$0.00')+'</td></tr>'}
+function tickets(bd){var k=calc(),o=k.o,c0=ROOMS[o.room][0],c1=ROOMS[sel.room][0];
+ var h='<div class="tk" style="border-left-color:'+c0+'"><div class="k2">NOW</div><div class="r" style="color:'+c0+'">'+o.room+'</div><div class="w">'+days[o.day]+' · '+hm(o.t)+' – '+hm(o.t+o.h*60)+' · '+o.h+'h · paid '+money(o.paid)+'</div></div><div class="arr">▼ MOVING TO ▼</div>'+
+ '<div class="tk" style="border-left-color:'+c1+';border-color:'+c1+'"><div class="k2">NEW</div><div class="r" style="color:'+c1+'">'+sel.room+'</div><div class="w">'+days[sel.day]+' · '+hm(sel.t)+' – '+hm(sel.t+sel.h*60)+' · '+sel.h+'h · '+money(k.newp)+'</div></div>';
+ if(bd)h+='<div class="mini"><table class="bd">'+k.L.map(row).join('')+(k.net<-0.004?'<tr class="nr"><td>Cheaper overall<small>new '+money(k.newp)+' vs paid '+money(o.paid)+' · nothing refunded</small></td><td>$0.00</td></tr>':'')+'<tr class="tot"><td>You’ll pay</td><td>'+money(k.tot)+'</td></tr></table></div>';return h}
+function drawCal(){var c=$('calv');if(c.classList.contains('hidden'))return;var m0=new Date(D0.getTime()+sel.wk*864e5),first=new Date(Date.UTC(m0.getUTCFullYear(),m0.getUTCMonth(),1,12)),pad=(first.getUTCDay()+6)%7,n=new Date(Date.UTC(m0.getUTCFullYear(),m0.getUTCMonth()+1,0)).getUTCDate(),h=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(x){return '<div class="h">'+x+'</div>'}).join('');for(var k=0;k<pad;k++)h+='<button class="cd" disabled></button>';for(var d=1;d<=n;d++){var i=Math.round((Date.UTC(first.getUTCFullYear(),first.getUTCMonth(),d,12)-D0)/864e5),ok=i>=0&&i<ND,full=ok&&dayFull(i);h+='<button class="cd'+(i==sel.day?' on':'')+(full||!ok?' full':'')+'" '+(ok&&!full?'onclick="sel.day='+i+';sel.picked=1;sel.wk=Math.floor('+i+'/7)*7;toggleCal(false);draw()"':'')+'>'+d+'</button>'}c.innerHTML=h}
+function toggleCal(on){$('calv').classList.toggle('hidden',!on);$('days').classList.toggle('hidden',on);$('calb').classList.toggle('on',on);drawCal()}
+$('toSum').onclick=function(){var k=calc();$('sumT').innerHTML=tickets(false);
+ $('sum').innerHTML=k.L.map(row).join('')+(k.net<-0.004?'<tr class="nr"><td>Cheaper overall<small>new '+money(k.newp)+' vs paid '+money(k.o.paid)+' · nothing refunded</small></td><td>$0.00</td></tr>':'')+'<tr class="tot"><td>To pay</td><td>'+money(k.tot)+'</td></tr>';
+ $('mvn').textContent=S.moves+1;$('pay').textContent=k.tot>0?'Pay '+money(k.tot)+' with HitPay':'Confirm move (free)';$('agree').checked=false;go('sum')};
+$('pay').onclick=function(){if(!$('agree').checked){$('payerr').textContent='Tick the box first.';return}var k=calc(),b=$('pay');b.disabled=true;$('payerr').textContent='';b.textContent='One moment…';
+ fetch('/move/api',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({act:'pay',ref:REF,date:C.days[sel.day].date,room:sel.room,t:sel.t,h:sel.h,total:k.tot})}).then(function(r){return r.json()}).then(function(j){b.disabled=false;
+  if(j.changed){if(j.C)use({C:j.C,info:INFO});$('toSum').onclick();$('payerr').textContent='The price just changed to '+money(j.total)+' (the calendar moved). Check it and tap again.';return}
+  if(j.error){if(j.C)use({C:j.C,info:INFO});$('payerr').textContent=j.error;b.textContent='Try again';return}
+  if(j.done)return poll(j.mv,0);
+  if(j.url){b.textContent='Opening HitPay…';try{window.top.location.href=j.url}catch(e){location.href=j.url}}}).catch(function(){b.disabled=false;b.textContent='Try again';$('payerr').textContent='No connection – try again.'})};
+/* booking-page pixel icons (slots page): tiers sofa / gem / crown; each character's own icon */
+var PIX={sofa:['............','............','..########..','.#........#.','.#........#.','##........##','#.########.#','#..........#','############','.#........#.','.#........#.','............'],
+ gem:['............','..########..','.#..#..#..#.','#..#....#..#','############','.#..#..#..#.','..#..##..#..','...#.##.#...','....#..#....','.....##.....','............','............'],
+ crown:['............','.#...##...#.','.##..##..##.','.###.##.###.','.##########.','.##########.','.##.####.##.','.##########.','............','.##########.','............','............'],
+ cat:['............','.#.......#..','.##.....##..','.#.#####.#..','.#.......#..','#..#...#..#.','#.........#.','#....#....#.','.#..#.#..#..','..#.....#...','...#####....','............'],
+ leaf:['.........###','......######','....#####..#','...####...#.','..####...#..','..###...#...','.###...#....','.##...#.....','.#.###......','.###........','#...........','............'],
+ saturn:['..............','..............','.....####.....','....######..##','...#########.#','...#######.##.','...#####..#...','...##...###...','.##..######...','#.#########...','##..######....','.....####.....','..............','..............'],
+ mount:['............','............','.....#......','....#.#.....','...#...#.#..','..#.#.#.#.#.','..#..#..#..#','.#.........#','.#.........#','#...........','############','............'],
+ book:['............','.####..####.','#....##....#','#.##.##.##.#','#....##....#','#.##.##.##.#','#....##....#','#.##.##.##.#','#....##....#','.####..####.','.....##.....','............'],
+ boat:['.....#......','.....##.....','.....###....','.....####...','.....#####..','.....######.','.....#......','############','.##########.','..########..','............','#.##.##.##.#'],
+ car:['............','............','...######...','..#..#...#..','.#...#....#.','############','#..........#','#.##....##.#','############','.##......##.','.##......##.','............']};
+function pic(n){var p=PIX[n],r='';for(var y=0;y<p.length;y++)for(var x=0;x<p[y].length;x++)if(p[y][x]==='#')r+='M'+x+' '+y+'h1v1h-1z';return '<svg class="pic" viewBox="0 0 '+p[0].length+' '+p.length+'" aria-hidden="true" shape-rendering="crispEdges"><path d="'+r+'" fill="currentColor"/></svg>'}
+var CHARIC={Vale:'cat',Kaeden:'leaf',Scarlett:'saturn',Kai:'mount',Bella:'book',Atlas:'boat',Maximillion:'car'};
+var TIERS=[['NETFLIX ROOMS',['Vale','Kaeden','Scarlett'],'sofa'],['DELUXE ROOMS',['Kai','Bella','Atlas'],'gem'],['VIP ROOM',['Maximillion'],'crown']];
+/* the price difference split into its reasons – the same words on the cards, the summary and the receipt */
+function diffParts(i,r,t,h){var o=O(),a=o.paid,b=price(r,o.day,o.t,o.h),c=price(r,i,t,o.h),dd=price(r,i,t,h||o.h),P=[];
+ if(b-a>0.004)P.push([TYPE[ROOMS[r][1]].replace(' room','')+' room',b-a]);
+ if(c-b>0.004)P.push([o.eb?'full-price time':'peak '+(rate(i,t)==='peak'?'day':'time'),c-b]);
+ if(dd-c>0.004)P.push(['extra hours',dd-c]);return P}
+/* card contents (owner, 12 Nov): what kind of move · what you pay · what it's made of – every part named */
+function paycol(i,r,t,d){var F=feeOf(i,r,t),f=fee(t,i,r),add=S.grace?0:F.add,base=f-add,dd=Math.max(0,d),P=diffParts(i,r,t),c=F.name==='PEAK TIME'?PEAKC:F.name==='UPGRADE'?'#7fd3ff':'#b9b2cc',m=function(x){return '$'+(Math.round(x*100)/100).toString()};
+ var parts=[(S.grace?'free change':m(base)+' fee')].concat(add?['<span class="pp">'+m(add)+' popular'+(F.snug?' <span class="psn">($5 off)</span>':'')+'</span>']:[]).concat(d>0.004?P.map(function(x){return '<span class="pdf">'+m(x[1])+' '+x[0].replace(' room','')+'</span>'}):[]);
+ return '<span class="pc1"><span class="lv" style="color:'+c+';border-color:'+c+'">'+(S.grace?'FREE':F.name)+'</span>'+(add?'<span class="lv" style="color:#F2C21B;border-color:#F2C21B">POPULAR</span>':'')+(F.snug&&!S.grace?'<span class="lv" style="color:#9be38f;border-color:#9be38f">$5 OFF</span>':'')+'<b>'+money(base+add+dd).replace('.00','')+'</b></span>'+
+  '<span class="pc2">'+parts.join(' + ')+(d<-0.004?' · cheaper slot, no refund':d<0.004?' · same price':'')+'</span>'}
+/* BEST VALUE (owner, 12 Nov): once a day is picked – per room type, the cheapest upgrade near your time, and smart picks */
+var RANK={'Netflix room':0,'Deluxe room':1,'VIP room':2};
+function deals(){var o=O(),i=sel.day,L=[];if(!sel.picked){$('deals').style.display='none';return}
+ TIERS.forEach(function(g){var T=TYPE[ROOMS[g[1][0]][1]];if(RANK[T]<=RANK[TYPE[ROOMS[o.room][1]]])return;var best=null,free=[];
+  g[1].forEach(function(r){var ss=starts(i,r);if(!ss.length)return;var t=near(ss,want()),f=fee(t,i,r),df=Math.max(0,price(r,i,t,o.h)-o.paid),pay=f+df;free.push(r);if(!best||pay<best.pay)best={pay:pay,f:f,df:df,t:t}});
+  if(best)L.push({k:'up',tier:g[0],txt:'Upgrade to a '+T+' · from <b>'+money(best.pay).replace('.00','')+'</b>',sub:'$'+best.f+' fee + '+money(best.df).replace('.00','')+' price difference · '+free.join(', ')+' free around '+hm(best.t)})});
+ Object.keys(ROOMS).forEach(function(r){starts(i,r).forEach(function(t){var F=feeOf(i,r,t);if(F.snug&&L.filter(function(x){return x.k==='sp'}).length<2)L.push({k:'sp',r:r,t:t,txt:'$5 off · <b>'+r+' '+hm(t)+'</b>',sub:'popular time, now $5 cheaper'})})});
+ $('deals').innerHTML=L.length?'<h2>BEST VALUE · '+days[i].toUpperCase()+'</h2>'+L.map(function(x){return '<button class="deal" onclick="'+(x.k==='up'?'var e=[].filter.call(document.querySelectorAll(\'.tier\'),function(s){return s.textContent.indexOf(\''+x.tier+'\')===0||s.querySelector(\'header\').textContent.indexOf(\''+x.tier+'\')>=0})[0];e&&e.scrollIntoView({behavior:\'smooth\',block:\'start\'})':'sel.room=\''+x.r+'\';sel.want='+x.t+';sel.t='+x.t+';draw();document.getElementById(\'rooms\').scrollIntoView({behavior:\'smooth\',block:\'start\'})')+'"><i style="color:'+(x.k==='up'?'#7fd3ff':'#9be38f')+'">'+(x.k==='up'?'⬆':'−5')+'</i><span>'+x.txt+'<small>'+x.sub+'</small></span><em>›</em></button>'}).join(''):'';
+ $('deals').style.display=L.length?'':'none'}
+function rn(r){return r==='Maximillion'?'Max':r}
+/* RECEIPT: the booking (k = -1) or one move; same look as the live /receipt page; Save as PDF = the phone's print */
+function rcpt(k){if(k<0){try{window.top.location.href='https://book.round2.sg/receipt?ref='+REF}catch(e){location.href='/receipt?ref='+REF}return}
+ var m=INFO.moves[k],fr=G2(m.from),to=G2(m.to),rows=[['Change fee'+(m.guest&&k>0&&m.fee>=15?' (2nd move +$10 included)':''),m.fee]];if(m.diff>0)rows.push(['Price difference',m.diff]);var tot=rows.reduce(function(a,r){return a+r[1]},0);
+ $('rcBody').innerHTML='<div class="rcpt" style="--rc:'+ROOMS[to.room][0]+'"><div class="px kick">ROUND2 · RESCHEDULE RECEIPT</div><h1 style="margin:6px 0 2px">'+money(tot)+'</h1><p class="fine" style="margin:0 0 12px!important">Paid with HitPay · ref '+(m.ref||REF)+' · '+new Date(m.t+8*36e5).toISOString().slice(0,10)+'</p>'+
+  '<div class="rcmv"><div><small>FROM</small><b style="color:'+ROOMS[fr.room][0]+'">'+fr.room+'</b><span>'+fr.lbl+'<br>'+fr.h+' hours</span></div><div class="arr">→</div><div><small>TO</small><b style="color:'+ROOMS[to.room][0]+'">'+to.room+'</b><span>'+to.lbl+'<br>'+to.h+' hours</span></div></div>'+
+  '<table class="bd">'+rows.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+money(r[1])+'</td></tr>'}).join('')+'<tr class="tot"><td>Total paid</td><td>'+money(tot)+'</td></tr></table>'+
+  '<p class="fine">Booking '+REF+' · '+(INFO.name||'')+'. Round2 · 20 Haji Lane #02-00, Singapore 189213 · hello@round2.sg</p></div>';go('rc')}
+$('wprev').onclick=function(){sel.wk=Math.max(0,sel.wk-7);draw()};$('wnext').onclick=function(){sel.wk=Math.min(ND-1,sel.wk+7);draw()};$('calb').onclick=function(){toggleCal($('calv').classList.contains('hidden'))};
+boot();
+</script><script>/* inside book.round2.sg: keep its address bar in step; links that leave open outside the frame */(function(){if(window.top===window)return;try{parent.postMessage({r2:'page',path:location.pathname+location.search,title:document.title},'https://book.round2.sg')}catch(e){}document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href]');if(!a)return;var u=new URL(a.href,location.href);if(u.origin===location.origin)return;a.target=/(^|\.)round2\.sg$/.test(u.hostname)?'_top':'_blank';a.rel='noopener'},true)})()</script></body></html>
