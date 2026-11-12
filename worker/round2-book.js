@@ -2043,6 +2043,7 @@ async function mvExecute(env, mv, how) {
     /* its own Vale/Atlas block goes first (else SimplyBook sees the twin room busy); put back if the move fails */
     const mir = await hb.kvGet('mir:' + B.bid);
     if (mir && mir.blk) { await a('cancelBooking', [mir.blk]).catch(() => null); await hb.kvSet('mir:' + B.bid, null); await hb.kvSet('mirb:' + mir.blk, null); }
+    await hb.kvSet('mvpush:' + B.bid, Date.now() + 10 * 60e3).catch(() => null);   /* set BEFORE SimplyBook hears of it: its own 'changed' alert is skipped, ours (with who + what was paid) goes instead */
     const ed = await a('editBook', [B.bid, q.eventId, q.unit, B.cid, q.date, q.time + ':00', eB >= 1440 ? addDays(q.date, 1) : q.date, hhmm(eB % 1440) + ':00', 0, B.fields]).then(() => true).catch((e) => String(e.message || e).slice(0, 160));
     await mirrorOnSb(env, B.bid, 'change').catch(() => null);   /* new block in the other twin (or the old one put back) */
     if (ed !== true) return { error: 'SimplyBook didn’t take the move – the booking is unchanged: ' + ed };
@@ -2067,7 +2068,6 @@ async function mvExecute(env, mv, how) {
     const L = (await hb.kvGet('mvlog')) || []; L.unshift(rec); await hb.kvSet('mvlog', L.slice(0, 300));
     await mvStats(env, true).catch(() => null);   /* trip-wires: a push alert when one turns red */
     /* staff phones (owner, 12 Nov): who moved it and what was paid – same tag as the booking's own alert, so it replaces "MOVED" */
-    await hb.kvSet('mvpush:' + B.bid, Date.now() + 10 * 60e3).catch(() => null);   /* SimplyBook's own 'changed' alert for this move is skipped (below) */
     if (env.VAPID_JWK) {
       const sp = (x) => (x.room === 'Max' || +x.unit === 11 ? 'Max' : x.room) + ' ' + new Date(x.date + 'T12:00:00Z').toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).replace(/,/g, '') + ', ' + clock12(sgMs0(x.date + ' ' + x.time));
       const paid = +mv.total > 0 ? 'paid $' + (+mv.total).toFixed(2).replace(/\.00$/, '') + ' (fee $' + (+mv.fee) + (+mv.diff > 0 ? ' + $' + (+mv.diff).toFixed(2).replace(/\.00$/, '') + ' difference' : '') + ')' : 'no charge' + (mv.grace ? ' (free 15 min)' : '');
