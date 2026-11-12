@@ -2413,7 +2413,7 @@ async function mvApi(env, hb, f, origin) {
     const ref = String(f.ref || '').replace(/[^A-Z0-9]/g, ''), mv = await hb.kvGet('mv:' + ref); if (!mv) return { error: 'Unknown move.' };
     if (mv.status === 'done') return { ok: true, already: true, moved: mv.result };
     const st = await mvPayStatus(env, mv); if (!st.paid) return { error: 'HitPay doesn’t show it paid yet.', st };
-    await hb.kvSet('mvdone:' + ref, Date.now() + 120e3);
+    await hb.kvSet('mvdone:' + ref, Date.now() + 120e3); await hb.kvSet('mvlock:' + mv.from.bid, 0);
     let r; try { r = await mvExecute(env, mv, 'paid ' + (st.via || 'HitPay') + ' (finished by staff)'); } catch (e) { r = { error: 'threw: ' + String(e && e.stack || e).slice(0, 600) }; }
     mv.status = r.ok ? 'done' : 'failed'; mv.result = r.moved || null; mv.err = r.error || ''; await hb.kvSet('mv:' + ref, mv);
     return Object.assign({ step: 'executed' }, r);
