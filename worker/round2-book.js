@@ -1917,19 +1917,26 @@ async function mvBooking(env, bid) {
   const fields = {}; for (const x of [].concat(b.additional_fields || [])) if (x && x.field_name) fields[x.field_name] = String(x.value != null ? x.value : '');
   return { bid: String(b.id), code: String(b.code || ''), unit: +b.unit_id, cid: String(b.client_id), name: String(b.client_name || ''), event: String(b.event_id), date: st.slice(0, 10), time: st.slice(11, 16), s, e, hours, fields };
 }
+/* the booking's +h (EXT) notes: owner, 12 Nov – they move with the booking (made in In session; one per room + its twin) */
+function mvExtOf(D, B) {
+  const S = D.sessions.find((x) => x.key === 'b' + B.bid); if (!S || !S.ext.length) return { min: 0, main: [], twin: [] };
+  const tw = MIRROR[B.unit], a = S.ext[0].s, z = S.end;
+  const twin = tw ? D.items.filter((x) => x.unit === tw && x.k === 'n' && !x.blk && x.ext && x.s >= a - 5 * 60e3 && x.e <= z + 5 * 60e3) : [];
+  return { min: Math.round((S.end - S.e0) / 60e3), main: S.ext.map((x) => ({ id: String(x.id), s: x.s, e: x.e })), twin: twin.map((x) => ({ id: String(x.id), s: x.s, e: x.e })) };
+}
 async function mvQuote(env, f) {
   const hb = book(env), now = Date.now(), B = await mvBooking(env, f.bid);
   if (B.s < now - 15 * 60e3) throw new Error('That session has already started.');
   const hours = +f.hours || B.hours, unit = +f.unit || B.unit, date = /^\d{4}-\d\d-\d\d$/.test(f.date || '') ? f.date : B.date, time = /^\d\d:\d\d$/.test(f.time || '') ? f.time : B.time;
   const q = await quote(env, { unit, date, time, hours });
-  const s = sgMs0(date + ' ' + time), e = s + hours * 3600e3 + BUF * 60e3;
+  const s = sgMs0(date + ' ' + time), eB0 = s + hours * 3600e3 + BUF * 60e3;
   if (s < now) throw new Error('That time has passed.');
   if (unit === B.unit && date === B.date && time === B.time && hours === B.hours) throw new Error('That’s the booking as it is now.');
   const D0 = await sessDay(env, sgDay(B.s - SHADOW_TILL * 60e3)), D1 = await sessDay(env, sgDay(s - SHADOW_TILL * 60e3));
-  const S = D0.sessions.find((x) => x.key === 'b' + B.bid);
-  if (S && S.ext.length) throw new Error('This booking has extension (EXT) notes – undo the +1h first (In session), move it, then add the hours again.');
+  const X = mvExtOf(D0, B);   /* its +h moves with it, so the new time must be free for the extra time too */
   /* anything in the way at the new time, apart from this booking and its own Vale/Atlas block */
-  const mir = await hb.kvGet('mir:' + B.bid), skip = new Set(['b' + B.bid].concat(mir && mir.blk ? ['b' + mir.blk] : []));
+  const e = eB0 + X.min * 60e3;
+  const mir = await hb.kvGet('mir:' + B.bid), skip = new Set(['b' + B.bid].concat(mir && mir.blk ? ['b' + mir.blk] : []).concat(X.main.concat(X.twin).map((n) => 'n' + n.id)));
   const twinBlk = (x) => x.k === 'b' && x.sys && (x.unit === 5 || x.unit === 12) && D0.items.concat(D1.items).some((y) => y.k === 'b' && y.id === B.bid && Math.abs(y.s - x.s) <= 5 * 60e3);
   const tw = MIRROR[unit], clash = [];
   for (const x of D1.items) {
@@ -1951,7 +1958,7 @@ async function mvQuote(env, f) {
   if (twin === 'same') lv = Math.min(2, lv + 1);
   else if (money <= (twin === 'other' ? 10 : 5) && !eb && q.total > paid + 0.004) lv = 3;
   const diff = Math.max(0, Math.round((q.total - paid) * 100) / 100), fee = MV_LV[lv][1];
-  return { ok: !clash.length, clash, from: { bid: B.bid, code: B.code, room: ROOMS[B.unit][0], unit: B.unit, date: B.date, time: B.time, hours: B.hours, name: B.name, paid, online: !!held },
+  return { ok: !clash.length, clash, ext: X.min, from: { bid: B.bid, code: B.code, room: ROOMS[B.unit][0], unit: B.unit, date: B.date, time: B.time, hours: B.hours, name: B.name, paid, online: !!held },
     to: { room: q.room, unit, date, time, hours, end: q.end, price: q.total, peak: q.peak, earlyBird: q.earlyBird },
     level: MV_LV[lv][0], fee, diff, total: Math.round((fee + diff) * 100) / 100, reason: [why, twin === 'same' ? 'same Vale/Atlas room straight after another session' : twin === 'other' ? 'other Vale/Atlas room – easy turnaround' : ''].filter(Boolean).join(' · '),
     lostSales: Math.round(money * 100) / 100 };
@@ -1964,6 +1971,7 @@ async function mvExecute(env, mv, how) {
     const Q = await mvQuote(env, { bid: mv.from.bid, unit: mv.to.unit, date: mv.to.date, time: mv.to.time, hours: mv.to.hours });
     if (!Q.ok) return { error: 'That time isn’t free any more: ' + Q.clash.join('; '), clash: Q.clash };
     const B = await mvBooking(env, mv.from.bid), q = await quote(env, { unit: mv.to.unit, date: mv.to.date, time: mv.to.time, hours: mv.to.hours });
+    const X0 = mvExtOf(await sessDay(env, sgDay(B.s - SHADOW_TILL * 60e3)), B);
     const a = await admin(env), eB = mins(q.time) + q.hours * 60 + BUF;
     /* its own Vale/Atlas block goes first (else SimplyBook sees the twin room busy); put back if the move fails */
     const mir = await hb.kvGet('mir:' + B.bid);
@@ -1971,7 +1979,20 @@ async function mvExecute(env, mv, how) {
     const ed = await a('editBook', [B.bid, q.eventId, q.unit, B.cid, q.date, q.time + ':00', eB >= 1440 ? addDays(q.date, 1) : q.date, hhmm(eB % 1440) + ':00', 0, B.fields]).then(() => true).catch((e) => String(e.message || e).slice(0, 160));
     await mirrorOnSb(env, B.bid, 'change').catch(() => null);   /* new block in the other twin (or the old one put back) */
     if (ed !== true) return { error: 'SimplyBook didn’t take the move – the booking is unchanged: ' + ed };
-    const rec = { t: Date.now(), bid: B.bid, name: B.name, from: mv.from, to: { room: q.room, unit: q.unit, date: q.date, time: q.time, hours: q.hours }, level: mv.level, feeWas: mv.feeWas, fee: mv.fee, diff: mv.diff, total: mv.total, how, by: mv.by || '', why: mv.why || '', ref: mv.ref || '' };
+    /* its +h (EXT) notes follow: same length after the new end, new room, text rewritten; the Vale/Atlas twin note is redone */
+    let extProb = '';
+    if (X0.min) {
+      try {
+        const s2 = await sb2(env), d = sgMs0(q.date + ' ' + q.time) - B.s, ns = B.e + d, ne = ns + X0.min * 60e3, who = (B.name || 'guest').replace(/\s+/g, ' ').trim().split(' ')[0].slice(0, 14);
+        const body = (unit, st, en, text) => ({ provider_id: unit, service_id: null, start_date_time: sgStr(st), end_date_time: sgStr(en), note_type_id: 1, note: text, mode: 'provider', time_blocked: true });
+        const [first, ...rest] = X0.main;
+        await s2('PUT', '/admin/calendar-notes/' + first.id, body(q.unit, ns, ne, 'EXT till ' + clock12(ne - BUF * 60e3) + ' · ' + who));
+        for (const n of rest) await s2('DELETE', '/admin/calendar-notes/' + n.id).catch(() => null);
+        for (const n of X0.twin) await s2('DELETE', '/admin/calendar-notes/' + n.id).catch(() => null);
+        if (MIRROR[q.unit]) await s2('POST', '/admin/calendar-notes', body(MIRROR[q.unit], ns, ne, 'SYSTEM BLOCK · EXT ' + ROOMS[q.unit][0] + ' till ' + clock12(ne)));
+      } catch (e) { extProb = String(e.message || e).slice(0, 120); await humanAlert(env, 'mvext-' + B.bid, 'Moved booking: its +h note didn’t follow', `${B.name || 'Guest'} moved to ${q.room} ${q.date} ${q.time}, but the extra-hours (EXT) note didn’t move: ${extProb}. Fix it in SimplyBook (or In session).`).catch(() => null); }
+    }
+    const rec = { t: Date.now(), bid: B.bid, name: B.name, ext: X0.min, extProb, from: mv.from, to: { room: q.room, unit: q.unit, date: q.date, time: q.time, hours: q.hours }, level: mv.level, feeWas: mv.feeWas, fee: mv.fee, diff: mv.diff, total: mv.total, how, by: mv.by || '', why: mv.why || '', ref: mv.ref || '' };
     await hb.holdMove(B.bid, q, rec).catch(() => null);   /* the guest's booking page shows the new room and time */
     await hb.kvSet('gapc', {}).catch(() => null);
     await hb.onSb(B.bid, 'change').catch(() => null);   /* guest TV messages follow */
@@ -2003,23 +2024,24 @@ async function mvApi(env, hb, f, origin) {
   const act = f.action;
   if (act === 'mvday') {   /* the guest bookings on a day (shop night) */
     const day = /^\d{4}-\d\d-\d\d$/.test(f.day || '') ? f.day : sgDay(Date.now() - SHADOW_TILL * 60e3), D = await sessDay(env, day);
-    return { ok: true, day, list: D.sessions.filter((S) => S.k === 'b' && !S.sys).sort((a, b) => a.s - b.s).map((S) => ({ bid: S.key.slice(1), room: ROOMS[S.unit][0], unit: S.unit, name: S.name, s: S.s, guestEnd: S.guestEnd, ext: S.ext.length, started: S.s < Date.now() })) };
+    return { ok: true, day, list: D.sessions.filter((S) => S.k === 'b' && !S.sys).sort((a, b) => a.s - b.s).map((S) => ({ bid: S.key.slice(1), room: ROOMS[S.unit][0], unit: S.unit, name: S.name, s: S.s, guestEnd: S.guestEnd, hours: Math.round((S.e0 - S.s - BUF * 60e3) / 3600e3), ext: Math.round((S.end - S.e0) / 60e3), started: S.s < Date.now() })) };
   }
   if (act === 'mvquote') return Object.assign({ ok: true }, await mvQuote(env, f));
   if (act === 'mvfree') {   /* the free start times on a day for this booking (no extra SimplyBook calls: the day's notes + bookings) */
     const B = await mvBooking(env, f.bid), hours = +f.hours || B.hours, date = f.date, D = await sessDay(env, date), mir = await hb.kvGet('mir:' + B.bid), out = {};
-    const skip = new Set(['b' + B.bid].concat(mir && mir.blk ? ['b' + mir.blk] : [])), now = Date.now();
+    const X = mvExtOf(await sessDay(env, sgDay(B.s - SHADOW_TILL * 60e3)), B);
+    const skip = new Set(['b' + B.bid].concat(mir && mir.blk ? ['b' + mir.blk] : []).concat(X.main.concat(X.twin).map((n) => 'n' + n.id))), now = Date.now();
     for (const u of Object.keys(ROOMS).map(Number)) {
       const tw = MIRROR[u], L = [];
       for (let m = 660; m <= 1215; m += 15) {
-        const s = sgMs0(date + ' ' + hhmm(m)), e = s + hours * 3600e3 + BUF * 60e3; if (s < now + 15 * 60e3) continue;
-        if (m + hours * 60 > CLOSE) continue;
+        const s = sgMs0(date + ' ' + hhmm(m)), e = s + hours * 3600e3 + BUF * 60e3 + X.min * 60e3; if (s < now + 15 * 60e3) continue;
+        if (m + hours * 60 + X.min > CLOSE) continue;
         if (D.items.some((x) => (x.unit === u || x.unit === tw) && !skip.has(x.k + x.id) && !(x.k === 'b' && x.sys && D.items.some((y) => y.id === B.bid && Math.abs(y.s - x.s) <= 5 * 60e3)) && x.s < e && x.e > s)) continue;
         L.push(m);
       }
       out[ROOMS[u][0]] = L;
     }
-    return { ok: true, date, hours, free: out };
+    return { ok: true, date, hours, ext: X.min, free: out };
   }
   if (act === 'mvpay' || act === 'mvlink') {   /* PayNow QR (mvpay) or a normal payment link for WhatsApp (mvlink) */
     const Q = await mvQuote(env, f); if (!Q.ok) return { error: 'Not free: ' + Q.clash.join('; ') };
