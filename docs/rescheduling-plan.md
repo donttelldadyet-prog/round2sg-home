@@ -194,7 +194,7 @@ Control centre: top tab "In session" renamed Bookings; pages In session · Add a
 |---|---|---|
 | A · levels $15/$25/$35 (+$5 upgrade only if ~free) | $14.75 | $5 7% · $15 88% · $25 4% |
 | B · move ($15 / $5) + popular +$10/+$20 | $14.38 | $5 7% · $15 92% · $25 1% |
-| C · B with popular in $5 steps, $15 floor, smart pick | $14.36 | $5 7% · $15 92% · $20–25 1% |
+| C · B with popular in $5 steps, $15 floor, $5 off | $14.36 | $5 7% · $15 92% · $20–25 1% |
 Most real moves are $15 under every method; the methods differ only on late moves out of / into popular evenings
 (e.g. Atlas Fri 13 7:15pm → Scarlett Sat 21 8:15pm: A $25 → C $15; Max Mon 16 2:30pm → Atlas Sat 14 2:45pm: A $35 → C $25).
 Early-bird bookings: $15 under all. Best value box shows per room type after a day is picked.
