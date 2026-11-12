@@ -3752,7 +3752,7 @@ const HANDLER = {
       if (u.pathname === '/find') {
         const form = (err, em = '') => H(PAGE(`<h1>View your booking</h1><p>Enter the email and mobile number you booked with to see your booking and add or change your TV message.</p>
 <form method="post"><label>Email</label><input name="email" type="email" required value="${esc(em)}"><label>Mobile</label><input name="phone" type="tel" required placeholder="8123 4567"><button>Show my booking</button></form>${err ? `<p class="err">${err}</p>` : ''}
-<p style="font-size:14px;margin-top:18px">Booked on WhatsApp or by phone? Message us on <a href="https://wa.me/6591625767">WhatsApp</a>.</p>`));
+<p style="font-size:14px;margin-top:18px">Booked with us on WhatsApp? Open the booking link we sent you – or enter the email and mobile you gave us. No link, or a late-night session? Message us on <a href="https://wa.me/6591625767">WhatsApp</a>.</p>`));
         if (req.method !== 'POST') return form();
         const f = new URLSearchParams(await req.text()), em = String(f.get('email') || '').trim().toLowerCase(), p8 = String(f.get('phone') || '').replace(/\D/g, '').slice(-8);
         if (!em || p8.length < 8) return form('Please enter your email and full mobile number.', em);
