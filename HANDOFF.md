@@ -49,8 +49,10 @@
 > 4. **Add a session = real booking first** (owner corrected me: I first said it only made notes – it did, the booking path was new).
 >    Needs the guest's mobile (email optional); daytime 3–6 h, nothing in the way. Shows Copy link / WhatsApp it. Late/clash/odd
 >    length/no mobile → note as before. Email stored in small letters so "View your booking" (email + mobile) finds it.
-> 5. **T&Cs** (Wix, page "NEW TNC", HTML block, round2.sg/tnc): clause 2.4 + "Before you pay" = 2 moves, until 3 hours before,
->    change fee + difference, no refunds for cheaper. Owner published. The older "t&c" page (/r2tnc) was NOT changed.
+> 5. **T&Cs** (Wix, page "NEW TNC", HTML block html1 in section46, round2.sg/tnc): clause 2.4 + "Before you pay" = 2 moves, until
+>    3 hours before; then (owner, 12 Nov 8pm, CCCS price-transparency) the price STRUCTURE spelled out: change fee S$5/S$15 (+S$10
+>    2nd move), popular-time add-on S$5–S$20 by demand, price difference, itemised total shown before paying, free first 15 min.
+>    The demand model, twin rule and "$5 OFF" stay internal. Keep this clause in step with gLogic if fees change. The older "t&c" page (/r2tnc) was NOT changed.
 > 6. **Homepage LOAD SAVE / SAVE FOUND** (phone remembers the booking) – built, then REMOVED the same hour (owner: a forwarded link
 >    would show on someone else's phone; more risk than reward). Homepage clears anything it stored (`r2.saves`).
 > 7. **One booking page everywhere** (owner: "keep everything consistent"): the 4-button page `/move?ref=` (Reschedule · TV message ·
