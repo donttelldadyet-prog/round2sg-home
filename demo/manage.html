@@ -68,6 +68,7 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 @media print{.noprint,.demo,#demo{display:none!important}body{background:#fff;color:#000}.rcpt{background:#fff;color:#000}}
 .rooms{display:block!important;margin:6px 0}.tier{margin:14px 0 4px}.tier::before{content:'';display:block;height:3px;margin:0 0 8px;background:var(--tg)}.tier>header{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-bottom:6px}.tier>header .px{font:10px 'Press Start 2P',monospace;color:#f4f1fb}.tier>header span{font-size:13px;color:var(--mu)}.tier>header .pic{width:12px;height:12px;margin-right:8px;vertical-align:-1px}
 .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}.pic{display:inline-block;width:1em;height:1em;vertical-align:-.12em}.rm .rnm .pic{width:14px;height:14px;margin-right:7px;vertical-align:-2px}.rm .rnm{font-weight:700}.rm:disabled .rnm{color:inherit!important}
+.rm{position:relative}.pcol{display:block;margin-top:8px;border-top:1px dashed rgba(255,255,255,.14);padding-top:6px}.pl{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:3px 0;font-size:12px;color:#d6d0e3}.pl b{font-size:13px;font-weight:600;color:#f4f1fb}.pl .lv{font-size:7px}.pl.pd span{color:var(--mu)}.pl.pd b{color:#ffcf5a}.pl.pt{margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,.14)}.pl.pt span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)}.pl.pt b{font-size:16px}
 </style></head><body><main>
 <div class="demo">DEMO · nothing is real here.
 <label>Their booking: <select id="bk">
@@ -282,7 +283,7 @@ function draw(){var o=O(),st=stage();
  $('days').innerHTML=days.slice(w0,w0+7).map(function(d,k){var i=w0+k,full=dayFull(i),past=i*1440+LAST-NOW<180;return '<button class="day'+(i==sel.day?' on':'')+(full||past?' full':'')+(i==o.day?' yours':'')+'" '+(past?'disabled':'')+' onclick="sel.day='+i+';draw()">'+d.split(' ')[0]+'<br><b>'+d.split(' ')[1]+'</b><i>'+(past?(i*1440+LAST-NOW>-1440&&i*1440+OPEN-NOW>-1440&&Math.floor(NOW/1440)===i?'too soon':'—'):full?'full':peak(i)?'peak':'off')+'</i></button>'}).join('');drawCal();
  if(!starts(sel.day,sel.room).length){var f=Object.keys(ROOMS).filter(function(r){return starts(sel.day,r).length});if(f.length)sel.room=f[0]}
  var card=function(r){var ss=starts(sel.day,r),n=ss.length,tt=near(ss,want()),d=n?price(r,sel.day,tt,o.h)-o.paid:0;
-  return '<button class="rm'+(r==sel.room?' on':'')+'" '+(n?'':'disabled')+' onclick="sel.room=\''+r+'\';draw()" style="border-left:4px solid '+ROOMS[r][0]+';--c:'+ROOMS[r][0]+'"><span class="rnm" style="color:'+(n?ROOMS[r][0]:'')+'">'+pic(CHARIC[r])+r+'</span>'+(r==o.room?' <span class="ytag">YOURS</span>':'')+'<small>'+(n?n+' start times':'Fully booked')+'</small>'+(n?'<em class="at">at '+hm(tt)+'</em> '+lvchip(sel.day,r,tt)+' '+tag(d):'')+'</button>'};
+  return '<button class="rm'+(r==sel.room?' on':'')+'" '+(n?'':'disabled')+' onclick="sel.room=\''+r+'\';draw()" style="border-left:4px solid '+ROOMS[r][0]+';--c:'+ROOMS[r][0]+'"><span class="rnm" style="color:'+(n?ROOMS[r][0]:'')+'">'+pic(CHARIC[r])+r+'</span>'+(r==o.room?' <span class="ytag">YOURS</span>':'')+'<small>'+(n?n+' start times':'Fully booked')+'</small>'+(n?'<em class="at">at '+hm(tt)+'</em>'+paycol(sel.day,r,tt,d):'')+'</button>'};
  /* tiers like the booking page: icon + name, the rooms' names in their colours, a bar of the rooms' colours */
  $('rooms').innerHTML=TIERS.map(function(g){var n=g[1].length,bar='linear-gradient(90deg,'+g[1].map(function(r,i){return ROOMS[r][0]+' '+(100*i/n).toFixed(1)+'% '+(100*(i+1)/n).toFixed(1)+'%'}).join(',')+')';
   return '<section class="tier" style="--tg:'+bar+'"><header><span class="px">'+pic(g[2])+g[0]+'</span><span>'+g[1].map(function(r){return '<span style="color:'+ROOMS[r][0]+'">'+r+'</span>'}).join(' · ')+'</span></header><div class="tgrid">'+g[1].map(card).join('')+'</div></section>'}).join('');
@@ -338,6 +339,12 @@ var PIX={sofa:['............','............','..########..','.#........#.','.#..
 function pic(n){var p=PIX[n],r='';for(var y=0;y<p.length;y++)for(var x=0;x<p[y].length;x++)if(p[y][x]==='#')r+='M'+x+' '+y+'h1v1h-1z';return '<svg class="pic" viewBox="0 0 '+p[0].length+' '+p.length+'" aria-hidden="true" shape-rendering="crispEdges"><path d="'+r+'" fill="currentColor"/></svg>'}
 var CHARIC={Vale:'cat',Kaeden:'leaf',Scarlett:'saturn',Kai:'mount',Bella:'book',Atlas:'boat',Maximillion:'car'};
 var TIERS=[['NETFLIX ROOMS',['Vale','Kaeden','Scarlett'],'sofa'],['DELUXE ROOMS',['Kai','Bella','Atlas'],'gem'],['VIP ROOM',['Maximillion'],'crown']];
+/* the price column on each room card (owner, 12 Nov: a bare "+$30" next to "UPGRADE $5" looks like a scam) – every part named, then the total */
+function paycol(i,r,t,d){var F=feeOf(i,r,t),f=fee(t,i,r),add=S.grace?0:F.add,base=f-add,c=F.name==='PEAK TIME'?PEAKC:F.name==='UPGRADE'?'#7fd3ff':'#b9b2cc',a=F.add===20?'#ffb070':'#F2C21B',dd=Math.max(0,d);
+ return '<span class="pcol"><span class="pl"><span class="lv" style="color:'+c+';border-color:'+c+'">'+(S.grace?'FREE CHANGE':F.name)+'</span><b>'+money(base)+'</b></span>'+
+  (add?'<span class="pl"><span class="lv" style="color:'+a+';border-color:'+a+'">POPULAR</span><b>+'+money(add)+'</b></span>':'')+
+  '<span class="pl pd"><span>'+(d>0.004?'price difference':d<-0.004?'cheaper · no refund':'same price')+'</span><b>'+(d>0.004?'+'+money(d):'$0')+'</b></span>'+
+  '<span class="pl pt"><span>you pay</span><b>'+money(base+add+dd)+'</b></span></span>'}
 function rn(r){return r==='Maximillion'?'Max':r}
 /* RECEIPT: the booking (k = -1) or one move; same look as the live /receipt page; Save as PDF = the phone's print */
 function rcpt(k){var o=O(),M=o.mvs,first=M.length?M[0].from:{room:o.room,day:o.day,t:o.t,h:o.h},rows,title,tot;
