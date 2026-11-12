@@ -2411,6 +2411,11 @@ async function mvApi(env, hb, f, origin) {
   }
   if (act === 'mvlog') return { ok: true, list: ((await hb.kvGet('mvlog')) || []).slice(0, Math.min(300, +f.n || 100)) };
   if (act === 'mvstats') return await mvStats(env, false);
+  if (act === 'mvselftest') {   /* System check: the kv lock really locks (13 Nov: a same-named method had broken it) + every Vale/Atlas booking has its twin block */
+    const k = 'selftest:' + crypto.randomUUID().slice(0, 8), a1 = await hb.lock(k, 30e3), a2 = await hb.lock(k, 30e3); await hb.kvSet(k, 0);
+    const mir = await mirAdopt(env, false).catch((e) => ({ error: String(e.message || e) }));
+    return { ok: true, lockFirst: a1, lockSecond: a2, mirMissing: (mir.missing || []).map((x) => x.room + ' ' + x.when + ' ' + x.name), mirErr: mir.error || '', pending: (await hb.mvRecent(Date.now() - 48 * 3600e3)).filter((m) => m.status !== 'done').map((m) => m.ref + ' ' + m.status) };
+  }
   if (act === 'mvfinish') {   /* staff: finish a paid move that got stuck, step by step (owner, 13 Nov 2am) */
     const ref = String(f.ref || '').replace(/[^A-Z0-9]/g, ''), mv = await hb.kvGet('mv:' + ref); if (!mv) return { error: 'Unknown move.' };
     if (mv.status === 'done') return { ok: true, already: true, moved: mv.result };
@@ -2438,7 +2443,7 @@ async function gm(env, req) {
   /* wrong staff codes are counted for every staff action (overnight review 5 Nov: only some were). The right code is never
      slowed down, so a phone with an old code can't lock anyone else out on the shop wifi. */
   if (!guest && (!env.GM_STAFF || f.staff !== env.GM_STAFF) && !(await hb.gmRate('gmbad:' + who, 60))) return gmJ({ error: 'Too many wrong staff codes from here. Wait 10 minutes.' });
-  if (/^mv(day|quote|free|pay|link|status|now|log|stats|recent|paycheck|finish)$/.test(act)) {   /* staff: Move a booking (control centre › Bookings) */
+  if (/^mv(day|quote|free|pay|link|status|now|log|stats|recent|paycheck|finish|selftest)$/.test(act)) {   /* staff: Move a booking (control centre › Bookings) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await mvApi(env, hb, f, new URL(req.url).origin)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
