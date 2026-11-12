@@ -737,6 +737,10 @@ export class HoldBook extends DurableObject {
   /* the guest ticked the terms + "non-cancellable, non-refundable" boxes on the hold step */
   agree(ref) { const h = this.get(ref); if (!h || h.status !== 'pending' || h.data.agreed) return false; h.data.agreed = Date.now(); this.sql.exec(`UPDATE holds SET data = ? WHERE ref = ?`, JSON.stringify(h.data), ref); return true; }
   /* the link in SimplyBook's confirmation email: …/b/<SimplyBook booking code> */
+  /* bookings staff made with Add a session (owner, 12 Nov: a list to re-send a lost booking link) */
+  staffBookings(from) { return this.rows(`SELECT ref, date, unit, data FROM holds WHERE status = 'paid' AND date >= ? AND json_extract(data, '$.pay') = 'staff' ORDER BY date, s LIMIT 60`, from).map((r) => ({ ref: r.ref, d: JSON.parse(r.data) })); }
+  /* SimplyBook booking id → its booking-page code, for the bookings that have a booking page (online + Add a session) */
+  codesFor(bids) { const L = (bids || []).map(String).slice(0, 80); if (!L.length) return {}; const out = {}; for (const r of this.rows(`SELECT CAST(json_extract(data, '$.done.bookingId') AS TEXT) AS bid, json_extract(data, '$.done.code') AS code FROM holds WHERE status = 'paid' AND CAST(json_extract(data, '$.done.bookingId') AS TEXT) IN (${L.map(() => '?').join(',')})`, ...L)) if (r.code) out[r.bid] = r.code; return out; }
   addPaid(h) { this.sql.exec(`INSERT INTO holds VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, h.ref, h.date, h.unit, h.s, h.e, 0, '', h.phone, h.email, 'paid', JSON.stringify(h.data), Date.now()); return true; }
   byCode(code) { return this.rows(`SELECT ref FROM holds WHERE status IN ('paid', 'cancelled') AND json_extract(data, '$.done.code') = ? ORDER BY status = 'paid' DESC LIMIT 1`, code)[0] || null; }   /* cancelled too, so its /done page says it was cancelled */
   setTv(ref, tv) { const h = this.get(ref); if (!h || !h.data.done) return; h.data.done.tv = tv; this.sql.exec(`UPDATE holds SET data = ? WHERE ref = ?`, JSON.stringify(h.data), ref); }
@@ -1699,6 +1703,14 @@ async function latelist(env, hb) {
     out.push({ id: it.id, unit: it.unit, room: ROOMS[it.unit][0], text: it.txt.slice(0, 80), name: it.txt.split(' · ')[0].replace(/\s*\d+\s*(?:pax|ppl|pp)\b.*$/i, '').trim().slice(0, 40), pax: pm ? +pm[1] : 0,
       s: it.s, guestEnd, day: sgDay(it.s), night: sgDay(it.s - SHADOW_TILL * 60e3), ext: nExt, live: it.s <= now });
   }
+  /* real bookings made here (owner, 12 Nov): listed with their booking link to copy / WhatsApp again; changed with Move a booking */
+  for (const x of await hb.staffBookings(addDays(today, -1))) {
+    const q = x.d.q, dn = x.d.done || {}, s = sgMs0(q.date + ' ' + q.time), guestEnd = s + q.hours * 3600e3;
+    if (guestEnd <= now || !dn.code) continue;
+    out.push({ kind: 'booking', id: 'b' + dn.bookingId, ref: x.ref, code: dn.code, link: PUBLIC_BOOK + '/b/' + dn.code, unit: q.unit, room: ROOMS[q.unit][0], name: x.d.name || '', pax: +x.d.pax || 0, phone: x.d.phone || '',
+      text: x.d.name || '', s, guestEnd, day: q.date, night: sgDay(s - SHADOW_TILL * 60e3), ext: 0, live: s <= now, moved: (x.d.moves || []).length });
+  }
+  out.sort((a, b) => a.s - b.s);
   return { ok: true, now, sessions: out };
 }
 /* ===== Wrap-up messages with no session left (owner, 2 Nov) =====
@@ -2291,7 +2303,8 @@ async function mvApi(env, hb, f, origin) {
   const act = f.action;
   if (act === 'mvday') {   /* the guest bookings on a day (shop night) */
     const day = /^\d{4}-\d\d-\d\d$/.test(f.day || '') ? f.day : sgDay(Date.now() - SHADOW_TILL * 60e3), D = await sessDay(env, day);
-    return { ok: true, day, list: D.sessions.filter((S) => S.k === 'b' && !S.sys).sort((a, b) => a.s - b.s).map((S) => ({ bid: S.key.slice(1), room: ROOMS[S.unit][0], unit: S.unit, name: S.name, s: S.s, guestEnd: S.guestEnd, hours: Math.round((S.e0 - S.s - BUF * 60e3) / 3600e3), ext: Math.round((S.end - S.e0) / 60e3), started: S.s < Date.now() })) };
+    const L0 = D.sessions.filter((S) => S.k === 'b' && !S.sys), codes = await hb.codesFor(L0.map((S) => S.key.slice(1)));   /* each booking's guest link (online / Add a session bookings) */
+    return { ok: true, day, list: L0.sort((a, b) => a.s - b.s).map((S) => ({ link: codes[S.key.slice(1)] ? PUBLIC_BOOK + '/b/' + codes[S.key.slice(1)] : '', bid: S.key.slice(1), room: ROOMS[S.unit][0], unit: S.unit, name: S.name, s: S.s, guestEnd: S.guestEnd, hours: Math.round((S.e0 - S.s - BUF * 60e3) / 3600e3), ext: Math.round((S.end - S.e0) / 60e3), started: S.s < Date.now() })) };
   }
   if (act === 'mvquote') return Object.assign({ ok: true }, await mvQuote(env, f));
   if (act === 'mvfree') {   /* the free start times on a day for this booking (no extra SimplyBook calls: the day's notes + bookings) */
