@@ -2059,12 +2059,13 @@ async function mvExecute(env, mv, how) {
         if (MIRROR[q.unit]) await s2('POST', '/admin/calendar-notes', body(MIRROR[q.unit], ns, ne, 'SYSTEM BLOCK · EXT ' + ROOMS[q.unit][0] + ' till ' + clock12(ne)));
       } catch (e) { extProb = String(e.message || e).slice(0, 120); await humanAlert(env, 'mvext-' + B.bid, 'Moved booking: its +h note didn’t follow', `${B.name || 'Guest'} moved to ${q.room} ${q.date} ${q.time}, but the extra-hours (EXT) note didn’t move: ${extProb}. Fix it in SimplyBook (or In session).`).catch(() => null); }
     }
-    const rec = { t: Date.now(), bid: B.bid, name: B.name, ext: X0.min, extProb, from: mv.from, to: { room: q.room, unit: q.unit, date: q.date, time: q.time, hours: q.hours }, level: mv.level, feeWas: mv.feeWas, fee: mv.fee, diff: mv.diff, total: mv.total, how, by: mv.by || '', why: mv.why || '', ref: mv.ref || '', guest: !!mv.guest, moveNo: mv.moveNo || 0, add: mv.add || 0, snug: !!mv.snug };
+    const rec = { t: Date.now(), bid: B.bid, name: B.name, ext: X0.min, extProb, from: mv.from, to: { room: q.room, unit: q.unit, date: q.date, time: q.time, hours: q.hours }, level: mv.level, feeWas: mv.feeWas, fee: mv.fee, diff: mv.diff, total: mv.total, how, by: mv.by || '', why: mv.why || '', ref: mv.ref || '', guest: !!mv.guest, moveNo: mv.moveNo || 0, add: mv.add || 0, snug: !!mv.snug, cost: mv.cost != null ? Math.round(mv.cost * 100) / 100 : null };
     await hb.holdMove(B.bid, q, rec).catch(() => null);   /* the guest's booking page shows the new room and time */
     await hb.kvSet('gapc', {}).catch(() => null); await hb.kvSet('gcal', null).catch(() => null);
     await hb.onSb(B.bid, 'change').catch(() => null);   /* guest TV messages follow */
     await autoRun(env, 'moved').catch(() => null);
     const L = (await hb.kvGet('mvlog')) || []; L.unshift(rec); await hb.kvSet('mvlog', L.slice(0, 300));
+    await mvStats(env, true).catch(() => null);   /* trip-wires: a push alert when one turns red */
     return { ok: true, moved: rec };
   } finally { await hb.kvSet('mvlock:' + mv.from.bid, 0); }
 }
@@ -2285,7 +2286,7 @@ async function gApi(env, f, origin) {
   const Q = await mvQuote(env, { bid: X.bid, unit, date: f.date, time, hours: hrs });
   if (!Q.ok) return { error: 'That time was just taken – pick another.', C: X.C };
   const mref = 'MV' + crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase();
-  const mv = { ref: mref, status: 'pending', t: Date.now(), from: Q.from, to: Q.to, level: F.name.toLowerCase(), feeWas: fee, fee, diff, total, add: F.add, snug: F.snug, by: 'guest online', why: '', prs: [], guest: true, guestRef: ref, moveNo: X.C.moves + 1, grace: !!X.C.grace };
+  const mv = { ref: mref, status: 'pending', t: Date.now(), from: Q.from, to: Q.to, level: F.name.toLowerCase(), feeWas: fee, fee, diff, total, add: F.add, snug: F.snug, cost: F.d.money, by: 'guest online', why: '', prs: [], guest: true, guestRef: ref, moveNo: X.C.moves + 1, grace: !!X.C.grace };
   if (total < 0.01) {
     await hb.kvSet('mv:' + mref, mv);
     const r = await mvExecute(env, mv, 'guest · nothing to pay');
@@ -2300,6 +2301,49 @@ async function gApi(env, f, origin) {
   const pr = await hitpay(e, 'POST', '/payment-requests', form);
   mv.prs.push({ id: pr.id, kind: 'online', env: X.d.pay === 'test' ? 'test' : 'live' }); await hb.kvSet('mv:' + mref, mv);
   return { ok: true, url: pr.url, mv: mref, total };
+}
+/* ===== Rescheduling beta: stats and trip-wires (owner, 12 Nov – the demo's owner view, live). Last 28 days of moves.
+   Red → one push alert a day per trip-wire ("we review the rules"). Moves before 12 Nov have no lost-sale estimate. */
+const MV_WIRES = [
+  { k: 'moved', name: 'of online bookings moved', lim: 15, bad: (v) => v > 15, limTxt: 'limit 15%' },
+  { k: 'short', name: 'of moves were under 3 days before', lim: 50, bad: (v) => v > 50, limTxt: 'limit 50%' },
+  { k: 'peak', name: 'of moves went into Fri–Sun evenings', lim: 33, bad: (v) => v > 33, limTxt: 'limit 33%' },
+  { k: 'rebook', name: 'of freed slots were booked again', lim: 15, bad: (v) => v < 15, limTxt: 'at least 15%' },
+  { k: 'profit', name: 'average gain per move (fee + difference − estimated lost sale)', lim: 0, bad: (v) => v < 0, limTxt: 'above $0', money: true },
+];
+async function mvStats(env, alert) {
+  const hb = book(env), now = Date.now(), since = now - 28 * 86400e3, L = ((await hb.kvGet('mvlog')) || []).filter((m) => m.t >= since);
+  const booked = (await hb.rows(`SELECT COUNT(*) AS n FROM holds WHERE status IN ('paid', 'cancelled') AND created >= ? AND json_extract(data, '$.done.bookingId') IS NOT NULL`, since))[0].n;
+  const G = L.filter((m) => m.guest), lead = (m) => (sgMs0(m.from.date + ' ' + m.from.time) - m.t) / 3600e3;
+  const pct = (a, b) => (b ? Math.round(100 * a / b) : 0), dow = (d) => new Date(d + 'T00:00:00Z').getUTCDay();
+  /* freed slots booked again: one SimplyBook read over the moved-from dates */
+  let rebooked = 0, freedPast = 0;
+  if (L.length) {
+    try {
+      const ds = L.map((m) => m.from.date).sort(), a = await admin(env);
+      const bk = Object.values((await a('getBookings', [{ booking_type: 'non_cancelled', date_from: ds[0], date_to: ds[ds.length - 1] }])) || {});
+      for (const m of L) {
+        const s = sgMs0(m.from.date + ' ' + m.from.time), e = s + (m.from.hours || 3) * 3600e3, tw = MIRROR[m.from.unit];
+        freedPast++;
+        if (bk.some((b) => { const u = +b.unit_id, bs = sgMs0(b.start_date || b.start_date_time), be = sgMs0(b.end_date || b.end_date_time); return (u === m.from.unit || (tw && u === tw && !SYS_CLIENTS.includes(String(b.client_id)))) && String(b.id) !== String(m.bid) && bs < e && be > s; })) rebooked++;
+      }
+    } catch (e) { freedPast = 0; }
+  }
+  const withCost = L.filter((m) => m.cost != null);
+  const v = {
+    moved: pct(G.length, booked), short: pct(L.filter((m) => lead(m) < 72).length, L.length),
+    peak: pct(L.filter((m) => [0, 5, 6].includes(dow(m.to.date)) && mins(m.to.time) >= 1035).length, L.length),
+    rebook: pct(rebooked, freedPast), profit: withCost.length ? Math.round(withCost.reduce((a, m) => a + (+m.fee || 0) + (+m.diff || 0) - (+m.cost || 0), 0) / withCost.length * 100) / 100 : 0,
+  };
+  const wires = MV_WIRES.map((w) => ({ k: w.k, name: w.name, value: v[w.k], money: !!w.money, lim: w.limTxt, red: L.length >= 5 && w.bad(v[w.k]), n: w.k === 'profit' ? withCost.length : w.k === 'rebook' ? freedPast : w.k === 'moved' ? booked : L.length }));
+  const out = { ok: true, since, moves: L.length, guest: G.length, staff: L.length - G.length, free: L.filter((m) => !(+m.total > 0)).length, booked,
+    fees: L.reduce((a, m) => a + (+m.fee || 0), 0), diffs: L.reduce((a, m) => a + (+m.diff || 0), 0), lowered: L.reduce((a, m) => a + Math.max(0, (+m.feeWas || 0) - (+m.fee || 0)), 0),
+    second: G.filter((m) => m.moveNo === 2).length, wires, note: L.length < 5 ? 'Trip-wires only turn red after 5 moves (too few to judge).' : '' };
+  if (alert) for (const w of wires.filter((x) => x.red)) {
+    const k = 'mvwire:' + w.k + ':' + sgDay(now); if (await hb.kvGet(k)) continue; await hb.kvSet(k, 1);
+    await humanAlert(env, 'mvwire-' + w.k, 'Rescheduling trip-wire: ' + w.name, `${w.money ? '$' + w.value : w.value + '%'} ${w.name} in the last 4 weeks (${w.lim}). Time to review the reschedule rules – control centre › Bookings › Rescheduling.`).catch(() => null);
+  }
+  return out;
 }
 async function mvApi(env, hb, f, origin) {
   const act = f.action;
@@ -2332,7 +2376,7 @@ async function mvApi(env, hb, f, origin) {
     let ref = String(f.ref || '').replace(/[^A-Z0-9]/g, ''), mv = ref ? await hb.kvGet('mv:' + ref) : null;
     if (!mv || mv.status !== 'pending' || mv.total !== total || mv.to.unit !== Q.to.unit || mv.to.date !== Q.to.date || mv.to.time !== Q.to.time) {
       ref = 'MV' + crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase();
-      mv = { ref, status: 'pending', t: Date.now(), from: Q.from, to: Q.to, level: Q.level, feeWas: Q.fee, fee, diff: Q.diff, total, by: String(f.by || '').slice(0, 30), why: String(f.why || '').slice(0, 120), prs: [] };
+      mv = { ref, status: 'pending', t: Date.now(), from: Q.from, to: Q.to, level: Q.level, feeWas: Q.fee, fee, diff: Q.diff, total, cost: Q.lostSales, by: String(f.by || '').slice(0, 30), why: String(f.why || '').slice(0, 120), prs: [] };
     }
     const e = envFor(env, 'live'), when = new Date(Q.to.date + 'T00:00:00Z').toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
     const form = { amount: total.toFixed(2), currency: 'SGD', purpose: `Round2 move → ${Q.to.room} · ${when} ${Q.to.time} (fee $${fee}${Q.diff ? ' + $' + Q.diff.toFixed(2) + ' difference' : ''})`, reference_number: ref + (act === 'mvpay' ? 'Q' : 'L'), webhook: `${origin}/move/hitpay`, name: Q.from.name || 'Round2 guest' };
@@ -2352,9 +2396,10 @@ async function mvApi(env, hb, f, origin) {
     const how = f.how === 'shop' ? 'paid in shop' : total < 0.01 ? (Q.fee && !fee ? 'waived' : 'nothing to pay') : '';
     if (!how) return { error: 'There’s $' + total.toFixed(2) + ' to pay – show the QR, send a link, or tick “Paid in shop”.' };
     if (f.how !== 'shop' && fee < Q.fee && !String(f.why || '').trim()) return { error: 'Say why the fee is waived (one line).' };
-    return mvExecute(env, { from: Q.from, to: Q.to, level: Q.level, feeWas: Q.fee, fee, diff: Q.diff, total, by: String(f.by || '').slice(0, 30), why: String(f.why || '').slice(0, 120) }, how);
+    return mvExecute(env, { from: Q.from, to: Q.to, level: Q.level, feeWas: Q.fee, fee, diff: Q.diff, total, cost: Q.lostSales, by: String(f.by || '').slice(0, 30), why: String(f.why || '').slice(0, 120) }, how);
   }
   if (act === 'mvlog') return { ok: true, list: ((await hb.kvGet('mvlog')) || []).slice(0, Math.min(300, +f.n || 100)) };
+  if (act === 'mvstats') return await mvStats(env, false);
   return null;
 }
 async function gm(env, req) {
@@ -2364,7 +2409,7 @@ async function gm(env, req) {
   /* wrong staff codes are counted for every staff action (overnight review 5 Nov: only some were). The right code is never
      slowed down, so a phone with an old code can't lock anyone else out on the shop wifi. */
   if (!guest && (!env.GM_STAFF || f.staff !== env.GM_STAFF) && !(await hb.gmRate('gmbad:' + who, 60))) return gmJ({ error: 'Too many wrong staff codes from here. Wait 10 minutes.' });
-  if (/^mv(day|quote|free|pay|link|status|now|log)$/.test(act)) {   /* staff: Move a booking (control centre › Bookings) */
+  if (/^mv(day|quote|free|pay|link|status|now|log|stats)$/.test(act)) {   /* staff: Move a booking (control centre › Bookings) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await mvApi(env, hb, f, new URL(req.url).origin)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
