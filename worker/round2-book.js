@@ -2267,7 +2267,7 @@ async function gApi(env, f, origin) {
   const X = await gCtx(env, ref, f.act === 'pay');
   if (X.stop) return { stop: X.stop };
   const info = { name: X.d.name || '', room: X.C.bk.room, code: (X.d.done && X.d.done.code) || '', ext: X.ext ? Math.round(X.ext / 60e3) : 0, graceEnd: X.graceEnd, made: (X.d.done && X.d.done.at) || X.h.created, paid0: +(X.d.qWas || X.d.q).total,
-    staff: X.d.pay === 'staff', moves: (X.d.moves || []).map((m) => ({ t: m.t, guest: !!m.guest, from: m.from, to: m.to, fee: m.fee, diff: m.diff, total: m.total, ref: m.ref || '', how: m.how })) };
+    staff: X.d.pay === 'staff', pax: X.d.pax || '', tv: (X.d.done && X.d.done.tv && X.d.done.tv.code) || '', msg: X.d.msg ? { title: String(X.d.msg.title || '').slice(0, 60), after: +X.d.msg.after || 0 } : null, moves: (X.d.moves || []).map((m) => ({ t: m.t, guest: !!m.guest, from: m.from, to: m.to, fee: m.fee, diff: m.diff, total: m.total, ref: m.ref || '', how: m.how })) };
   if (f.act !== 'pay') return { ok: true, C: X.C, info };
   /* PAY: the same rules and fee on fresh data */
   if (X.ext) return { error: 'This booking has extra time added – WhatsApp us to move it.' };
@@ -2918,7 +2918,7 @@ tr.tot td{border-bottom:0;font-size:20px;font-weight:700;padding-top:12px}tr.tot
 <table>${line('Receipt for', esc(d.name))}${line('Booking ref', esc(ref))}${line('Paid on', esc(fmt(paidAt)))}${line('Paid with', esc(method) + ' (HitPay)')}${p.id ? line('Payment ID', `<span style="font-size:12px">${esc(String(p.id))}</span>`) : ''}
 ${line(`${esc(room)} · ${esc(look[2] || 'Private room')}${q.earlyBird ? ' · Early bird' : ''}<br><span class="fine">${esc(day)}, ${esc(clock(q.time))} – ${esc(clock(q.end))} · ${q.hours} hours · ${esc(String(d.pax || ''))} guests</span>`, '$' + (+q.total).toFixed(2))}
 ${line('Total paid (SGD)', '$' + amt, 'tot')}</table>${paid ? '<span class="st">PAID</span>' : '<span class="st">PAYMENT PENDING</span>'}</div>
-<button class="btn" onclick="print()">Save as PDF / print</button><a class="btn" target="_top" href="${PUBLIC_BOOK}/done?ref=${esc(ref)}">Back to your booking</a>
+<button class="btn" onclick="print()">Save as PDF / print</button><a class="btn" target="_top" href="${PUBLIC_BOOK}/move?ref=${esc(ref)}">Back to your booking</a>
 <p class="fine">Bookings are non-cancellable and non-refundable. Questions about this payment? WhatsApp +65 9162 5767 with your booking ref.</p>
 </main></body></html>`;
 }
@@ -3743,6 +3743,8 @@ const HANDLER = {
         }
         const f = await finalize(env, ref, 'redirect');
         const q = f.h.q;
+        /* one booking page everywhere (owner, 12 Nov): a real booking goes to the 4-button page; test runs that never reach SimplyBook keep this one */
+        if (f.ok && f.h.done && f.h.done.bookingId && !f.h.done.dryRun && !u.searchParams.has('classic')) return Response.redirect(u.origin + '/move?ref=' + ref + (Date.now() - (+f.h.done.at || 0) < 30 * 60e3 && !(f.h.moves || []).length ? '&new=1' : ''), 302);
         if (f.ok) return H(bookedPage(env, ref, f.h, u.origin));
         return H(PAGE(f.ok ? `<h1>You're booked 🎉</h1><p><b>${esc(q.room)}</b>, ${esc(q.date)}, ${esc(q.time)}–${esc(q.end)} (${q.hours}h) · $${q.total.toFixed(2)} paid.</p><p>Ref ${esc(ref)}${f.h.done && f.h.done.dryRun ? ' · <span class="tag">TEST – not put in calendar</span>' : ''}</p><p>A confirmation email is on its way.</p>${f.h.done && f.h.done.tv && f.h.done.tv.code ? `<p>Your message pops up on the TV ${f.h.msg.after ? f.h.msg.after + ' minutes after you start' : 'when you start'}. Want to change it? <a style="color:#F2C21B" href="https://cue.round2.sg/${esc(f.h.done.tv.code)}">cue.round2.sg/${esc(f.h.done.tv.code)}</a></p>` : ''}${f.h.ret ? `<a class="btn" href="${esc(f.h.ret)}">Back to Round2</a>` : ''}<script>try{sessionStorage.clear()}catch(e){}</script>`
           : f.pending ? `<h1>Confirming your booking…</h1><p>Your payment came through. We’re putting the booking into our calendar – this page refreshes by itself.</p><meta http-equiv="refresh" content="4">`

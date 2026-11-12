@@ -73,15 +73,15 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 </style></head><body><main>
 <section id="s-load"><div class="px kick">LOADING SAVE FILE…</div><h1 id="ld-h">ONE MOMENT</h1><div class="card" style="margin-top:0"><p id="ld-p">Getting your booking and the free times.</p><a class="btn ghost hidden" id="ld-wa" href="https://wa.me/6591625767" target="_blank" rel="noopener">WhatsApp us</a></div></section>
 <section id="s-home" class="hidden">
-<div class="px kick">SAVE FILE LOADED</div><h1>YOUR BOOKING</h1>
+<div class="px kick" id="h-k">SAVE FILE LOADED</div><h1 id="h-t">YOUR BOOKING</h1>
 <div class="ticket" id="tk"><p class="room" id="t-room"></p><div class="type" id="t-type"></div>
-<dl><dt>Name</dt><dd id="t-name"></dd><dt>Date</dt><dd id="t-date"></dd><dt>Time</dt><dd class="big" id="t-time"></dd><dt>Length</dt><dd id="t-len"></dd><dt>Paid</dt><dd id="t-paid"></dd><dt>Ref</dt><dd class="ref" id="t-ref"></dd></dl>
+<dl><dt>Name</dt><dd id="t-name"></dd><dt>Date</dt><dd id="t-date"></dd><dt>Time</dt><dd class="big" id="t-time"></dd><dt>Length</dt><dd id="t-len"></dd><dt>Guests</dt><dd id="t-pax"></dd><dt>Paid</dt><dd id="t-paid"></dd><dt>Ref</dt><dd class="ref" id="t-ref"></dd></dl>
 <div class="chips" id="chips"></div></div>
 <div class="grid">
 <button class="act main" id="a-move"><b>RESCHEDULE<span class="beta">BETA</span></b><span id="a-move-sub"></span></button>
-<a class="act" id="a-book" href="#" style="text-decoration:none"><b>BOOKING PAGE</b><span>TV message, calendar</span></a>
+<a class="act" id="a-tv" href="#" target="_top" style="text-decoration:none"><b>TV MESSAGE</b><span id="a-tv-sub">Birthday or celebration on the big screen</span></a>
 <button class="act" onclick="rcpt(-1)"><b>RECEIPT</b><span id="a-rc">Save as PDF</span></button>
-<a class="act" id="a-wa" href="#" target="_blank" rel="noopener" style="text-decoration:none"><b>WHATSAPP</b><span>Questions? Message us</span></a></div>
+<a class="act" id="a-cal" href="#" style="text-decoration:none"><b>CALENDAR</b><span>Add to your phone</span></a></div>
 <div class="card"><h2>RESCHEDULE RULES <span class="beta">BETA</span></h2>
 <div class="mine" id="myrule"></div>
 <details class="more"><summary>See all rules</summary>
@@ -94,6 +94,7 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 </details>
 <p class="fine">Rescheduling is new. Tell us on WhatsApp if anything’s unclear.</p></div>
 <div class="card"><h2>YOUR SAVE HISTORY</h2><p class="fine" style="margin:0 0 6px!important">Your booking and every move, with a receipt for each.</p><ul class="hist" id="hist"></ul></div>
+<div class="card"><h2>WHEN YOU ARRIVE</h2><ul class="hist" style="margin:0"><li>Come in and take a seat in our lobby. We’ll know you’ve arrived and come to show you to <b id="w-room"></b>.</li><li>Your booking is under <b id="w-name"></b>.</li><li>Please be on time: your session ends at <span id="w-end"></span>.</li></ul><a class="btn ghost" id="a-wa" href="#" target="_blank" rel="noopener">Questions? WhatsApp us</a></div>
 <div class="card"><h2>ADDRESS</h2><p style="margin:0"><b>20 Haji Lane, #02-00</b><br><span class="fine" style="font-size:14px">Singapore 189213 · Bugis MRT Exit B · 6 min walk</span></p></div>
 </section>
 
@@ -145,15 +146,21 @@ function lvOf(i,room,t,h){var F=feeOf(i,room,t,h||sel.h);return F.add?(F.add<=10
 function fee(t,i,room){if(t==null)return S.grace?0:(O().eb?15:5)+(S.moves===1?10:0);return LG.fee(i==null?sel.day:i,room||sel.room,t,sel.h)}
 function go(s){['load','home','pick','sum','done','rc'].forEach(function(x){var e=$('s-'+x);if(e)e.classList.toggle('hidden',x!==s)});scrollTo(0,0)}
 function tag(d){return d>0.004?'<em class="up">+'+money(d)+'</em>':d<-0.004?'<em class="dn">cheaper · no refund</em>':'<em class="eq">same price</em>'}
+/* add-to-calendar file for the booking as it is now (session time only – the 15 min cleaning isn't the guest's) */
+function ics(){var o=O(),d=C.days[o.day].date.replace(/-/g,''),p=function(m){return String(Math.floor(m/60)%24).padStart(2,'0')+String(m%60).padStart(2,'0')+'00'},endM=o.t+o.h*60,ed=endM>=1440?new Date(Date.parse(C.days[o.day].date+'T12:00:00Z')+864e5).toISOString().slice(0,10).replace(/-/g,''):d;
+ var t=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Round2//Booking//EN','BEGIN:VEVENT','UID:'+REF+'@round2.sg','DTSTAMP:'+new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z','DTSTART;TZID=Asia/Singapore:'+d+'T'+p(o.t),'DTEND;TZID=Asia/Singapore:'+ed+'T'+p(endM),'SUMMARY:Round2 · '+o.room,'LOCATION:Round2\\, 20 Haji Lane #02-00\\, Singapore 189213','DESCRIPTION:Booking '+REF+': https://book.round2.sg/move?ref='+REF,'END:VEVENT','END:VCALENDAR'].join('\r\n');
+ var a=document.createElement('a');a.href='data:text/calendar;charset=utf-8,'+encodeURIComponent(t);a.download='Round2-'+REF+'.ics';document.body.appendChild(a);a.click();a.remove()}
 function toBooking(){location.href='/done?ref='+REF}
 function stop(h,p){go('load');$('ld-h').textContent=h;$('ld-p').innerHTML=p;$('ld-wa').classList.remove('hidden')}
-var STOP={notfound:['BOOKING NOT FOUND','We can’t find this booking. Open the link in your confirmation email again, or message us.'],cancelled:['BOOKING CANCELLED','This booking is no longer in our calendar. If that’s not right, message us.'],notbooked:['NOT ONLINE YET','This booking can’t be changed online. Message us on WhatsApp and we’ll help.'],gone:['CHECK WITH US','We can’t see this booking in our calendar right now. Message us on WhatsApp and we’ll sort it out.'],past:['SESSION OVER','This session has already happened. Hope you had fun! <a href="/receipt?ref='+REF+'" style="color:#F2C21B">Your receipt</a> · <a href="/done?ref='+REF+'" style="color:#F2C21B">Booking details</a>'],off:['RESCHEDULE PAUSED','Online rescheduling is paused for now. Message us on WhatsApp and we’ll move your booking.']};
+var STOP={notfound:['BOOKING NOT FOUND','We can’t find this booking. Open the link in your confirmation email again, or message us.'],cancelled:['BOOKING CANCELLED','This booking is no longer in our calendar. If that’s not right, message us.'],notbooked:['NOT ONLINE YET','This booking can’t be changed online. Message us on WhatsApp and we’ll help.'],gone:['CHECK WITH US','We can’t see this booking in our calendar right now. Message us on WhatsApp and we’ll sort it out.'],past:['SESSION OVER','This session has already happened. Hope you had fun! <a href="/receipt?ref='+REF+'" style="color:#F2C21B">Your receipt</a> · <a href="/done?ref='+REF+'&classic=1" style="color:#F2C21B">Booking details</a>'],off:['RESCHEDULE PAUSED','Online rescheduling is paused for now. Message us on WhatsApp and we’ll move your booking.']};
 function load(fresh){return fetch('/move/api?ref='+REF+(fresh?'&t='+Date.now():'')).then(function(r){return r.json()})}
 function use(j){C=j.C;INFO=j.info;LG=gLogic(C);ROOMS=LG.ROOMS;OPEN=LG.OPEN;LAST=LG.LAST;CLOSE=LG.CLOSE;BUF=LG.BUF;LOCK=LG.LOCK;price=LG.price;rate=LG.rate;peak=LG.peak;taken=LG.taken;fits=LG.fits;why=LG.why;starts=LG.starts;locked=LG.locked;dayFull=LG.dayFull;feeOf=LG.feeOf;pace=LG.pace;leadH=LG.leadH;stage=LG.stage;
  NOW=C.now;ND=C.days.length;D0=new Date(C.days[0].date+'T12:00:00Z');days=C.days.map(function(x){var d=new Date(x.date+'T12:00:00Z');return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getUTCDay()]+' '+d.getUTCDate()});
  S={moves:C.moves,grace:C.grace,wa:INFO.staff}}
 function boot(){go('load');load().then(function(j){if(j.stop){var s=STOP[j.stop]||STOP.gone;return stop(s[0],s[1])}if(!j.C)return stop('SOMETHING WENT WRONG',(j.error||'Try again in a minute.'));use(j);
- $('a-book').href='/done?ref='+REF;$('a-wa').href='https://wa.me/6591625767?text='+encodeURIComponent('Hi Round2, about my booking '+REF+' ('+(INFO.name||'')+')');
+ if(/[?&]new=1/.test(location.search)){$('h-k').textContent='SAVE FILE CREATED';$('h-t').textContent='YOU’RE BOOKED!'}
+ var tv=INFO.tv;$('a-tv').href=tv?'https://cue.round2.sg/'+tv:'/done/message?ref='+REF;$('a-tv').target=tv?'_top':'_self';$('a-tv-sub').textContent=tv?(INFO.msg&&INFO.msg.title?'“'+INFO.msg.title+'”'+(INFO.msg.after?' · '+INFO.msg.after+' min in':'')+' · edit':'Write or edit your message'):'Birthday or celebration on the big screen';
+ $('a-cal').onclick=function(e){e.preventDefault();ics()};$('a-wa').href='https://wa.me/6591625767?text='+encodeURIComponent('Hi Round2, about my booking '+REF+' ('+(INFO.name||'')+')');
  if(MV){var m=MV;MV='';return poll(m,0)}state()}).catch(function(){stop('NO CONNECTION','We couldn’t load your booking. Check your connection and try again.')})}
 function poll(m,n){go('load');$('ld-h').textContent='CONFIRMING YOUR MOVE…';$('ld-p').textContent='Your payment came through. We’re moving your booking – this takes a few seconds.';
  fetch('/move/api?ref='+REF+'&mv='+m).then(function(r){return r.json()}).then(function(j){
@@ -164,7 +171,7 @@ function doneScreen(){var o=O(),last=INFO.moves[INFO.moves.length-1];$('d-room')
  document.documentElement.style.setProperty('--rc',ROOMS[o.room][0]);$('d-rc').onclick=function(){rcpt(INFO.moves.length-1)};
  $('d-left').textContent=S.moves>=2?'That was your last move. For anything else, WhatsApp us.':'You have 1 move left. Changes in the next 15 minutes have no change fee.';go('done')}
 function state(){var o=O(),st=stage();go('home');
- $('t-name').textContent=INFO.name;$('t-ref').textContent=REF;
+ $('t-name').textContent=INFO.name;$('t-pax').textContent=INFO.pax||'–';$('w-room').textContent=o.room;$('w-name').textContent=INFO.name;$('w-end').textContent=hm(o.t+o.h*60);$('t-ref').textContent=REF;
  document.documentElement.style.setProperty('--rc',ROOMS[o.room][0]);
  $('t-room').textContent=o.room;$('t-type').textContent=TYPE[ROOMS[o.room][1]]+(o.eb?' · Early bird':'');$('t-date').textContent=longDate(o.day);$('t-time').textContent=hm(o.t)+' – '+hm(o.t+o.h*60);$('t-len').textContent=o.h+' hours';$('t-paid').textContent=money(o.paid);
  $('a-rc').textContent=(S.wa?'Booked with our team':'Paid online')+(o.mvs.length?' · '+o.mvs.length+' move'+(o.mvs.length>1?'s':''):'')+' · save PDF';
