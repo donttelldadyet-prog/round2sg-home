@@ -2409,6 +2409,12 @@ async function mvApi(env, hb, f, origin) {
   }
   if (act === 'mvlog') return { ok: true, list: ((await hb.kvGet('mvlog')) || []).slice(0, Math.min(300, +f.n || 100)) };
   if (act === 'mvstats') return await mvStats(env, false);
+  if (act === 'mvpaycheck') {   /* what HitPay says about a move's payment (staff diagnosis) */
+    const mv = await hb.kvGet('mv:' + String(f.ref || '').replace(/[^A-Z0-9]/g, '')); if (!mv) return { error: 'Unknown move.' };
+    const out = []; for (const p of mv.prs || []) { let pr = null, err = ''; try { pr = await hitpay(envFor(env, p.env || 'live'), 'GET', '/payment-requests/' + p.id); } catch (e) { err = String(e.message || e).slice(0, 200); }
+      out.push({ id: p.id, env: p.env || 'live', err, status: pr && pr.status, amount: pr && pr.amount, payments: pr && (pr.payments || []).map((x) => ({ status: x.status, amount: x.amount })) }); }
+    return { ok: true, total: mv.total, status: mv.status, claim: await hb.kvGet('mvdone:' + mv.ref), prs: out };
+  }
   if (act === 'mvrecent') return { ok: true, list: (await hb.mvRecent(Date.now() - (+f.h || 48) * 3600e3)).map((m) => ({ ref: m.ref, t: m.t, status: m.status, guest: !!m.guest, guestRef: m.guestRef || '', total: m.total, fee: m.fee, diff: m.diff, from: m.from, to: m.to, err: m.err || '', prs: (m.prs || []).map((x) => x.kind + ':' + (x.env || 'live')) })) };
   return null;
 }
@@ -2419,7 +2425,7 @@ async function gm(env, req) {
   /* wrong staff codes are counted for every staff action (overnight review 5 Nov: only some were). The right code is never
      slowed down, so a phone with an old code can't lock anyone else out on the shop wifi. */
   if (!guest && (!env.GM_STAFF || f.staff !== env.GM_STAFF) && !(await hb.gmRate('gmbad:' + who, 60))) return gmJ({ error: 'Too many wrong staff codes from here. Wait 10 minutes.' });
-  if (/^mv(day|quote|free|pay|link|status|now|log|stats|recent)$/.test(act)) {   /* staff: Move a booking (control centre › Bookings) */
+  if (/^mv(day|quote|free|pay|link|status|now|log|stats|recent|paycheck)$/.test(act)) {   /* staff: Move a booking (control centre › Bookings) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await mvApi(env, hb, f, new URL(req.url).origin)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
