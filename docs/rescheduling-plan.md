@@ -198,3 +198,13 @@ Control centre: top tab "In session" renamed Bookings; pages In session · Add a
 Most real moves are $15 under every method; the methods differ only on late moves out of / into popular evenings
 (e.g. Atlas Fri 13 7:15pm → Scarlett Sat 21 8:15pm: A $25 → C $15; Max Mon 16 2:30pm → Atlas Sat 14 2:45pm: A $35 → C $25).
 Early-bird bookings: $15 under all. Best value box shows per room type after a day is picked.
+
+
+## LIVE 12 Nov 2026 (beta, fully open) – what actually shipped
+- Fee = the demo's: MOVE $15 / UPGRADE $5 / PEAK TIME $5 + price difference + POPULAR +$5…+$20 in $5 steps; "$5 OFF" a popular slot
+  next to another booking (guests aren't told why); Vale/Atlas same twin back-to-back +$10, other twin −$10 where covered; early-bird
+  bookings always $15; 2nd move +$10; free in the first 15 min after booking or a move (price difference still paid).
+- Stages by how far away the CURRENT booking is: 3+ days any slot · under 3 days from 2:15pm · under 24 h same-day upgrades ·
+  under 3 h closed. New time ≥ 3 h from now. Max 2 guest moves (staff moves don't count). Cheaper: no refund.
+- Engine `gLogic` = the only copy of these rules (page and charge). Staff Move a booking uses `mvQuote` with the same $5 steps.
+- How guests get in, the booking page, Add a session bookings and the flow end to end: HANDOFF.md, top section.

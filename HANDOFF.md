@@ -1,17 +1,37 @@
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
 
-> ## Guest rescheduling + Add a session bookings (LIVE 12 Nov 2026, beta) – read docs/rescheduling-plan.md first
-> - Guest page: `book.round2.sg/move?ref=<R2B…>` (engine `/move` serves round2sg-home `move/index.html` from GitHub main, 60 s cache).
->   Linked from the booking page (`/done`, "Change of plans?" card) and the emails' MANAGE YOUR BOOKING button (`/b/[code]`).
-> - ONE rules file: `gLogic(C)` in the engine. The engine charges with it and serves the same function as `/move/logic.js` to the
->   page, so the price shown = the price charged. Change fees/rules ONLY there. `gCtx` builds C (booking + month calendar from one
->   getBookings + one calendar-notes read, kept 3 min in kv `gcal`, wiped with `gapc`). `gApi` = `/move/api` (read / pay / status).
-> - Pay: HitPay payment request (ref `MV…G`, webhook `/move/hitpay`), then `mvComplete` → `mvExecute` (fresh `mvQuote` clash check,
->   SimplyBook editBook, twin, EXT, TV messages, `holdMove` adds the move to the booking record with `guest:true`; `d.paid` grows by
->   each price difference). Switch off: engine mode `gResched = false`.
-> - Add a session (`late`): daytime 3–6h with a mobile → `lateBooking` = real SimplyBook booking + booking record (`pay:'staff'`) +
->   link `book.round2.sg/b/<code>`; late / odd length / clash / no mobile / Change → note as before. Upcoming list still lists notes
->   only; booking-made sessions are changed with Bookings › Move a booking or in SimplyBook.
+> ## Guest booking page + rescheduling + Add a session bookings (LIVE 12 Nov 2026, beta) – the whole flow
+> Full rules, fees and the reasoning: docs/rescheduling-plan.md ("LIVE 12 Nov" section at the end).
+> **1. Booking.** Online: HitPay → `/done?ref=` → (real or test) redirect to the ONE guest booking page `/move?ref=…&new=1`
+>   ("SAVE FILE CREATED · YOU'RE BOOKED!" for 30 min after booking, then "YOUR BOOKING"). WhatsApp/walk-in: control centre ›
+>   Add a session (`late`): start 11am–8:15pm, guest out by 11:15pm, 3–6 whole hours, nothing in the way, MOBILE typed → `lateBooking`
+>   makes a real SimplyBook booking (own contact with the typed name, pax, twin, noise rule, Auto wrap-up) + a booking record
+>   (`addPaid`, `pay:'staff'`, email stored lowercase) and shows **Copy link / WhatsApp it** (`book.round2.sg/b/<code>`). Anything
+>   else (late, odd length, clash, no mobile, Change) = a note as before (no link). The link is also in the SimplyBook booking comment.
+> **2. Ways in (all land on `/move?ref=`):** email MANAGE YOUR BOOKING button (`/b/[code]` → 302), the link staff send, View your
+>   booking (`/find`, email + mobile must match the same booking), the receipt's "Back to your booking". There is NO login: the link
+>   (ref) is the key. A homepage LOAD SAVE / SAVE FOUND (phone remembers the booking) was built and REMOVED the same day (owner:
+>   a forwarded link would show on someone else's phone – more risk than reward). Old `/done` page: only with `&classic=1`.
+> **3. The booking page** (round2sg-home `move/index.html`, served by the engine from GitHub main, 60 s cache; framed at
+>   book.round2.sg – `/move` is in the round2-book wrapper's allowed paths): ticket (room colour, name, date, time, length,
+>   guests, paid, ref, chips), tiles RESCHEDULE (beta) · TV MESSAGE (cue link or `/done/message`) · RECEIPT (`/receipt`) ·
+>   CALENDAR (.ics), reschedule rules, save history (every move + its receipt), when you arrive + WhatsApp, address.
+>   Test bookings: yellow TEST BOOKING banner; a sandbox run never put in SimplyBook can go up to payment, then is told it can't move.
+> **4. Rescheduling.** ONE rules file `gLogic(C)` in the engine: it charges with it and serves the same function as
+>   `/move/logic.js` to the page (price shown = price charged; a moved calendar → "price changed, tap again"). `gCtx` builds C
+>   (booking as SimplyBook has it now + a month calendar from ONE getBookings + ONE calendar-notes read, kept 3 min in kv `gcal`,
+>   wiped with `gapc` on any change; + online holds). `gApi` = `/move/api` (read · pay · `mv=` status). Pay: fresh check (gLogic +
+>   `mvQuote`), HitPay payment request `MV…G` (sandbox for test bookings), redirect back `/move?ref&mv=`, webhook `/move/hitpay` →
+>   `mvComplete` → `mvExecute` (SimplyBook editBook, twin, EXT, TV messages follow, `holdMove` adds the move with `guest:true`,
+>   `d.paid` += difference). Slot gone after paying → not moved, staff alerted to move or refund. Nothing to pay → moved at once.
+>   Switch off: engine mode `gResched = false` (page says "WhatsApp us").
+> **5. Staff.** Bookings › Move a booking (same $5-step fee, can lower/waive with a reason; shows each booking's 🔗 guest link to
+>   copy). Add a session › Upcoming lists bookings made there with Copy link / WhatsApp it (change them via Move a booking).
+> **6. Emails/Terms.** SimplyBook templates: MANAGE YOUR BOOKING button (email/btn-manage.png), big Name row, "Tap Manage your
+>   booking above to reschedule…", receipt line `/r/[code]`. SimplyBook's own Client Rescheduling/Client login OFF, cancellation
+>   "Do not allow". Wix T&C (page NEW TNC, HTML block) clause 2.4 + "Before you pay": 2 moves, until 3 hours before.
+> **7. Checks.** System check steps: "Guest rescheduling: page, rules and fees" and "Add a session: daytime with a mobile = real
+>   booking, late = note". Deploy: r2-deploy-helper cron fetches the commit into KV, verify SHA-256, PUT with keep_bindings.
 
 > ## TV notifications (31 Oct 2026) – read round2-tv-launcher `docs/notifications.md` first
 > Flow charts of every timer and priority on the room TVs (guest > Round2 > +N CREDITS ADDED; food first), the 10 → 5 min → That's a wrap
