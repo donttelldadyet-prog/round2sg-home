@@ -2215,14 +2215,15 @@ async function gCtx(env, ref, fresh) {
   if (!h || !h.data || !h.data.q) return { stop: 'notfound' };
   if (h.status === 'cancelled') return { stop: 'cancelled' };
   const d = h.data, bid = d.done && d.done.bookingId ? String(d.done.bookingId) : '';
-  if (h.status !== 'paid' || !bid || (d.done && d.done.dryRun)) return { stop: 'notbooked' };
+  const dry = !!(d.done && d.done.dryRun);   /* a test run that never went into SimplyBook: same page, can't really be moved */
+  if (h.status !== 'paid' || (!bid && !dry)) return { stop: 'notbooked' };
   const now = Date.now(), today = sgDay(now), d0 = sgMs0(today + ' 00:00');
   const q = d.q, bS = sgMs0(q.date + ' ' + q.time), bDay = Math.round((sgMs0(q.date + ' 00:00') - d0) / 86400e3);
   const ND = Math.min(70, Math.max(G_DAYS, bDay + 8)), to = addDays(today, ND);
   const items = await gCalItems(env, addDays(today, -1), to, fresh);
   /* the booking as SimplyBook has it now (staff may have changed it there) */
-  const me = items.find((x) => x.k === 'b' && x.id === bid);
-  if (!me) return { stop: bS < now ? 'past' : 'gone' };
+  const me = dry ? { k: 'b', id: 'dry', unit: q.unit, s: bS, e: bS + (q.hours * 60 + BUF) * 60e3 } : items.find((x) => x.k === 'b' && x.id === bid);
+  if (!me || (dry && bS < now)) return { stop: bS < now ? 'past' : 'gone' };
   const mir = await hb.kvGet('mir:' + bid), skip = new Set(['b' + bid].concat(mir && mir.blk ? ['b' + mir.blk] : []));
   /* its +h (EXT) notes and the twin's copy of them: an extended booking is moved by staff (WhatsApp) */
   let ext = 0, end = me.e; for (;;) { const nx = items.find((x) => x.k === 'n' && x.ext && x.unit === me.unit && Math.abs(x.s - end) <= 5 * 60e3 && !skip.has('n' + x.id)); if (!nx) break; skip.add('n' + nx.id); ext += nx.e - nx.s; end = nx.e; }
@@ -2251,7 +2252,7 @@ async function gCtx(env, ref, fresh) {
   const hours = Math.round((me.e - me.s - BUF * 60e3) / 3600e3), t = Math.round((me.s - (d0 + bDay * 86400e3)) / 60e3);
   const paid = d.paid != null ? +d.paid : +q.total;
   const C = { now: Math.floor((now - d0) / 60e3), days, cal, bk: { room: G_NAME(me.unit), day: Math.round((sgMs0(sgDay(me.s) + ' 00:00') - d0) / 86400e3), t: sgMins(me.s), h: hours, paid }, moves: moves.length, grace: now - last < 15 * 60e3 };
-  return { h, d, bid, C, ext, today, graceEnd: last + 15 * 60e3, moves };
+  return { h, d, bid, C, ext, today, graceEnd: last + 15 * 60e3, moves, dry };
 }
 function sgMins(ms) { const x = new Date(ms + 8 * 3600e3); return x.getUTCHours() * 60 + x.getUTCMinutes(); }
 async function gApi(env, f, origin) {
@@ -2267,9 +2268,10 @@ async function gApi(env, f, origin) {
   const X = await gCtx(env, ref, f.act === 'pay');
   if (X.stop) return { stop: X.stop };
   const info = { name: X.d.name || '', room: X.C.bk.room, code: (X.d.done && X.d.done.code) || '', ext: X.ext ? Math.round(X.ext / 60e3) : 0, graceEnd: X.graceEnd, made: (X.d.done && X.d.done.at) || X.h.created, paid0: +(X.d.qWas || X.d.q).total,
-    staff: X.d.pay === 'staff', pax: X.d.pax || '', tv: (X.d.done && X.d.done.tv && X.d.done.tv.code) || '', msg: X.d.msg ? { title: String(X.d.msg.title || '').slice(0, 60), after: +X.d.msg.after || 0 } : null, moves: (X.d.moves || []).map((m) => ({ t: m.t, guest: !!m.guest, from: m.from, to: m.to, fee: m.fee, diff: m.diff, total: m.total, ref: m.ref || '', how: m.how })) };
+    staff: X.d.pay === 'staff', test: X.d.pay === 'test' || !!X.dry, dry: !!X.dry, pax: X.d.pax || '', tv: (X.d.done && X.d.done.tv && X.d.done.tv.code) || '', msg: X.d.msg ? { title: String(X.d.msg.title || '').slice(0, 60), after: +X.d.msg.after || 0 } : null, moves: (X.d.moves || []).map((m) => ({ t: m.t, guest: !!m.guest, from: m.from, to: m.to, fee: m.fee, diff: m.diff, total: m.total, ref: m.ref || '', how: m.how })) };
   if (f.act !== 'pay') return { ok: true, C: X.C, info };
   /* PAY: the same rules and fee on fresh data */
+  if (X.dry) return { error: 'This is a test booking that was never put in our calendar, so it can’t really be moved. Everything up to here works the same as a real booking.' };
   if (X.ext) return { error: 'This booking has extra time added – WhatsApp us to move it.' };
   if (X.C.moves >= 2) return { error: 'You’ve used both moves for this booking – WhatsApp us.' };
   const L = gLogic(X.C), room = String(f.room || ''), i = X.C.days.findIndex((x) => x.date === f.date), t = +f.t, hrs = +f.h;
@@ -3744,7 +3746,7 @@ const HANDLER = {
         const f = await finalize(env, ref, 'redirect');
         const q = f.h.q;
         /* one booking page everywhere (owner, 12 Nov): a real booking goes to the 4-button page; test runs that never reach SimplyBook keep this one */
-        if (f.ok && f.h.done && f.h.done.bookingId && !f.h.done.dryRun && !u.searchParams.has('classic')) return Response.redirect(u.origin + '/move?ref=' + ref + (Date.now() - (+f.h.done.at || 0) < 30 * 60e3 && !(f.h.moves || []).length ? '&new=1' : ''), 302);
+        if (f.ok && f.h.done && (f.h.done.bookingId || f.h.done.dryRun) && !u.searchParams.has('classic')) return Response.redirect(u.origin + '/move?ref=' + ref + (Date.now() - (+f.h.done.at || 0) < 30 * 60e3 && !(f.h.moves || []).length ? '&new=1' : ''), 302);
         if (f.ok) return H(bookedPage(env, ref, f.h, u.origin));
         return H(PAGE(f.ok ? `<h1>You're booked 🎉</h1><p><b>${esc(q.room)}</b>, ${esc(q.date)}, ${esc(q.time)}–${esc(q.end)} (${q.hours}h) · $${q.total.toFixed(2)} paid.</p><p>Ref ${esc(ref)}${f.h.done && f.h.done.dryRun ? ' · <span class="tag">TEST – not put in calendar</span>' : ''}</p><p>A confirmation email is on its way.</p>${f.h.done && f.h.done.tv && f.h.done.tv.code ? `<p>Your message pops up on the TV ${f.h.msg.after ? f.h.msg.after + ' minutes after you start' : 'when you start'}. Want to change it? <a style="color:#F2C21B" href="https://cue.round2.sg/${esc(f.h.done.tv.code)}">cue.round2.sg/${esc(f.h.done.tv.code)}</a></p>` : ''}${f.h.ret ? `<a class="btn" href="${esc(f.h.ret)}">Back to Round2</a>` : ''}<script>try{sessionStorage.clear()}catch(e){}</script>`
           : f.pending ? `<h1>Confirming your booking…</h1><p>Your payment came through. We’re putting the booking into our calendar – this page refreshes by itself.</p><meta http-equiv="refresh" content="4">`

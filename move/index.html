@@ -73,7 +73,7 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 </style></head><body><main>
 <section id="s-load"><div class="px kick">LOADING SAVE FILE…</div><h1 id="ld-h">ONE MOMENT</h1><div class="card" style="margin-top:0"><p id="ld-p">Getting your booking and the free times.</p><a class="btn ghost hidden" id="ld-wa" href="https://wa.me/6591625767" target="_blank" rel="noopener">WhatsApp us</a></div></section>
 <section id="s-home" class="hidden">
-<div class="px kick" id="h-k">SAVE FILE LOADED</div><h1 id="h-t">YOUR BOOKING</h1>
+<div id="h-test" class="hidden" style="background:#F2C21B;color:#000;font-weight:700;padding:8px 10px;margin-bottom:12px;font-size:13px;letter-spacing:.06em">TEST BOOKING · nothing was really charged</div><div class="px kick" id="h-k">SAVE FILE LOADED</div><h1 id="h-t">YOUR BOOKING</h1>
 <div class="ticket" id="tk"><p class="room" id="t-room"></p><div class="type" id="t-type"></div>
 <dl><dt>Name</dt><dd id="t-name"></dd><dt>Date</dt><dd id="t-date"></dd><dt>Time</dt><dd class="big" id="t-time"></dd><dt>Length</dt><dd id="t-len"></dd><dt>Guests</dt><dd id="t-pax"></dd><dt>Paid</dt><dd id="t-paid"></dd><dt>Ref</dt><dd class="ref" id="t-ref"></dd></dl>
 <div class="chips" id="chips"></div></div>
@@ -158,6 +158,7 @@ function use(j){C=j.C;INFO=j.info;LG=gLogic(C);ROOMS=LG.ROOMS;OPEN=LG.OPEN;LAST=
  NOW=C.now;ND=C.days.length;D0=new Date(C.days[0].date+'T12:00:00Z');days=C.days.map(function(x){var d=new Date(x.date+'T12:00:00Z');return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getUTCDay()]+' '+d.getUTCDate()});
  S={moves:C.moves,grace:C.grace,wa:INFO.staff}}
 function boot(){go('load');load().then(function(j){if(j.stop){var s=STOP[j.stop]||STOP.gone;return stop(s[0],s[1])}if(!j.C)return stop('SOMETHING WENT WRONG',(j.error||'Try again in a minute.'));use(j);
+ $('h-test').classList.toggle('hidden',!INFO.test);if(INFO.dry)$('h-test').textContent='TEST BOOKING · not in our calendar, nothing was charged';
  if(/[?&]new=1/.test(location.search)){$('h-k').textContent='SAVE FILE CREATED';$('h-t').textContent='YOU’RE BOOKED!'}
  var tv=INFO.tv;$('a-tv').href=tv?'https://cue.round2.sg/'+tv:'/done/message?ref='+REF;$('a-tv').target=tv?'_top':'_self';$('a-tv-sub').textContent=tv?(INFO.msg&&INFO.msg.title?'“'+INFO.msg.title+'”'+(INFO.msg.after?' · '+INFO.msg.after+' min in':'')+' · edit':'Write or edit your message'):'Birthday or celebration on the big screen';
  $('a-cal').onclick=function(e){e.preventDefault();ics()};$('a-wa').href='https://wa.me/6591625767?text='+encodeURIComponent('Hi Round2, about my booking '+REF+' ('+(INFO.name||'')+')');
