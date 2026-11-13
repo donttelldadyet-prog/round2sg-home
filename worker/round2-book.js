@@ -3749,7 +3749,7 @@ async function ps4AutoUpdate(env, hb, id, room) {   /* quiet time? hand out an u
   await hb.kvSet('ps4autoTry:' + id, { v: rel.v, t: now }); await hb.kvSet('ps4cmd:' + id, c);
   return c;
 }
-const ps4Out = (c) => c.do === 'update' ? { cid: c.cid, do: 'update', v: c.v, sha: c.sha, size: c.size } : { cid: c.cid, do: c.do };
+const ps4Out = (c) => c.do === 'update' ? { cid: c.cid, do: 'update', v: c.v, sha: c.sha, size: c.size } : c.do === 'look' && c.p ? { cid: c.cid, do: 'look', p: c.p } : { cid: c.cid, do: c.do };
 async function ps4Cmd(env, req) {   /* the helper, every minute: anything for me? */
   if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
   let r = {}; try { r = JSON.parse(await req.text()); } catch (e) {}
@@ -3802,7 +3802,8 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
   if (act === 'ps4look') {   /* read-only folder listing from the PS4 (helper 1.0.5+): what the Capture Gallery keeps, etc. */
     const id = ps4Id(f.id), now = Date.now();
     if (now - ((await hb.kvGet('ps4poll:' + id)) || 0) > 3 * 60e3) return { error: 'The PS4 isn’t answering.', off: true };
-    const c = { cid: 'l' + now.toString(36), do: 'look', at: now, by: String(f.by || 'staff').slice(0, 40), state: 'sent' };
+    const paths = String(f.paths || '').replace(/[^\w./|;-]/g, '').slice(0, 300);   /* "/dir|depth;/dir2|depth" (helper 1.0.6+) */
+    const c = { cid: 'l' + now.toString(36), do: 'look', p: paths, at: now, by: String(f.by || 'staff').slice(0, 40), state: 'sent' };
     await hb.kvSet('ps4cmd:' + id, c); return { ok: true, cmd: c };
   }
   if (act === 'ps4rel') return { ok: true, rel: await ps4Latest(env, true), err: await hb.kvGet('ps4relErr') };   /* staff: which helper version is out (fresh look) */
