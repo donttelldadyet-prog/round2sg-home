@@ -54,6 +54,12 @@
 >   didn't fire either and was removed. Working way: set KV `deploy:want` = commit, open
 >   `https://r2-deploy-helper.donttelldadyet.workers.dev/?k=<deploy:key>` in a normal browser (this cloud machine is blocked from
 >   it), then verify SHA-256 of `deploy:src` and PUT with keep_bindings. Bindings stay 26, cron `*/5` kept.
+> **Self-updating helper (evening):** starter round2-boot.elf in AutoRun launches the helper via GoldHEN BinLoader. First live
+>   update (Max 1.0.5→1.0.6) got stuck: the old helper's `_exit` ended in signal 12 and it kept its lock, so the starter never
+>   swapped. Fixed with helper 1.0.7 (never exits – lets go of the lock and sleeps) + starter 2; engine `PS4_SELFUP='1.0.7'`
+>   (no updates offered to older helpers – FTP once). **Max 1.0.7→1.0.8 by Update now worked (~20 s).** Releases: branch
+>   `ps4-release`, read by commit (staff gm `ps4rel` checks). Read-only `ps4look`/`ps4lookres` lists PS4 folders.
+>   PS4 FTP: Vale .88.21, Kai .88.18, Max .88.6, Scarlett .88.16 (port 2121).
 > **Vale PS4 (owner):** sometimes kernel-panics while jailbreaking (11.00) – before Round2's helper starts (AutoRun runs after
 >   the jailbreak). Noted in the PS4 plan; watch whether it gets worse once more payloads run.
 
