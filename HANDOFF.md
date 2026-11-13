@@ -31,7 +31,30 @@
 >   booking above to reschedule…", receipt line `/r/[code]`. SimplyBook's own Client Rescheduling/Client login OFF, cancellation
 >   "Do not allow". Wix T&C (page NEW TNC, HTML block) clause 2.4 + "Before you pay": 2 moves, until 3 hours before.
 > **7. Checks.** System check steps: "Guest rescheduling: page, rules and fees" and "Add a session: daytime with a mobile = real
->   booking, late = note". Deploy: r2-deploy-helper cron fetches the commit into KV, verify SHA-256, PUT with keep_bindings.
+>   booking, late = note". Deploy: see "How to deploy the engine" in the PS4 block below (the helper's cron is gone – open its link).
+
+> ## PS4 game saves – WHERE IT STANDS (14 Nov 2026, 4:30am) – read this first, detail in the session log below
+> **Proven remotely (Max):** profile rename · sign-in/out · open a save decrypted · backup to R2 · restore into another profile
+>   (GT Sport Max → User4, owner saw it on the TV) · rest mode. **Not proven:** 9.00 ↔ 11.00 restore · restore where no save
+>   exists yet · helper frozen by rest mode mid-job · helper resuming after a *remote* rest (check /data/round2/rest.log).
+> **Versions:** helper 1.1.8 on Max, Scarlett, Kai; Vale + Bella 1.1.1 (asleep, update when idle); **Atlas 1.0.7** – check it
+>   self-updates (1.0.7 is the first that can). Engine 1ec01c9 live, 27 bindings.
+> **How to deploy the engine:** KV `deploy:want` = commit → open the r2-deploy-helper link in the owner's built-in browser →
+>   verify SHA-256 of `deploy:src` → PUT with keep_bindings **secret_text, kv_namespace, plain_text,
+>   durable_object_namespace, r2_bucket** (leave r2_bucket out and the save storage is cut off) → 27 bindings, cron `*/5` →
+>   System check.
+> **Left as is:** Max User4 holds a COPY of the unlocked GT Sport save (its own GT progress is in R2: …/14a1e947/CUSA02168/
+>   local-data/1794592769 + sce_sdmemory/1794592784) – owner to say keep or put back. Kai has User1 + User4 signed in.
+>   Test backups are filed by console/profile; member saves will be filed by member.
+> **Owner decisions 14 Nov:** park non-members' saves (don't wipe) · saves prepared on the PS4 before the day's bookings, live
+>   fetch as fallback · member profiles never activated · never update PS4 firmware for any feature · morning wake by TV on →
+>   HDMI device link (to check at the shop) · cloud is the one true copy (2nd outlet), a Pi disk only a local cache.
+> **Owner still to answer:** other house saves besides GT Sport? · park window (end of day vs 14 days).
+> **Next, in order:** 1) game versions per room 2) 9.00 ↔ 11.00 restore 3) restore with no existing save (create + register,
+>   Apollo's way) 4) member profile start to end 5) parking + proper delete 6) backup during session + on-disk to-do list, rest
+>   mode mid-job test 7) daily prep from SimplyBook 8) QR login 9) morning wake.
+> **Also open (not PS4):** SimplyBook requests were 7,110 on 13 Nov (guideline ~5,000; mostly /day getAvailableTimeIntervals)
+>   – find out why. TVs: Bella not reporting 3 days (Kaeden = renovation).
 
 > ## Session log – 13 Nov 2026 (owner + Claude): room PS4s report to the engine, one-tap clean-up, self-updating helper
 > Plan + full detail: project doc `ps4-game-saves.md` and round2-tv-launcher branch `ps4-helper` folder `ps4/` (README).
@@ -53,13 +76,13 @@
 > **Deploys today:** r2-deploy-helper had NO cron schedule any more (why it "stopped firing"); a 1-min schedule added for a test
 >   didn't fire either and was removed. Working way: set KV `deploy:want` = commit, open
 >   `https://r2-deploy-helper.donttelldadyet.workers.dev/?k=<deploy:key>` in a normal browser (this cloud machine is blocked from
->   it), then verify SHA-256 of `deploy:src` and PUT with keep_bindings. Bindings stay 26, cron `*/5` kept.
+>   it), then verify SHA-256 of `deploy:src` and PUT with keep_bindings. Bindings were 26; **27 since 14 Nov** (R2 `SAVES`) – see below.
 > **Self-updating helper (evening):** starter round2-boot.elf in AutoRun launches the helper via GoldHEN BinLoader. First live
 >   update (Max 1.0.5→1.0.6) got stuck: the old helper's `_exit` ended in signal 12 and it kept its lock, so the starter never
 >   swapped. Fixed with helper 1.0.7 (never exits – lets go of the lock and sleeps) + starter 2; engine `PS4_SELFUP='1.0.7'`
 >   (no updates offered to older helpers – FTP once). **Max 1.0.7→1.0.8 by Update now worked (~20 s).** Releases: branch
 >   `ps4-release`, read by commit (staff gm `ps4rel` checks). Read-only `ps4look`/`ps4lookres` lists PS4 folders.
->   PS4 FTP: Vale .88.21, Kai .88.18, Max .88.6, Scarlett .88.16 (port 2121).
+>   PS4 FTP (192.168.x, port 2121): Vale .88.21, Kai .88.18, Max .88.6, Scarlett .88.16, Atlas .88.19, Bella .88.23.
 > **Game saves – tests 13 Nov evening (full findings + rules: project doc ps4-game-saves.md "Save-transfer tests"):** PS4's own
 >   USB save copy is blocked (wants a system update). Apollo's copy works between Kai and Max, into activated AND unactivated
 >   profiles, because it re-stamps the save (param.sfo user ID + account ID + PSID) for the receiving profile → member profiles
@@ -81,10 +104,9 @@
 >   ~10 KB + icons. Staff `ps4look` paths `/_save.<user>.<title>.<save>|3`. Cloud storage (R2) not enabled on the Cloudflare
 >   account – owner switched it on 1:44am; bucket **round2-saves** (APAC) created, not yet bound to the engine. Next: pack +
 >   upload + restore.
-> **RULE (owner, 14 Nov): never touch Gran Turismo Sport's save on Max (CUSA02168)** – fully unlocked, only on Max, the
->   racing-sim USP. No open/backup/restore/overwrite/delete on any profile; never remove the profile holding it. Helper 1.1.3
->   refuses every save job for it (tested with a dummy profile – "protected game - never touched").
->   Updated 1:50am (owner): the main profile's GT save may be READ (backed up / copied elsewhere) but never written or deleted.
+> **RULE (owner, 14 Nov): Gran Turismo Sport on Max (CUSA02168).** The save in the main **Max** profile is fully unlocked,
+>   only on Max, the racing-sim USP. It may be READ (backed up, copied into another profile) but is **never written to,
+>   restored over or deleted**, and that profile is never removed. Helper 1.1.4+ refuses (first version 1.1.3 refused reads too).
 > **14 Nov 2:15am – PS4 save backup + restore working.** Engine 1ec01c9 (deployed, 27 bindings incl. R2 `SAVES` →
 >   round2-saves; keep_bindings must now include "r2_bucket"): `/ps4/sput`, `/ps4/sget`, staff `ps4saves`. Helper 1.1.7 (Max;
 >   others in quiet time): `ps4look` paths `/_sback.<user>.<title>.<save>` and `/_srest.<user>.<title>.<save>.<backup>` (into
@@ -97,7 +119,7 @@
 >   non-member saves go at session end (main + User1–4 profiles) except a per-room house baseline (GT Sport on Max).
 >   Owner 2:38am: PARK (keep on the PS4 + cloud, tied to the booking) rather than wipe, so a guest who signs up can still get
 >   their progress back. **2:55am: remote rest mode works** – helper 1.1.8 `ps4look` paths `/_rest` (only if rest mode is
->   enabled and no game is open); Max went to sleep on command. Scarlett + Kai self-updated to 1.1.7 overnight.
+>   enabled and no game is open); Max, then Scarlett + Kai (self-updated to 1.1.8) went to sleep on command.
 > **Vale PS4 (owner):** sometimes kernel-panics while jailbreaking (11.00) – before Round2's helper starts (AutoRun runs after
 >   the jailbreak). Noted in the PS4 plan; watch whether it gets worse once more payloads run.
 
