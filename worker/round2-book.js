@@ -3708,6 +3708,7 @@ async function ps4Busy(env, room, gap = PS4_GAP) {
    switch off with kv ps4auto=false), or "Update now" (staff, same rules as Clean up: 10 min). */
 const PS4_REL = 'https://raw.githubusercontent.com/donttelldadyet-prog/round2-tv-launcher/';   /* + <commit>/round2d.json – the branch head is looked up first (GitHub API), so both files come from the same commit and nothing is stale */
 const ps4Ver = (v) => String(v || '0').split('.').map((x) => +x || 0);
+const PS4_SELFUP = '1.0.7';   /* helpers older than this exit to hand over, which got stuck on Max (13 Nov) – they get 1.0.7+ by FTP once */
 const ps4Newer = (a, b) => { const x = ps4Ver(a), y = ps4Ver(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
 async function ps4Latest(env, fresh) {
   const hb = book(env), c = await hb.kvGet('ps4rel'), now = Date.now();
@@ -3738,7 +3739,7 @@ async function ps4App(env, req) {   /* the helper downloads the newest version t
 async function ps4AutoUpdate(env, hb, id, room) {   /* quiet time? hand out an update */
   if ((await hb.kvGet('ps4auto')) === false) return null;
   const rep = await hb.kvGet('ps4:' + id), now = Date.now();
-  if (!rep || !rep.boot || rep.running || now - rep.t > 20 * 60e3) return null;
+  if (!rep || !rep.boot || rep.running || now - rep.t > 20 * 60e3 || ps4Newer(PS4_SELFUP, rep.v)) return null;
   const rel = await ps4Latest(env); if (!rel || !ps4Newer(rel.v, rep.v)) return null;
   if (rep.rolled && rep.rolled.includes(' ' + rel.v + ':')) return null;   /* that version was rolled back here – needs a newer one or Update now */
   const tried = await hb.kvGet('ps4autoTry:' + id); if (tried && tried.v === rel.v && now - tried.t < 6 * 3600e3) return null;
@@ -3813,6 +3814,7 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
     if (!room || !rep) return { error: 'Link this PS4 to a room first.' };
     if (now - ((await hb.kvGet('ps4poll:' + id)) || 0) > 3 * 60e3) return { error: 'The PS4 isn’t answering (off, in rest mode, or not jailbroken yet) – switch it on and jailbreak it first.', off: true };
     if (!rep.boot) return { error: 'This PS4 has no Round2 starter yet – install round2-boot.elf once (FTP + AutoRun), then it updates itself.' };
+    if (ps4Newer(PS4_SELFUP, rep.v)) return { error: 'Helper ' + rep.v + ' can’t update itself safely – put round2d.elf ' + PS4_SELFUP + '+ and the new round2-boot.elf on it once by FTP.' };
     const rel = await ps4Latest(env, true); if (!rel) return { error: 'No PS4 helper release found on GitHub.' };
     if (!ps4Newer(rel.v, rep.v)) return { error: 'Already on the newest version (' + rep.v + ').' };
     const busy = await ps4Busy(env, room, 10); if (busy) return { error: busy + ' – try after that.', busy: true };
@@ -3837,7 +3839,7 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
   for (const id of ids) { const r = await hb.kvGet('ps4:' + id); if (r) list.push(Object.assign({}, r, { room: map[id] || null, poll: (await hb.kvGet('ps4poll:' + id)) || 0, cmd: (await hb.kvGet('ps4cmd:' + id)) || null, runName: r.running ? (((r.games || []).find((g) => g && g.id === r.running) || {}).t || '') : '', games: undefined, nGames: (r.games || []).length, ago: Math.round((now - r.t) / 60e3) })); }
   const night = sgDay(now - SHADOW_TILL * 60e3);
   const rel = await ps4Latest(env).catch(() => null);
-  return { ok: true, now, list, latest: rel ? rel.v : null, auto: (await hb.kvGet('ps4auto')) !== false, map: (await hb.kvGet('ps4map')) || {}, played: (await hb.kvGet('ps4play:' + night)) || {}, discs: (await hb.kvGet('ps4discs')) || [], names: (await hb.kvGet('ps4names')) || {} };
+  return { ok: true, now, list, latest: rel ? rel.v : null, selfUp: PS4_SELFUP, auto: (await hb.kvGet('ps4auto')) !== false, map: (await hb.kvGet('ps4map')) || {}, played: (await hb.kvGet('ps4play:' + night)) || {}, discs: (await hb.kvGet('ps4discs')) || [], names: (await hb.kvGet('ps4names')) || {} };
 }
 
 /* ===== Remote TV updates (owner, 2 Nov) =====
