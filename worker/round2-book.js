@@ -2447,7 +2447,7 @@ async function gm(env, req) {
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await mvApi(env, hb, f, new URL(req.url).origin)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
-  if (/^ps4(list|map|discs|names|clean|update)$/.test(act)) {   /* staff: control centre › PS4s (13 Nov) */
+  if (/^ps4(list|map|discs|names|clean|update|look|lookres)$/.test(act)) {   /* staff: control centre › PS4s (13 Nov) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await ps4Gm(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
@@ -3769,6 +3769,7 @@ async function ps4Done(env, req) {   /* the helper: how the command went */
   c.state = r.ok ? 'done' : r.refused ? 'refused' : 'failed'; c.doneAt = Date.now();
   c.res = { dlMB: +r.dlMB || 0, capMB: +r.capMB || 0, files: +r.files || 0, why: String(r.why || '').slice(0, 120) };
   await hb.kvSet('ps4cmd:' + id, c);
+  if (c.do === 'look' && r.list && typeof r.list === 'object') await hb.kvSet('ps4look:' + id, { at: Date.now(), list: Object.fromEntries(Object.entries(r.list).slice(0, 400).map(([k, v]) => [String(k).slice(0, 200), String(v).slice(0, 40)])) });
   return J({ ok: true });
 }
 async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4map (id, room or '' to clear) · ps4discs (json list) · ps4names (id, name; '-' hides) */
@@ -3791,6 +3792,13 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
     const c = { cid: 'c' + now.toString(36), do: 'clean', at: now, by: String(f.by || 'control centre').slice(0, 40), state: 'sent' };
     await hb.kvSet('ps4cmd:' + id, c); return { ok: true, cmd: c };
   }
+  if (act === 'ps4look') {   /* read-only folder listing from the PS4 (helper 1.0.5+): what the Capture Gallery keeps, etc. */
+    const id = ps4Id(f.id), now = Date.now();
+    if (now - ((await hb.kvGet('ps4poll:' + id)) || 0) > 3 * 60e3) return { error: 'The PS4 isn’t answering.', off: true };
+    const c = { cid: 'l' + now.toString(36), do: 'look', at: now, by: String(f.by || 'staff').slice(0, 40), state: 'sent' };
+    await hb.kvSet('ps4cmd:' + id, c); return { ok: true, cmd: c };
+  }
+  if (act === 'ps4lookres') return { ok: true, look: await hb.kvGet('ps4look:' + ps4Id(f.id)) };
   if (act === 'ps4update') {
     const id = ps4Id(f.id), room = ((await hb.kvGet('ps4map')) || {})[id], now = Date.now(), rep = await hb.kvGet('ps4:' + id);
     if (!room || !rep) return { error: 'Link this PS4 to a room first.' };
