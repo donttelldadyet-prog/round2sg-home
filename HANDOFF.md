@@ -33,6 +33,30 @@
 > **7. Checks.** System check steps: "Guest rescheduling: page, rules and fees" and "Add a session: daytime with a mobile = real
 >   booking, late = note". Deploy: r2-deploy-helper cron fetches the commit into KV, verify SHA-256, PUT with keep_bindings.
 
+> ## Session log – 13 Nov 2026 (owner + Claude): room PS4s report to the engine, one-tap clean-up, self-updating helper
+> Plan + full detail: project doc `ps4-game-saves.md` and round2-tv-launcher branch `ps4-helper` folder `ps4/` (README).
+> **Engine (all on main, deployed):** `/ps4/in` (report every 15 min, header `x-r2-ps4` = secret **PS4_KEY**, added 13 Nov),
+>   `/ps4/games` (public games list from the PS4s, by room tier; PS Vue + names set to '-' hidden; lobby discs from kv
+>   `ps4discs`), `/ps4/cmd` (helper asks every minute for a job), `/ps4/done`, `/ps4/app` (newest helper file, SHA-256 checked).
+>   Staff gm actions (GM_STAFF): `ps4list`, `ps4map` (console ID → room; Vale = a24af9cb275fa9472848ce070b7ef1e8), `ps4discs`,
+>   `ps4names`, `ps4clean`, `ps4update`. kv: `ps4:<id>`, `ps4ids`, `ps4map`, `ps4poll:<id>`, `ps4cmd:<id>`, `ps4play:<night>`,
+>   `ps4rel`, `ps4auto` (false = no quiet-time updates), `ps4autoTry:<id>`, `ps4autoChk:<id>`.
+> **Helper releases:** round2-tv-launcher branch **`ps4-release`** (round2d.elf + round2d.json {v, sha256, size} + round2-boot.elf).
+>   Not GitHub releases (this session can't create them; the TV apps read releases/latest, so PS4 files stay off releases).
+> **Busy-room rule changed (owner, 13 Nov 1:40pm):** Clean up on Vale was refused "session until 2pm" – it was Atlas's guests:
+>   Atlas's booking puts a SYSTEM BLOCK *booking* in Vale (the engine mirror makes bookings, clients 2472/2476; noise blocks are
+>   notes), and the rule also counted the twin. Vale and Atlas are separate rooms (Atlas upstairs), so now `roomBusy` counts only
+>   the room's OWN guests: skips SYSTEM BLOCK sessions (`S.sys`), the twin, and notes longer than 12 h (Kaeden renovation).
+>   Used by PS4 Clean up / Update now / quiet-time updates AND the TVs' Update now (`tvUpdate`, same twin issue). The mirror
+>   itself is unchanged (still bookings) – owner asked "notes instead, or treat system blocks differently"; we did the second
+>   (no change to how rooms are sold/blocked). If the mirror ever moves to notes, nothing here needs changing.
+> **Deploys today:** r2-deploy-helper had NO cron schedule any more (why it "stopped firing"); a 1-min schedule added for a test
+>   didn't fire either and was removed. Working way: set KV `deploy:want` = commit, open
+>   `https://r2-deploy-helper.donttelldadyet.workers.dev/?k=<deploy:key>` in a normal browser (this cloud machine is blocked from
+>   it), then verify SHA-256 of `deploy:src` and PUT with keep_bindings. Bindings stay 26, cron `*/5` kept.
+> **Vale PS4 (owner):** sometimes kernel-panics while jailbreaking (11.00) – before Round2's helper starts (AutoRun runs after
+>   the jailbreak). Noted in the PS4 plan; watch whether it gets worse once more payloads run.
+
 > ## INCIDENT 13 Nov 2am – first real guest move didn't run; Atlas not blocked (FIXED)
 > - Ranen Tan paid $15 (PayNow, 2:04am, MV39355CBD) to move Vale Tue 17 Nov 3:30pm 4h → 4pm 3h. Nothing moved, no alert, Atlas free.
 > - Cause: the HoldBook class had TWO methods named `claim` – the kv lock `claim(k, ms)` (added 11 Nov with the engine mirror) and
