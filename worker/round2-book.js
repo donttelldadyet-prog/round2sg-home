@@ -2447,7 +2447,7 @@ async function gm(env, req) {
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await mvApi(env, hb, f, new URL(req.url).origin)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
-  if (/^ps4(list|map|discs|names)$/.test(act)) {   /* staff: control centre › PS4s (13 Nov) */
+  if (/^ps4(list|map|discs|names|clean)$/.test(act)) {   /* staff: control centre › PS4s (13 Nov) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await ps4Gm(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
@@ -3674,6 +3674,45 @@ async function ps4Games(env) {
   const list = Object.values(out).sort((a, b) => a.t.localeCompare(b.t));
   return new Response(JSON.stringify({ ok: true, at: Date.now(), games: list }), { headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'cache-control': 'public, max-age=300' } });
 }
+/* Staff commands for a PS4 (13 Nov, owner: "one-tap clean-up"). The helper asks /ps4/cmd every minute; one command waits per
+   PS4 in kv ps4cmd:<id> { cid, do, at, by, state: sent → taken → done | failed | refused | expired, res }. Clean-up deletes the
+   stuck update downloads (never PS Vue's) and guests' screenshots/clips – only when the room (and its twin) has no session now
+   or within 15 minutes, checked when staff press the button AND again when the PS4 picks it up; the PS4 itself also refuses
+   while a game is open. */
+const PS4_GAP = 15;
+async function ps4Busy(env, room) {
+  const unit = +(Object.keys(GM_ROOM).find((u) => GM_ROOM[u] === room) || 0), now = Date.now();
+  if (!unit) return null;
+  const night = sgDay(now - SHADOW_TILL * 60e3), tw = MIRROR[unit];
+  for (const d of [night, addDays(night, 1)]) for (const S of (await sessDay(env, d)).sessions)
+    if ((S.unit === unit || S.unit === tw) && S.s - PS4_GAP * 60e3 <= now && now < S.guestEnd)
+      return (S.unit !== unit ? ROOMS[S.unit][0] + ' (its twin) ' : '') + 'has a session ' + (S.s > now ? 'starting at ' : 'until ') + clock12(S.s > now ? S.s : S.guestEnd);
+  return null;
+}
+async function ps4Cmd(env, req) {   /* the helper, every minute: anything for me? */
+  if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
+  let r = {}; try { r = JSON.parse(await req.text()); } catch (e) {}
+  const id = ps4Id(r.id); if (id.length < 16) return J({ error: 'no console id' }, 400);
+  const hb = book(env), now = Date.now();
+  await hb.kvSet('ps4poll:' + id, now);
+  const c = await hb.kvGet('ps4cmd:' + id);
+  if (!c || c.state !== 'sent') return J({ ok: true, now });
+  if (now - c.at > 10 * 60e3) { c.state = 'expired'; await hb.kvSet('ps4cmd:' + id, c); return J({ ok: true, now }); }
+  const room = ((await hb.kvGet('ps4map')) || {})[id] || null, busy = room ? await ps4Busy(env, room) : 'not linked to a room';
+  if (busy) { c.state = 'refused'; c.res = { why: busy }; await hb.kvSet('ps4cmd:' + id, c); return J({ ok: true, now }); }
+  c.state = 'taken'; c.takenAt = now; await hb.kvSet('ps4cmd:' + id, c);
+  return J({ ok: true, now, cmd: { cid: c.cid, do: c.do } });
+}
+async function ps4Done(env, req) {   /* the helper: how the command went */
+  if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
+  let r = {}; try { r = JSON.parse(await req.text()); } catch (e) { return J({ error: 'bad json' }, 400); }
+  const id = ps4Id(r.id), hb = book(env), c = await hb.kvGet('ps4cmd:' + id);
+  if (!c || c.cid !== r.cid) return J({ error: 'unknown command' }, 404);
+  c.state = r.ok ? 'done' : r.refused ? 'refused' : 'failed'; c.doneAt = Date.now();
+  c.res = { dlMB: +r.dlMB || 0, capMB: +r.capMB || 0, files: +r.files || 0, why: String(r.why || '').slice(0, 120) };
+  await hb.kvSet('ps4cmd:' + id, c);
+  return J({ ok: true });
+}
 async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4map (id, room or '' to clear) · ps4discs (json list) · ps4names (id, name; '-' hides) */
   const act = f.action;
   if (act === 'ps4map') {
@@ -3684,6 +3723,15 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
     for (const k in map) if (room && map[k] === room && k !== id) delete map[k];   /* one PS4 per room */
     if (room) map[id] = room; else delete map[id];
     await hb.kvSet('ps4map', map); return { ok: true, map };
+  }
+  if (act === 'ps4clean') {
+    const id = ps4Id(f.id), room = ((await hb.kvGet('ps4map')) || {})[id], now = Date.now();
+    if (!room) return { error: 'Link this PS4 to a room first.' };
+    const poll = (await hb.kvGet('ps4poll:' + id)) || 0;
+    if (now - poll > 3 * 60e3) return { error: 'The PS4 isn’t answering (off, in rest mode, or not jailbroken yet) – switch it on and jailbreak it first.', off: true };
+    const busy = await ps4Busy(env, room); if (busy) return { error: busy + ' – try after that.', busy: true };
+    const c = { cid: 'c' + now.toString(36), do: 'clean', at: now, by: String(f.by || 'control centre').slice(0, 40), state: 'sent' };
+    await hb.kvSet('ps4cmd:' + id, c); return { ok: true, cmd: c };
   }
   if (act === 'ps4discs') {
     let l; try { l = JSON.parse(f.list || '[]'); } catch (e) { return { error: 'Bad list.' }; }
@@ -3700,7 +3748,7 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
   /* ps4list */
   const ids = (await hb.kvGet('ps4ids')) || [], now = Date.now(), list = [];
   const map = (await hb.kvGet('ps4map')) || {};
-  for (const id of ids) { const r = await hb.kvGet('ps4:' + id); if (r) list.push(Object.assign({}, r, { room: map[id] || null, games: undefined, nGames: (r.games || []).length, ago: Math.round((now - r.t) / 60e3) })); }
+  for (const id of ids) { const r = await hb.kvGet('ps4:' + id); if (r) list.push(Object.assign({}, r, { room: map[id] || null, poll: (await hb.kvGet('ps4poll:' + id)) || 0, cmd: (await hb.kvGet('ps4cmd:' + id)) || null, runName: r.running ? (((r.games || []).find((g) => g && g.id === r.running) || {}).t || '') : '', games: undefined, nGames: (r.games || []).length, ago: Math.round((now - r.t) / 60e3) })); }
   const night = sgDay(now - SHADOW_TILL * 60e3);
   return { ok: true, now, list, map: (await hb.kvGet('ps4map')) || {}, played: (await hb.kvGet('ps4play:' + night)) || {}, discs: (await hb.kvGet('ps4discs')) || [], names: (await hb.kvGet('ps4names')) || {} };
 }
@@ -3983,6 +4031,8 @@ const HANDLER = {
       }
       if (u.pathname === '/ps4/in' && req.method === 'POST') return await ps4In(env, req);   /* room PS4 check-ins (13 Nov) */
       if (u.pathname === '/ps4/games') return await ps4Games(env);
+      if (u.pathname === '/ps4/cmd' && req.method === 'POST') return await ps4Cmd(env, req);   /* helper: waiting command? (every minute) */
+      if (u.pathname === '/ps4/done' && req.method === 'POST') return await ps4Done(env, req);   /* helper: command result */
       if (u.pathname === '/gm' && req.method === 'POST') return await gm(env, req);
       if (u.pathname === '/gh' && req.method === 'POST') return await ghProxy(env, req);
       if (u.pathname.startsWith('/push/')) return await pushApi(env, req, u.pathname);
