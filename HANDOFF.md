@@ -93,6 +93,8 @@
 >   after: 38 ok / 0 bad (new step "PS4 helpers + game-save storage"). Owner's daily plan: prepare the day's members' saves on
 >   each PS4 from SimplyBook ahead of time (works offline), live fetch at login as fallback. Full log: project doc
 >   ps4-game-saves.md.
+>   **2:32am owner confirmed: User4 on Max has the GT Sport save – restore works end to end.** Clean slate (owner): all
+>   non-member saves go at session end (main + User1–4 profiles) except a per-room house baseline (GT Sport on Max).
 > **Vale PS4 (owner):** sometimes kernel-panics while jailbreaking (11.00) – before Round2's helper starts (AutoRun runs after
 >   the jailbreak). Noted in the PS4 plan; watch whether it gets worse once more payloads run.
 
