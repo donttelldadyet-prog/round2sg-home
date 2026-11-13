@@ -65,7 +65,14 @@
 >   profiles, because it re-stamps the save (param.sfo user ID + account ID + PSID) for the receiving profile → member profiles
 >   stay unactivated, main profiles untouched. Changing a profile's ID after saves are in it = "save corrupted". Encrypted copies
 >   are firmware-bound (11.00 vs 9.00 rooms) → cloud copies decrypted. Helper 1.1.0 has staff gm `ps4prof` (rename / activate /
->   undo, one change per job, read back; refused while signed in or a game is open). Kai + Max User4 still named "Test" – rename back.
+>   undo, one change per job, read back; refused while signed in or a game is open). Kai + Max User4 renamed back to "User4" (9pm).
+> **Late 13 Nov:** helper 1.1.1 (prof ops logout/login, never the main profile) released; all PS4s self-updated except Scarlett
+>   1.0.9 / Atlas 1.0.7. Engine bb2049e (ps4prof allows logout|login) – Cloudflare's script upload returned HTTP 500 (code 10002,
+>   Workers incident open on their status page) 3x 11:23–11:30pm, went through 11:45pm; live engine was never half-changed.
+>   System check fix (round2-tv-launcher cd14388): the guest-rescheduling step's "under 3h" test moved the clock after building
+>   the rules (they read it once), so it always failed – it now builds them again. After: 36 ok / 0 bad. Warn: SimplyBook
+>   requests 7,110 today (guideline ~5,000; biggest user /day getAvailableTimeIntervals) – look into it. Next: sign-out test on
+>   **Max** User4 (Kai has Scarlett's guests – leaky aircon in Scarlett).
 > **Vale PS4 (owner):** sometimes kernel-panics while jailbreaking (11.00) – before Round2's helper starts (AutoRun runs after
 >   the jailbreak). Noted in the PS4 plan; watch whether it gets worse once more payloads run.
 
