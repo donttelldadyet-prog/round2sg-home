@@ -79,7 +79,11 @@
 >   **14 Nov 1:35am:** helper 1.1.2 (released, Max only so far – others get it in quiet time) opens a save **decrypted,
 >   read-only** Apollo's way (key service + sceFsMountSaveData), lists it, closes it – tested on Max User1 CUSA34284: real data
 >   ~10 KB + icons. Staff `ps4look` paths `/_save.<user>.<title>.<save>|3`. Cloud storage (R2) not enabled on the Cloudflare
->   account yet – owner to switch on; then: pack + upload + restore.
+>   account – owner switched it on 1:44am; bucket **round2-saves** (APAC) created, not yet bound to the engine. Next: pack +
+>   upload + restore.
+> **RULE (owner, 14 Nov): never touch Gran Turismo Sport's save on Max (CUSA02168)** – fully unlocked, only on Max, the
+>   racing-sim USP. No open/backup/restore/overwrite/delete on any profile; never remove the profile holding it. Helper 1.1.3
+>   refuses every save job for it (tested with a dummy profile – "protected game - never touched").
 > **Vale PS4 (owner):** sometimes kernel-panics while jailbreaking (11.00) – before Round2's helper starts (AutoRun runs after
 >   the jailbreak). Noted in the PS4 plan; watch whether it gets worse once more payloads run.
 
