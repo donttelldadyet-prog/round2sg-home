@@ -2447,7 +2447,7 @@ async function gm(env, req) {
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await mvApi(env, hb, f, new URL(req.url).origin)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
-  if (/^ps4(list|map|discs|names|clean)$/.test(act)) {   /* staff: control centre › PS4s (13 Nov) */
+  if (/^ps4(list|map|discs|names|clean|update)$/.test(act)) {   /* staff: control centre › PS4s (13 Nov) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await ps4Gm(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
@@ -3647,6 +3647,11 @@ async function ps4In(env, req) {
   r.games = Array.isArray(r.games) ? r.games.slice(0, 400) : prev && prev.games || [];   /* the helper sends games only when they change */
   const rep = Object.assign({}, r, { id, room, t: now, ip: req.headers.get('cf-connecting-ip') || '' });
   await hb.kvSet('ps4:' + id, rep);
+  const uc = await hb.kvGet('ps4cmd:' + id);   /* an update: did the new version arrive, or was it rolled back? */
+  if (uc && uc.do === 'update' && (uc.state === 'taken' || uc.state === 'done')) {
+    if (r.v === uc.v) { uc.state = 'updated'; uc.doneAt = now; await hb.kvSet('ps4cmd:' + id, uc); }
+    else if (r.rolled && String(r.rolled).includes(' ' + uc.v + ':')) { uc.state = 'rolledback'; uc.doneAt = now; uc.res = { why: String(r.rolled).slice(0, 120) }; await hb.kvSet('ps4cmd:' + id, uc); }
+  }
   const ids = (await hb.kvGet('ps4ids')) || []; if (!ids.includes(id)) { ids.push(id); await hb.kvSet('ps4ids', ids.slice(-40)); }
   /* play time: the helper counts minutes per title since its last check-in (it looks every minute) */
   if (room && r.played && typeof r.played === 'object') {
@@ -3680,15 +3685,63 @@ async function ps4Games(env) {
    or within 15 minutes, checked when staff press the button AND again when the PS4 picks it up; the PS4 itself also refuses
    while a game is open. */
 const PS4_GAP = 15;
-async function ps4Busy(env, room) {
+async function ps4Busy(env, room, gap = PS4_GAP) {
   const unit = +(Object.keys(GM_ROOM).find((u) => GM_ROOM[u] === room) || 0), now = Date.now();
   if (!unit) return null;
   const night = sgDay(now - SHADOW_TILL * 60e3), tw = MIRROR[unit];
   for (const d of [night, addDays(night, 1)]) for (const S of (await sessDay(env, d)).sessions)
-    if ((S.unit === unit || S.unit === tw) && S.s - PS4_GAP * 60e3 <= now && now < S.guestEnd)
+    if ((S.unit === unit || S.unit === tw) && S.s - gap * 60e3 <= now && now < S.guestEnd)
       return (S.unit !== unit ? ROOMS[S.unit][0] + ' (its twin) ' : '') + 'has a session ' + (S.s > now ? 'starting at ' : 'until ') + clock12(S.s > now ? S.s : S.guestEnd);
   return null;
 }
+/* Helper updates (13 Nov). New versions are GitHub pre-releases tagged ps4-vX.Y.Z on round2-tv-launcher (pre-releases, so the
+   TVs' "latest release" never sees them) with round2d.elf + round2d.json { v, sha256, size }. The PS4s can only reach Round2,
+   so the engine passes the file on (/ps4/app) after checking its SHA-256. When: by itself in quiet time (helper with the
+   starter, no game open, no session in the room or its twin within 60 min, not a version that was rolled back, one try per
+   version per 6 h; switch off with kv ps4auto=false), or "Update now" (staff, same rules as Clean up: 10 min). */
+const ps4Ver = (v) => String(v || '0').split('.').map((x) => +x || 0);
+const ps4Newer = (a, b) => { const x = ps4Ver(a), y = ps4Ver(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
+async function ps4Latest(env, fresh) {
+  const hb = book(env), c = await hb.kvGet('ps4rel'), now = Date.now();
+  if (c && !fresh && now - c.at < 10 * 60e3) return c.v ? c : null;
+  const h = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'round2-book' };
+  if (env.GH_TOKEN) h.Authorization = 'Bearer ' + env.GH_TOKEN;
+  try {
+    const L = await fetch('https://api.github.com/repos/donttelldadyet-prog/round2-tv-launcher/releases?per_page=40', { headers: h }).then((r) => r.ok ? r.json() : []);
+    let best = null;
+    for (const r of L) { const m = /^ps4-v(\d+\.\d+\.\d+)$/.exec(r.tag_name || ''); if (m && !r.draft && (!best || ps4Newer(m[1], best.v))) best = { v: m[1], r }; }
+    if (!best) { await hb.kvSet('ps4rel', { at: now }); return null; }
+    const elf = (best.r.assets || []).find((a) => a.name === 'round2d.elf'), js = (best.r.assets || []).find((a) => a.name === 'round2d.json');
+    const info = js ? await fetch(js.browser_download_url, { headers: { 'User-Agent': 'round2-book' } }).then((r) => r.json()).catch(() => null) : null;
+    if (!elf || !info || info.v !== best.v || !/^[0-9a-f]{64}$/.test(info.sha256 || '') || +info.size !== elf.size) { await hb.kvSet('ps4rel', { at: now, bad: best.v }); return null; }
+    const out = { at: now, v: best.v, sha: info.sha256, size: elf.size, url: elf.browser_download_url };
+    await hb.kvSet('ps4rel', out); return out;
+  } catch (e) { return c && c.v ? c : null; }
+}
+async function ps4App(env, req) {   /* the helper downloads the newest version through here */
+  if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
+  const rel = await ps4Latest(env); if (!rel) return J({ error: 'no release' }, 404);
+  const b = await fetch(rel.url, { headers: { 'User-Agent': 'round2-book' } }).then((r) => r.ok ? r.arrayBuffer() : null).catch(() => null);
+  if (!b) return J({ error: 'download failed' }, 502);
+  const sha = [...new Uint8Array(await crypto.subtle.digest('SHA-256', b))].map((x) => x.toString(16).padStart(2, '0')).join('');
+  if (sha !== rel.sha || b.byteLength !== rel.size) return J({ error: 'file check failed' }, 502);
+  return new Response(b, { headers: { 'content-type': 'application/octet-stream', 'x-r2-v': rel.v } });
+}
+async function ps4AutoUpdate(env, hb, id, room) {   /* quiet time? hand out an update */
+  if ((await hb.kvGet('ps4auto')) === false) return null;
+  const rep = await hb.kvGet('ps4:' + id), now = Date.now();
+  if (!rep || !rep.boot || rep.running || now - rep.t > 20 * 60e3) return null;
+  const rel = await ps4Latest(env); if (!rel || !ps4Newer(rel.v, rep.v)) return null;
+  if (rep.rolled && rep.rolled.includes(' ' + rel.v + ':')) return null;   /* that version was rolled back here – needs a newer one or Update now */
+  const tried = await hb.kvGet('ps4autoTry:' + id); if (tried && tried.v === rel.v && now - tried.t < 6 * 3600e3) return null;
+  const chk = (await hb.kvGet('ps4autoChk:' + id)) || 0; if (now - chk < 10 * 60e3) return null;   /* bookings looked up at most every 10 min per PS4 */
+  await hb.kvSet('ps4autoChk:' + id, now);
+  if (await ps4Busy(env, room, 60)) return null;
+  const c = { cid: 'a' + now.toString(36), do: 'update', v: rel.v, sha: rel.sha, size: rel.size, from: rep.v, at: now, takenAt: now, by: 'auto (quiet time)', state: 'taken' };
+  await hb.kvSet('ps4autoTry:' + id, { v: rel.v, t: now }); await hb.kvSet('ps4cmd:' + id, c);
+  return c;
+}
+const ps4Out = (c) => c.do === 'update' ? { cid: c.cid, do: 'update', v: c.v, sha: c.sha, size: c.size } : { cid: c.cid, do: c.do };
 async function ps4Cmd(env, req) {   /* the helper, every minute: anything for me? */
   if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
   let r = {}; try { r = JSON.parse(await req.text()); } catch (e) {}
@@ -3696,12 +3749,16 @@ async function ps4Cmd(env, req) {   /* the helper, every minute: anything for me
   const hb = book(env), now = Date.now();
   await hb.kvSet('ps4poll:' + id, now);
   const c = await hb.kvGet('ps4cmd:' + id);
-  if (!c || c.state !== 'sent') return J({ ok: true, now });
+  if (!c || c.state !== 'sent') {
+    const room0 = ((await hb.kvGet('ps4map')) || {})[id];
+    const a = room0 && !(c && c.state === 'taken' && now - c.takenAt < 15 * 60e3) ? await ps4AutoUpdate(env, hb, id, room0).catch(() => null) : null;
+    return J(a ? { ok: true, now, cmd: ps4Out(a) } : { ok: true, now });
+  }
   if (now - c.at > 10 * 60e3) { c.state = 'expired'; await hb.kvSet('ps4cmd:' + id, c); return J({ ok: true, now }); }
   const room = ((await hb.kvGet('ps4map')) || {})[id] || null, busy = room ? await ps4Busy(env, room) : 'not linked to a room';
   if (busy) { c.state = 'refused'; c.res = { why: busy }; await hb.kvSet('ps4cmd:' + id, c); return J({ ok: true, now }); }
   c.state = 'taken'; c.takenAt = now; await hb.kvSet('ps4cmd:' + id, c);
-  return J({ ok: true, now, cmd: { cid: c.cid, do: c.do } });
+  return J({ ok: true, now, cmd: ps4Out(c) });
 }
 async function ps4Done(env, req) {   /* the helper: how the command went */
   if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
@@ -3733,6 +3790,17 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
     const c = { cid: 'c' + now.toString(36), do: 'clean', at: now, by: String(f.by || 'control centre').slice(0, 40), state: 'sent' };
     await hb.kvSet('ps4cmd:' + id, c); return { ok: true, cmd: c };
   }
+  if (act === 'ps4update') {
+    const id = ps4Id(f.id), room = ((await hb.kvGet('ps4map')) || {})[id], now = Date.now(), rep = await hb.kvGet('ps4:' + id);
+    if (!room || !rep) return { error: 'Link this PS4 to a room first.' };
+    if (now - ((await hb.kvGet('ps4poll:' + id)) || 0) > 3 * 60e3) return { error: 'The PS4 isn’t answering (off, in rest mode, or not jailbroken yet) – switch it on and jailbreak it first.', off: true };
+    if (!rep.boot) return { error: 'This PS4 has no Round2 starter yet – install round2-boot.elf once (FTP + AutoRun), then it updates itself.' };
+    const rel = await ps4Latest(env, true); if (!rel) return { error: 'No PS4 helper release found on GitHub.' };
+    if (!ps4Newer(rel.v, rep.v)) return { error: 'Already on the newest version (' + rep.v + ').' };
+    const busy = await ps4Busy(env, room, 10); if (busy) return { error: busy + ' – try after that.', busy: true };
+    const c = { cid: 'u' + now.toString(36), do: 'update', v: rel.v, sha: rel.sha, size: rel.size, from: rep.v, at: now, by: String(f.by || 'control centre').slice(0, 40), state: 'sent' };
+    await hb.kvSet('ps4cmd:' + id, c); return { ok: true, cmd: c };
+  }
   if (act === 'ps4discs') {
     let l; try { l = JSON.parse(f.list || '[]'); } catch (e) { return { error: 'Bad list.' }; }
     if (!Array.isArray(l)) return { error: 'Bad list.' };
@@ -3750,7 +3818,8 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
   const map = (await hb.kvGet('ps4map')) || {};
   for (const id of ids) { const r = await hb.kvGet('ps4:' + id); if (r) list.push(Object.assign({}, r, { room: map[id] || null, poll: (await hb.kvGet('ps4poll:' + id)) || 0, cmd: (await hb.kvGet('ps4cmd:' + id)) || null, runName: r.running ? (((r.games || []).find((g) => g && g.id === r.running) || {}).t || '') : '', games: undefined, nGames: (r.games || []).length, ago: Math.round((now - r.t) / 60e3) })); }
   const night = sgDay(now - SHADOW_TILL * 60e3);
-  return { ok: true, now, list, map: (await hb.kvGet('ps4map')) || {}, played: (await hb.kvGet('ps4play:' + night)) || {}, discs: (await hb.kvGet('ps4discs')) || [], names: (await hb.kvGet('ps4names')) || {} };
+  const rel = await ps4Latest(env).catch(() => null);
+  return { ok: true, now, list, latest: rel ? rel.v : null, auto: (await hb.kvGet('ps4auto')) !== false, map: (await hb.kvGet('ps4map')) || {}, played: (await hb.kvGet('ps4play:' + night)) || {}, discs: (await hb.kvGet('ps4discs')) || [], names: (await hb.kvGet('ps4names')) || {} };
 }
 
 /* ===== Remote TV updates (owner, 2 Nov) =====
@@ -4032,7 +4101,8 @@ const HANDLER = {
       if (u.pathname === '/ps4/in' && req.method === 'POST') return await ps4In(env, req);   /* room PS4 check-ins (13 Nov) */
       if (u.pathname === '/ps4/games') return await ps4Games(env);
       if (u.pathname === '/ps4/cmd' && req.method === 'POST') return await ps4Cmd(env, req);   /* helper: waiting command? (every minute) */
-      if (u.pathname === '/ps4/done' && req.method === 'POST') return await ps4Done(env, req);   /* helper: command result */
+      if (u.pathname === '/ps4/done' && req.method === 'POST') return await ps4Done(env, req);
+      if (u.pathname === '/ps4/app' && req.method === 'POST') return await ps4App(env, req);   /* helper: download the newest version */   /* helper: command result */
       if (u.pathname === '/gm' && req.method === 'POST') return await gm(env, req);
       if (u.pathname === '/gh' && req.method === 'POST') return await ghProxy(env, req);
       if (u.pathname.startsWith('/push/')) return await pushApi(env, req, u.pathname);
