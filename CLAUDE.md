@@ -8,3 +8,7 @@
 - `worker/round2-book.js` is the live Cloudflare engine `round2-book`. Deploy carefully (keep bindings), then run the check.
 - **Kaeden is under renovation (since ~30 Oct 2026, open-ended).** Its long "room blocked" note in SimplyBook stays – don't
   remove it or "fix" Kaeden having no free slots. Its TV should still run and report in like the others, ready for reopening.
+- **Telegram is only for the Madd Pizza ↔ Round2 food workflow** (kitchen slip, pickup button). Owner, 14 Nov 2026: never send
+  anything about bookings to Telegram – Madd Pizza doesn't need to know them. Booking alerts go to staff phones (control centre) only.
+- Deploying the engine: `keep_bindings` must list secret_text, kv_namespace, plain_text, durable_object_namespace **and r2_bucket**
+  (27 settings; without r2_bucket the PS4 game-save storage is cut off). Check the count after every deploy.

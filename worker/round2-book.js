@@ -1120,11 +1120,11 @@ async function humanAlert(env, ref, title, body) {
 }
 
 /* ---------- after payment: put the booking into SimplyBook (exactly once) ---------- */
-/* staff alerts (Telegram): secret STAFF_CHAT = the chat id of a staff-only group with the Round2 kitchen bot in it */
-async function staffAlert(env, text) {
-  if (!env.TG_BOT_TOKEN || !env.STAFF_CHAT) return;
-  await fetch('https://api.telegram.org/bot' + env.TG_BOT_TOKEN + '/sendMessage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ chat_id: env.STAFF_CHAT, text }) });
-}
+/* Telegram is ONLY for the food workflow between Madd Pizza and Round2 (kitchen slip, pickup button – KITCHEN_CHAT below).
+   Owner, 14 Nov 2026: no Telegram messages about bookings – Madd Pizza doesn't need to know them. This used to post booking
+   alerts to a staff group (secret STAFF_CHAT, never set, so nothing was ever sent); it now never sends, whatever is set.
+   Booking alerts go to the staff phones (control centre push) only. */
+async function staffAlert(env, text) { return; }
 async function finalize(env, ref, source) {
   const hb = book(env);
   let h = await hb.get(ref); if (!h) return { ok: false, err: 'unknown ref' };
