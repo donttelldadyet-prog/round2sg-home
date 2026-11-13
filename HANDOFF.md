@@ -95,6 +95,9 @@
 >   ps4-game-saves.md.
 >   **2:32am owner confirmed: User4 on Max has the GT Sport save – restore works end to end.** Clean slate (owner): all
 >   non-member saves go at session end (main + User1–4 profiles) except a per-room house baseline (GT Sport on Max).
+>   Owner 2:38am: PARK (keep on the PS4 + cloud, tied to the booking) rather than wipe, so a guest who signs up can still get
+>   their progress back. **2:55am: remote rest mode works** – helper 1.1.8 `ps4look` paths `/_rest` (only if rest mode is
+>   enabled and no game is open); Max went to sleep on command. Scarlett + Kai self-updated to 1.1.7 overnight.
 > **Vale PS4 (owner):** sometimes kernel-panics while jailbreaking (11.00) – before Round2's helper starts (AutoRun runs after
 >   the jailbreak). Noted in the PS4 plan; watch whether it gets worse once more payloads run.
 
