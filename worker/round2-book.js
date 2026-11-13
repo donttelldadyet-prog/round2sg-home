@@ -3706,16 +3706,22 @@ async function ps4Busy(env, room, gap = PS4_GAP) {
    passes the file on (/ps4/app) after checking its SHA-256. When: by itself in quiet time (helper with the starter, no game
    open, no guest session in the room within 60 min, not a version that was rolled back, one try per version per 6 h;
    switch off with kv ps4auto=false), or "Update now" (staff, same rules as Clean up: 10 min). */
-const PS4_REL = 'https://raw.githubusercontent.com/donttelldadyet-prog/round2-tv-launcher/ps4-release/';
+const PS4_REL = 'https://raw.githubusercontent.com/donttelldadyet-prog/round2-tv-launcher/';   /* + <commit>/round2d.json – the branch head is looked up first (GitHub API), so both files come from the same commit and nothing is stale */
 const ps4Ver = (v) => String(v || '0').split('.').map((x) => +x || 0);
 const ps4Newer = (a, b) => { const x = ps4Ver(a), y = ps4Ver(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
 async function ps4Latest(env, fresh) {
   const hb = book(env), c = await hb.kvGet('ps4rel'), now = Date.now();
   if (c && !fresh && now - c.at < 10 * 60e3) return c.v ? c : null;
   try {
-    const info = await fetch(PS4_REL + 'round2d.json', { headers: { 'User-Agent': 'round2-book' } }).then((r) => r.ok ? r.json() : null).catch(() => null);
+    const h = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'round2-book' };
+    if (env.GH_TOKEN) h.Authorization = 'Bearer ' + env.GH_TOKEN;
+    const head = await fetch('https://api.github.com/repos/donttelldadyet-prog/round2-tv-launcher/commits/ps4-release', { headers: h }).then((r) => r.ok ? r.json() : null).catch(() => null);
+    const sha1 = head && /^[0-9a-f]{40}$/.test(head.sha || '') ? head.sha : null;
+    if (!sha1) return c && c.v ? c : null;
+    if (c && c.commit === sha1 && c.v) { c.at = now; await hb.kvSet('ps4rel', c); return c; }
+    const info = await fetch(PS4_REL + sha1 + '/round2d.json', { headers: { 'User-Agent': 'round2-book' } }).then((r) => r.ok ? r.json() : null).catch(() => null);
     if (!info || !/^\d+\.\d+\.\d+$/.test(info.v || '') || !/^[0-9a-f]{64}$/.test(info.sha256 || '') || !(+info.size > 1024)) { await hb.kvSet('ps4rel', { at: now }); return null; }
-    const out = { at: now, v: info.v, sha: info.sha256, size: +info.size, url: PS4_REL + 'round2d.elf' };
+    const out = { at: now, v: info.v, sha: info.sha256, size: +info.size, commit: sha1, url: PS4_REL + sha1 + '/round2d.elf' };
     await hb.kvSet('ps4rel', out); return out;
   } catch (e) { return c && c.v ? c : null; }
 }
