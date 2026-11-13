@@ -73,6 +73,9 @@
 >   the rules (they read it once), so it always failed – it now builds them again. After: 36 ok / 0 bad. Warn: SimplyBook
 >   requests 7,110 today (guideline ~5,000; biggest user /day getAvailableTimeIntervals) – look into it. Next: sign-out test on
 >   **Max** User4 (Kai has Scarlett's guests – leaky aircon in Scarlett).
+>   **14 Nov 1:20am – done:** remote sign-in AND sign-out of Max User4 both worked (helper `prof` login/logout, result 0, read
+>   back "Max" → "Max, User4" → "Max"). Main profile untouched. The 12:15am try missed because the shop's internet dropped
+>   (~12:07–1:10am, ISP); the helper resumed by itself. → end-of-session clean slate can be automated.
 > **Vale PS4 (owner):** sometimes kernel-panics while jailbreaking (11.00) – before Round2's helper starts (AutoRun runs after
 >   the jailbreak). Noted in the PS4 plan; watch whether it gets worse once more payloads run.
 
