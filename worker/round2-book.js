@@ -430,7 +430,7 @@ export class HoldBook extends DurableObject {
     const all = this.mvHoldsAll().filter((x) => x.exp > Date.now() - 6 * 3600e3), old = all.filter((x) => x.bid === h.bid);
     this.kvSet('mvholds', all.filter((x) => x.bid !== h.bid));
     if (this.clash(h.date, h.units, h.s, h.e)) return { ok: false, old };
-    this.kvSet('mvholds', this.mvHoldsAll().concat([h])); return { ok: true, old };
+    this.kvSet('mvholds', this.mvHoldsAll().concat([h])); this.arm(); return { ok: true, old };   /* the hold timer lifts it at exactly 10 min */
   }
   mvHoldNotes(ref, ids) { this.kvSet('mvholds', this.mvHoldsAll().map((x) => x.ref === ref ? Object.assign(x, { notes: ids }) : x)); }
   mvHoldDrop(ref) { this.kvSet('mvholds', this.mvHoldsAll().filter((x) => x.ref !== ref)); }
@@ -825,12 +825,18 @@ export class HoldBook extends DurableObject {
     this.bqInit(); const bqn = this.rows(`SELECT COUNT(*) AS n FROM bq`)[0].n;
     this.nudgeInit(); const nd = this.rows(`SELECT MIN(at) AS t FROM nudge`)[0];
     this.autoInit(); const au = this.rows(`SELECT MIN(at) AS t FROM autoq WHERE sent = 0`)[0];
-    const ts = [bqn ? Date.now() + 30e3 : 0, nd && nd.t ? nd.t : 0, n && n.t ? n.t + 1000 : 0, q && q.t ? q.t - 60e3 : 0, syn ? syn + 86400e3 : 0, fl ? fol + FOLLOW_MS : 0, lsy ? 0 : Date.now() + 2000, lt && lt.t ? lt.t : 0, au && au.t ? au.t : 0].filter((t) => t > 0);
+    const mvh = this.mvHoldsAll().filter((x) => !x.lifted).map((x) => x.exp);
+    const ts = [mvh.length ? Math.min(...mvh) + 1000 : 0, bqn ? Date.now() + 30e3 : 0, nd && nd.t ? nd.t : 0, n && n.t ? n.t + 1000 : 0, q && q.t ? q.t - 60e3 : 0, syn ? syn + 86400e3 : 0, fl ? fol + FOLLOW_MS : 0, lsy ? 0 : Date.now() + 2000, lt && lt.t ? lt.t : 0, au && au.t ? au.t : 0].filter((t) => t > 0);
     if (ts.length) this.ctx.storage.setAlarm(Math.max(Date.now() + 1000, Math.min(...ts)));
   }
   /* timer ran out → release the hold and kill its HitPay link */
   async alarm() { sbWho = 'hold timer'; try { await this.alarm0(); } finally { if (sbCalls) { this.sbAdd(sbCalls, sbBy); sbCalls = 0; sbBy = {}; } } }
   async alarm0() {
+    /* a move's hold ends at exactly its 10 minutes (owner, 14 Nov: no extra buffer): its SimplyBook notes come off now; the
+       5-min sweep then only closes the move's record (or finishes it if the money did arrive) */
+    try { const mh = this.mvHoldsAll(), over = mh.filter((x) => x.exp <= Date.now() && !x.lifted);
+      for (const x of over) { try { await holdNotesDel(this.env, x.notes || []); } catch (e) {} }
+      if (over.length) { this.kvSet('mvholds', mh.filter((x) => x.exp > Date.now())); this.kvSet('gapc', {}); this.kvSet('gcal', null); } } catch (e) {}
     const due = this.rows(`SELECT ref, pr, data, created FROM holds WHERE status = 'pending' AND exp <= ?`, Date.now());
     for (const d of due) {
       /* paid at HitPay but nobody has booked it yet (webhook late, guest closed the page): keep it – the sweep books it */
@@ -4019,7 +4025,7 @@ const HANDLER = {
     /* paid moves that never ran (HitPay's message missed and the guest closed the page): finish them, or alert staff */
     go((async () => { for (const m of await hb.mvRecent(Date.now() - 48 * 3600e3)) if (m.status === 'pending' && Date.now() - m.t > 60e3) {
       const r = await mvComplete(env, m.ref, 'sweep').catch((e) => ({ error: String(e.message || e) }));
-      { const m1 = await hb.kvGet('mv:' + m.ref), over = m1 && m1.guest && m1.status === 'pending' && Date.now() > (m1.hold ? m1.hold.exp + HOLD_CAP_EXTRA : m1.t + 30 * 60e3);
+      { const m1 = await hb.kvGet('mv:' + m.ref), over = m1 && m1.guest && m1.status === 'pending' && Date.now() > (m1.hold ? m1.hold.exp : m1.t + 30 * 60e3);
         if (over && !(await mvPayStatus(env, m1).catch(() => ({ paid: true }))).paid) { await mvHoldRelease(env, m1, 'expired').catch(() => null); continue; } }   /* unpaid and its 10 minutes are over: closed, slot free */
       /* paid but still not moved after 15 min (any reason) → a Round2 alert, once */
       const m2 = await hb.kvGet('mv:' + m.ref);

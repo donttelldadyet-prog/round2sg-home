@@ -78,7 +78,7 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 <dl><dt>Name</dt><dd id="t-name"></dd><dt>Date</dt><dd id="t-date"></dd><dt>Time</dt><dd class="big" id="t-time"></dd><dt>Length</dt><dd id="t-len"></dd><dt>Guests</dt><dd id="t-pax"></dd><dt>Paid</dt><dd id="t-paid"></dd><dt>Ref</dt><dd class="ref" id="t-ref"></dd></dl>
 <div class="chips" id="chips"></div></div>
 <div class="grid">
-<button class="act main" id="a-move"><b>RESCHEDULE<span class="beta">BETA</span></b><span id="a-move-sub"></span></button>
+<button class="act main" id="a-move"><b>RESCHEDULE / ADD HOURS<span class="beta">BETA</span></b><span id="a-move-sub"></span></button>
 <a class="act" id="a-tv" href="#" target="_top" style="text-decoration:none"><b>TV MESSAGE</b><span id="a-tv-sub">Birthday or celebration on the big screen</span></a>
 <button class="act" onclick="rcpt(-1)"><b>RECEIPT</b><span id="a-rc">Save as PDF</span></button>
 <a class="act" id="a-cal" href="#" style="text-decoration:none"><b>CALENDAR</b><span>Add to your phone</span></a></div>
@@ -204,7 +204,7 @@ function state(){var o=O(),st=stage();go('home');
  else if(S.moves>=2){b.disabled=true;sub.textContent='No moves left (2 of 2 used)'}
  else if(INFO.ext){b.disabled=true;sub.textContent='Extra time added – WhatsApp us to move it'}
  else if(st==='day')sub.textContent='Today/tomorrow: same-day upgrades only';
- else sub.textContent=S.grace?'Free right now · price difference only':('Change room, day or time · from $'+fee(null));
+ else sub.textContent=S.grace?'Free right now · price difference only':('Change room, day or time from $'+fee(null)+' · or just add hours');
  var fm=function(t){var d=new Date(t+8*36e5);return ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d.getUTCDay()]+' '+d.getUTCDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()]+', '+hm(d.getUTCHours()*60+d.getUTCMinutes())};
  var h=['<li>'+(S.wa?'Booked with our team':'Booked online')+(INFO.made?' · '+fm(INFO.made):'')+' <small>· '+money(o.paid0!=null?o.paid0:o.paid)+'</small></li>'];
  o.mvs.forEach(function(m,k){var fr=G2(m.from),to=G2(m.to);h.push('<li><span class="mvdot" style="background:'+ROOMS[fr.room][0]+'"></span>'+rn(fr.room)+' '+fr.lbl+' → <span class="mvdot" style="background:'+ROOMS[to.room][0]+'"></span><b>'+rn(to.room)+' '+to.lbl+'</b><small> · moved '+fm(m.t)+(m.guest?'':' by our team')+' · '+(m.total>0?'paid '+money(m.total)+' ('+money(m.fee)+' fee'+(m.diff>0?' + '+money(m.diff)+' difference':'')+')':'no charge')+'</small>'+(m.total>0?' <button class="rlink" onclick="rcpt('+k+')">Receipt</button>':'')+'</li>')});
