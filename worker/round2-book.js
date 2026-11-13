@@ -84,7 +84,7 @@ async function sb2(env) {
     if (r.status === 401 && !again) { sb2tok = { k: '', t: 0 }; await tokPut(env, 'tokRest', null); await sb2(env); return go(method, path, body, true); }   /* a shared login gone stale: log in once more */
     const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch (e) {}
     if (!r.ok) throw new Error('SimplyBook ' + method + ' ' + path.split('?')[0] + ' ' + r.status + ': ' + t.slice(0, 200));
-    if (method !== 'GET' && /calendar-notes/.test(path)) await book(env).kvSet('gcal', null).catch(() => null); await book(env).kvSet('gapc', {}).catch(() => null);   /* a note changed (late session, block, extension): the booking board asks again */
+    if (method !== 'GET' && /calendar-notes/.test(path)) { await book(env).kvSet('gcal', null).catch(() => null); await book(env).kvSet('gapc', {}).catch(() => null); }   /* BOTH inside the if: 12–14 Nov the board's memory was wiped on every notes READ too (7,110 requests on 13 Nov) */   /* a note changed (late session, block, extension): the booking board asks again */
     return j;
   };
   return (method, path, body) => go(method, path, body);
@@ -422,6 +422,18 @@ export class HoldBook extends DurableObject {
     if (by) { const kb = 'sbb:' + day, m = this.kvGet(kb) || {}; for (const x in by) if (m[x] || Object.keys(m).length < 120) m[x] = (m[x] || 0) + by[x]; this.kvSet(kb, m);
       const old = 'sbb:' + new Date(Date.now() + 8 * 3600e3 - 3 * 86400e3).toISOString().slice(0, 10); this.sql.exec(`DELETE FROM kv WHERE k = ?`, old); } }
   /* recent moves (owner, 13 Nov 2am: a paid guest move never ran and nobody knew) – for the sweep and staff */
+  /* MOVE HOLDS (owner, 14 Nov): while a guest pays for a move, the new slot is held like a new booking's – 10 min, in kv
+     `mvholds` [{ref, bid, date, unit, units, s, e, exp, notes}]. clash()/list() count them, so nobody can book or move into
+     it; the guest's own booking never conflicts (it isn't a hold). One hold per booking: a new try drops the old one. */
+  mvHoldsAll() { return this.kvGet('mvholds') || []; }
+  mvHoldAdd(h) {
+    const all = this.mvHoldsAll().filter((x) => x.exp > Date.now() - 6 * 3600e3), old = all.filter((x) => x.bid === h.bid);
+    this.kvSet('mvholds', all.filter((x) => x.bid !== h.bid));
+    if (this.clash(h.date, h.units, h.s, h.e)) return { ok: false, old };
+    this.kvSet('mvholds', this.mvHoldsAll().concat([h])); return { ok: true, old };
+  }
+  mvHoldNotes(ref, ids) { this.kvSet('mvholds', this.mvHoldsAll().map((x) => x.ref === ref ? Object.assign(x, { notes: ids }) : x)); }
+  mvHoldDrop(ref) { this.kvSet('mvholds', this.mvHoldsAll().filter((x) => x.ref !== ref)); }
   mvRecent(since) { this.qInit(); return this.rows(`SELECT k, v FROM kv WHERE k LIKE 'mv:MV%'`).map((r) => JSON.parse(r.v)).filter((m) => m && m.t >= since).sort((a, b) => b.t - a.t).slice(0, 60); }
   kvGet(k) { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = ?`, k)[0]; return r ? JSON.parse(r.v) : null; }
   kvSet(k, v) { this.qInit(); this.sql.exec(`INSERT OR REPLACE INTO kv VALUES (?, ?)`, k, JSON.stringify(v)); }
@@ -674,7 +686,8 @@ export class HoldBook extends DurableObject {
   clash(date, units, s, e, ignore = '') {
     const now = Date.now();
     return this.rows(`SELECT ref, unit, s, e FROM holds WHERE date = ? AND ((status = 'pending' AND exp > ?) OR (status = 'booking' AND created > ?)) AND ref != ?`, date, now, now - 3 * 3600e3, ignore)   /* 'booking': being put into SimplyBook right now (review 5 Nov) */
-      .some((h) => units.includes(h.unit) && s < h.e + BUF && h.s < e + BUF);
+      .some((h) => units.includes(h.unit) && s < h.e + BUF && h.s < e + BUF)
+      || this.mvHoldsAll().some((h) => h.ref !== ignore && h.date === date && h.exp > now && h.units.some((u) => units.includes(u)) && s < h.e + BUF && h.s < e + BUF);   /* a guest paying for a move */
   }
   /* atomic: drop this guest's earlier unpaid holds, then hold the slot if nobody else has it */
   hold(h) {
@@ -685,7 +698,7 @@ export class HoldBook extends DurableObject {
     this.arm();
     return { ok: true, released };
   }
-  list(date) { return this.rows(`SELECT unit, s, e FROM holds WHERE date = ? AND ((status = 'pending' AND exp > ?) OR (status = 'booking' AND created > ?))`, date, Date.now(), Date.now() - 3 * 3600e3); }
+  list(date) { return this.rows(`SELECT unit, s, e FROM holds WHERE date = ? AND ((status = 'pending' AND exp > ?) OR (status = 'booking' AND created > ?))`, date, Date.now(), Date.now() - 3 * 3600e3).concat(this.mvHoldsAll().filter((h) => h.date === date && h.exp > Date.now()).map((h) => ({ unit: h.unit, s: h.s, e: h.e }))); }
   setPr(ref, pr) { this.sql.exec(`UPDATE holds SET pr = ? WHERE ref = ?`, pr, ref); }
   /* this guest's unpaid holds (same phone or email) – let go before they pick again */
   pendingFor(phone, email) { return this.rows(`SELECT ref, pr, data FROM holds WHERE status = 'pending' AND (phone = ? OR email = ?)`, phone, email); }
@@ -2010,6 +2023,7 @@ async function mvQuote(env, f) {
   for (const x of D1.items) {
     if (x.unit !== unit && x.unit !== tw) continue;
     if (skip.has(x.k + x.id) || twinBlk(x)) continue;
+    if (f.holdRef && x.k === 'n' && String(x.name || '').includes('ref ' + f.holdRef)) continue;   /* this move's own ONLINE HOLD note (a remembered day may still list it) */
     if (x.s < e && x.e > s) clash.push(ROOMS[x.unit][0] + ': ' + (x.k === 'b' ? (x.sys ? 'twin room booking' : 'booking ' + (x.name || 'guest')) : HOLD_RE.test(x.name || '') ? 'an online guest is paying for this time' : (x.blk ? 'room blocked' : 'note: ' + String(x.name || '').slice(0, 40))) + ' ' + clock12(x.s) + '–' + clock12(x.e));
   }
   const closeT = sgMs0(sgDay(s - SHADOW_TILL * 60e3) + ' ' + hhmm(CLOSE)); if (e - BUF * 60e3 > closeT + 60e3) clash.push('past closing time (11:15pm)');
@@ -2025,9 +2039,12 @@ async function mvQuote(env, f) {
   /* the fee in two parts (owner, 12 Nov): the move – upgrade $5 (bigger room) / peak time $5 (same kind of room) / move $15 –
      plus "popular time" +$10/+$20 for what the move part doesn't cover; Vale/Atlas straight after a session in the same twin
      room +$10, the other twin room −$10 where that still covers the cost. Early-bird bookings: always move $15. */
-  const up = !eb && q.total > paid + 0.004, base = up ? 5 : 15, name = up ? (ROOMS[unit][1] === ROOMS[B.unit][1] ? 'peak time' : 'upgrade') : 'move';
-  const xs = money - base; let add = xs <= 5 ? 0 : Math.min(20, Math.ceil((xs - 5) / 5) * 5);   /* $5 steps, same as the guest page (owner, 12 Nov) */
-  if (twin === 'same') add = Math.min(20, add + 10); else if (twin === 'other' && add && base + add - 10 >= money - 5) add -= 10;
+  /* same rule as the guest page's gLogic.feeOf (owner, 14 Nov): add hours = no fee; $5 only for a bigger kind of room or the same kind at a dearer rate */
+  const RK = { netflix: 1, deluxe: 2, vip: 3 }, rN = RK[ROOMS[unit][1]], rO = RK[ROOMS[B.unit][1]], addOnly = unit === B.unit && date === B.date && time === B.time && hours > B.hours;
+  let dearer = false; try { dearer = (await quote(env, { unit, date, time, hours: 3 })).total > (await quote(env, { unit: B.unit, date: B.date, time: B.time, hours: 3 })).total + 0.004; } catch (e) {}
+  const up = !eb && q.total > paid + 0.004 && (rN > rO || (rN === rO && dearer)), base = addOnly ? 0 : up ? 5 : 15, name = addOnly ? 'add hours' : up ? (rN > rO ? 'upgrade' : 'peak time') : 'move';
+  const xs = money - base; let add = addOnly || xs <= 5 ? 0 : Math.min(20, Math.ceil((xs - 5) / 5) * 5);   /* $5 steps, same as the guest page (owner, 12 Nov) */
+  if (addOnly) add = 0; else if (twin === 'same') add = Math.min(20, add + 10); else if (twin === 'other' && add && base + add - 10 >= money - 5) add -= 10;
   const diff = Math.max(0, Math.round((q.total - paid) * 100) / 100), fee = base + add;
   return { ok: !clash.length, clash, ext: X.min, from: { bid: B.bid, code: B.code, room: ROOMS[B.unit][0], unit: B.unit, date: B.date, time: B.time, hours: B.hours, name: B.name, paid, online: !!held },
     to: { room: q.room, unit, date, time, hours, end: q.end, price: q.total, peak: q.peak, earlyBird: q.earlyBird },
@@ -2039,7 +2056,8 @@ async function mvExecute(env, mv, how) {
   const hb = book(env);
   if (!(await hb.lock('mvlock:' + mv.from.bid, 120e3))) return { error: 'Someone is moving this booking right now.' };
   try {
-    const Q = await mvQuote(env, { bid: mv.from.bid, unit: mv.to.unit, date: mv.to.date, time: mv.to.time, hours: mv.to.hours });
+    if (mv.hold || mv.holdNotes) { if (mv.holdNotes && !mv.holdNotesDone) { await holdNotesDel(env, mv.holdNotes).catch(() => null); mv.holdNotesDone = Date.now(); } await hb.mvHoldDrop(mv.ref).catch(() => null); }   /* our own hold off, then the fresh check and the move */
+    const Q = await mvQuote(env, { bid: mv.from.bid, unit: mv.to.unit, date: mv.to.date, time: mv.to.time, hours: mv.to.hours, holdRef: mv.ref });
     if (!Q.ok) return { error: 'That time isn’t free any more: ' + Q.clash.join('; '), clash: Q.clash };
     const B = await mvBooking(env, mv.from.bid), q = await quote(env, { unit: mv.to.unit, date: mv.to.date, time: mv.to.time, hours: mv.to.hours });
     const X0 = mvExtOf(await sessDay(env, sgDay(B.s - SHADOW_TILL * 60e3)), B);
@@ -2064,7 +2082,7 @@ async function mvExecute(env, mv, how) {
         if (MIRROR[q.unit]) await s2('POST', '/admin/calendar-notes', body(MIRROR[q.unit], ns, ne, 'SYSTEM BLOCK · EXT ' + ROOMS[q.unit][0] + ' till ' + clock12(ne)));
       } catch (e) { extProb = String(e.message || e).slice(0, 120); await humanAlert(env, 'mvext-' + B.bid, 'Moved booking: its +h note didn’t follow', `${B.name || 'Guest'} moved to ${q.room} ${q.date} ${q.time}, but the extra-hours (EXT) note didn’t move: ${extProb}. Fix it in SimplyBook (or In session).`).catch(() => null); }
     }
-    const rec = { t: Date.now(), bid: B.bid, name: B.name, ext: X0.min, extProb, from: mv.from, to: { room: q.room, unit: q.unit, date: q.date, time: q.time, hours: q.hours }, level: mv.level, feeWas: mv.feeWas, fee: mv.fee, diff: mv.diff, total: mv.total, how, by: mv.by || '', why: mv.why || '', ref: mv.ref || '', guest: !!mv.guest, moveNo: mv.moveNo || 0, add: mv.add || 0, snug: !!mv.snug, cost: mv.cost != null ? Math.round(mv.cost * 100) / 100 : null };
+    const rec = { t: Date.now(), bid: B.bid, name: B.name, ext: X0.min, extProb, from: mv.from, to: { room: q.room, unit: q.unit, date: q.date, time: q.time, hours: q.hours }, level: mv.level, feeWas: mv.feeWas, fee: mv.fee, diff: mv.diff, total: mv.total, how, by: mv.by || '', why: mv.why || '', ref: mv.ref || '', guest: !!mv.guest, addHours: !!mv.addHours, moveNo: mv.moveNo || 0, add: mv.add || 0, snug: !!mv.snug, cost: mv.cost != null ? Math.round(mv.cost * 100) / 100 : null };
     await hb.holdMove(B.bid, q, rec).catch(() => null);   /* the guest's booking page shows the new room and time */
     await hb.kvSet('gapc', {}).catch(() => null); await hb.kvSet('gcal', null).catch(() => null);
     await hb.onSb(B.bid, 'change').catch(() => null);   /* guest TV messages follow */
@@ -2088,10 +2106,19 @@ async function mvPayStatus(env, mv) {
   }
   return { paid: false };
 }
+/* let go of a move's hold: its SimplyBook ONLINE HOLD notes, the kv entry and (when closing it unpaid) its payment link */
+async function mvHoldRelease(env, mv, status) {
+  const hb = book(env);
+  if (mv.holdNotes && mv.holdNotes.length && !mv.holdNotesDone) { await holdNotesDel(env, mv.holdNotes).catch(() => null); mv.holdNotesDone = Date.now(); }
+  await hb.mvHoldDrop(mv.ref).catch(() => null);
+  if (status) { for (const p of mv.prs || []) await cancelLink(envFor(env, p.env || 'live'), p.id); mv.status = status; }
+  await hb.kvSet('mv:' + mv.ref, mv);
+}
 async function mvComplete(env, ref, source) {
   const hb = book(env), mv = await hb.kvGet('mv:' + ref);
   if (!mv) return { error: 'unknown move' };
   if (mv.status === 'done') return { ok: true, already: true, moved: mv.result };
+  if (mv.status === 'expired' || mv.status === 'released') { const st0 = await mvPayStatus(env, mv).catch(() => ({})); if (!st0.paid) return { paid: false, closed: mv.status }; }   /* money that still arrived is honoured below */
   if (!(await hb.lock('mvdone:' + ref, 120e3))) return { busy: true };
   const st = await mvPayStatus(env, mv); if (!st.paid) { await hb.kvSet('mvdone:' + ref, 0); return { paid: false }; }
   const r = await mvExecute(env, mv, 'paid ' + (st.via || 'HitPay'));
@@ -2179,14 +2206,20 @@ function gLogic(C) {
      +$5…+$20 in $5 steps; Vale/Atlas same twin back-to-back +$10, other twin −$10 where still covered; "$5 OFF" a popular slot
      that fits snugly next to another booking (guests aren't told why). Early-bird bookings: always MOVE $15. */
   function feeOf(i, room, t, h) {
-    var o = O(), hh = h || o.h, d = demand(i, room, t, hh), up = !o.eb && price(room, i, t, hh) > o.paid + .004, base = up ? 5 : 15, name = up ? (ROOMS[room][1] === ROOMS[o.room][1] ? 'PEAK TIME' : 'UPGRADE') : 'MOVE';
+    /* owner, 14 Nov: ADD HOURS (same day, room and start, just longer) = no change fee, only the extra hours' price, and it
+       doesn't use up a move. $5 only for a real upgrade: a bigger kind of room (UPGRADE), or the same kind at a dearer rate
+       (PEAK TIME) – longer hours alone no longer make a move "$5 peak time"; a smaller room is never an upgrade. */
+    var o = O(), hh = h || o.h, d = demand(i, room, t, hh);
+    if (i === o.day && room === o.room && t === o.t && hh > o.h) return { base: 0, name: 'ADD HOURS', add: 0, total: 0, d: d, snug: false, addOnly: true };
+    var RK = { netflix: 1, deluxe: 2, vip: 3 }, rN = RK[ROOMS[room][1]], rO = RK[ROOMS[o.room][1]], dearer = price(room, i, t, 3) > price(o.room, o.day, o.t, 3) + .004;
+    var up = !o.eb && price(room, i, t, hh) > o.paid + .004 && (rN > rO || (rN === rO && dearer)), base = up ? 5 : 15, name = up ? (rN > rO ? 'UPGRADE' : 'PEAK TIME') : 'MOVE';
     var x = d.money - base, add = x <= 5 ? 0 : Math.min(20, Math.ceil((x - 5) / 5) * 5);
     if (d.load.same) add = Math.min(20, add + 10); else if (d.load.other && add && base + add - 10 >= d.money - 5) add -= 10;
     var sn = !o.eb && !d.load.same && add > 0 && snug(i, room, t, hh) && base + add - 5 >= d.money - 5; if (sn) add -= 5;
     return { base: base, name: name, add: add, total: base + add, d: d, snug: sn };
   }
   /* what the guest pays in change fee for this slot: free in the grace minutes; the 2nd move +$10 */
-  function fee(i, room, t, h) { if (C.grace) return 0; return feeOf(i, room, t, h).total + (C.moves === 1 ? 10 : 0); }
+  function fee(i, room, t, h) { if (C.grace) return 0; var F = feeOf(i, room, t, h); if (F.addOnly) return 0; return F.total + (C.moves === 1 ? 10 : 0); }
   function diff(i, room, t, h) { return Math.max(0, Math.round((price(room, i, t, h) - O().paid) * 100) / 100); }
   function total(i, room, t, h) { return Math.round((fee(i, room, t, h) + diff(i, room, t, h)) * 100) / 100; }
   return { ROOMS: ROOMS, OPEN: OPEN, LAST: LAST, CLOSE: CLOSE, BUF: BUF, LOCK: LOCK, O: O, peak: peak, rate: rate, price: price, leadH: leadH, stage: stage, taken: taken, fits: fits, why: why, starts: starts, locked: locked, dayFull: dayFull, pace: pace, sellP: sellP, feeOf: feeOf, fee: fee, diff: diff, total: total, snug: snug };
@@ -2237,6 +2270,7 @@ async function gCtx(env, ref, fresh) {
   const me = dry ? { k: 'b', id: 'dry', unit: q.unit, s: bS, e: bS + (q.hours * 60 + BUF) * 60e3 } : items.find((x) => x.k === 'b' && x.id === bid);
   if (!me || (dry && bS < now)) return { stop: bS < now ? 'past' : 'gone' };
   const mir = await hb.kvGet('mir:' + bid), skip = new Set(['b' + bid].concat(mir && mir.blk ? ['b' + mir.blk] : []));
+  const mvH = await hb.mvHoldsAll(); for (const x of mvH) if (x.bid === bid) for (const id of x.notes || []) skip.add('n' + id);   /* this guest's own unpaid move hold never blocks them */
   /* its +h (EXT) notes and the twin's copy of them: an extended booking is moved by staff (WhatsApp) */
   let ext = 0, end = me.e; for (;;) { const nx = items.find((x) => x.k === 'n' && x.ext && x.unit === me.unit && Math.abs(x.s - end) <= 5 * 60e3 && !skip.has('n' + x.id)); if (!nx) break; skip.add('n' + nx.id); ext += nx.e - nx.s; end = nx.e; }
   if (MIRROR[me.unit]) for (const x of items) if (x.k === 'n' && x.sys && x.unit === MIRROR[me.unit] && x.s >= me.s - 5 * 60e3 && x.e <= end + 5 * 60e3) skip.add('n' + x.id);
@@ -2260,7 +2294,8 @@ async function gCtx(env, ref, fresh) {
   for (const r of await hb.rows(`SELECT unit, s, e, date FROM holds WHERE date >= ? AND ((status = 'pending' AND exp > ?) OR (status = 'booking' AND created > ?))`, today, now, now - 3 * 3600e3)) {
     const dS = sgMs0(r.date + ' 00:00'); for (const u of [r.unit, MIRROR[r.unit]].filter(Boolean)) put(u, dS + r.s * 60e3, dS + (r.e + BUF) * 60e3, G_NAME(r.unit));
   }
-  const moves = (d.moves || []).filter((m) => m.guest), last = Math.max((d.done && d.done.at) || h.created || 0, ...moves.map((m) => m.t || 0));
+  for (const x of mvH) if (x.bid !== bid && x.exp > now) { const dS = sgMs0(x.date + ' 00:00'); for (const u of x.units) put(u, dS + x.s * 60e3, dS + (x.e + BUF) * 60e3, G_NAME(x.unit)); }   /* another guest is paying for a move into it */
+  const moves = (d.moves || []).filter((m) => m.guest && !m.addHours), last = Math.max((d.done && d.done.at) || h.created || 0, ...moves.map((m) => m.t || 0));
   const hours = Math.round((me.e - me.s - BUF * 60e3) / 3600e3), t = Math.round((me.s - (d0 + bDay * 86400e3)) / 60e3);
   const paid = d.paid != null ? +d.paid : +q.total;
   const C = { now: Math.floor((now - d0) / 60e3), days, cal, bk: { room: G_NAME(me.unit), day: Math.round((sgMs0(sgDay(me.s) + ' 00:00') - d0) / 86400e3), t: sgMins(me.s), h: hours, paid }, moves: moves.length, grace: now - last < 15 * 60e3 };
@@ -2275,6 +2310,7 @@ async function gApi(env, f, origin) {
     const mref = String(f.mv).replace(/[^A-Z0-9]/g, ''), mv = await hb.kvGet('mv:' + mref);
     if (!mv || mv.guestRef !== ref) return { error: 'Unknown move.' };
     if (mv.status === 'pending') await mvComplete(env, mref, 'guest page').catch(() => null);
+    if (f.back === '1') { const m1 = await hb.kvGet('mv:' + mref); if (m1 && m1.status === 'pending' && m1.guest && !(await mvPayStatus(env, m1).catch(() => ({ paid: true }))).paid) await mvHoldRelease(env, m1, 'released').catch(() => null); }   /* came back without paying → the slot is free again now */
     const m2 = await hb.kvGet('mv:' + mref); return { ok: true, status: m2.status, moved: m2.result || null, err: m2.err ? 'not moved' : '' };
   }
   const X = await gCtx(env, ref, f.act === 'pay');
@@ -2285,33 +2321,44 @@ async function gApi(env, f, origin) {
   /* PAY: the same rules and fee on fresh data */
   if (X.dry) return { error: 'This is a test booking that was never put in our calendar, so it can’t really be moved. Everything up to here works the same as a real booking.' };
   if (X.ext) return { error: 'This booking has extra time added – WhatsApp us to move it.' };
-  if (X.C.moves >= 2) return { error: 'You’ve used both moves for this booking – WhatsApp us.' };
   const L = gLogic(X.C), room = String(f.room || ''), i = X.C.days.findIndex((x) => x.date === f.date), t = +f.t, hrs = +f.h;
   if (i < 0 || !L.ROOMS[room]) return { error: 'Pick a day and room again.' };
   const w = L.why(i, room, t, hrs);
   if (w) return { error: { taken: 'That time was just taken – pick another.', soon: 'New times must be at least 3 hours from now.', closed: 'No rescheduling within 3 hours of your session.', sameday: 'Under 24 hours before: same-day changes only.', upgrade: 'Under 24 hours before: upgrades only.', lock: 'Under 3 days before: new times from 2:15pm only.', gap: 'That time isn’t available.', same: 'That’s your booking as it is.' }[w] || 'That time isn’t available.', why: w, C: X.C };
   const F = L.feeOf(i, room, t, hrs), fee = L.fee(i, room, t, hrs), diff = L.diff(i, room, t, hrs), total = L.total(i, room, t, hrs);
+  if (X.C.moves >= 2 && !F.addOnly) return { error: 'You’ve used both moves for this booking – WhatsApp us.' };
   if (f.total != null && Math.abs(+f.total - total) > 0.004) return { changed: true, total, fee, diff, C: X.C };
   const unit = +Object.keys(ROOMS).find((u) => G_NAME(u) === room), time = hhmm(t);
   /* the staff move's own fresh check (SimplyBook read now, its +h, the twin) */
   const Q = await mvQuote(env, { bid: X.bid, unit, date: f.date, time, hours: hrs });
   if (!Q.ok) return { error: 'That time was just taken – pick another.', C: X.C };
   const mref = 'MV' + crypto.randomUUID().replace(/-/g, '').slice(0, 8).toUpperCase();
-  const mv = { ref: mref, status: 'pending', t: Date.now(), from: Q.from, to: Q.to, level: F.name.toLowerCase(), feeWas: fee, fee, diff, total, add: F.add, snug: F.snug, cost: F.d.money, by: 'guest online', why: '', prs: [], guest: true, guestRef: ref, moveNo: X.C.moves + 1, grace: !!X.C.grace };
+  const mv = { ref: mref, status: 'pending', t: Date.now(), from: Q.from, to: Q.to, level: F.name.toLowerCase(), feeWas: fee, fee, diff, total, add: F.add, snug: F.snug, cost: F.d.money, by: 'guest online', why: '', prs: [], guest: true, guestRef: ref, addHours: !!F.addOnly, moveNo: F.addOnly ? 0 : X.C.moves + 1, grace: !!X.C.grace };
   if (total < 0.01) {
     await hb.kvSet('mv:' + mref, mv);
     const r = await mvExecute(env, mv, 'guest · nothing to pay');
     mv.status = r.ok ? 'done' : 'failed'; mv.result = r.moved || null; mv.err = r.error || ''; await hb.kvSet('mv:' + mref, mv);
     return r.ok ? { ok: true, done: true, mv: mref } : { error: 'That time was just taken – pick another.', C: X.C };
   }
+  /* HOLD the new slot while they pay – the booking page's rules (owner, 14 Nov): 10 minutes, the room and its twin, a SimplyBook
+     ONLINE HOLD note so staff see it, the payment page ends with the hold. A new try by the same booking drops its old hold. */
+  const hs = t, he = t + hrs * 60, exp = Date.now() + HOLD_SEC * 1000;
+  const H = await hb.mvHoldAdd({ ref: mref, bid: X.bid, date: f.date, unit, units: [unit, MIRROR[unit]].filter(Boolean), s: hs, e: he, exp, notes: [] });
+  for (const o of H.old || []) { const om = await hb.kvGet('mv:' + o.ref); if (om && om.status === 'pending' && !(await mvPayStatus(env, om).catch(() => ({}))).paid) await mvHoldRelease(env, om, 'released').catch(() => null); }
+  if (!H.ok) return { error: 'Someone is paying for that time right now – pick another, or try again in 10 minutes.', C: X.C };
+  mv.hold = { exp }; await hb.kvSet('mv:' + mref, mv);
+  mv.holdNotes = await holdNotesMake(env, mref, { date: f.date, time, hours: hrs, unit, room }, X.d.pax || 0).catch(() => []);
+  if (mv.holdNotes.length) await hb.mvHoldNotes(mref, mv.holdNotes);
+  await hb.kvSet('mv:' + mref, mv);
   const when = new Date(f.date + 'T00:00:00Z').toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
   const e = envFor(env, X.d.pay === 'test' ? 'test' : 'live');
   const form = { amount: total.toFixed(2), currency: 'SGD', purpose: `Round2 reschedule → ${room === 'Maximillion' ? 'Max' : room} · ${when} ${clock12(sgMs0(f.date + ' ' + time))} (change fee $${fee}${diff ? ' + $' + diff.toFixed(2) + ' price difference' : ''})`,
-    reference_number: mref + 'G', webhook: `${origin}/move/hitpay`, redirect_url: `${PUBLIC_BOOK}/move?ref=${ref}&mv=${mref}`, name: X.d.name || 'Round2 guest' };
+    reference_number: mref + 'G', webhook: `${origin}/move/hitpay`, redirect_url: `${PUBLIC_BOOK}/move?ref=${ref}&mv=${mref}`, name: X.d.name || 'Round2 guest',
+    expiry_date: new Date(exp + PAGE_GRACE + 8 * 3600e3).toISOString().slice(0, 19).replace('T', ' ') };   /* the payment page ends with the hold */
   if (X.d.email && /@/.test(X.d.email)) form.email = X.d.email;
-  const pr = await hitpay(e, 'POST', '/payment-requests', form);
+  let pr; try { pr = await hitpay(e, 'POST', '/payment-requests', form); } catch (err) { await mvHoldRelease(env, mv, 'released').catch(() => null); throw err; }
   mv.prs.push({ id: pr.id, kind: 'online', env: X.d.pay === 'test' ? 'test' : 'live' }); await hb.kvSet('mv:' + mref, mv);
-  return { ok: true, url: pr.url, mv: mref, total };
+  return { ok: true, url: pr.url, mv: mref, total, holdUntil: exp };
 }
 /* ===== Rescheduling beta: stats and trip-wires (owner, 12 Nov – the demo's owner view, live). Last 28 days of moves.
    Red → one push alert a day per trip-wire ("we review the rules"). Moves before 12 Nov have no lost-sale estimate. */
@@ -2414,7 +2461,11 @@ async function mvApi(env, hb, f, origin) {
   if (act === 'mvselftest') {   /* System check: the kv lock really locks (13 Nov: a same-named method had broken it) + every Vale/Atlas booking has its twin block */
     const k = 'selftest:' + crypto.randomUUID().slice(0, 8), a1 = await hb.lock(k, 30e3), a2 = await hb.lock(k, 30e3); await hb.kvSet(k, 0);
     const mir = await mirAdopt(env, false).catch((e) => ({ error: String(e.message || e) }));
-    return { ok: true, lockFirst: a1, lockSecond: a2, mirMissing: (mir.missing || []).map((x) => x.room + ' ' + x.when + ' ' + x.name), mirErr: mir.error || '', pending: (await hb.mvRecent(Date.now() - 48 * 3600e3)).filter((m) => m.status !== 'done').map((m) => m.ref + ' ' + m.status) };
+    /* a move hold really blocks the slot (and a second mover), and lets go */
+    const hd = addDays(sgDay(Date.now()), 300), hh = { ref: 'MVSELFTEST', bid: 'selftest', date: hd, unit: 9, units: [9], s: 900, e: 1080, exp: Date.now() + 60e3, notes: [] };
+    const h1 = await hb.mvHoldAdd(hh), h2 = await hb.clash(hd, [9], 960, 1140), h3 = await hb.mvHoldAdd(Object.assign({}, hh, { ref: 'MVSELFTEST2', bid: 'selftest2' }));
+    await hb.mvHoldDrop('MVSELFTEST'); await hb.mvHoldDrop('MVSELFTEST2'); const h4 = await hb.clash(hd, [9], 960, 1140);
+    return { ok: true, holdWorks: h1.ok === true && h2 === true && h3.ok === false && h4 === false, lockFirst: a1, lockSecond: a2, mirMissing: (mir.missing || []).map((x) => x.room + ' ' + x.when + ' ' + x.name), mirErr: mir.error || '', pending: (await hb.mvRecent(Date.now() - 48 * 3600e3)).filter((m) => !['done', 'expired', 'released'].includes(m.status) && Date.now() - m.t > 20 * 60e3).map((m) => m.ref + ' ' + m.status) };
   }
   if (act === 'mvfinish') {   /* staff: finish a paid move that got stuck, step by step (owner, 13 Nov 2am) */
     const ref = String(f.ref || '').replace(/[^A-Z0-9]/g, ''), mv = await hb.kvGet('mv:' + ref); if (!mv) return { error: 'Unknown move.' };
@@ -3968,6 +4019,8 @@ const HANDLER = {
     /* paid moves that never ran (HitPay's message missed and the guest closed the page): finish them, or alert staff */
     go((async () => { for (const m of await hb.mvRecent(Date.now() - 48 * 3600e3)) if (m.status === 'pending' && Date.now() - m.t > 60e3) {
       const r = await mvComplete(env, m.ref, 'sweep').catch((e) => ({ error: String(e.message || e) }));
+      { const m1 = await hb.kvGet('mv:' + m.ref), over = m1 && m1.guest && m1.status === 'pending' && Date.now() > (m1.hold ? m1.hold.exp + HOLD_CAP_EXTRA : m1.t + 30 * 60e3);
+        if (over && !(await mvPayStatus(env, m1).catch(() => ({ paid: true }))).paid) { await mvHoldRelease(env, m1, 'expired').catch(() => null); continue; } }   /* unpaid and its 10 minutes are over: closed, slot free */
       /* paid but still not moved after 15 min (any reason) → a Round2 alert, once */
       const m2 = await hb.kvGet('mv:' + m.ref);
       if (m2 && m2.status === 'pending' && Date.now() - m.t > 15 * 60e3 && (await mvPayStatus(env, m2).catch(() => ({}))).paid && !(await hb.kvGet('mvstuck:' + m.ref))) {

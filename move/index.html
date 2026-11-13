@@ -114,7 +114,7 @@ table{width:100%;border-collapse:collapse}td{padding:7px 0;border-bottom:1px das
 <div id="sumT"></div>
 <div class="card"><table id="sum" class="bd"></table>
 <label class="chk"><input type="checkbox" id="agree"> I understand this booking still can’t be cancelled or refunded, and this uses move <span id="mvn"></span> of 2.</label></div>
-<button class="btn" id="pay">Pay</button><p class="fine" id="payerr" style="color:#ff9b9b"></p><p class="fine">You’ll pay on HitPay’s secure page (PayNow, card, Apple Pay…). Nothing changes until payment goes through – if the time is taken meanwhile, our team refunds you.</p></section>
+<button class="btn" id="pay">Pay</button><p class="fine" id="payerr" style="color:#ff9b9b"></p><p class="fine">You’ll pay on HitPay’s secure page (PayNow, card, Apple Pay…). We hold the new time for 10 minutes while you pay. Nothing changes until payment goes through, and your current slot stays yours.</p></section>
 
 <section id="s-done" class="hidden"><div class="px kick">SAVE FILE UPDATED</div><h1>YOU’RE MOVED!</h1>
 <div class="ticket" id="d-tk"><p class="room" id="d-room"></p><dl><dt>Date</dt><dd id="d-date"></dd><dt>Time</dt><dd class="big" id="d-time"></dd></dl></div>
@@ -177,7 +177,11 @@ function boot(){go('load');load().then(function(j){if(j.stop){var s=STOP[j.stop]
  if(/[?&]new=1/.test(location.search)){$('h-k').textContent='SAVE FILE CREATED';$('h-t').textContent='YOU’RE BOOKED!'}
  var tv=INFO.tv;$('a-tv').href=tv?'https://cue.round2.sg/'+tv:'/done/message?ref='+REF;$('a-tv').target=tv?'_top':'_self';$('a-tv-sub').textContent=tv?(INFO.msg&&INFO.msg.title?'“'+INFO.msg.title+'”'+(INFO.msg.after?' · '+INFO.msg.after+' min in':'')+' · edit':'Write or edit your message'):'Birthday or celebration on the big screen';
  $('a-cal').onclick=function(e){e.preventDefault();ics()};$('a-wa').href='https://wa.me/6591625767?text='+encodeURIComponent('Hi Round2, about my booking '+REF+' ('+(INFO.name||'')+')');
- if(MV){var m=MV;MV='';return poll(m,0)}state()}).catch(function(){stop('NO CONNECTION','We couldn’t load your booking. Check your connection and try again.')})}
+ if(MV){var m=MV;MV='';try{sessionStorage.removeItem('r2mv')}catch(e){}return poll(m,0)}
+ /* came back from HitPay without paying: let the held time go now (a payment that did go through is finished instead) */
+ var pm=null;try{pm=sessionStorage.getItem('r2mv');sessionStorage.removeItem('r2mv')}catch(e){}
+ if(pm)fetch('/move/api?ref='+REF+'&mv='+pm+'&back=1').then(function(r){return r.json()}).then(function(k){if(k&&k.status==='done')poll(pm,0);else refresh('back')}).catch(function(){});
+ state()}).catch(function(){stop('NO CONNECTION','We couldn’t load your booking. Check your connection and try again.')})}
 function poll(m,n){go('load');$('ld-h').textContent='CONFIRMING YOUR MOVE…';$('ld-p').textContent='Your payment came through. We’re moving your booking – this takes a few seconds.';
  fetch('/move/api?ref='+REF+'&mv='+m).then(function(r){return r.json()}).then(function(j){
   if(j.status==='done'){try{history.replaceState(null,'','?ref='+REF)}catch(e){}return load(true).then(function(k){if(k.C)use(k);doneScreen()})}
@@ -194,7 +198,7 @@ function state(){var o=O(),st=stage();go('home');
  var L=leadH(),c='';if(S.grace){c+='<span class="chip ok" id="gchip">'+graceTxt()+'</span>'}c+='<span class="chip '+(S.moves>=2?'no':'')+'">Moves used '+S.moves+' / 2</span>';
  c+='<span class="chip '+(st==='closed'?'warn':'')+'">Starts in '+(L>=48?Math.round(L/24)+' days':Math.round(L)+'h')+'</span>';if(S.wa)c+='<span class="chip">Booked with our team</span>';$('chips').innerHTML=c;
  var R={early:['g','3+ DAYS','Any free slot, any day'],late:['y','UNDER 3 DAYS','Any day, but start 2:15pm or later'],day:['o','UNDER 24 HRS','Same day only: later time, bigger room or more hours'],closed:['r','UNDER 3 HRS','No rescheduling allowed']}[st];
- $('myrule').innerHTML='<span class="lead">Your session starts in '+(L>=48?Math.round(L/24)+' days':Math.round(L)+' hours')+', so right now:</span><span class="w '+R[0]+'">'+R[1]+'</span><span>'+R[2]+'</span>'+(st==='closed'?'':'<span class="sub">Change fee '+(S.grace?'<b>free</b> (within 15 min)':'<b>$5 for a bigger room or peak time, $15 otherwise</b>, plus any price difference. Each slot shows the total')+' · new time at least 3 hours from now</span>');
+ $('myrule').innerHTML='<span class="lead">Your session starts in '+(L>=48?Math.round(L/24)+' days':Math.round(L)+' hours')+', so right now:</span><span class="w '+R[0]+'">'+R[1]+'</span><span>'+R[2]+'</span>'+(st==='closed'?'':'<span class="sub">Change fee '+(S.grace?'<b>free</b> (within 15 min)':'<b>$5 for a bigger room or peak time, $15 otherwise</b>, plus any price difference. Each slot shows the total')+' · new time at least 3 hours from now · <b>just adding hours? No fee</b>, only the extra hours</span>');
  var b=$('a-move'),sub=$('a-move-sub');b.disabled=false;b.onclick=function(){sel={day:o.day,room:o.room,t:o.t,h:o.h,wk:null};go('pick');draw()};
  if(st==='closed'){b.disabled=true;sub.textContent='No rescheduling within 3 hours of your start'}
  else if(S.moves>=2){b.disabled=true;sub.textContent='No moves left (2 of 2 used)'}
@@ -238,14 +242,14 @@ function draw(){var o=O(),st=stage();setTimeout(deals,0);
  $('hrnote').innerHTML=sel.h<o.h&&!isMine?'<div class="note" style="border-color:#F2C21B;background:rgba(242,194,27,.12);color:#fff"><b>⚠ Only '+sel.h+' hours here</b> – your booking is <b>'+o.h+' hours</b>. Moving here, you’d lose '+(o.h-sel.h)+(o.h-sel.h>1?' hours':' hour')+' and it isn’t refunded. Pick a time without “max” to keep all '+o.h+' hours.</div>':(sel.h>o.h&&!isMine?'<div class="note">Longer than your '+o.h+'h booking: the extra time is in the price.</div>':'');
  /* owner, 13 Nov: a guest paid $15 to start later only because he thought his slot would be released – it isn't */
  if(!isMine&&sel.day==o.day&&sel.room==o.room&&sel.t>o.t&&sel.t+sel.h*60<=o.t+o.h*60)$('hrnote').innerHTML+='<div class="note" style="border-color:#4DB848"><b>Just arriving later?</b> You don’t need to move: your room stays yours for your whole booking – we’ll message you about 30 minutes in to check you’re still coming. It still ends at '+hm(o.t+o.h*60)+'.</div>';
- $('feeb').className='feeb'+(S.grace?' free':'');$('feeb').textContent=S.grace?'FREE CHANGE':'MOVE '+(S.moves+1)+' OF 2';
+ $('feeb').className='feeb'+(S.grace?' free':'');$('feeb').textContent=(!isMine&&sel.t!=null&&feeOf(sel.day,sel.room,sel.t,sel.h).addOnly)?'ADD HOURS · NO MOVE USED':S.grace?'FREE CHANGE':'MOVE '+(S.moves+1)+' OF 2';
  if(isMine){$('live').innerHTML='<div class="note">This is your current slot. Pick a different day, room, time or length.</div>';$('toSum').disabled=true;$('toSum').style.opacity=.4}else{$('live').innerHTML=tickets(true);$('toSum').disabled=sel.t==null;$('toSum').style.opacity=1}}
 /* does the guest's own length fit at t (this day/room)? the longest that does */
 function fitsLen(t){var o=O();return !why(sel.day,sel.room,t,o.h)||(sel.day==o.day&&sel.room==o.room&&t==o.t)}
 function maxLen(ts){var m=0;ts.forEach(function(t){[3,4,5,6].forEach(function(h){if(!why(sel.day,sel.room,t,h)&&h>m)m=h})});return m}
 function pickH(hr){var st=starts(sel.day,sel.room).filter(function(t){return Math.floor(t/60)===hr}),ok=st.filter(fitsLen);if(st.length)sel.t=sel.want=st.indexOf(hr*60)>=0&&fitsLen(hr*60)?hr*60:(ok[0]!=null?ok[0]:st[0]);draw()}
 function calc(){var o=O(),T0=ROOMS[o.room][1],T1=ROOMS[sel.room][1],r0=rate(o.day,o.t),r1=rate(sel.day,sel.t),a=o.paid,b=price(sel.room,o.day,o.t,o.h),c=price(sel.room,sel.day,sel.t,o.h),dd=price(sel.room,sel.day,sel.t,sel.h),L=[],F=fee(sel.t),st=stage();
- var FF=feeOf(sel.day,sel.room,sel.t,sel.h);if(!F)L.push(['Change fee','free · within 15 min',0]);else{L.push(['Change fee · '+FF.name.toLowerCase(),(FF.name==='UPGRADE'?'moving to a bigger room':FF.name==='PEAK TIME'?'moving to a peak day or time':'moving your booking')+(S.moves?' · 2nd move +$10':''),FF.base+(S.moves===1?10:0)]);if(FF.add)L.push(['Popular time add-on','this slot is likely to be booked'+(FF.snug?' · $5 off':'')+(FF.d.why?' · '+FF.d.why:''),FF.add]);}
+ var FF=feeOf(sel.day,sel.room,sel.t,sel.h);if(FF.addOnly)L.push(['Change fee','none · you’re only adding hours (doesn’t use a move)',0]);else if(!F)L.push(['Change fee','free · within 15 min',0]);else{L.push(['Change fee · '+FF.name.toLowerCase(),(FF.name==='UPGRADE'?'moving to a bigger room':FF.name==='PEAK TIME'?'moving to a peak day or time':'moving your booking')+(S.moves?' · 2nd move +$10':''),FF.base+(S.moves===1?10:0)]);if(FF.add)L.push(['Popular time add-on','this slot is likely to be booked'+(FF.snug?' · $5 off':'')+(FF.d.why?' · '+FF.d.why:''),FF.add]);}
  if(T0!==T1)L.push([b<a?'Smaller room':TYPE[T1].replace(' room','')+' room',TYPE[T0]+' → '+TYPE[T1]+(b<a?' · not refunded':''),b-a]);
  if(r0!==r1||Math.abs(c-b)>0.004)L.push([c<b?'Cheaper time':o.eb?'Full-price time':'Peak '+(r1==='peak'?'day':'time'),rateName(r0)+' → '+rateName(r1)+(c<b?' · not refunded':''),c-b]);
  if(sel.h!==o.h)L.push([sel.h<o.h?'Shorter':'Extra hours',o.h+'h → '+sel.h+'h'+(sel.h<o.h?' · not refunded':''),dd-c]);
@@ -265,7 +269,7 @@ $('pay').onclick=function(){if(!$('agree').checked){$('payerr').textContent='Tic
   if(j.changed){if(j.C)use({C:j.C,info:INFO});$('toSum').onclick();$('payerr').textContent='The price just changed to '+money(j.total)+' (the calendar moved). Check it and tap again.';return}
   if(j.error){if(j.C)use({C:j.C,info:INFO});$('payerr').textContent=j.error;b.textContent='Try again';return}
   if(j.done)return poll(j.mv,0);
-  if(j.url){b.textContent='Opening HitPay…';$('payerr').innerHTML='Nothing happening? <a href="'+j.url+'" target="_top" style="color:#F2C21B">Tap here to pay</a>';try{window.top.location.href=j.url}catch(e){location.href=j.url}}}).catch(function(){b.disabled=false;b.textContent='Try again';$('payerr').textContent='No connection – try again.'})};
+  if(j.url){try{sessionStorage.setItem('r2mv',j.mv)}catch(e){}b.textContent='Opening HitPay…';$('payerr').innerHTML='Nothing happening? <a href="'+j.url+'" target="_top" style="color:#F2C21B">Tap here to pay</a>';try{window.top.location.href=j.url}catch(e){location.href=j.url}}}).catch(function(){b.disabled=false;b.textContent='Try again';$('payerr').textContent='No connection – try again.'})};
 /* booking-page pixel icons (slots page): tiers sofa / gem / crown; each character's own icon */
 var PIX={sofa:['............','............','..########..','.#........#.','.#........#.','##........##','#.########.#','#..........#','############','.#........#.','.#........#.','............'],
  gem:['............','..########..','.#..#..#..#.','#..#....#..#','############','.#..#..#..#.','..#..##..#..','...#.##.#...','....#..#....','.....##.....','............','............'],
