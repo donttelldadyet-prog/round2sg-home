@@ -1,11 +1,13 @@
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
 
-> ## 14 Nov 2026, 6am – second chat (TVs / control centre): review follow-ups, engine c9958b6 DEPLOYED (27 bindings, cron */5)
+> ## 14 Nov 2026, 6am – second chat (TVs / control centre): review follow-ups, engine 19aad40 DEPLOYED (27 bindings, cron */5)
 > - **A moved booking's noise block follows at once** (`mvExecute` → `noiseSync` old day + new day).
 > - **Phone alerts late / in threes:** the delivery log (KV `diag:push`) showed late alerts appearing within 2 s of a re-send, so
 >   the first re-send now goes after ~50 s (DO kv `pushchk` on the hold timer's alarm, `pushChk`, `pushRetry` – then ~4 and ~9 min,
 >   5-min cron as backstop); `Topic` header so a newer copy replaces an undelivered one; VAPID pass reused 2 h (KV `vapid:<service>`,
->   Apple's once-an-hour rule). Full write-up + the Telegram plan (prepared, OFF): round2-tv-launcher docs/staff-alerts.md.
+>   Apple's once-an-hour rule). Full write-up: round2-tv-launcher docs/staff-alerts.md.
+> - **Telegram = the Madd Pizza food workflow only (owner's rule).** Nothing about bookings goes to Telegram; `staffAlert` never
+>   sends since engine 19aad40 (it never did – `STAFF_CHAT` was never set). Booking alerts = staff phones only.
 > - **Guest links:** "Fix this link's room or start" (was "Change booking time or room" – it never moved the booking); the guest's
 >   message page now keeps and shows a pop-up time set by staff (`retimed`).
 > - My deploys patch the live script through the Cloudflare API (hash of live checked before, hash of result checked after,
@@ -322,7 +324,7 @@ To confirm in to-do #1 (real test booking): SimplyBook accepts the longer end ti
 - Everywhere: online bookings, SimplyBook bookings (guest-count field), control-centre sessions ("5 pax" in the note text).
   A 4+ group paying online also holds the noise room with its ONLINE HOLD note.
 - **Other room already booked → the booking still goes ahead (owner's choice) and staff get an alert** (control-centre phone
-  alert; the Telegram staff chat is prepared but OFF – `STAFF_CHAT` isn't set, see round2-tv-launcher docs/staff-alerts.md), once per clash. Cleaning-time overlap alone doesn't count. ZZTEST sessions never alert.
+  alert only – nothing about bookings ever goes to Telegram, owner's rule 14 Nov), once per clash. Cleaning-time overlap alone doesn't count. ZZTEST sessions never alert.
 - Engine `noiseSync`: runs on every SimplyBook callback (and again 3–5 min later – a new booking's guest count is saved a
   moment after the callback), straight after an online booking, after In session / Add a session actions, **straight after a
   move (`mvExecute`, 14 Nov)**, every 10 min (tonight + tomorrow), hourly (week ahead) and one day per half hour for 8–91 days
