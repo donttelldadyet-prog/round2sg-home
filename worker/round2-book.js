@@ -3681,23 +3681,30 @@ async function ps4Games(env) {
 }
 /* Staff commands for a PS4 (13 Nov, owner: "one-tap clean-up"). The helper asks /ps4/cmd every minute; one command waits per
    PS4 in kv ps4cmd:<id> { cid, do, at, by, state: sent → taken → done | failed | refused | expired, res }. Clean-up deletes the
-   stuck update downloads (never PS Vue's) and guests' screenshots/clips – only when the room (and its twin) has no session now
-   or within 15 minutes, checked when staff press the button AND again when the PS4 picks it up; the PS4 itself also refuses
+   stuck update downloads (never PS Vue's) and guests' screenshots/clips – only when the room has no guest session now (its own guests – not
+   the twin's SYSTEM BLOCK) or within 15 minutes, checked when staff press the button AND again when the PS4 picks it up; the PS4 itself also refuses
    while a game is open. */
 const PS4_GAP = 15;
+/* a real guest session in this room (13 Nov, owner): only the room's OWN guests count. Vale and Atlas are separate rooms (Atlas
+   is upstairs) – their twin SYSTEM BLOCK *bookings* (the mirror blocks the other room's sale) are not guests, nor noise blocks /
+   other SYSTEM BLOCK notes, nor long "room blocked" notes (Kaeden renovation). Used by PS4 jobs and the TVs' Update now. */
+const realGuests = (S, unit) => S.unit === unit && !S.sys && !(S.e0 - S.s > 12 * 3600e3);
+async function roomBusy(env, unit, gap) {
+  const now = Date.now(), night = sgDay(now - SHADOW_TILL * 60e3);
+  for (const d of [night, addDays(night, 1)]) for (const S of (await sessDay(env, d)).sessions)
+    if (realGuests(S, unit) && S.s - gap * 60e3 <= now && now < S.guestEnd) return S;
+  return null;
+}
 async function ps4Busy(env, room, gap = PS4_GAP) {
   const unit = +(Object.keys(GM_ROOM).find((u) => GM_ROOM[u] === room) || 0), now = Date.now();
   if (!unit) return null;
-  const night = sgDay(now - SHADOW_TILL * 60e3), tw = MIRROR[unit];
-  for (const d of [night, addDays(night, 1)]) for (const S of (await sessDay(env, d)).sessions)
-    if ((S.unit === unit || S.unit === tw) && S.s - gap * 60e3 <= now && now < S.guestEnd)
-      return (S.unit !== unit ? ROOMS[S.unit][0] + ' (its twin) ' : '') + 'has a session ' + (S.s > now ? 'starting at ' : 'until ') + clock12(S.s > now ? S.s : S.guestEnd);
-  return null;
+  const S = await roomBusy(env, unit, gap);
+  return S ? 'has a session ' + (S.s > now ? 'starting at ' : 'until ') + clock12(S.s > now ? S.s : S.guestEnd) : null;
 }
 /* Helper updates (13 Nov). The newest helper lives on round2-tv-launcher branch ps4-release (only round2d.elf + round2d.json
    { v, sha256, size }, replaced for each version; the TV apps never look there). The PS4s can only reach Round2, so the engine
    passes the file on (/ps4/app) after checking its SHA-256. When: by itself in quiet time (helper with the starter, no game
-   open, no session in the room or its twin within 60 min, not a version that was rolled back, one try per version per 6 h;
+   open, no guest session in the room within 60 min, not a version that was rolled back, one try per version per 6 h;
    switch off with kv ps4auto=false), or "Update now" (staff, same rules as Clean up: 10 min). */
 const PS4_REL = 'https://raw.githubusercontent.com/donttelldadyet-prog/round2-tv-launcher/ps4-release/';
 const ps4Ver = (v) => String(v || '0').split('.').map((x) => +x || 0);
@@ -3829,11 +3836,8 @@ async function tvUpdate(env, f) {
   if (!hb || !hb.t || now - hb.t > 12 * 60e3) return { error: 'The TV is off – switch it on first.', off: true };
   if (hb.pw && hb.pw !== 'Active') return { error: 'The TV is asleep (screen off, Quick Start+) – switch it on first.', off: true, asleep: true };   /* owner, 3 Nov */
   if (hb.ru === false) return { error: 'Locked on the TV (Staff tools › Updates from the control centre: not allowed).', locked: true };
-  const night = sgDay(now - SHADOW_TILL * 60e3), tw = MIRROR[unit], busy = [];
-  for (const d of [night, addDays(night, 1)]) for (const S of (await sessDay(env, d)).sessions) {
-    if ((S.unit === unit || S.unit === tw) && S.s - 10 * 60e3 <= now && now < S.guestEnd) busy.push(S);
-  }
-  if (busy.length) { const S = busy[0]; return { error: (S.unit !== unit ? ROOMS[S.unit][0] + ' (its twin) ' : '') + 'has a session ' + (S.s > now ? 'starting at ' : 'until ') + clock12(S.s > now ? S.s : S.guestEnd) + ' – try after that.', busy: true }; }
+  const S = await roomBusy(env, unit, 10);   /* the room's own guests only (13 Nov) – not the twin's SYSTEM BLOCK */
+  if (S) return { error: 'has a session ' + (S.s > now ? 'starting at ' : 'until ') + clock12(S.s > now ? S.s : S.guestEnd) + ' – try after that.', busy: true };
   const cmd = { id: 'u' + now.toString(36), do: 'update', at: now, by: String(f.by || 'control centre').slice(0, 40) };
   const ok = await fetch(base + '/cmd.json', { method: 'PUT', body: JSON.stringify(cmd) }).then((r) => r.ok).catch(() => false);
   if (!ok) return { error: 'Couldn’t reach the TV database.' };
