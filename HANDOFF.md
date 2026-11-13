@@ -84,6 +84,15 @@
 > **RULE (owner, 14 Nov): never touch Gran Turismo Sport's save on Max (CUSA02168)** – fully unlocked, only on Max, the
 >   racing-sim USP. No open/backup/restore/overwrite/delete on any profile; never remove the profile holding it. Helper 1.1.3
 >   refuses every save job for it (tested with a dummy profile – "protected game - never touched").
+>   Updated 1:50am (owner): the main profile's GT save may be READ (backed up / copied elsewhere) but never written or deleted.
+> **14 Nov 2:15am – PS4 save backup + restore working.** Engine 1ec01c9 (deployed, 27 bindings incl. R2 `SAVES` →
+>   round2-saves; keep_bindings must now include "r2_bucket"): `/ps4/sput`, `/ps4/sget`, staff `ps4saves`. Helper 1.1.7 (Max;
+>   others in quiet time): `ps4look` paths `/_sback.<user>.<title>.<save>` and `/_srest.<user>.<title>.<save>.<backup>` (into
+>   an existing save of the same game, its own sce_sys kept, each file staged on /data/round2/stage first). Max's unlocked GT
+>   Sport save is backed up; a copy was restored into User4's GT save (User4's own GT progress backed up first). System check
+>   after: 38 ok / 0 bad (new step "PS4 helpers + game-save storage"). Owner's daily plan: prepare the day's members' saves on
+>   each PS4 from SimplyBook ahead of time (works offline), live fetch at login as fallback. Full log: project doc
+>   ps4-game-saves.md.
 > **Vale PS4 (owner):** sometimes kernel-panics while jailbreaking (11.00) – before Round2's helper starts (AutoRun runs after
 >   the jailbreak). Noted in the PS4 plan; watch whether it gets worse once more payloads run.
 
