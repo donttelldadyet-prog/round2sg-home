@@ -3780,6 +3780,24 @@ async function ps4Done(env, req) {   /* the helper: how the command went */
   if ((c.do === 'look' || c.do === 'prof') && r.list && typeof r.list === 'object') await hb.kvSet('ps4look:' + id, { at: Date.now(), list: Object.fromEntries(Object.entries(r.list).slice(0, 400).map(([k, v]) => [String(k).slice(0, 200), String(v).slice(0, 40)])) });
   return J({ ok: true });
 }
+/* PS4 game saves (helper 1.1.4+, owner 14 Nov): the helper uploads the files of an opened save, 8 MB pieces, into Cloudflare
+   storage (bucket round2-saves, binding SAVES) under saves/<console>/<user>/<title>/<save>/<stamp>/ (f/<file>~<n> + manifest.txt),
+   and downloads them again to restore. Header x-r2-ps4 = PS4_KEY. */
+function ps4SaveKey(k) { k = String(k || ''); return k.length > 0 && k.length < 600 && !k.includes('..') && !k.startsWith('/') && /^[\w.@~ +=,()\[\]{}'&!$#%-]+(\/[\w.@~ +=,()\[\]{}'&!$#%-]+)*$/.test(k) ? k : ''; }
+async function ps4SPut(env, req, u) {
+  if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
+  if (!env.SAVES) return J({ error: 'no storage' }, 503);
+  const k = ps4SaveKey(u.searchParams.get('k')); if (!k) return J({ error: 'bad key' }, 400);
+  const b = await req.arrayBuffer(); if (b.byteLength > 20e6) return J({ error: 'too big' }, 413);
+  await env.SAVES.put('saves/' + k, b); return J({ ok: true, n: b.byteLength });
+}
+async function ps4SGet(env, req, u) {
+  if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
+  if (!env.SAVES) return J({ error: 'no storage' }, 503);
+  const k = ps4SaveKey(u.searchParams.get('k')); if (!k) return J({ error: 'bad key' }, 400);
+  const o = await env.SAVES.get('saves/' + k); if (!o) return J({ error: 'not found' }, 404);
+  return new Response(o.body, { headers: { 'content-type': 'application/octet-stream', 'content-length': String(o.size) } });
+}
 async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4map (id, room or '' to clear) · ps4discs (json list) · ps4names (id, name; '-' hides) */
   const act = f.action;
   if (act === 'ps4map') {
@@ -3806,6 +3824,13 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
     const paths = String(f.paths || '').replace(/[^\w./|;-]/g, '').slice(0, 300);   /* "/dir|depth;/dir2|depth" (helper 1.0.6+) */
     const c = { cid: 'l' + now.toString(36), do: 'look', p: paths, at: now, by: String(f.by || 'staff').slice(0, 40), state: 'sent' };
     await hb.kvSet('ps4cmd:' + id, c); return { ok: true, cmd: c };
+  }
+  if (act === 'ps4saves') {   /* staff: what's in the game-save storage (prefix = console/user/title/...) – sizes only */
+    if (!env.SAVES) return { error: 'no storage' };
+    const pre = 'saves/' + String(f.p || '').replace(/[^\w./@~-]/g, '').replace(/\.\./g, ''), out = []; let cur, tot = 0;
+    for (let i = 0; i < 10; i++) { const L = await env.SAVES.list({ prefix: pre, cursor: cur, limit: 1000 }); for (const o of L.objects) { tot += o.size; if (out.length < 300) out.push([o.key.slice(6), o.size]); } if (!L.truncated) break; cur = L.cursor; }
+    const man = String(f.m || '') ? await env.SAVES.get('saves/' + String(f.m).replace(/\.\./g, '')) : null;
+    return { ok: true, n: out.length, bytes: tot, list: out, manifest: man ? (await man.text()).slice(0, 8000) : undefined };
   }
   if (act === 'ps4rel') return { ok: true, rel: await ps4Latest(env, true), err: await hb.kvGet('ps4relErr') };   /* staff: which helper version is out (fresh look) */
   if (act === 'ps4prof') {   /* profile write test (helper 1.1.0+, owner 13 Nov: spare profiles only): op name|acct|unacct, u = user id hex */
@@ -4130,7 +4155,9 @@ const HANDLER = {
       if (u.pathname === '/ps4/games') return await ps4Games(env);
       if (u.pathname === '/ps4/cmd' && req.method === 'POST') return await ps4Cmd(env, req);   /* helper: waiting command? (every minute) */
       if (u.pathname === '/ps4/done' && req.method === 'POST') return await ps4Done(env, req);
-      if (u.pathname === '/ps4/app' && req.method === 'POST') return await ps4App(env, req);   /* helper: download the newest version */   /* helper: command result */
+      if (u.pathname === '/ps4/app' && req.method === 'POST') return await ps4App(env, req);
+      if (u.pathname === '/ps4/sput' && req.method === 'POST') return await ps4SPut(env, req, u);   /* helper: one piece of a save backup (1.1.4) */
+      if (u.pathname === '/ps4/sget' && req.method === 'GET') return await ps4SGet(env, req, u);   /* helper: a piece back, to restore */   /* helper: download the newest version */   /* helper: command result */
       if (u.pathname === '/gm' && req.method === 'POST') return await gm(env, req);
       if (u.pathname === '/gh' && req.method === 'POST') return await ghProxy(env, req);
       if (u.pathname.startsWith('/push/')) return await pushApi(env, req, u.pathname);
