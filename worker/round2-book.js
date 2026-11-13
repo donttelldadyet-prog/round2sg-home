@@ -3694,27 +3694,21 @@ async function ps4Busy(env, room, gap = PS4_GAP) {
       return (S.unit !== unit ? ROOMS[S.unit][0] + ' (its twin) ' : '') + 'has a session ' + (S.s > now ? 'starting at ' : 'until ') + clock12(S.s > now ? S.s : S.guestEnd);
   return null;
 }
-/* Helper updates (13 Nov). New versions are GitHub pre-releases tagged ps4-vX.Y.Z on round2-tv-launcher (pre-releases, so the
-   TVs' "latest release" never sees them) with round2d.elf + round2d.json { v, sha256, size }. The PS4s can only reach Round2,
-   so the engine passes the file on (/ps4/app) after checking its SHA-256. When: by itself in quiet time (helper with the
-   starter, no game open, no session in the room or its twin within 60 min, not a version that was rolled back, one try per
-   version per 6 h; switch off with kv ps4auto=false), or "Update now" (staff, same rules as Clean up: 10 min). */
+/* Helper updates (13 Nov). The newest helper lives on round2-tv-launcher branch ps4-release (only round2d.elf + round2d.json
+   { v, sha256, size }, replaced for each version; the TV apps never look there). The PS4s can only reach Round2, so the engine
+   passes the file on (/ps4/app) after checking its SHA-256. When: by itself in quiet time (helper with the starter, no game
+   open, no session in the room or its twin within 60 min, not a version that was rolled back, one try per version per 6 h;
+   switch off with kv ps4auto=false), or "Update now" (staff, same rules as Clean up: 10 min). */
+const PS4_REL = 'https://raw.githubusercontent.com/donttelldadyet-prog/round2-tv-launcher/ps4-release/';
 const ps4Ver = (v) => String(v || '0').split('.').map((x) => +x || 0);
 const ps4Newer = (a, b) => { const x = ps4Ver(a), y = ps4Ver(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
 async function ps4Latest(env, fresh) {
   const hb = book(env), c = await hb.kvGet('ps4rel'), now = Date.now();
   if (c && !fresh && now - c.at < 10 * 60e3) return c.v ? c : null;
-  const h = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'round2-book' };
-  if (env.GH_TOKEN) h.Authorization = 'Bearer ' + env.GH_TOKEN;
   try {
-    const L = await fetch('https://api.github.com/repos/donttelldadyet-prog/round2-tv-launcher/releases?per_page=40', { headers: h }).then((r) => r.ok ? r.json() : []);
-    let best = null;
-    for (const r of L) { const m = /^ps4-v(\d+\.\d+\.\d+)$/.exec(r.tag_name || ''); if (m && !r.draft && (!best || ps4Newer(m[1], best.v))) best = { v: m[1], r }; }
-    if (!best) { await hb.kvSet('ps4rel', { at: now }); return null; }
-    const elf = (best.r.assets || []).find((a) => a.name === 'round2d.elf'), js = (best.r.assets || []).find((a) => a.name === 'round2d.json');
-    const info = js ? await fetch(js.browser_download_url, { headers: { 'User-Agent': 'round2-book' } }).then((r) => r.json()).catch(() => null) : null;
-    if (!elf || !info || info.v !== best.v || !/^[0-9a-f]{64}$/.test(info.sha256 || '') || +info.size !== elf.size) { await hb.kvSet('ps4rel', { at: now, bad: best.v }); return null; }
-    const out = { at: now, v: best.v, sha: info.sha256, size: elf.size, url: elf.browser_download_url };
+    const info = await fetch(PS4_REL + 'round2d.json', { headers: { 'User-Agent': 'round2-book' } }).then((r) => r.ok ? r.json() : null).catch(() => null);
+    if (!info || !/^\d+\.\d+\.\d+$/.test(info.v || '') || !/^[0-9a-f]{64}$/.test(info.sha256 || '') || !(+info.size > 1024)) { await hb.kvSet('ps4rel', { at: now }); return null; }
+    const out = { at: now, v: info.v, sha: info.sha256, size: +info.size, url: PS4_REL + 'round2d.elf' };
     await hb.kvSet('ps4rel', out); return out;
   } catch (e) { return c && c.v ? c : null; }
 }
