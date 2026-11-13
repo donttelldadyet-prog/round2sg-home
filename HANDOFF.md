@@ -1,5 +1,16 @@
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
 
+> ## 14 Nov 2026, 6am – second chat (TVs / control centre): review follow-ups, engine c9958b6 DEPLOYED (27 bindings, cron */5)
+> - **A moved booking's noise block follows at once** (`mvExecute` → `noiseSync` old day + new day).
+> - **Phone alerts late / in threes:** the delivery log (KV `diag:push`) showed late alerts appearing within 2 s of a re-send, so
+>   the first re-send now goes after ~50 s (DO kv `pushchk` on the hold timer's alarm, `pushChk`, `pushRetry` – then ~4 and ~9 min,
+>   5-min cron as backstop); `Topic` header so a newer copy replaces an undelivered one; VAPID pass reused 2 h (KV `vapid:<service>`,
+>   Apple's once-an-hour rule). Full write-up + the Telegram plan (prepared, OFF): round2-tv-launcher docs/staff-alerts.md.
+> - **Guest links:** "Fix this link's room or start" (was "Change booking time or room" – it never moved the booking); the guest's
+>   message page now keeps and shows a pop-up time set by staff (`retimed`).
+> - My deploys patch the live script through the Cloudflare API (hash of live checked before, hash of result checked after,
+>   keep_bindings with r2_bucket) – same file as the commit, no deploy helper needed.
+
 > ## 14 Nov 2026, 5am – review of the notes + three fixes (owner + Claude). READ: sections below marked SUPERSEDED are history only
 > - **Bug fixed:** since 12 Nov the booking board's free-time memory (`gapc`) was wiped on every SimplyBook notes READ (missing
 >   braces in `sb2`) – the cause of ~7,000 requests/day. Now wiped only when a note changes. Watch the System check's request count.
@@ -311,9 +322,11 @@ To confirm in to-do #1 (real test booking): SimplyBook accepts the longer end ti
 - Everywhere: online bookings, SimplyBook bookings (guest-count field), control-centre sessions ("5 pax" in the note text).
   A 4+ group paying online also holds the noise room with its ONLINE HOLD note.
 - **Other room already booked → the booking still goes ahead (owner's choice) and staff get an alert** (control-centre phone
-  alert + Telegram staff chat), once per clash. Cleaning-time overlap alone doesn't count. ZZTEST sessions never alert.
-- Engine `noiseSync`: runs on every SimplyBook callback, after In session / Add a session actions, every 10 min (tonight +
-  tomorrow) and hourly (week ahead). Read-out: gm action `noise` (day, sync=1). System check step "Noise rule".
+  alert; the Telegram staff chat is prepared but OFF – `STAFF_CHAT` isn't set, see round2-tv-launcher docs/staff-alerts.md), once per clash. Cleaning-time overlap alone doesn't count. ZZTEST sessions never alert.
+- Engine `noiseSync`: runs on every SimplyBook callback (and again 3–5 min later – a new booking's guest count is saved a
+  moment after the callback), straight after an online booking, after In session / Add a session actions, **straight after a
+  move (`mvExecute`, 14 Nov)**, every 10 min (tonight + tomorrow), hourly (week ahead) and one day per half hour for 8–91 days
+  ahead (10 Nov). 10 Nov bug: a booking's guest count was looked up under the wrong key, so real bookings never blocked. Read-out: gm action `noise` (day, sync=1). System check step "Noise rule".
 
 ## Vale ↔ Atlas mirror runs in the engine (LIVE since 11 Nov 2026) – Make is off
 - Make "[BACKEND] SYSTEM BLOCKS MIRROR ROOMS" (6990225) was switched off 11 Nov 2026, 8:18pm SGT; kept, not deleted (fallback).
