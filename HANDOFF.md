@@ -60,6 +60,12 @@
 >   (no updates offered to older helpers – FTP once). **Max 1.0.7→1.0.8 by Update now worked (~20 s).** Releases: branch
 >   `ps4-release`, read by commit (staff gm `ps4rel` checks). Read-only `ps4look`/`ps4lookres` lists PS4 folders.
 >   PS4 FTP: Vale .88.21, Kai .88.18, Max .88.6, Scarlett .88.16 (port 2121).
+> **Game saves – tests 13 Nov evening (full findings + rules: project doc ps4-game-saves.md "Save-transfer tests"):** PS4's own
+>   USB save copy is blocked (wants a system update). Apollo's copy works between Kai and Max, into activated AND unactivated
+>   profiles, because it re-stamps the save (param.sfo user ID + account ID + PSID) for the receiving profile → member profiles
+>   stay unactivated, main profiles untouched. Changing a profile's ID after saves are in it = "save corrupted". Encrypted copies
+>   are firmware-bound (11.00 vs 9.00 rooms) → cloud copies decrypted. Helper 1.1.0 has staff gm `ps4prof` (rename / activate /
+>   undo, one change per job, read back; refused while signed in or a game is open). Kai + Max User4 still named "Test" – rename back.
 > **Vale PS4 (owner):** sometimes kernel-panics while jailbreaking (11.00) – before Round2's helper starts (AutoRun runs after
 >   the jailbreak). Noted in the PS4 plan; watch whether it gets worse once more payloads run.
 
