@@ -3810,7 +3810,7 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
   if (act === 'ps4rel') return { ok: true, rel: await ps4Latest(env, true), err: await hb.kvGet('ps4relErr') };   /* staff: which helper version is out (fresh look) */
   if (act === 'ps4prof') {   /* profile write test (helper 1.1.0+, owner 13 Nov: spare profiles only): op name|acct|unacct, u = user id hex */
     const id = ps4Id(f.id), room = ((await hb.kvGet('ps4map')) || {})[id], now = Date.now(), op = String(f.op || '');
-    if (!/^(name|acct|unacct)$/.test(op) || !/^[0-9a-f]{8}$/.test(String(f.u || ''))) return { error: 'bad op or user id' };
+    if (!/^(name|acct|unacct|logout|login)$/.test(op) || !/^[0-9a-f]{8}$/.test(String(f.u || ''))) return { error: 'bad op or user id' };   /* logout/login: helper 1.1.1+ */
     const pv = op === 'name' ? String(f.v || '').replace(/[^\w .-]/g, '').slice(0, 16) : op === 'acct' ? String(f.v || '').toLowerCase() : '';
     if ((op === 'name' && !pv) || (op === 'acct' && !/^[0-9a-f]{16}$/.test(pv))) return { error: 'bad value' };
     if (!room) return { error: 'Link this PS4 to a room first.' };
