@@ -162,7 +162,7 @@ class Component extends DCLogic {
     const pw = 112, ph = pw * 1.4, bw = 120, bh = bw * 210 / 180;
     const tileP = (i) => 'url(' + SP.ps4 + ') ' + (-(i % 8) * pw) + 'px ' + (-Math.floor(i / 8) * ph) + 'px / ' + (pw * 8) + 'px ' + (ph * 8) + 'px no-repeat';
     const XIMG = {"Rivals for Catan": "rivals-for-catan", "Paper Mahjong": "paper-mahjong", "Tales: Couples Edition": "tales-couples"};
-    const tileX = (n) => 'url(https://donttelldadyet-prog.github.io/round2sg-home/menu/img/games/' + XIMG[n] + '.webp) center / cover no-repeat';
+    const tileX = (n) => 'url(https://donttelldadyet-prog.github.io/round2sg-home/menu/img/games/' + XIMG[n] + '.webp?v=2) center / cover no-repeat';
     const tileB = (src, i, rows) => 'url(' + src + ') ' + (-(i % 5) * bw) + 'px ' + (-Math.floor(i / 5) * bh) + 'px / ' + (bw * 5) + 'px ' + (bh * rows) + 'px no-repeat';
     const dim = 'rgba(244,241,251,.18)', lit = '#f4f1fb';
     const CAT = { p: 'Party', t: 'Date night & talk', x: 'Tarot' };
@@ -344,7 +344,7 @@ class Component extends DCLogic {
     const pw = 104, ph = pw * 1.4, bw = 104, bh = bw * 210 / 180;
     const tileP = (i) => 'url(' + SP.ps4 + ') ' + (-(i % 8) * pw) + 'px ' + (-Math.floor(i / 8) * ph) + 'px / ' + (pw * 8) + 'px ' + (ph * 8) + 'px no-repeat';
     const XIMG = {"Rivals for Catan": "rivals-for-catan", "Paper Mahjong": "paper-mahjong", "Tales: Couples Edition": "tales-couples"};
-    const tileX = (n) => 'url(https://donttelldadyet-prog.github.io/round2sg-home/menu/img/games/' + XIMG[n] + '.webp) center / cover no-repeat';
+    const tileX = (n) => 'url(https://donttelldadyet-prog.github.io/round2sg-home/menu/img/games/' + XIMG[n] + '.webp?v=2) center / cover no-repeat';
     const tileB = (src, i, rows) => 'url(' + src + ') ' + (-(i % 5) * bw) + 'px ' + (-Math.floor(i / 5) * bh) + 'px / ' + (bw * 5) + 'px ' + (bh * rows) + 'px no-repeat';
     const dim = 'rgba(244,241,251,.18)', lit = '#f4f1fb';
     const CAT = { p: 'Party', t: 'Date night & talk', x: 'Tarot' };
