@@ -3748,7 +3748,7 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
   /* ps4list */
   const ids = (await hb.kvGet('ps4ids')) || [], now = Date.now(), list = [];
   const map = (await hb.kvGet('ps4map')) || {};
-  for (const id of ids) { const r = await hb.kvGet('ps4:' + id); if (r) list.push(Object.assign({}, r, { room: map[id] || null, poll: (await hb.kvGet('ps4poll:' + id)) || 0, cmd: (await hb.kvGet('ps4cmd:' + id)) || null, games: undefined, nGames: (r.games || []).length, ago: Math.round((now - r.t) / 60e3) })); }
+  for (const id of ids) { const r = await hb.kvGet('ps4:' + id); if (r) list.push(Object.assign({}, r, { room: map[id] || null, poll: (await hb.kvGet('ps4poll:' + id)) || 0, cmd: (await hb.kvGet('ps4cmd:' + id)) || null, runName: r.running ? (((r.games || []).find((g) => g && g.id === r.running) || {}).t || '') : '', games: undefined, nGames: (r.games || []).length, ago: Math.round((now - r.t) / 60e3) })); }
   const night = sgDay(now - SHADOW_TILL * 60e3);
   return { ok: true, now, list, map: (await hb.kvGet('ps4map')) || {}, played: (await hb.kvGet('ps4play:' + night)) || {}, discs: (await hb.kvGet('ps4discs')) || [], names: (await hb.kvGet('ps4names')) || {} };
 }
