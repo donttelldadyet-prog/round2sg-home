@@ -3658,9 +3658,11 @@ async function ps4In(env, req) {
 }
 async function ps4Games(env) {
   const hb = book(env), ids = (await hb.kvGet('ps4ids')) || [], names = (await hb.kvGet('ps4names')) || {}, discs = (await hb.kvGet('ps4discs')) || [];
+  const map = (await hb.kvGet('ps4map')) || {};   /* the room comes from the map (a link set by staff works at once, not at the next check-in) */
   const out = {};   /* title id → { t: name, tiers: 'ndv', rooms: [...] } */
   for (const id of ids) {
-    const rep = await hb.kvGet('ps4:' + id); if (!rep || !rep.room) continue;
+    const rep = await hb.kvGet('ps4:' + id); if (!rep) continue;
+    rep.room = map[id] || null; if (!rep.room) continue;
     for (const g of rep.games || []) {
       if (!g || !/^CUSA\d{5}$/.test(g.id) || g.cat === 'gde' || names[g.id] === '-') continue;   /* gde = apps like PS Vue; '-' = hidden by staff */
       const o = out[g.id] || (out[g.id] = { id: g.id, t: names[g.id] || g.t || g.id, tiers: '', rooms: [] });
@@ -3697,7 +3699,8 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
   }
   /* ps4list */
   const ids = (await hb.kvGet('ps4ids')) || [], now = Date.now(), list = [];
-  for (const id of ids) { const r = await hb.kvGet('ps4:' + id); if (r) list.push(Object.assign({}, r, { games: undefined, nGames: (r.games || []).length, ago: Math.round((now - r.t) / 60e3) })); }
+  const map = (await hb.kvGet('ps4map')) || {};
+  for (const id of ids) { const r = await hb.kvGet('ps4:' + id); if (r) list.push(Object.assign({}, r, { room: map[id] || null, games: undefined, nGames: (r.games || []).length, ago: Math.round((now - r.t) / 60e3) })); }
   const night = sgDay(now - SHADOW_TILL * 60e3);
   return { ok: true, now, list, map: (await hb.kvGet('ps4map')) || {}, played: (await hb.kvGet('ps4play:' + night)) || {}, discs: (await hb.kvGet('ps4discs')) || [], names: (await hb.kvGet('ps4names')) || {} };
 }
