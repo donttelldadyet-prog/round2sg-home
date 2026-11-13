@@ -2447,7 +2447,7 @@ async function gm(env, req) {
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await mvApi(env, hb, f, new URL(req.url).origin)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
-  if (/^ps4(list|map|discs|names|clean|update|look|lookres)$/.test(act)) {   /* staff: control centre › PS4s (13 Nov) */
+  if (/^ps4(list|map|discs|names|clean|update|look|lookres|rel)$/.test(act)) {   /* staff: control centre › PS4s (13 Nov) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await ps4Gm(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
@@ -3715,9 +3715,10 @@ async function ps4Latest(env, fresh) {
   try {
     const h = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'round2-book' };
     if (env.GH_TOKEN) h.Authorization = 'Bearer ' + env.GH_TOKEN;
-    const head = await fetch('https://api.github.com/repos/donttelldadyet-prog/round2-tv-launcher/commits/ps4-release', { headers: h }).then((r) => r.ok ? r.json() : null).catch(() => null);
+    const hr = await fetch('https://api.github.com/repos/donttelldadyet-prog/round2-tv-launcher/commits/ps4-release', { headers: h }).catch((e) => ({ ok: false, status: 'net ' + e.message }));
+    const head = hr.ok ? await hr.json().catch(() => null) : null;
     const sha1 = head && /^[0-9a-f]{40}$/.test(head.sha || '') ? head.sha : null;
-    if (!sha1) return c && c.v ? c : null;
+    if (!sha1) { await hb.kvSet('ps4relErr', { at: now, why: 'GitHub ' + hr.status + (head ? '' : ' ' + (await hr.text?.().catch(() => '') || '').slice(0, 120)) }); return c && c.v ? c : null; }
     if (c && c.commit === sha1 && c.v) { c.at = now; await hb.kvSet('ps4rel', c); return c; }
     const info = await fetch(PS4_REL + sha1 + '/round2d.json', { headers: { 'User-Agent': 'round2-book' } }).then((r) => r.ok ? r.json() : null).catch(() => null);
     if (!info || !/^\d+\.\d+\.\d+$/.test(info.v || '') || !/^[0-9a-f]{64}$/.test(info.sha256 || '') || !(+info.size > 1024)) { await hb.kvSet('ps4rel', { at: now }); return null; }
@@ -3804,6 +3805,7 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
     const c = { cid: 'l' + now.toString(36), do: 'look', at: now, by: String(f.by || 'staff').slice(0, 40), state: 'sent' };
     await hb.kvSet('ps4cmd:' + id, c); return { ok: true, cmd: c };
   }
+  if (act === 'ps4rel') return { ok: true, rel: await ps4Latest(env, true), err: await hb.kvGet('ps4relErr') };   /* staff: which helper version is out (fresh look) */
   if (act === 'ps4lookres') return { ok: true, look: await hb.kvGet('ps4look:' + ps4Id(f.id)) };
   if (act === 'ps4update') {
     const id = ps4Id(f.id), room = ((await hb.kvGet('ps4map')) || {})[id], now = Date.now(), rep = await hb.kvGet('ps4:' + id);
