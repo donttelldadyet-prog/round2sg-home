@@ -1,7 +1,16 @@
-# Rescheduling online bookings – plan (NOT switched on)
+# Rescheduling online bookings – LIVE since 12 Nov 2026 (beta)
 
-Status 30 Oct 2026: guests **cannot** change or move a booking online. The "View your booking" page only shows the
-booking and the TV-message button. Rescheduling stays on WhatsApp until the owner signs off the rules below.
+**What is live = the LAST section ("LIVE 12 Nov 2026 … what actually shipped", with the 14 Nov changes) and HANDOFF.md.**
+Everything in between is the history of how the rules were reached, kept for the reasoning. Where an older section differs,
+it is SUPERSEDED. The differences people trip on:
+- new slot must be **3 h** from now (early text: 1 h); 2nd move **+$10** (early text: $35, then $25);
+- **any staff** may lower or waive a fee with a reason (early text: owner only); staff moves don't count toward the 2 moves;
+- homepage LOAD SAVE / SAVE FOUND: built and **removed** 12 Nov; the fee levels $15/$25/$35 and the 10% hybrid: **replaced**
+  by MOVE/UPGRADE/PEAK TIME + POPULAR in $5 steps;
+- the "60 days" window: gone (the page shows about a month ahead, further for far-off bookings).
+
+## Original plan (30 Oct 2026 – SUPERSEDED, history)
+Status 30 Oct 2026: guests could not change or move a booking online.
 
 ## What the engine already keeps per booking (enough to price a reschedule later)
 `worker/round2-book.js`, Durable Object `holds` row (`data` JSON):
@@ -30,7 +39,7 @@ booking and the TV-message button. Rescheduling stays on WhatsApp until the owne
    The old slot is never released before the new payment lands.
 10. Who: staff first (WhatsApp, a staff page that does steps 9 for them), self-serve on "View your booking" later.
 
-## Decisions with the owner, 11 Nov 2026 (supersede the rules above where they differ)
+## Decisions with the owner, 11 Nov 2026 (history – fees, LOAD SAVE and "waive = owner only" here are SUPERSEDED)
 - Fees: 1st move S$15, 2nd S$25. Max 2 moves (free grace moves count). Then the button greys out ("No moves left").
 - Cut-off: 3 h before the current start (so also closed during and after the session; extensions stay with staff In session +1h). Checked in the engine, not only the page. Button greys out with the reason.
 - New slot: any free slot (subject to availability), no far-future limit, 15-minute start steps. Room and length changes allowed.
@@ -44,7 +53,7 @@ booking and the TV-message button. Rescheduling stays on WhatsApp until the owne
 - Later (keep in mind): put the guest's NAME in the SimplyBook confirmation email; receipt line; new rules text everywhere (T&C, booking page, FAQ, email, Wix terms).
 - Demo: branch my-booking-demo, demo/manage.html and index.html?demo=save.
 
-## FINAL RULES (owner + admin, 11 Nov 2026, 11:47pm) – these replace the fee/cut-off lines above
+## Rules of 11 Nov 2026, 11:47pm (stages, cut-offs and trip-wires here are LIVE; the fee line is SUPERSEDED by the last section)
 Data behind it (SimplyBook 1 Aug–10 Nov, 655 bookings, notes not included): 69% of bookings are made within 3 days of the
 date (44% within 1 day); a slot still free 3 days before sells later ~20–28% of the time; slots sell 24–34% overall,
 early bird 33% weekday / 44% weekend (most filled). Engine read: gm `bookstats` (staff, read-only).
@@ -71,7 +80,7 @@ early bird 33% weekday / 44% weekend (most filled). Engine read: gm `bookstats` 
   over 33% of moves into Fri–Sun evenings · freed-slot resale under 15% · average profit per move at or below $0.
 - Waiting list, S$10 release incentive, 55/45 split fees: discussed and rejected. Flat % fees (30/40, 20/30) replaced by the hybrid.
 
-## DEMAND-BASED FEE (owner, 12 Nov – ON TEST in the demo; replaces the per-room table above once agreed)
+## DEMAND-BASED FEE (owner, 12 Nov – the demand model here is LIVE inside gLogic; the $15/$25/$35 levels are SUPERSEDED)
 Guest sees the fee only (no demand labels – owner, 12 Nov: "quiet/busy" read as predatory): UPGRADE $5 · $15 · $25 · $35,
 "Popular times cost more to move into". Internal levels: UPGRADE (pricier slot, move costs the shop ≤ $5 after the difference;
 not for early-bird bookings, which stay $15+) · QUIET $15 · BUSY $25 · VERY BUSY $35 (expected cost ≤ $10 / ≤ $20 / more),
@@ -158,7 +167,7 @@ Move a booking (staff):
   (b) take it on HitPay's Tap to Pay on iPhone, then tick "Paid in shop" with the amount. The move goes through once paid
   (or straight away if waived / nothing to pay).
 
-## LIVE 12 Nov: staff Move a booking (control centre first; guest side stays in the demo)
+## LIVE 12 Nov: staff Move a booking (written when the guest side was still a demo – it went live the same day)
 Engine (gm, staff code): mvday (guest bookings of a shop night) · mvfree (free starts per room for the booking's length; the
 day's bookings + notes, no extra availability calls) · mvquote (clash check + demand fee + price difference) · mvpay (HitPay
 PayNow QR: payment_methods[]=paynow_online, generate_qr → qr_code_data.qr_code) · mvlink (normal HitPay link for WhatsApp) ·
@@ -208,3 +217,9 @@ Early-bird bookings: $15 under all. Best value box shows per room type after a d
   under 3 h closed. New time ≥ 3 h from now. Max 2 guest moves (staff moves don't count). Cheaper: no refund.
 - Engine `gLogic` = the only copy of these rules (page and charge). Staff Move a booking uses `mvQuote` with the same $5 steps.
 - How guests get in, the booking page, Add a session bookings and the flow end to end: HANDOFF.md, top section.
+- **14 Nov (owner):** ADD HOURS – same day, room and start, just longer – has no change fee (only the extra hours' price) and
+  doesn't use a move. $5 (UPGRADE / PEAK TIME) only for a bigger kind of room, or the same kind at a dearer rate; longer hours
+  alone or a smaller room = MOVE $15. Applies to guests (`gLogic.feeOf`) and staff (`mvQuote`).
+- **14 Nov (owner):** the new slot is held for 10 minutes while the guest pays, like a new booking (room + twin, ONLINE HOLD
+  note in SimplyBook, payment page ends with the hold). Unpaid → closed and freed (back button at once, otherwise within ~5 min
+  of the 10). Staff moves don't count toward the guest's 2 moves.

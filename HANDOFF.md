@@ -1,5 +1,18 @@
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
 
+> ## 14 Nov 2026, 5am – review of the notes + three fixes (owner + Claude). READ: sections below marked SUPERSEDED are history only
+> - **Bug fixed:** since 12 Nov the booking board's free-time memory (`gapc`) was wiped on every SimplyBook notes READ (missing
+>   braces in `sb2`) – the cause of ~7,000 requests/day. Now wiped only when a note changes. Watch the System check's request count.
+> - **Fee rule (owner):** ADD HOURS (same day, room, start – just longer) = no change fee, only the extra hours, doesn't use a move.
+>   $5 only for a real upgrade: bigger kind of room (UPGRADE) or same kind at a dearer rate (PEAK TIME). Longer hours alone, or a
+>   smaller room, = MOVE $15. Same rule in `gLogic.feeOf` (guests) and `mvQuote` (staff). Wix T&C clause 2.4 gets a line (d).
+> - **Guest moves now HOLD the new slot** like a new booking (owner): 10 min, room + twin, SimplyBook "ONLINE HOLD" notes, HitPay
+>   page expires with it. DO kv `mvholds` (`mvHoldAdd/Drop/Notes`, counted by `clash()` and `list()`); the guest's own booking never
+>   conflicts; one hold per booking; back from HitPay unpaid (`/move/api?…&back=1`) or the 5-min sweep closes it (`released` /
+>   `expired`). Staff QR/link moves do NOT hold (staff are at the screen).
+> - **Staff moves don't count** toward the guest's 2 moves (owner confirmed). Add a session bookings count as paid at full price (owner: fine).
+> - System check has: "Guest rescheduling" (now also the add-hours rule) and "Moves and Vale/Atlas blocks can run" (now also the hold).
+
 > ## Guest booking page + rescheduling + Add a session bookings (LIVE 12 Nov 2026, beta) – the whole flow
 > Full rules, fees and the reasoning: docs/rescheduling-plan.md ("LIVE 12 Nov" section at the end).
 > **1. Booking.** Online: HitPay → `/done?ref=` → (real or test) redirect to the ONE guest booking page `/move?ref=…&new=1`
@@ -23,7 +36,7 @@
 >   wiped with `gapc` on any change; + online holds). `gApi` = `/move/api` (read · pay · `mv=` status). Pay: fresh check (gLogic +
 >   `mvQuote`), HitPay payment request `MV…G` (sandbox for test bookings), redirect back `/move?ref&mv=`, webhook `/move/hitpay` →
 >   `mvComplete` → `mvExecute` (SimplyBook editBook, twin, EXT, TV messages follow, `holdMove` adds the move with `guest:true`,
->   `d.paid` += difference). Slot gone after paying → not moved, staff alerted to move or refund. Nothing to pay → moved at once.
+>   `d.paid` += difference). The new slot is HELD 10 min while they pay (14 Nov); if it still can't be moved after paying → staff alerted to move or refund. Nothing to pay → moved at once.
 >   Switch off: engine mode `gResched = false` (page says "WhatsApp us").
 > **5. Staff.** Bookings › Move a booking (same $5-step fee, can lower/waive with a reason; shows each booking's 🔗 guest link to
 >   copy). Add a session › Upcoming lists bookings made there with Copy link / WhatsApp it (change them via Move a booking).
@@ -174,7 +187,7 @@
 > 11. **System check** (before: 33 ✅; after: 34 ✅) – new steps "Guest rescheduling: page, rules and fees" and "Add a session:
 >    daytime with a mobile = real booking, late = note". Red both times: **SimplyBook requests 12.9k–13.5k today** (mostly the
 >    booking page's /day before the 12 Nov caching; watch tomorrow's number).
-> **Still open (12 Nov evening):** the owner's real test move (test booking "test", Scarlett Thu 19 Nov 11:15am, ref R2BEE8C55C26 –
+> **Still open (12 Nov evening) – all closed since except the last two:** the owner's real test move (not needed: a real guest move ran 13 Nov) (test booking "test", Scarlett Thu 19 Nov 11:15am, ref R2BEE8C55C26 –
 >    pay with 4242…, then cancel it in SimplyBook; earlier test bookings got cancelled before the test – the "CANCEL IT" note);
 >    engine commit 1620aed (move alerts + live trip-wires) DEPLOYED 12 Nov ~8pm (mvstats answers: 0 moves, 111 online bookings in 4 weeks); the old /r2tnc T&C page; the optional "last 4 digits" check.
 
@@ -182,7 +195,7 @@
 > Flow charts of every timer and priority on the room TVs (guest > Round2 > +N CREDITS ADDED; food first), the 10 → 5 min → That's a wrap
 > sequence, cut-offs, In session extensions (EXT notes, Vale/Atlas SYSTEM BLOCK) and a code map. The engine parts are in this repo's
 > `worker/round2-book.js`: `qRun` (queue), `follow` (messages follow bookings), `nudgeRun` (5-min reminder), `sessBanner`/`bqRun`
-> (credit banner waits in line), `insess`/`extend`/`extUndo` (In session). Deployed 5b7fa3d4e58d209e.
+> (credit banner waits in line), `insess`/`extend`/`extUndo` (In session).
 
 > ## Guest links are on round2.sg (DONE 31 Oct 2026) – never put "donttelldadyet" in anything guests see
 > - **book.round2.sg** (repo `round2-book`, GitHub Pages): shows the engine's guest pages (`/done?ref=…`, `/find`, `/b/<code>`) inside a
@@ -197,17 +210,17 @@
 > - Engine API calls and webhooks (HitPay `/hitpay`, SimplyBook `/sb/notify`, `/gm`, `/day`…) stay on `workers.dev` – guests never see them.
 >   Old `workers.dev` / `github.io` links keep working.
 > - **Still to do:** owner points each room's Wix links page (valelinks etc.) food button at `https://menu.round2.sg/<room>`;
->   SimplyBook's confirmation-email line (control centre › Systems, "Confirmation email link") should use `https://book.round2.sg/b/<code>`;
+>   (DONE 12 Nov: the SimplyBook emails use `https://book.round2.sg/b/[code]`);
 >   one real sandbox test booking + food order via the Test bench to see the return pages on the new addresses.
 
 > ## SEO optimisation (new department, 31 Oct 2026) – read docs/seo-optimisation.md first
 > Owner's rules: no visible SEO text on round2.sg, no hidden text, no keyword stuffing; the game homescreen look stays.
 > Next up: business details code (structured data) on the Wix homepage – drafted in that doc, owner to OK before publishing.
 
-# HANDOFF – Round2 own booking system (read this first)
+# HANDOFF – Round2 own booking system: the ORIGINAL 30 Oct note (SUPERSEDED where it says not live / sandbox / DRY_RUN / own-booking branch – it has been live on `main` since 30 Oct; kept for the how and why)
 
-Last session: 30 Oct 2026, ~6:30am SGT (co-owner who handles WhatsApp bookings). Branch: **`own-booking`** in `round2sg-home`.
-Nothing here is live for guests yet. Detailed notes: `docs/own-booking-plan.md`, `docs/simplybook-early-bird.md`.
+Written 30 Oct 2026, ~6:30am SGT (co-owner who handles WhatsApp bookings), on branch `own-booking` (merged, retired).
+At that time nothing was live for guests. Detailed notes: `docs/own-booking-plan.md`, `docs/simplybook-early-bird.md`.
 Working rule from the owners: work on your own branch, never merge without approval, leave a handoff note.
 
 ## What it is
@@ -216,12 +229,12 @@ Guests book on our own page instead of the SimplyBook widget:
 - URL of the engine: `https://round2-book.donttelldadyet.workers.dev` (`/day`, `/quote`, `/checkout`, `/release`, `/done`, `/hitpay`, `/test`, `/selftest`, `/ph`).
 - Board preview: `https://raw.githack.com/donttelldadyet-prog/round2sg-home/own-booking/slots/index.html`
 - Cloudflare account: the Round2 Google login (donttelldadyet). Deploy = upload `worker/round2-book.js` via the Cloudflare API MCP
-  (`PUT /accounts/{id}/workers/scripts/round2-book`, multipart, `keep_bindings: [secret_text, kv_namespace, plain_text, durable_object_namespace]`).
+  (`PUT /accounts/{id}/workers/scripts/round2-book`, multipart, `keep_bindings: [secret_text, kv_namespace, plain_text, durable_object_namespace, r2_bucket]` – **r2_bucket is needed since 14 Nov or the game-save storage is cut off**; current way to deploy: "How to deploy the engine" near the top).
   The repo file is the source of truth – commit first, then deploy the same file.
 - Secrets in the Worker: `HITPAY_KEY`, `HITPAY_SALT`, `HITPAY_API` (all **sandbox** now), `SB_COMPANY`, `SB_USER`, `SB_PASS`
   (SimplyBook user "Booking Bot", made for this). Vars: `DRY_RUN=1`, `SB_PUBLIC_KEY`. Durable Object `HOLDBOOK` (class `HoldBook`) holds unpaid slots.
 
-## Status
+## Status (as of 30 Oct – SUPERSEDED: all of "Not done" below was finished by the 30 Oct launch or since)
 Done and tested (sandbox):
 - Own price table `PRICES` at the top of the Worker (NOT read from SimplyBook). Early Bird = 11:00 start, $35 + day rate ÷ 3 per extra hour.
 - Peak = Fri–Sun + Singapore public holidays incl. in-lieu days (Google public holiday calendar; `EXTRA_PH` for days Google adds late).
@@ -247,9 +260,8 @@ Not done (in order):
 - Safe mode (control centre › Systems › Switches, needs `SWITCH_PASS` + `SWITCH_PIN`): the booking page shows the SimplyBook
   widget embedded instead, and the engine refuses new holds.
 
-## Food menu payment via Cloudflare (30 Oct) – ONE HitPay setting for booking + menu (superseded by the section above for which keys)
-The engine's secrets `HITPAY_KEY` / `HITPAY_SALT` / `HITPAY_API` are used by BOTH the booking page and the room menu (sandbox now;
-put the live account's values in those three to take both live together). `menu/index.html` (on main) posts to `/menu/checkout`
+## Food menu payment via Cloudflare (30 Oct) – which keys: see the section above (live = `HITPAY_LIVE_*`, sandbox = `HITPAY_KEY/SALT/API`; never swap them)
+Both the booking page and the room menu use the same pair of HitPay accounts. `menu/index.html` (on main) posts to `/menu/checkout`
 (re-prices from menu.json like the old Make checkout, keeps the order in the engine, creates the HitPay payment with webhook
 `/menu/hitpay`). `/menu/hitpay` and `/menu/return` ask HitPay whether it's paid, then once POST `order`, `details`, `k` (secret
 `MENU_MAKE_K`) to Make's [BACKEND] ROOM MENU PAID ORDER, which now reads those instead of its data store + HitPay (filter on `k`)

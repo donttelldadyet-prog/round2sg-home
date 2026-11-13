@@ -24,7 +24,7 @@ Extensions are often **calendar notes**, not a longer booking: 1-hour chunks sta
 stacked, each already including the 15 min cleaning → guest end = last note's end − 15 min. Full rules, and how to tell an
 extension note from another block: [docs/booking-times.md](docs/booking-times.md).
 
-## How Round2's automation fits together (read first) – updated 30 Oct 2026
+## How Round2's automation fits together (read first) – updated 14 Nov 2026
 
 **Rule: Cloudflare first, Make.com last.** Make has a hard monthly budget (10,000 operations, shared by everything), so
 nothing that runs often, polls, or waits may live in Make. Anything fast or frequent runs in the **Round2 engine on
@@ -36,7 +36,7 @@ go through the engine.
 `worker/round2-book.js` in **round2sg-home** . One Durable Object (`HoldBook`) holds its
 state (SQLite) and wakes itself with alarms. Deploy = upload that file through the Cloudflare API with `keep_bindings`
 (see round2sg-home `HANDOFF.md`). Secrets live only in Cloudflare (names: `HITPAY_KEY`, `HITPAY_SALT`, `HITPAY_API` (sandbox), `HITPAY_LIVE_KEY`, `HITPAY_LIVE_SALT`, `TEST_CODE`, `SWITCH_PASS`, `SWITCH_PIN`,
-`SB_COMPANY`, `SB_USER`, `SB_PASS`, `GM_STAFF`, `GM_HOOK_URL`, `MENU_MAKE_K`, `TV_KEY`, `TG_BOT_TOKEN`, `STAFF_CHAT`, `SB_NOTIFY_KEY` (the private part of SimplyBook's callback URL `/sb/notify/<key>`), `MIRROR_HOOK_URL` (Make mirror-rooms webhook the callback is passed on to)).
+`SB_COMPANY`, `SB_USER`, `SB_PASS`, `GM_STAFF`, `GM_HOOK_URL`, `MENU_MAKE_K`, `TV_KEY`, `TG_BOT_TOKEN`, `STAFF_CHAT`, `SB_NOTIFY_KEY` (the private part of SimplyBook's callback URL `/sb/notify/<key>`), `MIRROR_HOOK_URL` (Make mirror-rooms webhook – only used if the mirror is switched back to Make), `PS4_KEY` (room PS4 helpers), `VAPID_JWK` (staff phone alerts)). The engine also has an R2 bucket binding `SAVES` – deploys must keep `r2_bucket`.
 
 | Job | Where it runs | Notes |
 |---|---|---|
@@ -47,7 +47,9 @@ state (SQLite) and wakes itself with alarms. Deploy = upload that file through t
 | Telegram pickup button, Madd nightly settlement | Make (`[CONTROL] MADD PAYOUT TELEGRAM`, `[BACKEND] MADD NIGHTLY SETTLEMENT LOG`) | |
 | Guest/Round2 TV messages: every page talks to the engine's `/gm` front door | Engine → Make `[BACKEND] GUEST MESSAGE LINKS` | Engine checks codes, caches, caps edits; Make keeps the message records |
 | Message timer (send each message to its TV on time) | Engine (alarm, 1 min before) | Make's old 15-min timer is OFF |
-| Vale ↔ Atlas mirror bookings | Make `[BACKEND] SYSTEM BLOCKS MIRROR ROOMS` | Runs only on SimplyBook changes |
+| Vale ↔ Atlas mirror bookings | Engine (`mirrorOnSb`, since 11 Nov 2026) | On every SimplyBook change. Make's `[BACKEND] SYSTEM BLOCKS MIRROR ROOMS` is switched off (kept as fallback) |
+| Guest booking page + rescheduling (`move/`), staff Move a booking | Engine (`gLogic`, `gApi`, `mv…`) | One rules file for the price shown and the price charged – HANDOFF.md top |
+| Room PS4s: reports, clean-up, game saves | Engine (`/ps4/…`) + Cloudflare R2 `round2-saves` | HANDOFF.md PS4 section |
 | TVs ⇄ control centre (messages, OKs, food alerts, website stats) | Firebase Realtime Database | Pages listen live (EventSource); no Make |
 
 Docs: round2-tv-launcher `docs/guest-messages.md` (front door, timer), `docs/booking-times.md`, `docs/site-stats.md`;
