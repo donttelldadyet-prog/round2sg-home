@@ -2447,6 +2447,10 @@ async function gm(env, req) {
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await mvApi(env, hb, f, new URL(req.url).origin)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
+  if (/^ps4(list|map|discs|names)$/.test(act)) {   /* staff: control centre › PS4s (13 Nov) */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    try { return gmJ(await ps4Gm(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
+  }
   if (act === 'queue') {   /* staff: what the timer will send, and the last send */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     if (f.sync) await gmList(env, hb);
@@ -3625,6 +3629,79 @@ async function ghProxy(env, req) {
   return new Response(await r.text(), { status: r.status, headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*' } });
 }
 
+/* ===== Room PS4s (13 Nov 2026) – check-ins from the Round2 PS4 helper (round2-tv-launcher ps4/, branch ps4-helper) =====
+   Each PS4 POSTs /ps4/in every ~15 min with header x-r2-ps4 = secret PS4_KEY (the PS4 keeps it in /data/round2/key.txt).
+   A PS4 is known by its console ID; the room is set once by staff (gm ps4map) because profile names are characters
+   (Valentine = Vale). The engine keeps each PS4's latest report (kv ps4:<id>), adds the minutes each game was played to the
+   shop night's tally (kv ps4play:<night>, engine clock – the PS4 clocks have been wrong for long stretches) and answers
+   with the engine time. Nothing on a PS4 is changed from here yet. /ps4/games = the games list for the website: what the
+   PS4s report per room type + the lobby disc games (kv ps4discs) + display names (kv ps4names). */
+const PS4_TIER = { vale: 'n', kaeden: 'n', scarlett: 'n', kai: 'd', bella: 'd', atlas: 'd', max: 'v' };
+const ps4Id = (x) => String(x || '').toLowerCase().replace(/[^0-9a-f]/g, '').slice(0, 32);
+async function ps4In(env, req) {
+  if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
+  let r = {}; try { r = JSON.parse(await req.text()); } catch (e) { return J({ error: 'bad json' }, 400); }
+  const id = ps4Id(r.id); if (id.length < 16) return J({ error: 'no console id' }, 400);
+  const hb = book(env), now = Date.now(), map = (await hb.kvGet('ps4map')) || {}, room = map[id] || null;
+  const prev = await hb.kvGet('ps4:' + id);
+  r.games = Array.isArray(r.games) ? r.games.slice(0, 400) : prev && prev.games || [];   /* the helper sends games only when they change */
+  const rep = Object.assign({}, r, { id, room, t: now, ip: req.headers.get('cf-connecting-ip') || '' });
+  await hb.kvSet('ps4:' + id, rep);
+  const ids = (await hb.kvGet('ps4ids')) || []; if (!ids.includes(id)) { ids.push(id); await hb.kvSet('ps4ids', ids.slice(-40)); }
+  /* play time: the helper counts minutes per title since its last check-in (it looks every minute) */
+  if (room && r.played && typeof r.played === 'object') {
+    const night = sgDay(now - SHADOW_TILL * 60e3), k = 'ps4play:' + night, P = (await hb.kvGet(k)) || {};
+    for (const tid in r.played) { const m = Math.max(0, Math.min(30, +r.played[tid] || 0)); if (!m || !/^[A-Z]{4}\d{5}$/.test(tid)) continue; P[room] = P[room] || {}; P[room][tid] = (P[room][tid] || 0) + m; }
+    await hb.kvSet(k, P);
+  }
+  return J({ ok: true, now, room });
+}
+async function ps4Games(env) {
+  const hb = book(env), ids = (await hb.kvGet('ps4ids')) || [], names = (await hb.kvGet('ps4names')) || {}, discs = (await hb.kvGet('ps4discs')) || [];
+  const out = {};   /* title id → { t: name, tiers: 'ndv', rooms: [...] } */
+  for (const id of ids) {
+    const rep = await hb.kvGet('ps4:' + id); if (!rep || !rep.room) continue;
+    for (const g of rep.games || []) {
+      if (!g || !/^CUSA\d{5}$/.test(g.id) || g.cat === 'gde' || names[g.id] === '-') continue;   /* gde = apps like PS Vue; '-' = hidden by staff */
+      const o = out[g.id] || (out[g.id] = { id: g.id, t: names[g.id] || g.t || g.id, tiers: '', rooms: [] });
+      const tier = PS4_TIER[rep.room] || ''; if (tier && !o.tiers.includes(tier)) o.tiers += tier;
+      if (!o.rooms.includes(rep.room)) o.rooms.push(rep.room);
+    }
+  }
+  for (const d of discs) if (d && d.t) out['disc:' + d.t] = { t: d.t, tiers: d.tiers || 'ndv', rooms: [], disc: true, p: d.p || '' };
+  const list = Object.values(out).sort((a, b) => a.t.localeCompare(b.t));
+  return new Response(JSON.stringify({ ok: true, at: Date.now(), games: list }), { headers: { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'cache-control': 'public, max-age=300' } });
+}
+async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4map (id, room or '' to clear) · ps4discs (json list) · ps4names (id, name; '-' hides) */
+  const act = f.action;
+  if (act === 'ps4map') {
+    const id = ps4Id(f.id), room = String(f.room || '').toLowerCase();
+    if (id.length < 16) return { error: 'Which PS4?' };
+    if (room && !PS4_TIER[room]) return { error: 'Pick a room.' };
+    const map = (await hb.kvGet('ps4map')) || {};
+    for (const k in map) if (room && map[k] === room && k !== id) delete map[k];   /* one PS4 per room */
+    if (room) map[id] = room; else delete map[id];
+    await hb.kvSet('ps4map', map); return { ok: true, map };
+  }
+  if (act === 'ps4discs') {
+    let l; try { l = JSON.parse(f.list || '[]'); } catch (e) { return { error: 'Bad list.' }; }
+    if (!Array.isArray(l)) return { error: 'Bad list.' };
+    l = l.filter((d) => d && d.t).slice(0, 100).map((d) => ({ t: String(d.t).slice(0, 80), p: String(d.p || '').slice(0, 10), tiers: String(d.tiers || 'ndv').replace(/[^ndv]/g, '') || 'ndv' }));
+    await hb.kvSet('ps4discs', l); return { ok: true, discs: l };
+  }
+  if (act === 'ps4names') {
+    const id = String(f.id || '').toUpperCase(); if (!/^CUSA\d{5}$/.test(id)) return { error: 'Which game?' };
+    const n = (await hb.kvGet('ps4names')) || {}, t = String(f.name || '').trim().slice(0, 80);
+    if (t) n[id] = t; else delete n[id];
+    await hb.kvSet('ps4names', n); return { ok: true, names: n };
+  }
+  /* ps4list */
+  const ids = (await hb.kvGet('ps4ids')) || [], now = Date.now(), list = [];
+  for (const id of ids) { const r = await hb.kvGet('ps4:' + id); if (r) list.push(Object.assign({}, r, { games: undefined, nGames: (r.games || []).length, ago: Math.round((now - r.t) / 60e3) })); }
+  const night = sgDay(now - SHADOW_TILL * 60e3);
+  return { ok: true, now, list, map: (await hb.kvGet('ps4map')) || {}, played: (await hb.kvGet('ps4play:' + night)) || {}, discs: (await hb.kvGet('ps4discs')) || [], names: (await hb.kvGet('ps4names')) || {} };
+}
+
 /* ===== Remote TV updates (owner, 2 Nov) =====
    Update now from the control centre: only when the TV is on (checked in within 12 min), its Staff tools allow it, and
    its room has no session now or starting within 10 minutes (bookings and notes, the twin room's too). Then
@@ -3901,6 +3978,8 @@ const HANDLER = {
         }
         return Response.redirect('https://cue.round2.sg/' + tv.code, 302);
       }
+      if (u.pathname === '/ps4/in' && req.method === 'POST') return await ps4In(env, req);   /* room PS4 check-ins (13 Nov) */
+      if (u.pathname === '/ps4/games') return await ps4Games(env);
       if (u.pathname === '/gm' && req.method === 'POST') return await gm(env, req);
       if (u.pathname === '/gh' && req.method === 'POST') return await ghProxy(env, req);
       if (u.pathname.startsWith('/push/')) return await pushApi(env, req, u.pathname);
