@@ -445,6 +445,8 @@ export class HoldBook extends DurableObject {
      The control centre lists the last 24 hours; kept 3 days so a notification tapped late still opens. Newest first, at most 400. */
   alogAdd(e) { const L = (this.kvGet('alog') || []).filter((x) => x.t > Date.now() - 3 * 86400e3); L.unshift(e); this.kvSet('alog', L.slice(0, 400)); }
   alogList() { return this.kvGet('alog') || []; }
+  /* when to look again at alerts no phone has reported showing (pushRetry) – the earliest asked time wins */
+  pushChk(t) { const c = +this.kvGet('pushchk') || 0; if (!c || t < c) this.kvSet('pushchk', +t); this.arm(); }
   /* every OK a TV reports, kept per message (owner, 4 Nov): each TV only holds its LATEST OK (/msgAck), so a later OK
      made the control centre show an earlier message as "ended without OK" (Niv's birthday message, OK'd 7:28pm) */
   ackNote(room, k) {
@@ -826,12 +828,16 @@ export class HoldBook extends DurableObject {
     this.nudgeInit(); const nd = this.rows(`SELECT MIN(at) AS t FROM nudge`)[0];
     this.autoInit(); const au = this.rows(`SELECT MIN(at) AS t FROM autoq WHERE sent = 0`)[0];
     const mvh = this.mvHoldsAll().filter((x) => !x.lifted).map((x) => x.exp);
-    const ts = [mvh.length ? Math.min(...mvh) + 1000 : 0, bqn ? Date.now() + 30e3 : 0, nd && nd.t ? nd.t : 0, n && n.t ? n.t + 1000 : 0, q && q.t ? q.t - 60e3 : 0, syn ? syn + 86400e3 : 0, fl ? fol + FOLLOW_MS : 0, lsy ? 0 : Date.now() + 2000, lt && lt.t ? lt.t : 0, au && au.t ? au.t : 0].filter((t) => t > 0);
+    const pchk = +this.kvGet('pushchk') || 0;
+    const ts = [pchk, mvh.length ? Math.min(...mvh) + 1000 : 0, bqn ? Date.now() + 30e3 : 0, nd && nd.t ? nd.t : 0, n && n.t ? n.t + 1000 : 0, q && q.t ? q.t - 60e3 : 0, syn ? syn + 86400e3 : 0, fl ? fol + FOLLOW_MS : 0, lsy ? 0 : Date.now() + 2000, lt && lt.t ? lt.t : 0, au && au.t ? au.t : 0].filter((t) => t > 0);
     if (ts.length) this.ctx.storage.setAlarm(Math.max(Date.now() + 1000, Math.min(...ts)));
   }
   /* timer ran out → release the hold and kill its HitPay link */
   async alarm() { sbWho = 'hold timer'; try { await this.alarm0(); } finally { if (sbCalls) { this.sbAdd(sbCalls, sbBy); sbCalls = 0; sbBy = {}; } } }
   async alarm0() {
+    /* alerts a phone hasn't shown: re-send (see pushRetry). The time is cleared FIRST, so a failure can never make this alarm loop. */
+    try { const pc = +this.kvGet('pushchk') || 0;
+      if (pc && pc <= Date.now()) { this.kvSet('pushchk', 0); const pr = await pushRetry(this.env, this); if (pr && pr.more) this.kvSet('pushchk', Date.now() + 60e3); } } catch (e) {}
     /* a move's hold ends at exactly its 10 minutes (owner, 14 Nov: no extra buffer): its SimplyBook notes come off now; the
        5-min sweep then only closes the move's record (or finishes it if the money did arrive) */
     try { const mh = this.mvHoldsAll(), over = mh.filter((x) => x.exp <= Date.now() && !x.lifted);
@@ -2092,6 +2098,9 @@ async function mvExecute(env, mv, how) {
     await hb.holdMove(B.bid, q, rec).catch(() => null);   /* the guest's booking page shows the new room and time */
     await hb.kvSet('gapc', {}).catch(() => null); await hb.kvSet('gcal', null).catch(() => null);
     await hb.onSb(B.bid, 'change').catch(() => null);   /* guest TV messages follow */
+    /* its noise block (4+ guests: Max/Atlas → Bella, Bella → Atlas) follows now – old day and new day – instead of waiting for
+       SimplyBook's notice or the next sweep (review 14 Nov: up to an hour, or two days for far-off dates) */
+    await noiseSync(env, [sgDay(B.s), q.date], 'moved').catch((e) => console.log('[noise] moved ' + String(e.message || e).slice(0, 120)));
     await autoRun(env, 'moved').catch(() => null);
     const L = (await hb.kvGet('mvlog')) || []; L.unshift(rec); await hb.kvSet('mvlog', L.slice(0, 300));
     await mvStats(env, true).catch(() => null);   /* trip-wires: a push alert when one turns red */
@@ -3141,13 +3150,24 @@ async function hkdf(salt, ikm, info, len) {
   return new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info }, k, len * 8));
 }
 function vapidPublic(env) { const j = JSON.parse(env.VAPID_JWK); return b64u(cat(new Uint8Array([4]), unb64u(j.x), unb64u(j.y))); }
+/* Apple (Sending web push notifications): "Don't refresh your JWT more frequently than once per hour." Until 14 Nov every
+   single alert to every phone carried a freshly signed one. Now one per push service, reused for 2 hours (valid 12): kept in
+   memory and in KV (HOLDS › vapid:<service>) so every copy of the engine uses the same one. */
+const VAPID_MEM = {};
 async function vapidAuth(env, endpoint) {
-  const j = JSON.parse(env.VAPID_JWK), aud = new URL(endpoint).origin;
-  const head = b64u(utf8(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));
-  const body = b64u(utf8(JSON.stringify({ aud, exp: Math.floor(Date.now() / 1000) + 12 * 3600, sub: 'mailto:hello@round2.sg' })));
-  const key = await crypto.subtle.importKey('jwk', { kty: 'EC', crv: 'P-256', x: j.x, y: j.y, d: j.d }, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
-  const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, utf8(head + '.' + body));   /* raw r||s, as JWT wants */
-  return 'vapid t=' + head + '.' + body + '.' + b64u(sig) + ', k=' + vapidPublic(env);
+  const j = JSON.parse(env.VAPID_JWK), aud = new URL(endpoint).origin, now = Date.now(), pk = vapidPublic(env), fresh = (c) => c && c.jwt && c.pk === pk && now - c.t < 2 * 3600e3;
+  let c = VAPID_MEM[aud];
+  if (!fresh(c) && env.HOLDS) c = await env.HOLDS.get('vapid:' + aud, 'json').catch(() => null);
+  if (!fresh(c)) {
+    const head = b64u(utf8(JSON.stringify({ typ: 'JWT', alg: 'ES256' })));
+    const body = b64u(utf8(JSON.stringify({ aud, exp: Math.floor(now / 1000) + 12 * 3600, sub: 'mailto:hello@round2.sg' })));
+    const key = await crypto.subtle.importKey('jwk', { kty: 'EC', crv: 'P-256', x: j.x, y: j.y, d: j.d }, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+    const sig = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, key, utf8(head + '.' + body));   /* raw r||s, as JWT wants */
+    c = { t: now, pk, jwt: head + '.' + body + '.' + b64u(sig) };
+    if (env.HOLDS) await env.HOLDS.put('vapid:' + aud, JSON.stringify(c), { expirationTtl: 6 * 3600 }).catch(() => null);
+  }
+  VAPID_MEM[aud] = c;
+  return 'vapid t=' + c.jwt + ', k=' + pk;
 }
 async function pushEncrypt(sub, payload) {
   const uaPub = unb64u(sub.keys.p256dh), auth = unb64u(sub.keys.auth);
@@ -3167,8 +3187,13 @@ async function pushEncrypt(sub, payload) {
 /* one phone → 'ok' | 'gone' (drop it) | 'failed …' */
 async function pushOne(env, sub, msg) {
   try {
-    const r = await fetch(sub.endpoint, { method: 'POST', body: await pushEncrypt(sub, JSON.stringify(msg)),
-      headers: { Authorization: await vapidAuth(env, sub.endpoint), 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '86400', Urgency: 'high' } });
+    /* Topic (14 Nov): while a phone hasn't taken an alert yet, a newer one for the same booking (our own re-send, or a change)
+       REPLACES it at Apple/Google instead of queueing behind it – the owner got 2–3 copies at once when his phone woke up */
+    const topic = String(msg.tag || '').replace(/[^A-Za-z0-9_-]/g, '').slice(-32);
+    const send = async (withTopic) => fetch(sub.endpoint, { method: 'POST', body: await pushEncrypt(sub, JSON.stringify(msg)),
+      headers: Object.assign({ Authorization: await vapidAuth(env, sub.endpoint), 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '86400', Urgency: 'high' }, withTopic ? { Topic: topic } : {}) });
+    let r = await send(!!topic);
+    if (r.status === 400 && topic) r = await send(false);   /* a push service that won't take the Topic: the alert still goes */
     if (r.status === 404 || r.status === 410) return 'gone';
     return r.ok ? 'ok' : 'failed ' + r.status + ' ' + (await r.text()).slice(0, 80);
   } catch (e) { return 'failed ' + String(e.message || e).slice(0, 80); }
@@ -3187,23 +3212,30 @@ async function logAlert(env, kind, msg, ctx) {
 /* a copy of "which phone showed which alert, how fast" in the engine's KV (HOLDS › diag:push), readable from the Cloudflare
    dashboard/API without the staff code (owner, 6 Nov: reminders late on his phone while the browser link was down).
    Written only when something changed. */
-/* every 5 min: a phone that reports back but hasn't shown an alert from 1–20 minutes ago gets it again (at most twice).
+/* A phone that reports back but hasn't shown an alert gets it again: about 50 s after it was sent, then ~4 and ~9 min
+   (at most 3 times; same tag and Topic, so there is never more than one on the screen).
    Owner, 6 Nov: Apple held his phone's alerts for 15–50 minutes, and a held alert came through the moment another one was
-   sent. Same tag, so if the first one does turn up, the second replaces it – no doubles. */
-async function pushRetry(env) {
-  const hb = book(env), seen = (await hb.kvGet('pseen')) || {}, now = Date.now();
-  const reports = new Set(); for (const a in seen) for (const k in seen[a]) reports.add(k);   /* phones on the new background worker */
-  const L = (await hb.alogList()).filter((x) => x.t < now - 60e3 && x.t > now - 20 * 60e3 && !x.preview);
-  if (!L.length || !reports.size) return [];
-  const T = (await hb.kvGet('pretry')) || {}, subs = await hb.pushList(), out = [];
+   sent. 14 Nov: the delivery log showed nearly every late alert appearing within 2 s of a re-send – so the first re-send now
+   comes after ~50 s (the hold timer's alarm, `pushchk`) instead of waiting for the 5-minute timer, which stays as a backstop.
+   Phones that haven't reported anything for 3 days (an old sign-up left behind) are not re-sent to. */
+const PUSH_RETRY_GAPS = [45e3, 150e3, 300e3];
+async function pushRetry(env, hb0) {
+  const hb = hb0 || book(env), seen = (await hb.kvGet('pseen')) || {}, now = Date.now();
+  const reports = new Set(); for (const a in seen) for (const k in seen[a]) if (+seen[a][k] > now - 3 * 86400e3) reports.add(k);   /* phones on the new background worker */
+  const L = (await hb.alogList()).filter((x) => x.t < now - 45e3 && x.t > now - 20 * 60e3 && !x.preview);
+  if (!L.length || !reports.size) return { out: [], more: false };
+  const T = (await hb.kvGet('pretry')) || {}, subs = await hb.pushList(), out = []; let more = false;
   for (const x of L) for (const sb of subs) {
     const sid = String(sb.id).slice(0, 6); if (!reports.has(sid) || (seen[x.id] || {})[sid] || !sb.kinds.includes(x.kind === 'human' ? sb.kinds[0] : x.kind)) continue;
-    const k = x.id + ':' + sid; if ((T[k] || 0) >= 2) continue; T[k] = (T[k] || 0) + 1;
+    const k = x.id + ':' + sid, r = typeof T[k] === 'number' ? { n: 3, t: 0 } : T[k] || { n: 0, t: x.t };
+    if (r.n >= PUSH_RETRY_GAPS.length) continue;
+    if (now - r.t < PUSH_RETRY_GAPS[r.n]) { more = true; continue; }
+    T[k] = { n: r.n + 1, t: now }; if (r.n + 1 < PUSH_RETRY_GAPS.length) more = true;
     out.push(sid + ' ' + x.id + ' ' + (await pushOne(env, sb.sub, { kind: x.kind, title: x.title, body: x.body, tag: x.tag || 'r' + x.id, url: '/?alert=' + x.id })));
   }
   for (const k in T) if (!L.some((x) => k.startsWith(x.id + ':'))) delete T[k];
   await hb.kvSet('pretry', T); if (out.length) await hb.kvSet('pretryLast', { t: now, out });
-  return out;
+  return { out, more };
 }
 /* a read-only staff question left in the engine's KV (HOLDS › diag:req, JSON form fields) is answered within 5 minutes into
    diag:res – for when the browser link to the owner's computer is down (6 Nov). Only reading actions; only someone with
@@ -3240,6 +3272,7 @@ async function pushAll(env, kind, msg) {
     if (r === 'ok') sent++;
     await hb.pushResult(s.id, r);
   }));
+  if (sent) await hb.pushChk(Date.now() + 50e3).catch(() => null);   /* look again in ~50 s: re-send to any phone that hasn't shown it */
   return { sent, phones: subs.length };
 }
 async function pushId(endpoint) { return b64u(await crypto.subtle.digest('SHA-256', utf8(String(endpoint)))).slice(0, 22); }
