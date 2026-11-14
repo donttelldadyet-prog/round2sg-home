@@ -79,6 +79,8 @@
 >   trial" change was committed and reverted WITHOUT deploying (9ea5b1c / 6282673) – live engine is still 396b1f9
 >   (sha d7571fa2…). Owner asked whether to end the trial (delete KV `push:decl`); not changed yet. Still no Vale/Atlas booking
 >   since the switch to notes. Details: round2-tv-launcher docs/staff-alerts.md "Second reading".
+>   **11:00pm – trial ENDED (owner: ok):** KV `push:decl` deleted; all phones on ordinary delivery again, re-sends as before.
+>   Code for it stays in the engine, off. Live engine still 396b1f9.
 > - **4:43pm, engine eee2f10 DEPLOYED (27 bindings, 3 timers) – NEW Vale/Atlas TWIN BLOCKS ARE NOTES** (owner: "switch to
 >   notes … make them consistent … just use the time blocked notes from now onwards"). `mirrorOnSb`: no record yet → POST a
 >   time-blocked note in the twin, text `SYSTEM BLOCK · TWIN · <room> is booked (<first name>) · removed automatically · src
