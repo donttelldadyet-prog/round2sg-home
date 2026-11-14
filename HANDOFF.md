@@ -65,6 +65,8 @@
 >   alert shapes, reports `v`, test alerts report as `a: "test"`), `r2TidyAlerts` closes extra copies when the app is opened.
 >   The trial starts by itself once the owner opens the control centre on his phone and it shows one alert (Test alert).
 >   How to read it and what to do next: round2-tv-launcher `docs/staff-alerts.md` "Declarative Web Push".
+>   **4:06pm:** owner confirmed on his iPhone that opening the app dropped the 3 Scarlett copies to 1 (`r2TidyAlerts` works on
+>   a real iPhone), and his phone reported worker version 2 (KV `push:swv` = {GGAmdj: 2}) → it is on the trial from here on.
 > - Known stale comment (engine, noise rule header): says clashes alert "control-centre alert + Telegram" – Telegram never
 >   gets these (`staffAlert` is a no-op). Fix the wording with the next engine change.
 
