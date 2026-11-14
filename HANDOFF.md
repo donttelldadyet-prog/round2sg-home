@@ -73,6 +73,12 @@
 >   `push:decl` (it would have dropped his sign-up after a silent week), the control centre shows n/a for it, the System
 >   check's clean-up step ignores it. Not proven yet (the other phones were fast on those four too). No Vale/Atlas booking has
 >   come in since the 4:43pm switch to notes, so the note path is still untested on real SimplyBook.
+>   **9:20pm – trial did not fix the lateness.** Max booking alert sent 21:10:44, staff phones +3/+4 s, owner's phone (on the
+>   trial) showed 2 copies only when the one re-send arrived (~50 s). HitPay's native alert was on time on the same phone, so
+>   the hold is specific to web alerts on that phone. Nothing merges copies (tag, Topic, declarative). A "no re-sends on the
+>   trial" change was committed and reverted WITHOUT deploying (9ea5b1c / 6282673) – live engine is still 396b1f9
+>   (sha d7571fa2…). Owner asked whether to end the trial (delete KV `push:decl`); not changed yet. Still no Vale/Atlas booking
+>   since the switch to notes. Details: round2-tv-launcher docs/staff-alerts.md "Second reading".
 > - **4:43pm, engine eee2f10 DEPLOYED (27 bindings, 3 timers) – NEW Vale/Atlas TWIN BLOCKS ARE NOTES** (owner: "switch to
 >   notes … make them consistent … just use the time blocked notes from now onwards"). `mirrorOnSb`: no record yet → POST a
 >   time-blocked note in the twin, text `SYSTEM BLOCK · TWIN · <room> is booked (<first name>) · removed automatically · src
