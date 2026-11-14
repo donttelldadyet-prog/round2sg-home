@@ -1292,6 +1292,20 @@ async function tvMessage(env, d, q, ref, bid) {
    Then "About 10 minutes to go" and "That's a wrap!" move to the new end (or are made if there were none), and the TV
    shows "+N CREDITS ADDED" (no OK needed unless staff tick it). Undo puts everything back. */
 const SYS_CLIENTS = ['2472', '2476'];          /* Make mirror's SYSTEM BLOCK clients (in Atlas for a Vale booking, in Vale for an Atlas one) */
+/* Vale/Atlas twin block as a time-blocked NOTE (14 Nov; before that a booking under clients 2472/2476 – those stay as they are) */
+const MIR_RE = /SYSTEM\s*BLOCK\s*·\s*TWIN/i;
+const mirMine = (x, bid) => x.k === 'n' && MIR_RE.test(x.name || '') && new RegExp('src b' + bid + '(?!\\d)').test(x.name || '');
+/* every time-blocked or plain note between two dates – SimplyBook gives 200 a page; with twin blocks as notes a long range can
+   pass that (latelist 46 days, the guest calendar 31 days) */
+async function notesRange(s2, from, to) {
+  const out = [];
+  for (let p = 1; p <= 10; p++) {
+    const nt = await s2('GET', '/admin/calendar-notes?filter[date_from]=' + from + '&filter[date_to]=' + to + '&on_page=200&page=' + p), P = (nt && nt.data) || [];
+    for (const n of P) if (!out.some((x) => String(x.id) === String(n.id))) out.push(n);
+    if (P.length < 200) break;
+  }
+  return out;
+}
 const SYS_RE = /SYSTEM\s*BLOCK/i, HOLD_RE = /ONLINE\s*HOLD/i, EXT_RE = /\bEXT\b/i, LATE_RE = /(?:\blate|·|BLOCK · \w+) till [0-9:]+[ap]m/i;   /* a control-centre session note: "· late till 1am" (late by its times) or "· till 7pm" (owner, 5 Nov: a 4–7pm session keyed in here isn't late); twin "SYSTEM BLOCK · Vale (late) till …". Not EXT notes. */
 const sgMs0 = (t) => { const m = String(t || '').match(/(\d{4})-(\d\d)-(\d\d)[ T](\d\d):(\d\d)(?::(\d\d))?/); return m ? Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)) - 8 * 3600e3 : 0; };
 const sgStr = (ms) => new Date(ms + 8 * 3600e3).toISOString().replace('T', ' ').slice(0, 19);
@@ -1350,7 +1364,7 @@ function sessClash(day, S, from, to) {
   for (const x of day.items) {
     if (x.unit !== S.unit && x.unit !== tw) continue;
     const key = x.k + x.id; if (mine.has(key) || twinChain.has(key)) continue;
-    if (x.s < to && x.e > from) out.push({ room: ROOMS[x.unit][0], what: x.k === 'b' ? (x.sys ? 'twin room booking' : 'booking: ' + (x.name || 'guest')) : (HOLD_RE.test(x.name || '') ? 'an online guest is paying for this time (held ~10 min)' : (x.blk ? 'room blocked: ' : 'note: ') + (x.name || '').slice(0, 40)), s: x.s, e: x.e });
+    if (x.s < to && x.e > from) out.push({ room: ROOMS[x.unit][0], what: x.k === 'b' ? (x.sys ? 'twin room booking' : 'booking: ' + (x.name || 'guest')) : (HOLD_RE.test(x.name || '') ? 'an online guest is paying for this time (held ~10 min)' : MIR_RE.test(x.name || '') ? 'twin room booking' : (x.blk ? 'room blocked: ' : 'note: ') + (x.name || '').slice(0, 40)), s: x.s, e: x.e });
   }
   /* closing = 11:15pm of the shop night the session belongs to (12am–11am starts count as the night before), checked on
      the GUEST end like the booking page (a guest may end exactly at 11:15pm; the cleaning after it is fine) – time check 2 Nov */
@@ -1753,9 +1767,9 @@ async function lateMsgsCancel(env, hb, S) {
 }
 async function latelist(env, hb) {
   const s2 = await sb2(env), now = Date.now(), today = sgDay(now);
-  const nt = await s2('GET', '/admin/calendar-notes?filter[date_from]=' + addDays(today, -1) + '&filter[date_to]=' + addDays(today, 45) + '&on_page=200');
+  const nt = await notesRange(s2, addDays(today, -1), addDays(today, 45));
   const its = [];
-  for (const n of ((nt && nt.data) || [])) {
+  for (const n of nt) {
     const s = sgMs0(n.start_date_time), e = sgMs0(n.end_date_time), unit = +n.provider_id, txt = String(n.note || '');
     if (!n.time_blocked || !s || !e || !ROOMS[unit] || SYS_RE.test(txt) || e - s > 12 * 3600e3) continue;
     its.push({ id: String(n.id), unit, s, e, txt, ext: EXT_RE.test(txt) });
@@ -2070,14 +2084,14 @@ async function mvQuote(env, f) {
   const X = mvExtOf(D0, B);   /* its +h moves with it, so the new time must be free for the extra time too */
   /* anything in the way at the new time, apart from this booking and its own Vale/Atlas block */
   const e = eB0 + X.min * 60e3;
-  const mir = await hb.kvGet('mir:' + B.bid), skip = new Set(['b' + B.bid].concat(mir && mir.blk ? ['b' + mir.blk] : []).concat(X.main.concat(X.twin).map((n) => 'n' + n.id)));
-  const twinBlk = (x) => x.k === 'b' && x.sys && (x.unit === 5 || x.unit === 12) && D0.items.concat(D1.items).some((y) => y.k === 'b' && y.id === B.bid && Math.abs(y.s - x.s) <= 5 * 60e3);
+  const mir = await hb.kvGet('mir:' + B.bid), skip = new Set(['b' + B.bid].concat(mir && mir.blk ? ['b' + mir.blk] : []).concat(mir && mir.note ? ['n' + mir.note] : []).concat(X.main.concat(X.twin).map((n) => 'n' + n.id)));
+  const twinBlk = (x) => mirMine(x, B.bid) || (x.k === 'b' && x.sys && (x.unit === 5 || x.unit === 12) && D0.items.concat(D1.items).some((y) => y.k === 'b' && y.id === B.bid && Math.abs(y.s - x.s) <= 5 * 60e3));
   const tw = MIRROR[unit], clash = [];
   for (const x of D1.items) {
     if (x.unit !== unit && x.unit !== tw) continue;
     if (skip.has(x.k + x.id) || twinBlk(x)) continue;
     if (f.holdRef && x.k === 'n' && String(x.name || '').includes('ref ' + f.holdRef)) continue;   /* this move's own ONLINE HOLD note (a remembered day may still list it) */
-    if (x.s < e && x.e > s) clash.push(ROOMS[x.unit][0] + ': ' + (x.k === 'b' ? (x.sys ? 'twin room booking' : 'booking ' + (x.name || 'guest')) : HOLD_RE.test(x.name || '') ? 'an online guest is paying for this time' : (x.blk ? 'room blocked' : 'note: ' + String(x.name || '').slice(0, 40))) + ' ' + clock12(x.s) + '–' + clock12(x.e));
+    if (x.s < e && x.e > s) clash.push(ROOMS[x.unit][0] + ': ' + (x.k === 'b' ? (x.sys ? 'twin room booking' : 'booking ' + (x.name || 'guest')) : HOLD_RE.test(x.name || '') ? 'an online guest is paying for this time' : MIR_RE.test(x.name || '') ? 'twin room booking' : (x.blk ? 'room blocked' : 'note: ' + String(x.name || '').slice(0, 40))) + ' ' + clock12(x.s) + '–' + clock12(x.e));
   }
   const closeT = sgMs0(sgDay(s - SHADOW_TILL * 60e3) + ' ' + hhmm(CLOSE)); if (e - BUF * 60e3 > closeT + 60e3) clash.push('past closing time (11:15pm)');
   /* the fee */
@@ -2118,6 +2132,7 @@ async function mvExecute(env, mv, how) {
     /* its own Vale/Atlas block goes first (else SimplyBook sees the twin room busy); put back if the move fails */
     const mir = await hb.kvGet('mir:' + B.bid);
     if (mir && mir.blk) { await a('cancelBooking', [mir.blk]).catch(() => null); await hb.kvSet('mir:' + B.bid, null); await hb.kvSet('mirb:' + mir.blk, null); }
+    else if (mir && mir.note) { await (await sb2(env))('DELETE', '/admin/calendar-notes/' + mir.note).catch(() => null); await hb.kvSet('mir:' + B.bid, null); }
     await hb.kvSet('mvpush:' + B.bid, Date.now() + 10 * 60e3).catch(() => null);   /* set BEFORE SimplyBook hears of it: its own 'changed' alert is skipped, ours (with who + what was paid) goes instead */
     const ed = await a('editBook', [B.bid, q.eventId, q.unit, B.cid, q.date, q.time + ':00', eB >= 1440 ? addDays(q.date, 1) : q.date, hhmm(eB % 1440) + ':00', 0, B.fields]).then(() => true).catch((e) => String(e.message || e).slice(0, 160));
     await mirrorOnSb(env, B.bid, 'change').catch(() => null);   /* new block in the other twin (or the old one put back) */
@@ -2292,7 +2307,7 @@ async function gCalItems(env, from, to, fresh) {
   const a = await admin(env), s2 = await sb2(env);
   const [bk, nt] = await Promise.all([
     a('getBookings', [{ booking_type: 'non_cancelled', date_from: from, date_to: to }]),
-    s2('GET', '/admin/calendar-notes?filter[date_from]=' + from + '&filter[date_to]=' + to + '&on_page=500'),
+    notesRange(s2, from, to),
   ]);
   const items = [];
   for (const b of Object.values(bk || {})) {
@@ -2301,7 +2316,7 @@ async function gCalItems(env, from, to, fresh) {
     const cid = String(b.client_id || ''), name = String(b.client || b.client_name || '');
     items.push({ k: 'b', id: String(b.id), unit, s, e, sys: SYS_CLIENTS.includes(cid) || SYS_RE.test(name) });
   }
-  for (const n of ((nt && nt.data) || [])) {
+  for (const n of (nt || [])) {
     const s = sgMs0(n.start_date_time), e = sgMs0(n.end_date_time), unit = +n.provider_id;
     if (!n.time_blocked || !s || !e || !ROOMS[unit]) continue;
     const txt = String(n.note || '');
@@ -2325,7 +2340,7 @@ async function gCtx(env, ref, fresh) {
   /* the booking as SimplyBook has it now (staff may have changed it there) */
   const me = dry ? { k: 'b', id: 'dry', unit: q.unit, s: bS, e: bS + (q.hours * 60 + BUF) * 60e3 } : items.find((x) => x.k === 'b' && x.id === bid);
   if (!me || (dry && bS < now)) return { stop: bS < now ? 'past' : 'gone' };
-  const mir = await hb.kvGet('mir:' + bid), skip = new Set(['b' + bid].concat(mir && mir.blk ? ['b' + mir.blk] : []));
+  const mir = await hb.kvGet('mir:' + bid), skip = new Set(['b' + bid].concat(mir && mir.blk ? ['b' + mir.blk] : []).concat(mir && mir.note ? ['n' + mir.note] : []));
   const mvH = await hb.mvHoldsAll(); for (const x of mvH) if (x.bid === bid) for (const id of x.notes || []) skip.add('n' + id);   /* this guest's own unpaid move hold never blocks them */
   /* its +h (EXT) notes and the twin's copy of them: an extended booking is moved by staff (WhatsApp) */
   let ext = 0, end = me.e; for (;;) { const nx = items.find((x) => x.k === 'n' && x.ext && x.unit === me.unit && Math.abs(x.s - end) <= 5 * 60e3 && !skip.has('n' + x.id)); if (!nx) break; skip.add('n' + nx.id); ext += nx.e - nx.s; end = nx.e; }
@@ -2470,13 +2485,13 @@ async function mvApi(env, hb, f, origin) {
   if (act === 'mvfree') {   /* the free start times on a day for this booking (no extra SimplyBook calls: the day's notes + bookings) */
     const B = await mvBooking(env, f.bid), hours = +f.hours || B.hours, date = f.date, D = await sessDay(env, date), mir = await hb.kvGet('mir:' + B.bid), out = {};
     const X = mvExtOf(await sessDay(env, sgDay(B.s - SHADOW_TILL * 60e3)), B);
-    const skip = new Set(['b' + B.bid].concat(mir && mir.blk ? ['b' + mir.blk] : []).concat(X.main.concat(X.twin).map((n) => 'n' + n.id))), now = Date.now();
+    const skip = new Set(['b' + B.bid].concat(mir && mir.blk ? ['b' + mir.blk] : []).concat(mir && mir.note ? ['n' + mir.note] : []).concat(X.main.concat(X.twin).map((n) => 'n' + n.id))), now = Date.now();
     for (const u of Object.keys(ROOMS).map(Number)) {
       const tw = MIRROR[u], L = [];
       for (let m = 660; m <= 1215; m += 15) {
         const s = sgMs0(date + ' ' + hhmm(m)), e = s + hours * 3600e3 + BUF * 60e3 + X.min * 60e3; if (s < now + 15 * 60e3) continue;
         if (m + hours * 60 + X.min > CLOSE) continue;
-        if (D.items.some((x) => (x.unit === u || x.unit === tw) && !skip.has(x.k + x.id) && !(x.k === 'b' && x.sys && D.items.some((y) => y.id === B.bid && Math.abs(y.s - x.s) <= 5 * 60e3)) && x.s < e && x.e > s)) continue;
+        if (D.items.some((x) => (x.unit === u || x.unit === tw) && !skip.has(x.k + x.id) && !mirMine(x, B.bid) && !(x.k === 'b' && x.sys && D.items.some((y) => y.id === B.bid && Math.abs(y.s - x.s) <= 5 * 60e3)) && x.s < e && x.e > s)) continue;
         L.push(m);
       }
       out[ROOMS[u][0]] = L;
@@ -2521,7 +2536,7 @@ async function mvApi(env, hb, f, origin) {
     const hd = addDays(sgDay(Date.now()), 300), hh = { ref: 'MVSELFTEST', bid: 'selftest', date: hd, unit: 9, units: [9], s: 900, e: 1080, exp: Date.now() + 60e3, notes: [] };
     const h1 = await hb.mvHoldAdd(hh), h2 = await hb.clash(hd, [9], 960, 1140), h3 = await hb.mvHoldAdd(Object.assign({}, hh, { ref: 'MVSELFTEST2', bid: 'selftest2' }));
     await hb.mvHoldDrop('MVSELFTEST'); await hb.mvHoldDrop('MVSELFTEST2'); const h4 = await hb.clash(hd, [9], 960, 1140);
-    return { ok: true, holdWorks: h1.ok === true && h2 === true && h3.ok === false && h4 === false, lockFirst: a1, lockSecond: a2, mirMissing: (mir.missing || []).map((x) => x.room + ' ' + x.when + ' ' + x.name), mirErr: mir.error || '', pending: (await hb.mvRecent(Date.now() - 48 * 3600e3)).filter((m) => !['done', 'expired', 'released'].includes(m.status) && Date.now() - m.t > 20 * 60e3).map((m) => m.ref + ' ' + m.status) };
+    return { ok: true, holdWorks: h1.ok === true && h2 === true && h3.ok === false && h4 === false, lockFirst: a1, lockSecond: a2, mirMissing: (mir.missing || []).map((x) => x.room + ' ' + x.when + ' ' + x.name), mirErr: mir.error || '', mirNotes: mir.notes || 0, mirBookings: (mir.already || 0) + (mir.linked || 0) - (mir.notes || 0), pending: (await hb.mvRecent(Date.now() - 48 * 3600e3)).filter((m) => !['done', 'expired', 'released'].includes(m.status) && Date.now() - m.t > 20 * 60e3).map((m) => m.ref + ' ' + m.status) };
   }
   if (act === 'mvfinish') {   /* staff: finish a paid move that got stuck, step by step (owner, 13 Nov 2am) */
     const ref = String(f.ref || '').replace(/[^A-Z0-9]/g, ''), mv = await hb.kvGet('mv:' + ref); if (!mv) return { error: 'Unknown move.' };
@@ -3321,7 +3336,7 @@ async function pushRetry(env, hb0) {
 /* a read-only staff question left in the engine's KV (HOLDS › diag:req, JSON form fields) is answered within 5 minutes into
    diag:res – for when the browser link to the owner's computer is down (6 Nov). Only reading actions; only someone with
    Cloudflare access to this account can write the KV. */
-const DIAG_OK = ['cronnet', 'noise', 'paxof', 'tvmsgs', 'alerts', 'pushsubs', 'tvlog', 'guestlook', 'list', 'auto', 'insess', 'holdsday', 'acks', 'latelist', 'paytimes', 'prinfo', 'queue', 'links'];
+const DIAG_OK = ['mirror', 'cronnet', 'noise', 'paxof', 'tvmsgs', 'alerts', 'pushsubs', 'tvlog', 'guestlook', 'list', 'auto', 'insess', 'holdsday', 'acks', 'latelist', 'paytimes', 'prinfo', 'queue', 'links'];
 async function diagReq(env) {
   if (!env.HOLDS) return;
   const q = await env.HOLDS.get('diag:req', 'json').catch(() => null); if (!q) return;
@@ -3329,6 +3344,7 @@ async function diagReq(env) {
   const reqs = Array.isArray(q) ? q.slice(0, 5) : [q], out = [];
   for (const f of reqs) {
     if (!DIAG_OK.includes(String(f.action))) { out.push({ q: f, error: 'not a reading action' }); continue; }
+    if (f.action === 'mirror') { if (f.do !== 'adopt') f.do = 'status'; delete f.fix; delete f.bid; }   /* the twin-block log, or the check the System check runs – never on/off/run/fix */
     if (f.action !== 'noise') delete f.sync;   /* read only – except bringing the noise blocks up to date, which the timer does anyway */
     const r = await gm(env, new Request('https://engine/gm', { method: 'POST', body: new URLSearchParams(Object.assign({}, f, { staff: env.GM_STAFF })) }));
     out.push({ q: f, r: await r.json().catch(() => null) });
@@ -3651,7 +3667,7 @@ async function bookingPush(env, bid, type) {
    as taken; screens skip it like every other SYSTEM BLOCK. Everywhere: online bookings, bookings made in SimplyBook (guest
    count field) and control-centre sessions (guest count in the note text, e.g. "5 pax").
    If the other room is already booked at that time, the booking still stands (owner's choice) and staff are alerted
-   (control-centre alert + Telegram), once per clash. Runs on every SimplyBook change, after In session / Late session
+   (phone alert + the control centre's list – never Telegram), once per clash. Runs on every SimplyBook change, after In session / Late session
    actions, every 10 minutes for tonight and tomorrow, and hourly for the week ahead. */
 const NOISE = { 11: 10, 12: 10, 10: 12 }, NOISE_PAX = 4, NOISE_RE = /SYSTEM\s*BLOCK\s*·\s*NOISE/i;
 const noiseRoom = (u) => (u === 11 ? 'Max' : ROOMS[u] ? ROOMS[u][0] : 'Room');
@@ -3719,8 +3735,33 @@ async function noiseOnSb(env, bid, type) {
    (client 2476), with the booking's exact SimplyBook start and end (cleaning included). The block moves when the booking
    moves (and goes if it leaves Vale/Atlas), and is cancelled with it. Better than Make: any service (same kind – off-peak /
    peak / early bird – in the twin, else its off-peak service), and a failed block alerts the staff phones.
-   kv mir:<booking> = { blk } (adopted from Make's blocks at switch-over: same room twin, same start and end). */
+   kv mir:<booking> = { blk } (adopted from Make's blocks at switch-over: same room twin, same start and end).
+   14 Nov (owner: "switch to notes … make them consistent … just use the time blocked notes from now onwards"): a NEW twin
+   block is a time-blocked note in the twin – "SYSTEM BLOCK · TWIN · Vale is booked (Amanda) · removed automatically · src
+   b<booking>" – like the noise rule, the hold while paying and the +h copies already are. kv mir:<booking> = { note }.
+   Blocks that exist as bookings stay bookings until their guest booking is cancelled or moved by Round2 (a move re-makes
+   the block, as a note). A note never fails for "room taken", so after making or moving one the twin is looked at: real
+   guests there at the same time → a "needs a human" alert (what SimplyBook's refusal used to tell us). SimplyBook doesn't
+   call us about notes: one deleted by hand is noticed by the System check (mirAdopt), not at once. */
 const MIR_CLIENT = { 12: '2472', 5: '2476' };
+function mirText(room, b, bid) {
+  const who = String(b.client_name || b.client || '').replace(/[^\p{L}\p{N} .'-]/gu, ' ').replace(/\s+/g, ' ').trim().split(' ')[0].slice(0, 20);
+  const t = (w) => 'SYSTEM BLOCK · TWIN · ' + room + ' is booked' + (w ? ' (' + w + ')' : '') + ' · removed automatically · src b' + bid;
+  const full = t(who), odd = (x) => EXT_RE.test(x) || LATE_RE.test(x) || HOLD_RE.test(x) || NOISE_RE.test(x);   /* a name that reads like one of our own tags is left out */
+  return odd(full) ? t('') : full;
+}
+const mirBody = (unit, st, en, text) => ({ provider_id: unit, service_id: null, start_date_time: st.slice(0, 19), end_date_time: en.slice(0, 19), note_type_id: 1, note: text, mode: 'provider', time_blocked: true });
+/* real guests in the twin at the same time? (bookings and session notes; not system blocks, not day-long blocks) */
+async function mirClash(env, bid, tw, st, en, room, twin, who) {
+  try {
+    const s = sgMs0(st), e = sgMs0(en), D = await sessDay0(env, sgDay(s));
+    const hit = D.items.filter((x) => x.unit === tw && !x.blk && !x.sys && !(x.k === 'n' && x.ext) && !(x.k === 'b' && x.id === String(bid)) && x.s < e && x.e > s);   /* not the booking itself (SimplyBook's list can lag a moment after a room change) */
+    if (!hit.length) return null;
+    const what = hit.slice(0, 3).map((x) => (x.k === 'b' ? (x.name || 'a booking') : 'note: ' + String(x.name || '').slice(0, 30)) + ' ' + clock12(x.s) + '–' + clock12(x.e)).join(', ');
+    await humanAlert(env, 'mirror-clash-' + bid, `${twin} is already taken – check`, `${room} is booked ${st.slice(0, 10)} ${clock12(s)}–${clock12(e)} (#${bid}, ${who || 'guest'}), but ${twin} already has guests then: ${what}. Vale and Atlas can't both be used – move one of them.`).catch(() => null);
+    return what;
+  } catch (e) { return null; }
+}
 function mirSvc(ev, from, to) {
   const A = SVC[ROOMS[from][1]] || {}, B = SVC[ROOMS[to][1]] || {}, kind = Object.keys(A).find((k) => A[k] === +ev);
   return B[kind || 'off'];
@@ -3730,6 +3771,13 @@ async function mirrorOnSb(env, bid, type, tries = 0) {
   if (!(await hb.lock('mirlock:' + bid, 60e3))) { if (tries < 3) { await new Promise((r) => setTimeout(r, 5000)); return mirrorOnSb(env, bid, type, tries + 1); } await humanAlert(env, 'mirror-' + bid, 'Vale/Atlas block not checked – look', `Booking #${bid} changed (${type}) but the twin block couldn’t be checked (busy 3 times). Check its twin room in SimplyBook, or System check › Moves and Vale/Atlas blocks.`).catch(() => null); return { busy: true }; }
   try {
     const drop = async (why) => {
+      if (rec && rec.note) {   /* the twin block is a note: delete it (already gone = fine) */
+        const ok = await (await sb2(env))('DELETE', '/admin/calendar-notes/' + rec.note).then(() => true).catch((e) => (/ 404:/.test(String(e.message || e)) ? true : String(e.message || e).slice(0, 120)));
+        await hb.kvSet('mir:' + bid, null);
+        if (ok !== true) await humanAlert(env, 'mirror-' + bid, 'Vale/Atlas block not removed', `Booking #${bid} ${why}, but its SYSTEM BLOCK note in the other room couldn't be deleted. Delete it by hand in SimplyBook. (${ok})`).catch(() => null);
+        await mirLog(env, { bid, do: 'cancel', why, note: rec.note, ok: ok === true });
+        return { cancelled: 'n' + rec.note, why };
+      }
       if (!rec || !rec.blk) return { none: why };
       const ok = await a('cancelBooking', [rec.blk]).then(() => true).catch((e) => String(e.message || e).slice(0, 120));
       await hb.kvSet('mir:' + bid, null); await hb.kvSet('mirb:' + rec.blk, null);
@@ -3753,6 +3801,16 @@ async function mirrorOnSb(env, bid, type, tries = 0) {
     const fields = {}; for (const x of [].concat(b.additional_fields || [])) if (x && x.field_name) fields[x.field_name] = '1';
     const args = [mirSvc(b.event_id, unit, tw), tw, MIR_CLIENT[tw], st.slice(0, 10), st.slice(11, 19), en.slice(0, 10), en.slice(11, 19), 0, fields];
     const room = ROOMS[unit][0], twin = ROOMS[tw][0], when = `${st.slice(0, 10)} ${st.slice(11, 16)}–${en.slice(11, 16)}`;
+    if (rec && rec.note) {   /* a note block follows its booking: same note, new room / time (deleted by hand meanwhile → a new one) */
+      if (rec.s === st && rec.e === en && rec.u === tw) return { same: 'n' + rec.note };
+      const s2 = await sb2(env), text = mirText(room, b, bid);
+      let nid = rec.note, ok = await s2('PUT', '/admin/calendar-notes/' + rec.note, mirBody(tw, st, en, text)).then(() => true).catch((e) => String(e.message || e).slice(0, 120));
+      if (ok !== true && / 404:/.test(ok)) { const r = await s2('POST', '/admin/calendar-notes', mirBody(tw, st, en, text)).catch((e) => ({ err: String(e.message || e).slice(0, 120) })); if (r && r.id) { nid = String(r.id); ok = true; } else ok = (r && r.err) || 'no answer'; }
+      if (ok === true) { await hb.kvSet('mir:' + bid, { note: nid, s: st, e: en, u: tw }); const clash = await mirClash(env, bid, tw, st, en, room, twin, b.client_name); await mirLog(env, { bid, do: 'move', note: nid, room, when, ok: true, clash: clash || undefined }); return { moved: 'n' + nid, clash: clash || undefined }; }
+      await mirLog(env, { bid, do: 'move', note: rec.note, room, when, ok: false, err: ok });
+      await humanAlert(env, 'mirror-' + bid, `${twin} not blocked – check`, `${room} booking #${bid} (${b.client_name || 'guest'}) moved to ${when}, but its SYSTEM BLOCK note in ${twin} couldn't follow. Move or add the block in ${twin} by hand. (${ok})`).catch(() => null);
+      return { error: ok };
+    }
     if (rec && rec.blk) {
       if (rec.s === st && rec.e === en && rec.u === tw) return { same: rec.blk };
       const ok = await a('editBook', [rec.blk, ...args]).then(() => true).catch((e) => String(e.message || e).slice(0, 120));
@@ -3761,9 +3819,9 @@ async function mirrorOnSb(env, bid, type, tries = 0) {
       await humanAlert(env, 'mirror-' + bid, `${twin} not blocked – check`, `${room} booking #${bid} (${b.client_name || 'guest'}) moved to ${when}, but its SYSTEM BLOCK in ${twin} (#${rec.blk}) couldn't follow. Move or add the block in ${twin} by hand. (${ok})`).catch(() => null);
       return { error: ok };
     }
-    const r = await a('book', args).catch((e) => ({ err: String(e.message || e).slice(0, 120) }));
-    const blk = r && r.bookings && r.bookings[0] && String(r.bookings[0].id);
-    if (blk) { await hb.kvSet('mir:' + bid, { blk, s: st, e: en, u: tw }); await hb.kvSet('mirb:' + blk, bid); await mirLog(env, { bid, do: 'block', blk, room, when, ok: true }); return { blocked: blk }; }
+    /* a new twin block = a time-blocked note (14 Nov); `args` (the booking way) is only used for blocks that already are bookings */
+    const r = await (await sb2(env))('POST', '/admin/calendar-notes', mirBody(tw, st, en, mirText(room, b, bid))).catch((e) => ({ err: String(e.message || e).slice(0, 120) }));
+    if (r && r.id) { await hb.kvSet('mir:' + bid, { note: String(r.id), s: st, e: en, u: tw }); const clash = await mirClash(env, bid, tw, st, en, room, twin, b.client_name); await mirLog(env, { bid, do: 'block', note: String(r.id), room, when, ok: true, clash: clash || undefined }); return { blocked: 'n' + r.id, clash: clash || undefined }; }
     await mirLog(env, { bid, do: 'block', room, when, ok: false, err: r && r.err });
     await humanAlert(env, 'mirror-' + bid, `${twin} not blocked – check`, `${room} was booked for ${when} (#${bid}, ${b.client_name || 'guest'}), but ${twin} couldn't be blocked at the same time – someone could book ${twin} then. Block ${twin} by hand in SimplyBook. (${(r && r.err) || 'no answer'})`).catch(() => null);
     return { error: r && r.err };
@@ -3775,11 +3833,19 @@ async function mirLog(env, x) { const hb = book(env), L = (await hb.kvGet('mirlo
 async function mirAdopt(env, fix) {
   const a = await admin(env), hb = book(env), from = sgDay(Date.now() - 86400e3), to = addDays(from, 120);
   const L = Object.values((await a('getBookings', [{ booking_type: 'non_cancelled', date_from: from, date_to: to }])) || {});
-  const blocks = L.filter((x) => SYS_CLIENTS.includes(String(x.client_id)) && MIRROR[+x.unit_id]), used = new Set(), out = { linked: 0, already: 0, missing: [], fixed: [], spareBlocks: [] };
+  const blocks = L.filter((x) => SYS_CLIENTS.includes(String(x.client_id)) && MIRROR[+x.unit_id]), used = new Set(), out = { linked: 0, already: 0, notes: 0, missing: [], fixed: [], spareBlocks: [] };
+  /* twin blocks that are notes (since 14 Nov): the note must still be there, in the twin, at the booking's times – SimplyBook
+     doesn't tell us when someone deletes a note by hand. If the notes can't be read, they are taken on trust. */
+  let NT = null; try { NT = await notesRange(await sb2(env), from, to); } catch (e) {}
   for (const x of L) {
     if (SYS_CLIENTS.includes(String(x.client_id)) || !MIRROR[+x.unit_id]) continue;
     const st = String(x.start_date || x.start_date_time || ''), en = String(x.end_date || x.end_date_time || ''), tw = MIRROR[+x.unit_id];
     const have = await hb.kvGet('mir:' + x.id); if (have && have.blk) { used.add(String(have.blk)); out.already++; continue; }
+    if (have && have.note) {
+      const n = NT && NT.find((y) => String(y.id) === String(have.note));
+      if (!NT || (n && n.time_blocked && +n.provider_id === tw && sgMs0(n.start_date_time) === sgMs0(st) && sgMs0(n.end_date_time) === sgMs0(en))) { out.already++; out.notes++; continue; }
+      if (fix) await hb.kvSet('mir:' + x.id, null);   /* gone or out of place: forgotten, so the fix below makes a fresh one */
+    }
     const m = blocks.find((y) => +y.unit_id === tw && !used.has(String(y.id)) && String(y.start_date || y.start_date_time) === st && String(y.end_date || y.end_date_time) === en);
     if (m) { used.add(String(m.id)); await hb.kvSet('mir:' + x.id, { blk: String(m.id), s: st, e: en, u: tw }); await hb.kvSet('mirb:' + m.id, String(x.id)); out.linked++; continue; }
     out.missing.push({ bid: x.id, room: ROOMS[+x.unit_id][0], when: st.slice(0, 16), name: x.client || x.client_name || '' });
