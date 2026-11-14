@@ -46,6 +46,19 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
    requests a day. Each part adds to sbCalls; it's written to the engine's kv as sbn:<day> after each request / tick / alarm. */
 let sbCalls = 0, sbBy = {}, sbWho = '?';
 /* which kind of request, and roughly who asked (owner, 5 Nov: 7,901 requests on 4 Nov – over the limit; find out what) */
+/* OUTSIDE REQUESTS (14 Nov): one run of the engine may make only 50 requests to the outside world on the free plan
+   (SimplyBook, Firebase, HitPay, Apple … – not KV or the store). At 10am the 5-minute timer's run went over and two
+   reminders couldn't be sent. Every outside request is counted here, and one refused for that reason is noted, so the
+   timer can record how close each run gets (store kv `cronNet`, read with gm `cronnet`). The count is per copy of the
+   engine: a page request served during the timer's run is counted with it, so read it as "at most". */
+const NET = { n: 0, by: {}, fails: [] };
+{ const f0 = globalThis.fetch;
+  globalThis.fetch = function (input, init) {
+    let host = '?';
+    try { host = new URL(typeof input === 'string' ? input : input.url).host; NET.n++; NET.by[host] = (NET.by[host] || 0) + 1; } catch (e) {}
+    let p; try { p = f0.call(globalThis, input, init); } catch (e) { p = Promise.reject(e); }
+    return p.catch((e) => { try { if (/Too many subrequests/i.test(String(e && e.message)) && NET.fails.length < 40) NET.fails.push({ t: Date.now(), host, who: sbWho }); } catch (x) {} throw e; });
+  }; }
 function sbHit(k) { sbCalls++; const kk = sbWho + ' › ' + k; sbBy[kk] = (sbBy[kk] || 0) + 1; }
 async function sbFlush(env) { if (!sbCalls) return; const n = sbCalls, by = sbBy; sbCalls = 0; sbBy = {}; await book(env).sbAdd(n, by); }
 async function rpc(path, method, params, headers = {}) {
@@ -2651,6 +2664,10 @@ async function gm(env, req) {
       : { kind: 'booking', title: '🧪 Delivery test', body: 'Sent ' + new Date(t + 8 * 3600e3).toISOString().slice(11, 19) + ' – nothing to do', tag: a, url: '/?alert=' + a });
     return gmJ({ ok: true, a, t, res });
   }
+  if (act === 'cronnet') {   /* staff, read-only (14 Nov): outside requests per timer run – last, biggest in 24 h, refused ones */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    return gmJ(Object.assign({ ok: true, now: Date.now() }, (await hb.kvGet('cronNet')) || {}));
+  }
   if (act === 'paxof') {   /* staff, read-only (10 Nov): the guest count the noise rule reads for one SimplyBook booking */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     const b = await (await admin(env))('getBookingDetails', [String(f.bid || '')]).catch((e) => ({ err: String(e.message || e).slice(0, 120) }));
@@ -3245,7 +3262,7 @@ async function pushRetry(env, hb0) {
 /* a read-only staff question left in the engine's KV (HOLDS › diag:req, JSON form fields) is answered within 5 minutes into
    diag:res – for when the browser link to the owner's computer is down (6 Nov). Only reading actions; only someone with
    Cloudflare access to this account can write the KV. */
-const DIAG_OK = ['noise', 'paxof', 'tvmsgs', 'alerts', 'pushsubs', 'tvlog', 'guestlook', 'list', 'auto', 'insess', 'holdsday', 'acks', 'latelist', 'paytimes', 'prinfo', 'queue', 'links'];
+const DIAG_OK = ['cronnet', 'noise', 'paxof', 'tvmsgs', 'alerts', 'pushsubs', 'tvlog', 'guestlook', 'list', 'auto', 'insess', 'holdsday', 'acks', 'latelist', 'paytimes', 'prinfo', 'queue', 'links'];
 async function diagReq(env) {
   if (!env.HOLDS) return;
   const q = await env.HOLDS.get('diag:req', 'json').catch(() => null); if (!q) return;
@@ -3436,7 +3453,7 @@ async function soonRun(env) {
   const sent = [], sgDay = (t) => new Date(t + 8 * 3600e3).toISOString().slice(0, 10);
   /* only the day the 55–61 min window falls on (today; tomorrow only around midnight) – one SimplyBook read each */
   const days = sgDay(now + 61 * 60e3) === sgDay(now) ? 1 : 2;   /* window 50–61 min: a quarter-hour start is hit on its exact tick; an odd-time note at most 5 min late */
-  const all = await soonSessions(env, days);
+  let all; try { all = await soonSessions(env, days); } catch (e) { await hb.kvSet('soonAgain', now).catch(() => null); throw e; }   /* tried again on the next 5-minute tick */
   for (const S of all) {
     const m = S.s - now; if (m <= 50 * 60e3 || m > 61 * 60e3) continue;   /* exactly 1 h before on the 5-min tick (owner, 2 Nov); keyed in within the hour → none */
     if (!(await hb.soonMark(S.key + ':' + S.s))) continue;
@@ -4064,10 +4081,14 @@ const HANDLER = {
     const base = envFor(env0, 'live'), env = Object.assign(Object.create(base), base, { __tick: new Map() }), hb = book(env); sbWho = 'cron';
     const mm = new Date(ev.scheduledTime || Date.now()).getUTCMinutes(), ten = mm % 10 < 5, quarter = mm % 15 < 5, jobs = [];
     const go = (p) => { const q = p.catch(() => null); jobs.push(q); ctx.waitUntil(q); };
+    const net0 = NET.n, by0 = Object.assign({}, NET.by), fail0 = NET.fails.length, t0 = Date.now();
     if (env.TV_KEY) go(Promise.all(['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max'].map((r) => fetch(FB_BASE + env.TV_KEY + '/' + r + '/msgAck.json').then((x) => x.json()).then((k) => hb.ackNote(r, k)).catch(() => null))));   /* every OK, kept per message */
     go((async () => { const prev = await hb.kvGet('cronLast'); await hb.kvSet('cronPrev', prev || 0); await hb.kvSet('cronLast', Date.now()); })());
     /* the reminder only needs the 10-min ticks plus :15 and :45 (bookings start on the quarter hour) */
+    /* 14 Nov: if that read fails (SimplyBook down, or the run out of outside requests) the next 5-minute tick tries once more –
+       55 min before is still inside the window, and a reminder is only ever sent once (soonMark) */
     if (ten || quarter) go(soonRun(env));
+    else go((async () => { if (await hb.kvGet('soonAgain')) { await hb.kvSet('soonAgain', 0); await soonRun(env); } })());
     go(paidSweep(env).catch(() => null));
     /* paid moves that never ran (HitPay's message missed and the guest closed the page): finish them, or alert staff */
     go((async () => { for (const m of await hb.mvRecent(Date.now() - 48 * 3600e3)) if (m.status === 'pending' && Date.now() - m.t > 60e3) {
@@ -4089,14 +4110,26 @@ const HANDLER = {
     go((async () => { const ag = await hb.kvGet('autoAgain'); if (ag && Date.now() >= ag) { await hb.kvSet('autoAgain', 0); if (!ten) await autoRun(env, 'recheck'); } })());
     if (ten) {
       go(autoRun(env, 'cron')); go(msgOrphans(env, 'cron')); go(waitWarn(env)); go(keyDaily(env)); go(holdSweep(env));
-      if (mm < 10 || (mm >= 30 && mm < 40)) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(shadowSync(env, [t, addDays(t, 1)])); }
-      { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(noiseSync(env, mm < 10 ? Array.from({ length: 7 }, (_, i) => addDays(t, i)) : [t, addDays(t, 1)], 'cron')); }   /* noise rule: tonight + tomorrow, hourly the week ahead */
+      /* 14 Nov: the heavy sweeps are kept OFF minute 0 and 30 – that is when most 1-hour reminders go (sessions start on the
+         hour), and one run may make only 50 outside requests. After-midnight notes: :10 and :40; the week-ahead noise sweep: :40
+         (was minute 0); tonight + tomorrow's noise check stays on every 10-minute tick. */
+      if ((mm >= 10 && mm < 20) || (mm >= 40 && mm < 50)) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(shadowSync(env, [t, addDays(t, 1)])); }
+      { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(noiseSync(env, mm >= 40 && mm < 50 ? Array.from({ length: 7 }, (_, i) => addDays(t, i)) : [t, addDays(t, 1)], 'cron')); }   /* noise rule: tonight + tomorrow, hourly the week ahead */
       /* ...and further ahead, one day every half hour, 8–91 days out (owner, 10 Nov: Anisah's 6 pax on 11 Dec hadn't blocked
          Bella – bookings made before the rule started, or a change SimplyBook didn't tell us about, were only caught a week
          before). The whole 12 weeks are gone through every ~42 hours, about one SimplyBook day per half hour. */
       if ((mm >= 20 && mm < 30) || mm >= 50) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(noiseSync(env, [addDays(t, 7 + Math.floor(Date.now() / 1800e3) % 84)], 'cron far')); }
     }
     ctx.waitUntil(Promise.all(jobs).then(() => sbFlush(env)).catch(() => null));
+    /* how many outside requests this run made (see NET): the last run, the biggest of the last 24 h, and any that were refused */
+    ctx.waitUntil(Promise.all(jobs).then(async () => {
+      const by = {}; for (const h in NET.by) { const d = NET.by[h] - (by0[h] || 0); if (d > 0) by[h] = d; }
+      const run = { t: t0, mm, n: NET.n - net0, by, ms: Date.now() - t0 }, fails = NET.fails.splice(0, NET.fails.length);
+      const c = (await hb.kvGet('cronNet')) || {};
+      const max = c.max && c.max.t > t0 - 86400e3 && c.max.n >= run.n ? c.max : run;
+      const fl = (c.fails || []).concat(fails).filter((x) => x.t > t0 - 3 * 86400e3).slice(-60);
+      await hb.kvSet('cronNet', { last: run, max, fails: fl, limit: 50 });
+    }).catch(() => null));
   },
   async fetch(req, env0, ctx) { try { return await HANDLER.fetch0(req, env0, ctx); } finally { ctx.waitUntil(sbFlush(rawEnv(env0)).catch(() => null)); } },
   async fetch0(req, env0, ctx) {
