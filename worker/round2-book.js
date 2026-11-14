@@ -1054,13 +1054,6 @@ async function sbGeneric(env, a) {
   if (cid) await hb.kvSet('sbGenericCid', cid);
   return cid || null;
 }
-/* before the shared contact (owner, 15 Nov: Max booking for "kikay" with a Philippine number, +63…, landed on "Round2 online
-   guest"): SimplyBook refused the contact WITH that number, so try one with the name only – staff greet the guest by that
-   name, and the number is in the booking's comment anyway. */
-async function sbNameOnly(a, name, errs) {
-  if (!String(name || '').trim()) return null;
-  return a('addClient', [{ name }]).catch((e) => { if (errs) errs.push('name only: ' + String(e.message || e).slice(0, 140)); return null; });
-}
 /* the very last resort (owner, 3 Nov: "always make a note booking with phone number and details"): SimplyBook refused the
    booking itself, so the room is blocked with a calendar note carrying everything staff need to reach the guest. Our own
    screens treat it as a session (name first, like Late session notes); the twin room is blocked too. */
@@ -1222,7 +1215,6 @@ async function finalize(env, ref, source) {
         const found = Object.values((await a('getClientList', [d.email, 1]).catch(() => null)) || {})[0] || Object.values((await a('getClientList', [p8, 1]).catch(() => null)) || {})[0];
         if (found) { cid = found.id; late = false; how.push('their existing SimplyBook contact'); }
       }
-      if (!cid) { cid = await sbNameOnly(a, d.name, cErr); if (cid) { late = false; how.push('a contact with the name only (SimplyBook refused it with the number/email) – the guest gets no email'); } }
       if (!cid) { cid = await sbGeneric(env, a).catch(() => null); if (cid) { late = false; how.push('the shared "Round2 online guest" contact – the guest gets no email'); } }
       /* SimplyBook's own bookings end 15 min after the session (its "buffer after" = cleaning time, e.g. 11:00–14:15 for 3 h),
          so ours do too – the calendar then blocks the cleaning time and nobody can book into it */
@@ -1658,7 +1650,10 @@ async function late(env, hb, f) {
      Anything else (late, odd lengths, clashes, Change) stays a note, exactly as before. */
   const phone = String(f.phone || '').replace(/[^\d+]/g, ''), email = String(f.email || '').trim().slice(0, 80), p8 = phone.replace(/\D/g, '').slice(-8);
   const stM = (s - sgMs0(day + ' 00:00')) / 60e3, geM = (guestEnd - sgMs0(day + ' 00:00')) / 60e3;
-  const noteWhy = f.replace ? 'change of a session' : f.kind === 'note' ? 'staff chose a note' : p8.length < 8 ? 'no mobile number' : ![3, 4, 5, 6].includes(hrs) ? 'not 3–6 whole hours' : stM < 660 || stM > 1215 || geM > CLOSE ? 'outside opening hours (late)' : clash.length ? 'something in the way' : email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? 'email doesn’t look right' : '';
+  const noteWhy = f.replace ? 'change of a session' : f.kind === 'note' ? 'staff chose a note' : p8.length < 8 ? 'no mobile number' : ![3, 4, 5, 6].includes(hrs) ? 'not 3–6 whole hours' : stM < 660 || stM > 1215 || geM > CLOSE ? 'outside opening hours (late)' : clash.length ? 'something in the way' : email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? 'email doesn’t look right' : !email ? 'no email – SimplyBook only makes a booking with one' : '';
+  /* owner, 15 Nov (kikay: no email → the shared "Round2 online guest" contact): a booking with the guest's own contact first;
+     no email, or SimplyBook refuses the contact → a NOTE (2nd option); the shared Round2 contact only if the note is refused too */
+  const bookable = !noteWhy || /^no email|^email doesn/.test(noteWhy);
   plan.as = noteWhy ? 'note' : 'booking'; plan.whyNote = noteWhy;
   if (!noteWhy) { try { const q0 = await quote(env, { unit, date: day, time: st, hours: hrs }); plan.price = q0.total; } catch (e) { plan.as = 'note'; plan.whyNote = String(e.message || e).slice(0, 60); } }
   if (f.dry) return { ok: true, dry: true, plan };
@@ -1691,6 +1686,11 @@ async function late(env, hb, f) {
     if (tw) { const r2 = await s2('POST', '/admin/calendar-notes', body(tw, 'SYSTEM BLOCK · ' + room + ' ' + lateW + clock12(blockEnd))); done.push({ unit: tw, id: String(r2.id), made: true }); }
   } catch (e) {
     await extRevert(s2, done);
+    /* the final failsafe (owner, 15 Nov): a new daytime session SimplyBook could book → book it on the shared Round2 contact */
+    if (!old && bookable && (!clash.length || f.force === 'yes')) {
+      const r = await lateBooking(env, hb, { unit, day, st, hrs, name, pax, phone, email, by: String(f.by || '').slice(0, 30), msgs: f.msgs, generic: true }).catch((e2) => ({ error: String(e2.message || e2).slice(0, 120) }));
+      if (r.ok) { plan.as = 'booking'; plan.whyNote = 'the note was refused (' + String(e.message || e).slice(0, 80) + ') – booked on the shared Round2 contact'; return { ok: true, plan, booking: r, msgs: [], notes: [] }; }
+    }
     if (old) await lateRestore(s2, old.notes, hb).catch(() => null);
     return { error: 'SimplyBook didn’t take the note, nothing was changed: ' + String(e.message || e).slice(0, 120) + (old ? ' (the old session was put back; its TV messages were cancelled – re-add them in Round2 messages if needed)' : '') };
   }
@@ -1721,12 +1721,10 @@ async function late(env, hb, f) {
 async function lateBooking(env, hb, x) {
   const q = await quote(env, { unit: x.unit, date: x.day, time: x.st, hours: x.hrs }), a = await admin(env), how = [], cErr = [];
   let cid = null, late = false;
-  const c = await sbContact(a, x.name, x.email || undefined, x.phone, cErr).catch(() => null); if (c) { cid = c.cid; late = c.late; }
-  if (!cid) { const p8 = x.phone.replace(/\D/g, '').slice(-8); const found = Object.values((await a('getClientList', [p8, 1]).catch(() => null)) || {})[0]; if (found) { cid = found.id; how.push('their existing SimplyBook contact'); } }
-  if (!cid) { cid = await sbNameOnly(a, x.name, cErr); if (cid) { late = false; how.push('a contact with the name only (SimplyBook refused the number ' + x.phone + ')'); } }
-  if (!cid) { cid = await sbGeneric(env, a).catch(() => null); if (cid) how.push('the shared "Round2 online guest" contact'); }
-  if (cErr.length && how.length) how.push('SimplyBook said: ' + cErr.join(' | ').slice(0, 300));   /* why, for next time (before: thrown away) */
-  if (!cid) throw new Error('SimplyBook wouldn’t make a contact');
+  if (x.generic) { cid = await sbGeneric(env, a).catch(() => null); if (cid) how.push('the shared "Round2 online guest" contact – the note was refused too'); }
+  else { const c = await sbContact(a, x.name, x.email || undefined, x.phone, cErr).catch(() => null); if (c) { cid = c.cid; late = c.late; } }
+  /* no old contact found by phone, no shared contact here (owner, 15 Nov): the caller makes a note instead */
+  if (!cid) throw new Error('SimplyBook wouldn’t take the guest’s contact' + (cErr.length ? ' (' + cErr.join(' | ').slice(0, 140) + ')' : ''));
   const eB = mins(q.time) + q.hours * 60 + BUF, endDate = eB >= 1440 ? addDays(q.date, 1) : q.date;
   let bErr = ''; const bk = await a('book', [q.eventId, q.unit, cid, q.date, q.time + ':00', endDate, hhmm(eB % 1440) + ':00', 0, { [PAX_FIELD]: String(x.pax) }]).catch((e) => { bErr = String(e.message || e).slice(0, 100); return null; });
   const b0 = bk && bk.bookings && bk.bookings[0]; if (!b0 || !b0.id) throw new Error(bErr || 'no booking id');
