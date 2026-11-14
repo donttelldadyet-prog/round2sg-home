@@ -23,6 +23,29 @@
 >   control centre signs that phone up again by itself at start-up (`Alerts.wake`). gm `pushsubs` now also returns `shown`,
 >   `dropDays`, `dropped`. System check has a reading-only step for it. Docs: round2-tv-launcher `docs/staff-alerts.md`
 >   (item 6, and a new plain-words section "How an alert travels").
+> - **2:24pm, engine 9a10564 DEPLOYED (27 bindings) – THREE TIMERS** (owner: "lets try 1", with the PS4 save feature and the
+>   other planned jobs in mind). Cloudflare › round2-book › Triggers now has 3 schedules; each fires its own run with its own
+>   50 outside requests. `scheduled()` picks the lane from the scheduled minute:
+>   - **now** `*/5 * * * *` – heartbeat (`cronLast`), 1-hour reminders (`soonRun`, + `soonAgain` retry), alert re-sends /
+>     hourly prune / `diag:push` (all in the DO), `noiseAgain` / `autoAgain` rechecks; on the 10-min ticks tonight's calendar
+>     work that shares one read of today + tomorrow: `autoRun`, `msgOrphans`, `waitWarn`, `holdSweep`, `noiseSync([t, t+1])`.
+>   - **side** `1,6,11,16,21,26,31,36,41,46,51,56 * * * *` – TV OKs (7 Firebase reads), `paidSweep`, the paid-moves sweep,
+>     `diagReq` (so a KV question is now answered at minute 1/6/…), `keyDaily`.
+>   - **sweep** `3,13,23,33,43,53 * * * *` – `shadowSync` (:13, :43), noise rule days +2…+6 (:43, `'cron week'`), one far day
+>     (:23, :53).
+>   - Self-healing: "now" reads kv `cronNet.lanes`; if side hasn't run for 12 min / sweep for 25 min it does that lane's jobs
+>     itself (exactly the old behaviour) and writes `fb: [...]` into its run record. So a deploy needs no order, and a deleted
+>     trigger costs nothing but the shared allowance.
+>   - Counters per lane: kv `cronNet` = {last, max, fails, limit, lanes: {now|side|sweep: {last, max}}} (gm / diag `cronnet`);
+>     SimplyBook counter names the lane (`cron`, `cron side`, `cron sweep`). System check step "Background jobs: 3 timers…".
+>   - **RULE for new background jobs** (PS4: daily prep from SimplyBook, parked-save expiry, version checks; membership renewal
+>     reminders; Madd payout; food menu off Make): put them in **side** (no calendar) or **sweep** (calendar look-ahead), or give
+>     them a **4th/5th timer** (5 per account on the free plan, 3 used) at a free minute (2/7 or 4/9) and a new lane name in
+>     `scheduled()`. Never in "now" unless it needs tonight's calendar and is small. Things a PS4 helper or a page asks for
+>     (`/ps4/…`, uploads to R2) are their own requests with their own allowance; R2/KV/DO calls count against a separate
+>     1,000, not the 50. Still one budget to watch everywhere: SimplyBook's ~5,000 requests a day (the split re-reads tomorrow
+>     twice an hour in sweep, about +100 a day).
+>   - A script upload (deploy) does not touch the triggers; check `GET …/workers/scripts/round2-book/schedules` shows 3.
 > - Known stale comment (engine, noise rule header): says clashes alert "control-centre alert + Telegram" – Telegram never
 >   gets these (`staffAlert` is a no-op). Fix the wording with the next engine change.
 

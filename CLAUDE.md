@@ -12,3 +12,6 @@
   anything about bookings to Telegram – Madd Pizza doesn't need to know them. Booking alerts go to staff phones (control centre) only.
 - Deploying the engine: `keep_bindings` must list secret_text, kv_namespace, plain_text, durable_object_namespace **and r2_bucket**
   (27 settings; without r2_bucket the PS4 game-save storage is cut off). Check the count after every deploy.
+- **Background jobs run in three timers** (14 Nov 2026; Cloudflare free plan = 50 outside requests per run): `now` */5
+  (reminders, tonight's calendar), `side` minutes 1,6,… (TV OKs, payments, keys), `sweep` minutes 3,13,… (look-aheads). A new
+  background job goes in side or sweep or gets its own timer (5 allowed, 3 used) – never bulk up `now`. HANDOFF "THREE TIMERS".
