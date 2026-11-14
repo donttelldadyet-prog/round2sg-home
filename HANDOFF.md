@@ -465,3 +465,30 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
 - Fix (page only, commit 527412c): empty state now says why – under 24 h → "only same-day upgrades online, WhatsApp us to move
   to another day" (prefilled WhatsApp link); otherwise "<room> has no free time on <day>" + which rooms are free. No engine change.
 - Not done: System check not re-run (session wasn't linked to the browser) – run it next time. Idea: grey out other days in stage `day`.
+- Same night, owner: "grey them out and explain why they can't move, find any other bugs" + two screenshots. Page-only (`move/index.html`):
+  - Under 24 h: other days are greyed ("locked"), week arrows/Month off, and the note at the top says why + WhatsApp link.
+    Under 3 days: a day whose only free times are before 2:15pm says "3+ days" instead of "full"; rooms say why they have
+    nothing ("Before 2:15pm only", "Not an upgrade", "Fully booked").
+  - The room the guest wants is remembered (`sel.rw`): if it has nothing that day the page says it switched ("Vale has no time
+    on Sun 22 – showing Scarlett") and goes back to their room on the next day they tap; it prefers the same kind of room.
+  - Hours: the guest's own length (`sel.hw`) comes back whenever it fits – before, one tap on a "max 3h" time left a 4h guest on
+    3h for every later time (Ranen's case again). "min 4h" label where only longer fits.
+  - "Starts in -2h" during/after a session → "On now · until 5:45pm" / "Session ended". Early-bird bookings no longer read
+    "$5 for a bigger room" (theirs is always $15). Done screen no longer says "1 move left / free for 15 min" after ADD HOURS.
+    Receipt's "(2nd move +$10 included)" only when it was the guest's 2nd move. Calendar file works for yesterday's booking.
+    Back from HitPay unpaid (status ≠ completed, or the hold expired/released) → "That change wasn't paid" instead of
+    "Your payment came through… confirming" for 2 minutes.
+  - Home button title "RESCHEDULE / ADD HOURS" overlapped itself on phones → "RESCHEDULE + HOURS", proper line height.
+- Control centre (round2-tv-launcher `manager/index.html`): a reschedule alert's page said "NEW BOOKING · NO NAME" (the engine
+  sends it without `ctx`). The page now reads the alert's own lines: Rescheduled · room, name, Now / Was / Moved by / Paid,
+  "Open Rescheduling"; the list row gets the "Changed" tag.
+- **Found, NOT changed (engine = needs a deploy + System check; owner to decide):**
+  1. `gLogic.why`: ADD HOURS is refused by the 2:15pm lock when the booking itself starts before 2:15pm and is under 3 days
+     away (11am early birds included) – adding hours to your own slot shouldn't be "a new time before 2:15pm".
+  2. ADD HOURS is refused by the "don't leave an unsellable gap" rule (`deadGap`) – e.g. 3pm–6pm with the next booking at
+     9:45pm can't add an hour online. Probably should be allowed: they're paying for the hour.
+  3. After 2 moves the page hides the button entirely, though the engine would still allow ADD HOURS (doesn't use a move).
+  4. The reschedule push has no `ctx` (bid/ref/times) → its alert page can't show phone/email or "Open In session"; and an
+     add-hours alert still says "RESCHEDULED" (page is ready for "HOURS ADDED").
+  5. Room cards price the guest's own length even where only a shorter one fits (the ticket below is right).
+- System check NOT run for any of this (no browser link this session). Tested on a mock copy with Playwright only.
