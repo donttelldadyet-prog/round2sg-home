@@ -46,6 +46,13 @@
 >     1,000, not the 50. Still one budget to watch everywhere: SimplyBook's ~5,000 requests a day (the split re-reads tomorrow
 >     twice an hour in sweep, about +100 a day).
 >   - A script upload (deploy) does not touch the triggers; check `GET …/workers/scripts/round2-book/schedules` shows 3.
+>   - First readings (2:31–2:46pm): new triggers took ~7 min to start firing (side first ran 2:31, sweep 2:33; until then "now"
+>     covered, `fb` as designed). Outside requests per run: now 0–2 on its own (12 while covering for side), side 8 (7 Firebase +
+>     1 HitPay), sweep 16 at :43 (the heaviest: after-midnight notes + 5 noise days). 0 refused. Not yet seen: a busy :00 with
+>     several reminders. System check NOT run yet after today's engine changes (needs the staff code in a browser).
+>   - Seen on the way (not fixed): SimplyBook requests today 4,469 by 2:30pm, yesterday 7,680 (guideline ~5,000). Biggest:
+>     booking page `/day › getAvailableTimeIntervals` 1,162, cron 656, `gm late` (Add a session page) 523, `/mode` 252.
+>   - Old sign-up hGptkT last showed an alert 11 Nov 1:40pm (owner re-added the app 1:45pm) → the prune takes it ~18 Nov 1:40pm.
 > - Known stale comment (engine, noise rule header): says clashes alert "control-centre alert + Telegram" – Telegram never
 >   gets these (`staffAlert` is a no-op). Fix the wording with the next engine change.
 
