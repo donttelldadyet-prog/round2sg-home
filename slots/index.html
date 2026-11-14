@@ -18,6 +18,18 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4
 /* inside the website's Book screen (?embed=1): the website already has the heading, so start straight at the calendar */
 .embed .wrap { padding-top: 6px; }
 .embed .kick.top, .embed h1.top, .embed .sub.intro { display: none; }
+/* wide screens (owner, 15 Nov – the website's desktop Book screen is ~1100px wide): calendar on the left, staying put while the
+   rooms on the right scroll. Phones and narrow windows: one column, unchanged. */
+.cols, .colL, .colR { min-width: 0; }
+@media (min-width: 900px) {
+  .wrap { max-width: 1180px; }
+  .cols { display: grid; grid-template-columns: minmax(310px, 350px) minmax(0, 1fr); gap: 0 28px; align-items: start; }
+  .colR .room { grid-template-columns: 215px minmax(0, 1fr); }   /* room name + early-bird chip need ~210px */
+  .colL { position: sticky; top: 10px; }
+  .colL .cal, .colL .dayhd, .colL .picked { max-width: none; }
+  .colR > .lbl:first-child { margin-top: 0 !important; }
+  .colR .tier:first-of-type { margin-top: 14px; }
+}
 .px { font-family: 'Press Start 2P', monospace; letter-spacing: .12em; }
 .kick { font-size: 9px; color: var(--acc); }
 h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4; margin: 8px 0 6px; letter-spacing: .04em; }
@@ -204,9 +216,11 @@ h3.nm, .nm { color: var(--rc); }
   <p class="sub intro">Pick a day, then look by room, by the time you'd like to start, or the earliest free. Coloured bars are times you can start; tap a room to choose your start and how long you'll stay.</p>
   <p class="sub" style="margin-top:-6px">Already booked? <a style="color:var(--acc)" target="_top" href="https://book.round2.sg/find">View your booking</a> or add a TV message.</p>
   <div class="banner" id="banner" hidden></div>
+  <div class="cols"><div class="colL">
   <div class="lbl px dayhd"><i data-ic="cal"></i>1 · PICK A DAY <button type="button" id="toToday" hidden>BACK TO TODAY</button></div>
   <div class="cal" id="days" role="group" aria-label="Pick a day"></div>
   <div class="picked" id="picked" role="status" hidden></div>
+  </div><div class="colR">
   <div class="lbl px" style="margin-top:20px"><i data-ic="eye"></i>2 · HOW DO YOU WANT TO LOOK?</div>
   <div class="views" id="views" role="group" aria-label="View">
     <button type="button" data-v="room" aria-pressed="true">BY ROOM</button>
@@ -216,6 +230,7 @@ h3.nm, .nm { color: var(--rc); }
   <div class="tiers" id="tiers"></div>
   <div id="board"><div class="state px load">LOADING SAVE SLOTS…</div></div>
   <p class="sub" style="margin-top:18px"><i data-ic="moon"></i> Online sessions must end by 11:15pm (latest 3-hour start: 8:15pm). Starting later or extending past 11:15pm? <a style="color:var(--acc)" href="https://wa.me/6591625767?text=Hi%20Round2%2C%20I%27d%20like%20a%20late-night%20session%20(past%2011%3A15pm)" target="_blank" rel="noopener">WhatsApp us</a>, subject to staff availability.</p>
+  </div></div>
 </div>
 
 <div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="mTitle">
