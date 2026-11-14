@@ -494,3 +494,7 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
      add-hours alert still says "RESCHEDULED" (page is ready for "HOURS ADDED").
   5. Room cards price the guest's own length even where only a shorter one fits (the ticket below is right).
 - System check NOT run for any of this (no browser link this session). Tested on a mock copy with Playwright only.
+- 11pm, owner: the receipt must say whether they **moved or added hours**. Page (`move/index.html`, `isAdd(m)` = same day, room
+  and start, just longer): booking history line "Hours added: 3h → 4h … no move used"; its receipt is "ADD HOURS RECEIPT" with
+  one row "Extra hour (3h → 4h) · no change fee"; the receipt tile says "moved once · hours added"; review screen says "▼ ADDING
+  HOURS ▼" and "adding hours doesn't use a move"; done screen "HOURS ADDED!". After 2 moves the button stays hidden (owner: intended).
