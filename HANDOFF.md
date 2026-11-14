@@ -13,8 +13,9 @@
 >   Heavy sweeps are now OFF minutes 0 and 30 (week-ahead noise :40, after-midnight notes :10/:40), alerts are out of the cron's
 >   allowance, and a reminder whose SimplyBook read failed is retried on the next 5-min tick (`soonAgain`). Each job is still
 >   wrapped in `go(…catch)`, so a refused request fails silently – `cronNet.fails` is where it shows.
-> - Unknown yet: whether Apple accepts our `Topic` header. If it refuses (HTTP 400) the alert is re-sent without it, the push
->   service is remembered (`TOPIC_NO`) and the phone's last result reads `ok (topic refused)` in `diag:push`.
+> - **1:15pm, first real alerts through the DO (2 reminders):** all 5 phones `ok`, no "topic refused" – Apple accepts `Topic`.
+>   Shown: one phone +1–3 s, one +57–60 s (first re-send), one +235 s (second re-send). So re-sends now come about every minute
+>   at first (`PUSH_RETRY_GAPS` 50 s, 2, 3, 4½, 9 min; engine deployed 1:28pm, 27 bindings).
 
 > ## 14 Nov 2026, 6am – second chat (TVs / control centre): review follow-ups, engine ed9d0be DEPLOYED (27 bindings, cron */5)
 > - **A moved booking's noise block follows at once** (`mvExecute` → `noiseSync` old day + new day).
