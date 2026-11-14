@@ -1,5 +1,18 @@
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
 
+> ## 14 Nov 2026, 10:25am – ⚠️ the 5-minute timer's run hits the free plan's 50-outside-requests limit (engine 810c91d DEPLOYED, 27 bindings)
+> - **What happened:** at 10:00 two of the four 1-hour reminders failed for EVERY phone: `failed Too many subrequests by single
+>   Worker invocation` (KV `diag:push` › phones › last). One cron run = one invocation = 50 outside requests in all (SimplyBook
+>   calls + every push to Apple). The new ~50 s re-send (runs in the DO) got them out 48 s and 112 s late.
+> - **Fix:** alerts are now sent from INSIDE the DO (`pushAll` → `hb.pushRun` → `pushAllHere`; the cron's re-send backstop too,
+>   `pushRetryRun`) – each has its own allowance. Falls back to sending from the caller if the DO call fails.
+> - **Not fixed, for whoever works on the engine next:** the top-of-the-hour cron run is at or near 50 outside requests WITHOUT the
+>   alerts (hourly week-ahead noise sweep + mirror sweep + auto wrap-up + reminders' guest-count look-ups …). Anything late in that
+>   run can fail the same silent way (each job is wrapped in `go(…catch)`). Worth: count `fetch`es per run (`sbHit` already counts
+>   SimplyBook ones) and move the heavy sweeps into the DO or onto different minutes.
+> - Unknown yet: whether Apple accepts our `Topic` header. If it refuses (HTTP 400) the alert is re-sent without it, the push
+>   service is remembered (`TOPIC_NO`) and the phone's last result reads `ok (topic refused)` in `diag:push`.
+
 > ## 14 Nov 2026, 6am – second chat (TVs / control centre): review follow-ups, engine ed9d0be DEPLOYED (27 bindings, cron */5)
 > - **A moved booking's noise block follows at once** (`mvExecute` → `noiseSync` old day + new day).
 > - **Phone alerts late / in threes:** the delivery log (KV `diag:push`) showed late alerts appearing within 2 s of a re-send, so
