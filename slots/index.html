@@ -28,11 +28,15 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4
   .colL { position: sticky; top: 10px; }
   .colL .cal, .colL .dayhd, .colL .picked { max-width: none; }
   /* the view switch stays at the top while guests scroll down the rooms – desktop only, one compact line (owner, 15 Nov) */
-  .viewbar { position: sticky; top: 0; z-index: 6; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 0 -4px; padding: 6px 4px 8px; background: var(--bg); }
+  /* one row on an 8px rhythm: step label (quiet) · 24px · a segmented switch (one outlined unit, equal 32px-high parts) */
+  .viewbar { position: sticky; top: 0; z-index: 6; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; margin: 0 -4px; padding: 8px 4px; background: var(--bg); }
   .viewbar.stuck { box-shadow: 0 10px 14px -10px rgba(0,0,0,.9); border-bottom: 1px solid var(--line); }
-  .viewbar > .lbl { margin: 0 !important; }
-  .viewbar .views { margin: 0; gap: 4px; }
-  .viewbar .views button { font-size: 8px; padding: 7px 9px; }
+  .viewbar > .lbl { margin: 0 !important; line-height: 1; }
+  .viewbar .views { display: inline-flex; flex-wrap: nowrap; gap: 0; margin: 0; border: 1px solid var(--line); }
+  .viewbar .views button { height: 32px; padding: 0 16px; font-size: 8px; letter-spacing: .12em; border: 0; border-left: 1px solid var(--line); }
+  .viewbar .views button:first-child { border-left: 0; }
+  .viewbar .views button:not([aria-pressed="true"]):hover { background: rgba(244,241,251,.08); }
+  .colR .tiers { margin: 8px 0 0; }
   .colR .tier:first-of-type { margin-top: 14px; }
 }
 .px { font-family: 'Press Start 2P', monospace; letter-spacing: .12em; }
@@ -226,11 +230,11 @@ h3.nm, .nm { color: var(--rc); }
   <div class="picked" id="picked" role="status" hidden></div>
   </div><div class="colR">
   <div class="viewbar">
-  <div class="lbl px" style="margin-top:20px"><i data-ic="eye"></i>2 · HOW DO YOU WANT TO LOOK?</div>
+  <div class="lbl px" style="margin-top:20px"><i data-ic="eye"></i>2 · BROWSE BY</div>
   <div class="views" id="views" role="group" aria-label="View">
-    <button type="button" data-v="room" aria-pressed="true">BY ROOM</button>
-    <button type="button" data-v="time" aria-pressed="false">BY TIME</button>
-    <button type="button" data-v="early" aria-pressed="false">EARLIEST</button>
+    <button type="button" data-v="room" aria-pressed="true">ROOM</button>
+    <button type="button" data-v="time" aria-pressed="false">START TIME</button>
+    <button type="button" data-v="early" aria-pressed="false">EARLIEST FREE</button>
   </div>
   </div>
   <div class="tiers" id="tiers"></div>
