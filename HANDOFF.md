@@ -81,6 +81,15 @@
 >   since the switch to notes. Details: round2-tv-launcher docs/staff-alerts.md "Second reading".
 >   **11:00pm – trial ENDED (owner: ok):** KV `push:decl` deleted; all phones on ordinary delivery again, re-sends as before.
 >   Code for it stays in the engine, off. Live engine still 396b1f9.
+> - **15 Nov 12:44am, engine 2056b5e DEPLOYED (27 bindings, 3 timers) – name-only contact before the shared one.** Max booking
+>   #3241 (22 Nov 11am, "kikay", Add a session) landed on "Round2 online guest": SimplyBook refused a contact with the number
+>   +63 9153455204 (Philippine mobile, 12 digits – valid, so not "too long"; SimplyBook's own reason wasn't kept). New
+>   `sbNameOnly`: before the shared contact, both paths (online `finalize`, staff `lateBooking`) try a contact with the name
+>   only; `lateBooking` now passes `cErr` to `sbContact` and adds "SimplyBook said: …" to `how` (booking comment). Add a
+>   session page (manager/late, db11f40) shows a ⚠️ Contact line when `how` isn't empty. Untested against SimplyBook (whether
+>   it takes a contact without phone for this account is unknown – if not, it falls to the shared contact as before, now
+>   with the reason in the comment). Also: the first new-style twin note went in for a real booking (Jennie, Vale 22 Nov
+>   2:45–6pm, note 2647 in Atlas). Booking #3241 itself left as is (owner can swap the contact in SimplyBook).
 > - **4:43pm, engine eee2f10 DEPLOYED (27 bindings, 3 timers) – NEW Vale/Atlas TWIN BLOCKS ARE NOTES** (owner: "switch to
 >   notes … make them consistent … just use the time blocked notes from now onwards"). `mirrorOnSb`: no record yet → POST a
 >   time-blocked note in the twin, text `SYSTEM BLOCK · TWIN · <room> is booked (<first name>) · removed automatically · src
