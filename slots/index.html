@@ -22,7 +22,10 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4
    rooms on the right scroll. Phones and narrow windows: one column, unchanged. */
 .cols, .colL, .colR { min-width: 0; }
 @media (min-width: 900px) {
-  .wrap { max-width: 1180px; }
+  /* the page's bottom space sits INSIDE the columns, so the pinned calendar and Browse-by bar never get pushed up when the
+     rooms are scrolled to the very end (owner, 15 Nov) */
+  .wrap { max-width: 1180px; padding-bottom: 0; }
+  .colR { padding-bottom: 40px; }
   .cols { display: grid; grid-template-columns: minmax(310px, 350px) minmax(0, 1fr); gap: 0 28px; align-items: start; }
   .colR .room { grid-template-columns: 215px minmax(0, 1fr); }   /* room name + early-bird chip need ~210px */
   /* the scaled desktop stage can leave a hairline above a stuck part: each one also paints 8px of page colour above itself */

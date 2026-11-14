@@ -842,12 +842,18 @@ class Component extends DCLogic {
   }
 
   /* screens: watch the page's own state changes (DCLogic is the runtime's component base) */
-  var last = {};
+  var last = {}, deepRoom = st.menu === 1 && typeof st.pick === 'number' && /[?&]room=/.test(location.search);
   function seen(s) {
     if (!s) return;
     if (s.book && !last.book) { count('book'); }
     if (s.menu !== last.menu && MENUS[s.menu]) count(MENUS[s.menu]);
-    if (s.menu === 1 && (s.pick !== last.pick || last.menu !== 1) && ROOMS[s.pick]) count('room_' + ROOMS[s.pick]);
+    /* a room counts when it was CHOSEN (owner, 15 Nov: Vale was inflated – the Rooms screen opens on Vale, so every visit to
+       Rooms counted it). Arriving on Rooms counts the room shown only if it isn't the default first one (a remembered pick),
+       or a ?room= link asked for it; after that every room moved to counts, Vale included. */
+    if (s.menu === 1 && ROOMS[s.pick]) {
+      if (last.menu === 1 ? s.pick !== last.pick : (s.pick !== 0 || deepRoom)) count('room_' + ROOMS[s.pick]);
+      deepRoom = false;
+    }
     if (s.gal && !last.gal) count('gallery');
     if (s.info && s.info !== last.info) count('info_' + s.info);
     last = { book: s.book, menu: s.menu, pick: s.pick, gal: s.gal, info: s.info };
