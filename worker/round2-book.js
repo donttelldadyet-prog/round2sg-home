@@ -2675,7 +2675,7 @@ async function gm(env, req) {
   if (act === 'pushsubs') {   /* staff, read-only (6 Nov): the phones signed up for alerts and how the last send went */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     const seen = (await hb.kvGet('pseen')) || {}, al = (await hb.alogList()).slice(0, 40);
-    return gmJ({ ok: true, now: Date.now(), alerts: al.map((x) => ({ id: x.id, t: x.t, title: x.title, seen: seen[x.id] || {} })), phones: (await hb.rows(`SELECT id, kinds, label, t, last, sub FROM push`)).map((r) => { let host = ''; try { host = new URL(JSON.parse(r.sub).endpoint).host; } catch (e) {} return { id: String(r.id).slice(0, 6), label: r.label, kinds: JSON.parse(r.kinds || '[]'), since: r.t, last: r.last ? JSON.parse(r.last) : null, host }; }), shown: (await hb.kvGet('pshown')) || {}, dropDays: 7, dropped: await hb.pushDropped() });
+    return gmJ({ ok: true, now: Date.now(), alerts: al.map((x) => ({ id: x.id, t: x.t, title: x.title, seen: seen[x.id] || {} })), phones: (await hb.rows(`SELECT id, kinds, label, t, last, sub FROM push`)).map((r) => { let host = ''; try { host = new URL(JSON.parse(r.sub).endpoint).host; } catch (e) {} return { id: String(r.id).slice(0, 6), label: r.label, kinds: JSON.parse(r.kinds || '[]'), since: r.t, last: r.last ? JSON.parse(r.last) : null, host }; }), decl: await declInfo(env).then((D) => ({ all: D.all, ids: D.ids, swv: D.swv })).catch(() => null), shown: (await hb.kvGet('pshown')) || {}, dropDays: 7, dropped: await hb.pushDropped() });
   }
   if (act === 'pushtest') {   /* staff (6 Nov): a test alert to ONE phone (id = its first letters) and when that phone showed it */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
@@ -3229,6 +3229,37 @@ async function pushEncrypt(sub, payload) {
   const rs = new Uint8Array([0, 0, 16, 0]);   /* record size 4096 */
   return cat(salt, rs, new Uint8Array([asPub.length]), asPub, ct);
 }
+/* DECLARATIVE WEB PUSH – a trial on chosen phones (14 Nov, 3:30pm: the owner's iPhone again showed 3 copies of one reminder,
+   original + 2 re-sends, all released at +115 s). What we learnt: iPhones ignore the alert's tag (WebKit bug 258922, still
+   open), won't close an alert in its first 30 s, and hand a burst of pushes to the background worker with a stale list – so
+   "close the older copy" can't work for copies that arrive together. The lateness itself looks like the iPhone putting off
+   STARTING the control centre's background worker while it lies locked. Declarative Web Push (iOS 18.4+) removes the worker
+   from the road: the alert itself says what to show ({web_push: 8030, notification: {title, body, navigate…}}) and the phone
+   shows it like a normal app's alert. With "mutable" the worker is still asked first (so it can report "shown", as before)
+   and the phone shows the alert by itself if the worker doesn't answer. No "silent push" penalty either.
+   Which phones: KV HOLDS › push:decl = {"ids": ["GGAmdj"]} (first 6 letters, as in "Did the alerts arrive?") or {"all": true};
+   delete the key = everything as before, no deploy needed. Only phones whose background worker has reported version 2+
+   (KV push:swv, from /push/seen) get it – an older worker would show an empty alert. Such a phone gets ONE re-send at most. */
+let DECL_C = null;
+const CC_ORIGIN = 'https://staff.round2.sg';
+async function declInfo(env) {
+  if (DECL_C && Date.now() - DECL_C.t < 60e3) return DECL_C;
+  let d = null, v = null;
+  try { [d, v] = await Promise.all([env.HOLDS.get('push:decl', 'json'), env.HOLDS.get('push:swv', 'json')]); } catch (e) {}
+  return (DECL_C = { t: Date.now(), all: !!(d && d.all), ids: (d && Array.isArray(d.ids) && d.ids) || [], swv: v || {} });
+}
+async function declOn(env, endpoint) {
+  try {
+    if (!env.HOLDS) return false;
+    const D = await declInfo(env); if (!D.all && !D.ids.length) return false;
+    const sid = (await pushId(endpoint)).slice(0, 6);
+    return (D.all || D.ids.includes(sid)) && +D.swv[sid] >= 2;
+  } catch (e) { return false; }
+}
+function declBody(msg) {
+  const url = /^\/(?!\/)/.test(String(msg.url || '')) ? String(msg.url) : '/';
+  return JSON.stringify({ web_push: 8030, notification: { title: String(msg.title || 'Round2'), body: String(msg.body || ''), navigate: CC_ORIGIN + url, tag: msg.tag ? String(msg.tag) : undefined, silent: false, data: { url, kind: String(msg.kind || '') } }, mutable: true });
+}
 /* one phone → 'ok' | 'gone' (drop it) | 'failed …' */
 const TOPIC_NO = {};   /* push services that refused the Topic header – remembered while this copy of the engine lives */
 async function pushOne(env, sub, msg) {
@@ -3237,7 +3268,8 @@ async function pushOne(env, sub, msg) {
     /* Topic (14 Nov): while a phone hasn't taken an alert yet, a newer one for the same booking (our own re-send, or a change)
        REPLACES it at Apple/Google instead of queueing behind it – the owner got 2–3 copies at once when his phone woke up */
     const topic = TOPIC_NO[svc] ? '' : String(msg.tag || '').replace(/[^A-Za-z0-9_-]/g, '').slice(-32);
-    const send = async (withTopic) => fetch(sub.endpoint, { method: 'POST', body: await pushEncrypt(sub, JSON.stringify(msg)),
+    const text = (await declOn(env, sub.endpoint)) ? declBody(msg) : JSON.stringify(msg);
+    const send = async (withTopic) => fetch(sub.endpoint, { method: 'POST', body: await pushEncrypt(sub, text),
       headers: Object.assign({ Authorization: await vapidAuth(env, sub.endpoint), 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '86400', Urgency: 'high' }, withTopic ? { Topic: topic } : {}) });
     let r = await send(!!topic), note = '';
     if (r.status === 400 && topic) { TOPIC_NO[svc] = 1; note = ' (topic refused)'; r = await send(false); }   /* a push service that won't take the Topic: the alert still goes, and later ones skip it */
@@ -3277,7 +3309,7 @@ async function pushRetry(env, hb0) {
   for (const x of L) for (const sb of subs) {
     const sid = String(sb.id).slice(0, 6); if (!reports.has(sid) || (seen[x.id] || {})[sid] || !sb.kinds.includes(x.kind === 'human' ? sb.kinds[0] : x.kind)) continue;
     const k = x.id + ':' + sid, r = typeof T[k] === 'number' ? { n: 99, t: 0 } : T[k] || { n: 0, t: x.t };
-    if (r.n >= PUSH_RETRY_GAPS.length) continue;
+    if (r.n >= PUSH_RETRY_GAPS.length || (r.n >= 1 && await declOn(env, sb.sub.endpoint))) continue;   /* a phone on the declarative trial: one re-send at most */
     if (now - r.t < PUSH_RETRY_GAPS[r.n]) { more = true; continue; }
     T[k] = { n: r.n + 1, t: now }; if (r.n + 1 < PUSH_RETRY_GAPS.length) more = true;
     out.push(sid + ' ' + x.id + ' ' + (await pushOne(env, sb.sub, { kind: x.kind, title: x.title, body: x.body, tag: x.tag || 'r' + x.id, url: '/?alert=' + x.id })));
@@ -3347,7 +3379,10 @@ async function pushApi(env, req, path) {
     const sub = (await hb.rows(`SELECT id FROM push WHERE instr(sub, ?) > 0`, e))[0]; if (!sub) return J({ ok: false });
     const m = (await hb.kvGet('pseen')) || {}; (m[a] = m[a] || {})[String(sub.id).slice(0, 6)] = Date.now();
     const keys = Object.keys(m); if (keys.length > 300) keys.slice(0, keys.length - 300).forEach((k) => delete m[k]);
-    await hb.kvSet('pseen', m); return J({ ok: true });
+    await hb.kvSet('pseen', m);
+    /* the phone's background worker says which version it is (2+ understands declarative alerts) */
+    if (+f.v && env.HOLDS) { try { const sid = String(sub.id).slice(0, 6), V = (await env.HOLDS.get('push:swv', 'json')) || {}; if (V[sid] !== +f.v) { V[sid] = +f.v; await env.HOLDS.put('push:swv', JSON.stringify(V)); DECL_C = null; } } catch (e) {} }
+    return J({ ok: true });
   }
   if (!env.GM_STAFF || f.staff !== env.GM_STAFF) {
     await hb.gmRate('pushbad:' + (req.headers.get('cf-connecting-ip') || '?'), 1000);
