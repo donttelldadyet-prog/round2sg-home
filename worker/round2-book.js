@@ -447,6 +447,9 @@ export class HoldBook extends DurableObject {
   alogList() { return this.kvGet('alog') || []; }
   /* when to look again at alerts no phone has reported showing (pushRetry) – the earliest asked time wins */
   pushChk(t) { const c = +this.kvGet('pushchk') || 0; if (!c || t < c) this.kvSet('pushchk', +t); this.arm(); }
+  /* alerts are sent from in here, so each has its own allowance of outside requests (see pushAll) */
+  async pushRun(kind, msg) { return pushAllHere(this.env, kind, msg, this); }
+  async pushRetryRun() { return pushRetry(this.env, this); }
   /* every OK a TV reports, kept per message (owner, 4 Nov): each TV only holds its LATEST OK (/msgAck), so a later OK
      made the control centre show an earlier message as "ended without OK" (Niv's birthday message, OK'd 7:28pm) */
   ackNote(room, k) {
@@ -3185,17 +3188,19 @@ async function pushEncrypt(sub, payload) {
   return cat(salt, rs, new Uint8Array([asPub.length]), asPub, ct);
 }
 /* one phone → 'ok' | 'gone' (drop it) | 'failed …' */
+const TOPIC_NO = {};   /* push services that refused the Topic header – remembered while this copy of the engine lives */
 async function pushOne(env, sub, msg) {
   try {
+    const svc = new URL(sub.endpoint).origin;
     /* Topic (14 Nov): while a phone hasn't taken an alert yet, a newer one for the same booking (our own re-send, or a change)
        REPLACES it at Apple/Google instead of queueing behind it – the owner got 2–3 copies at once when his phone woke up */
-    const topic = String(msg.tag || '').replace(/[^A-Za-z0-9_-]/g, '').slice(-32);
+    const topic = TOPIC_NO[svc] ? '' : String(msg.tag || '').replace(/[^A-Za-z0-9_-]/g, '').slice(-32);
     const send = async (withTopic) => fetch(sub.endpoint, { method: 'POST', body: await pushEncrypt(sub, JSON.stringify(msg)),
       headers: Object.assign({ Authorization: await vapidAuth(env, sub.endpoint), 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream', TTL: '86400', Urgency: 'high' }, withTopic ? { Topic: topic } : {}) });
-    let r = await send(!!topic);
-    if (r.status === 400 && topic) r = await send(false);   /* a push service that won't take the Topic: the alert still goes */
+    let r = await send(!!topic), note = '';
+    if (r.status === 400 && topic) { TOPIC_NO[svc] = 1; note = ' (topic refused)'; r = await send(false); }   /* a push service that won't take the Topic: the alert still goes, and later ones skip it */
     if (r.status === 404 || r.status === 410) return 'gone';
-    return r.ok ? 'ok' : 'failed ' + r.status + ' ' + (await r.text()).slice(0, 80);
+    return r.ok ? 'ok' + note : 'failed ' + r.status + ' ' + (await r.text()).slice(0, 80);
   } catch (e) { return 'failed ' + String(e.message || e).slice(0, 80); }
 }
 /* every phone that wants this kind of alert. msg = { title, body, tag, url } */
@@ -3203,10 +3208,10 @@ async function pushOne(env, sub, msg) {
 function lateSess(s, e) { const m = (t) => { const d = new Date(+t + 8 * 3600e3); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
   if (!s) return false; const a = m(s); if (a >= 23 * 60 || a < 7 * 60) return true; if (!e) return false; const b = m(e); return b > 23 * 60 + 15 || (b < 7 * 60 && e > s); }
 /* log the alert and point its tap at its own page (/?alert=<id>) */
-async function logAlert(env, kind, msg, ctx) {
+async function logAlert(env, kind, msg, ctx, hb0) {
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6), c = ctx || {};
   const late = c.late != null ? !!c.late : lateSess(c.s, c.e);   /* by the times only (owner, 5 Nov: sessions keyed in with the control centre's tool say "late till 7pm" but aren't late) */
-  await book(env).alogAdd({ id, t: Date.now(), kind, tag: String(msg.tag || '').slice(0, 60), title: String(msg.title || '').slice(0, 160), body: String(msg.body || '').slice(0, 900), ctx: c, late }).catch(() => null);
+  try { await (hb0 || book(env)).alogAdd({ id, t: Date.now(), kind, tag: String(msg.tag || '').slice(0, 60), title: String(msg.title || '').slice(0, 160), body: String(msg.body || '').slice(0, 900), ctx: c, late }); } catch (e) {}
   return Object.assign({}, msg, { url: '/?alert=' + id, ctx: undefined });
 }
 /* a copy of "which phone showed which alert, how fast" in the engine's KV (HOLDS › diag:push), readable from the Cloudflare
@@ -3263,16 +3268,25 @@ async function pushDiag(env) {
   if ((await hb.kvGet('pushDiagSig')) === sig) return;
   await hb.kvSet('pushDiagSig', sig); await env.HOLDS.put('diag:push', JSON.stringify(out, null, 1));
 }
+/* 14 Nov, 10am: two of four 1-hour reminders failed for every phone with "Too many subrequests by single Worker invocation" –
+   the 5-minute timer's run does a lot of SimplyBook work, and a free-plan run may make only 50 outside requests in all, the
+   alerts to Apple included (the ~50 s re-send, which runs in the store, got them out a minute or two late). So the sending
+   now happens INSIDE the store (the Durable Object, `pushRun`): each alert gets its own allowance, whatever else the caller
+   is doing. If that call itself fails, it is sent from here as before. */
 async function pushAll(env, kind, msg) {
   if (!env.VAPID_JWK) return { sent: 0, why: 'no VAPID_JWK' };
-  const hb = book(env), subs = await hb.pushList(kind); let sent = 0;
-  msg = await logAlert(env, kind, msg, msg.ctx);
+  try { return await book(env).pushRun(kind, JSON.parse(JSON.stringify(msg))); } catch (e) { console.log('[push] in-store send failed, sending here: ' + String(e.message || e).slice(0, 120)); }
+  return pushAllHere(env, kind, msg, book(env));
+}
+async function pushAllHere(env, kind, msg, hb) {
+  const subs = await hb.pushList(kind); let sent = 0;
+  msg = await logAlert(env, kind, msg, msg.ctx, hb);
   await Promise.all(subs.map(async (s) => {
     const r = await pushOne(env, s.sub, Object.assign({ kind }, msg));
-    if (r === 'ok') sent++;
+    if (/^ok/.test(r)) sent++;
     await hb.pushResult(s.id, r);
   }));
-  if (sent) await hb.pushChk(Date.now() + 50e3).catch(() => null);   /* look again in ~50 s: re-send to any phone that hasn't shown it */
+  if (sent) { try { await hb.pushChk(Date.now() + 50e3); } catch (e) {} }   /* look again in ~50 s: re-send to any phone that hasn't shown it */
   return { sent, phones: subs.length };
 }
 async function pushId(endpoint) { return b64u(await crypto.subtle.digest('SHA-256', utf8(String(endpoint)))).slice(0, 22); }
@@ -3331,7 +3345,7 @@ async function pushApi(env, req, path) {
     if (f.kind === 'soon' || f.kind === 'soonnote') { const p = await soonSample(env, f.kind === 'soonnote' ? 'n' : 'b'); if (!p) return J({ error: f.kind === 'soonnote' ? 'No calendar note in the next 7 days to show as a sample' : 'No booking in the next 7 days to show as a sample' }); m = Object.assign(p, { title: 'TEST · ' + p.title, tag: 'test-' + f.kind }); }
     const r = await pushOne(env, s.sub, m);
     await hb.pushResult(id, r);
-    return J(r === 'ok' ? { ok: true } : { error: r === 'gone' ? 'The phone’s subscription expired. Turn alerts off and on again.' : r });
+    return J(/^ok/.test(r) ? { ok: true } : { error: r === 'gone' ? 'The phone’s subscription expired. Turn alerts off and on again.' : r });
   }
   return J({ error: 'unknown' }, 404);
 }
@@ -4067,7 +4081,7 @@ const HANDLER = {
         await humanAlert(env, 'move-' + m.ref, 'Paid move not done yet', `${m.from.name || 'Guest'} paid $${(+m.total).toFixed(2)} to move ${m.from.room} ${m.from.date} ${m.from.time} → ${m.to.room} ${m.to.date} ${m.to.time}, still not moved after 15 min (${(r && (r.error || (r.busy ? 'busy' : ''))) || 'no answer'}). Bookings › Rescheduling, or ask Claude (mvfinish ${m.ref}).`).catch(() => null);
       }
     } })());
-    go(pushRetry(env).then(() => pushDiag(env)).catch(() => null));
+    go(book(env).pushRetryRun().catch(() => pushRetry(env)).then(() => pushDiag(env)).catch(() => null));   /* in the store: its own allowance of outside requests */
     go(diagReq(env).catch(() => null));   /* staff questions left in KV (diag:req → diag:res) */   /* resend alerts a phone hasn't shown; delivery report copy (KV diag:push) */   /* paid at HitPay but not booked? book it (every 5 min) */
     /* a SimplyBook change a few minutes ago: Auto wrap-up looks again on the next 5-min tick (owner, 3 Nov: a quick fix was
        only picked up after a refresh); the 10-min ticks run it anyway */
