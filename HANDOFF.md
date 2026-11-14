@@ -514,3 +514,5 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
 - **Under-24h wording (owner picked):** "We're getting your room ready! This slot has been kept for you and it's too late for
   another guest to take it, so the day can't be changed online – but you can still upgrade on <day>…".
 - System check step "Guest rescheduling: page, rules and fees" tests the three new rules.
+- **Engine 0c96804 DEPLOYED 11:50pm** by patching the live script through the Cloudflare API (live hash checked before = 6282673's file, after = this commit's file; module `worker.js`, compatibility 2026-06-01, 27 bindings, 3 timers).
+- Booking page "See all rules" now lists the early-bird rule and add-hours; an early bird 3+ days away sees the rule in yellow under their stage.
