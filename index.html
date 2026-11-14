@@ -712,9 +712,9 @@ class Component extends DCLogic {
        calendar (its own iframe) instead – nothing to change here. Payment opens in a new tab from inside it. */
     'r2-simplybook': function (d, scope, parent, before) {
       var f = document.createElement('iframe');
-      f.src = 'https://donttelldadyet-prog.github.io/round2sg-home/slots/?embed=1';
+      f.src = 'https://donttelldadyet-prog.github.io/round2sg-home/slots/?embed=1&v=' + Math.floor(Date.now() / 600e3);   /* a fresh copy at most 10 min old, not a cached one */
       f.title = 'Book a room';
-      f.setAttribute('allow', 'payment');
+      f.setAttribute('allow', 'payment; autoplay');   /* autoplay: the desktop click sounds */
       /* desktop (fill="1", owner 15 Nov: two scroll bars): the page fills the save-slot box and is the only thing that scrolls –
          the desktop stage is scaled, so 100vh (the real screen) made it taller than the box. Phone layout unchanged. */
       var fill = d.attrs.some(function (x) { return x.n === 'fill'; });

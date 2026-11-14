@@ -329,9 +329,10 @@ h3.nm, .nm { color: var(--rc); }
       src.connect(f); f.connect(g); g.connect(c.destination); src.start(t); src.stop(t + o.dur + 0.02);
     }
     var SND = {
-      move: function () { voice({ wave: 'triangle', f0: 620, f1: 480, dur: 0.07, vol: 0.12, cut: 2200 }); voice({ wave: 'noise', dur: 0.02, vol: 0.03, filter: 'bandpass', cut: 2400, q: 6 }); },
-      ok: function () { voice({ wave: 'sine', f0: 880, dur: 0.6, vol: 0.08, atk: 0.003 }); voice({ wave: 'sine', f0: 1320, dur: 0.4, vol: 0.04 }); voice({ wave: 'sine', f0: 2210, dur: 0.25, vol: 0.02 }); },
-      back: function () { voice({ wave: 'triangle', f0: 440, f1: 330, dur: 0.1, vol: 0.1, cut: 1600 }); }
+      /* twice the TVs' level: computer speakers are much quieter than the rooms' amps (owner, 15 Nov: "sounds don't play") */
+      move: function () { voice({ wave: 'triangle', f0: 620, f1: 480, dur: 0.09, vol: 0.25, cut: 2200 }); voice({ wave: 'noise', dur: 0.025, vol: 0.06, filter: 'bandpass', cut: 2400, q: 6 }); },
+      ok: function () { voice({ wave: 'sine', f0: 880, dur: 0.6, vol: 0.16, atk: 0.003 }); voice({ wave: 'sine', f0: 1320, dur: 0.4, vol: 0.08 }); voice({ wave: 'sine', f0: 2210, dur: 0.25, vol: 0.04 }); },
+      back: function () { voice({ wave: 'triangle', f0: 440, f1: 330, dur: 0.12, vol: 0.2, cut: 1600 }); }
     };
     document.addEventListener('click', function (e) {
       var t = e.target.closest && e.target.closest('button, a, .room'); if (!t || t.disabled || t.getAttribute('aria-disabled') === 'true') return;
