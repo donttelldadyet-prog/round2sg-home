@@ -67,6 +67,12 @@
 >   How to read it and what to do next: round2-tv-launcher `docs/staff-alerts.md` "Declarative Web Push".
 >   **4:06pm:** owner confirmed on his iPhone that opening the app dropped the 3 Scarlett copies to 1 (`r2TidyAlerts` works on
 >   a real iPhone), and his phone reported worker version 2 (KV `push:swv` = {GGAmdj: 2}) → it is on the trial from here on.
+>   **5:35pm, engine 396b1f9 DEPLOYED (27 bindings, 3 timers):** first reading of the trial – 4 alerts since 4:05pm, owner saw
+>   each on time and once; his phone reported none. On his iPhone a declarative alert is shown by the system WITHOUT starting
+>   the worker (`mutable` doesn't bring it in), so a trial phone never reports: `pushPrune` now skips phones named in
+>   `push:decl` (it would have dropped his sign-up after a silent week), the control centre shows n/a for it, the System
+>   check's clean-up step ignores it. Not proven yet (the other phones were fast on those four too). No Vale/Atlas booking has
+>   come in since the 4:43pm switch to notes, so the note path is still untested on real SimplyBook.
 > - **4:43pm, engine eee2f10 DEPLOYED (27 bindings, 3 timers) – NEW Vale/Atlas TWIN BLOCKS ARE NOTES** (owner: "switch to
 >   notes … make them consistent … just use the time blocked notes from now onwards"). `mirrorOnSb`: no record yet → POST a
 >   time-blocked note in the twin, text `SYSTEM BLOCK · TWIN · <room> is booked (<first name>) · removed automatically · src
