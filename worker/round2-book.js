@@ -369,7 +369,32 @@ export class HoldBook extends DurableObject {
   }
   /* staff phones signed up for push alerts (/push/*) */
   pushInit() { if (this.pushReady) return; this.pushReady = true; this.sql.exec(`CREATE TABLE IF NOT EXISTS push (id TEXT PRIMARY KEY, sub TEXT, kinds TEXT, label TEXT, t INTEGER, last TEXT)`); }
-  pushSet(id, sub, kinds, label) { this.pushInit(); this.sql.exec(`INSERT OR REPLACE INTO push VALUES (?, ?, ?, ?, ?, NULL)`, id, sub, kinds, label, Date.now()); }
+  pushSet(id, sub, kinds, label) { this.pushInit(); this.sql.exec(`INSERT OR REPLACE INTO push VALUES (?, ?, ?, ?, ?, NULL)`, id, sub, kinds, label, Date.now()); const D = this.kvGet('pushDropped'); if (D && D[id]) { delete D[id]; this.kvSet('pushDropped', D); } }
+  /* 14 Nov (owner: yes): a sign-up that has shown nothing for a week is dropped – an old sign-up left behind when the app was
+     re-added (Apple keeps accepting alerts for it, so it never goes "gone" by itself). A phone counts as alive from the day it
+     signed up or last saved its choices, and every time it reports showing any alert, the test alert included (`pshown`, kept
+     from `pseen`, which only holds the last 300 alerts). Nothing is dropped unless ANOTHER phone reported in the last 2 days –
+     so a quiet week, or the reporting itself breaking, can't empty the list. The dropped sign-up's choices are kept 60 days
+     (`pushDropped`): if that phone opens the control centre again it is signed up again by itself (/push/state → dropped). */
+  pushPrune() {
+    this.pushInit(); const now = Date.now(), WEEK = 7 * 86400e3, seen = this.kvGet('pseen') || {}, shown = this.kvGet('pshown') || {}; let ch = false;
+    for (const a in seen) for (const k in seen[a]) if (+seen[a][k] > (shown[k] || 0)) { shown[k] = +seen[a][k]; ch = true; }
+    const rows = this.rows(`SELECT id, kinds, label, t FROM push`), sid = (r) => String(r.id).slice(0, 6), out = [];
+    for (const k in shown) if (!rows.some((r) => sid(r) === k) && shown[k] < now - 60 * 86400e3) { delete shown[k]; ch = true; }
+    if (ch) this.kvSet('pshown', shown);
+    const D = this.kvGet('pushDropped') || {}; let dch = false;
+    for (const k in D) if (D[k].t < now - 60 * 86400e3) { delete D[k]; dch = true; }
+    for (const r of rows) {
+      if (Math.max(+r.t || 0, shown[sid(r)] || 0) > now - WEEK) continue;
+      if (!rows.some((o) => o.id !== r.id && (shown[sid(o)] || 0) > now - 2 * 86400e3)) continue;
+      this.sql.exec(`DELETE FROM push WHERE id = ?`, r.id);
+      D[r.id] = { t: now, kinds: r.kinds, label: r.label, since: r.t, shown: shown[sid(r)] || 0 }; dch = true; out.push(sid(r) + ' ' + (r.label || ''));
+    }
+    if (dch) this.kvSet('pushDropped', D);
+    if (out.length) console.log('[push] dropped after a week with nothing shown: ' + out.join(', '));
+    return { dropped: out };
+  }
+  pushDropped(id) { const D = this.kvGet('pushDropped') || {}; if (!id) return Object.keys(D).map((k) => ({ id: k.slice(0, 6), label: D[k].label, t: D[k].t, since: D[k].since, shown: D[k].shown })); const d = D[id]; return d ? { t: d.t, kinds: JSON.parse(d.kinds || '[]') } : null; }
   pushDel(id) { this.pushInit(); this.sql.exec(`DELETE FROM push WHERE id = ?`, id); }
   pushGet(id) { this.pushInit(); const r = this.rows(`SELECT * FROM push WHERE id = ?`, id)[0]; return r ? { id: r.id, sub: JSON.parse(r.sub), kinds: JSON.parse(r.kinds), label: r.label, last: r.last } : null; }
   pushList(kind) { this.pushInit(); return this.rows(`SELECT * FROM push`).map((r) => ({ id: r.id, sub: JSON.parse(r.sub), kinds: JSON.parse(r.kinds) })).filter((r) => !kind || r.kinds.includes(kind)); }
@@ -2650,7 +2675,7 @@ async function gm(env, req) {
   if (act === 'pushsubs') {   /* staff, read-only (6 Nov): the phones signed up for alerts and how the last send went */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     const seen = (await hb.kvGet('pseen')) || {}, al = (await hb.alogList()).slice(0, 40);
-    return gmJ({ ok: true, now: Date.now(), alerts: al.map((x) => ({ id: x.id, t: x.t, title: x.title, seen: seen[x.id] || {} })), phones: (await hb.rows(`SELECT id, kinds, label, t, last, sub FROM push`)).map((r) => { let host = ''; try { host = new URL(JSON.parse(r.sub).endpoint).host; } catch (e) {} return { id: String(r.id).slice(0, 6), label: r.label, kinds: JSON.parse(r.kinds || '[]'), since: r.t, last: r.last ? JSON.parse(r.last) : null, host }; }) });
+    return gmJ({ ok: true, now: Date.now(), alerts: al.map((x) => ({ id: x.id, t: x.t, title: x.title, seen: seen[x.id] || {} })), phones: (await hb.rows(`SELECT id, kinds, label, t, last, sub FROM push`)).map((r) => { let host = ''; try { host = new URL(JSON.parse(r.sub).endpoint).host; } catch (e) {} return { id: String(r.id).slice(0, 6), label: r.label, kinds: JSON.parse(r.kinds || '[]'), since: r.t, last: r.last ? JSON.parse(r.last) : null, host }; }), shown: (await hb.kvGet('pshown')) || {}, dropDays: 7, dropped: await hb.pushDropped() });
   }
   if (act === 'pushtest') {   /* staff (6 Nov): a test alert to ONE phone (id = its first letters) and when that phone showed it */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
@@ -3355,7 +3380,7 @@ async function pushApi(env, req, path) {
     await hb.pushSet(id, JSON.stringify({ endpoint, keys: { p256dh: String(sub.keys.p256dh), auth: String(sub.keys.auth) } }), JSON.stringify(kinds), String(f.label || '').slice(0, 40));
     return J({ ok: true, id, kinds });
   }
-  if (path === '/push/state') { const s = await hb.pushGet(id); return J(s ? { ok: true, on: true, kinds: s.kinds, label: s.label, last: s.last } : { ok: true, on: false }); }
+  if (path === '/push/state') { const s = await hb.pushGet(id); if (s) return J({ ok: true, on: true, kinds: s.kinds, label: s.label, last: s.last }); const d = await hb.pushDropped(id); return J(d ? { ok: true, on: false, dropped: d.t, kinds: d.kinds } : { ok: true, on: false }); }
   if (path === '/push/unsub') { await hb.pushDel(id); return J({ ok: true }); }
   if (path === '/push/test') {
     const s = await hb.pushGet(id); if (!s) return J({ error: 'This phone isn’t signed up for alerts' });
@@ -4104,7 +4129,7 @@ const HANDLER = {
         await humanAlert(env, 'move-' + m.ref, 'Paid move not done yet', `${m.from.name || 'Guest'} paid $${(+m.total).toFixed(2)} to move ${m.from.room} ${m.from.date} ${m.from.time} → ${m.to.room} ${m.to.date} ${m.to.time}, still not moved after 15 min (${(r && (r.error || (r.busy ? 'busy' : ''))) || 'no answer'}). Bookings › Rescheduling, or ask Claude (mvfinish ${m.ref}).`).catch(() => null);
       }
     } })());
-    go(book(env).pushRetryRun().catch(() => pushRetry(env)).then(() => pushDiag(env)).catch(() => null));   /* in the store: its own allowance of outside requests */
+    go(book(env).pushRetryRun().catch(() => pushRetry(env)).then(() => (mm >= 25 && mm < 30 ? book(env).pushPrune() : null)).catch(() => null).then(() => pushDiag(env)).catch(() => null));   /* in the store: its own allowance of outside requests */
     go(diagReq(env).catch(() => null));   /* staff questions left in KV (diag:req → diag:res) */   /* resend alerts a phone hasn't shown; delivery report copy (KV diag:push) */   /* paid at HitPay but not booked? book it (every 5 min) */
     /* a SimplyBook change a few minutes ago: Auto wrap-up looks again on the next 5-min tick (owner, 3 Nov: a quick fix was
        only picked up after a refresh); the 10-min ticks run it anyway */
