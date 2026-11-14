@@ -3234,13 +3234,15 @@ async function logAlert(env, kind, msg, ctx, hb0) {
 /* a copy of "which phone showed which alert, how fast" in the engine's KV (HOLDS › diag:push), readable from the Cloudflare
    dashboard/API without the staff code (owner, 6 Nov: reminders late on his phone while the browser link was down).
    Written only when something changed. */
-/* A phone that reports back but hasn't shown an alert gets it again: about 50 s after it was sent, then ~4 and ~9 min
-   (at most 3 times; same tag and Topic, so there is never more than one on the screen).
+/* A phone that reports back but hasn't shown an alert gets it again: about 50 s after it was sent, then about every minute
+   (see PUSH_RETRY_GAPS; same tag and Topic, so there is never more than one on the screen).
    Owner, 6 Nov: Apple held his phone's alerts for 15–50 minutes, and a held alert came through the moment another one was
    sent. 14 Nov: the delivery log showed nearly every late alert appearing within 2 s of a re-send – so the first re-send now
    comes after ~50 s (the hold timer's alarm, `pushchk`) instead of waiting for the 5-minute timer, which stays as a backstop.
    Phones that haven't reported anything for 3 days (an old sign-up left behind) are not re-sent to. */
-const PUSH_RETRY_GAPS = [45e3, 150e3, 300e3];
+/* 14 Nov 1:15pm, first real alerts with the quick re-send: one phone took it at +57 s (the first re-send), another only at
+   +235 s (the second) – so the tries now come about every minute at first: ~50 s, ~2, ~3, ~4½ and ~9 min (5 at most). */
+const PUSH_RETRY_GAPS = [45e3, 60e3, 60e3, 90e3, 240e3];
 async function pushRetry(env, hb0) {
   const hb = hb0 || book(env), seen = (await hb.kvGet('pseen')) || {}, now = Date.now();
   const reports = new Set(); for (const a in seen) for (const k in seen[a]) if (+seen[a][k] > now - 3 * 86400e3) reports.add(k);   /* phones on the new background worker */
@@ -3249,7 +3251,7 @@ async function pushRetry(env, hb0) {
   const T = (await hb.kvGet('pretry')) || {}, subs = await hb.pushList(), out = []; let more = false;
   for (const x of L) for (const sb of subs) {
     const sid = String(sb.id).slice(0, 6); if (!reports.has(sid) || (seen[x.id] || {})[sid] || !sb.kinds.includes(x.kind === 'human' ? sb.kinds[0] : x.kind)) continue;
-    const k = x.id + ':' + sid, r = typeof T[k] === 'number' ? { n: 3, t: 0 } : T[k] || { n: 0, t: x.t };
+    const k = x.id + ':' + sid, r = typeof T[k] === 'number' ? { n: 99, t: 0 } : T[k] || { n: 0, t: x.t };
     if (r.n >= PUSH_RETRY_GAPS.length) continue;
     if (now - r.t < PUSH_RETRY_GAPS[r.n]) { more = true; continue; }
     T[k] = { n: r.n + 1, t: now }; if (r.n + 1 < PUSH_RETRY_GAPS.length) more = true;
