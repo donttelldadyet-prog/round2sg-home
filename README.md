@@ -47,7 +47,7 @@ state (SQLite) and wakes itself with alarms. Background jobs run from three Clou
 | Telegram pickup button, Madd nightly settlement | Make (`[CONTROL] MADD PAYOUT TELEGRAM`, `[BACKEND] MADD NIGHTLY SETTLEMENT LOG`) | |
 | Guest/Round2 TV messages: every page talks to the engine's `/gm` front door | Engine → Make `[BACKEND] GUEST MESSAGE LINKS` | Engine checks codes, caches, caps edits; Make keeps the message records |
 | Message timer (send each message to its TV on time) | Engine (alarm, 1 min before) | Make's old 15-min timer is OFF |
-| Vale ↔ Atlas mirror bookings | Engine (`mirrorOnSb`, since 11 Nov 2026) | On every SimplyBook change. Make's `[BACKEND] SYSTEM BLOCKS MIRROR ROOMS` is switched off (kept as fallback) |
+| Vale ↔ Atlas twin blocks | Engine (`mirrorOnSb`, since 11 Nov 2026) | On every SimplyBook change. New blocks are time-blocked notes since 14 Nov 2026 (older ones are still SYSTEM BLOCK bookings). Make's `[BACKEND] SYSTEM BLOCKS MIRROR ROOMS` is switched off (kept as fallback) |
 | Guest booking page + rescheduling (`move/`), staff Move a booking | Engine (`gLogic`, `gApi`, `mv…`) | One rules file for the price shown and the price charged – HANDOFF.md top |
 | Room PS4s: reports, clean-up, game saves | Engine (`/ps4/…`) + Cloudflare R2 `round2-saves` | HANDOFF.md PS4 section |
 | TVs ⇄ control centre (messages, OKs, food alerts, website stats) | Firebase Realtime Database | Pages listen live (EventSource); no Make |

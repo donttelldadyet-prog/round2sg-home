@@ -90,7 +90,7 @@ by +1 h). Don't treat the gap 19:00–19:15 as a break; the guest plays straight
 
 The admin no longer adds EXT notes by hand: **In session › +1h/+2h/+3h** does it the way above (1-hour notes from the
 SimplyBook end, tagged `EXT +1h (1/2) · <guest> · control centre`). Vale/Atlas: the twin room gets the same notes tagged
-`SYSTEM BLOCK · EXT …`, so both sides stay blocked (the Make mirror only copies bookings, not notes). Mirror blocks
+`SYSTEM BLOCK · EXT …`, so both sides stay blocked (the Make mirror only copies bookings, not notes; since 14 Nov 2026 the engine's own twin blocks for new bookings are notes too, `SYSTEM BLOCK · TWIN …`). Mirror blocks
 (SYSTEM BLOCK clients 2472/2476) are hidden from the tab. It also moves/adds "About 10 minutes to go" and "That's a
 wrap!" and shows "+N CREDITS ADDED" on the TV. Details: round2-tv-launcher docs/guest-messages.md "In session".
 

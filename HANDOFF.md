@@ -67,8 +67,22 @@
 >   How to read it and what to do next: round2-tv-launcher `docs/staff-alerts.md` "Declarative Web Push".
 >   **4:06pm:** owner confirmed on his iPhone that opening the app dropped the 3 Scarlett copies to 1 (`r2TidyAlerts` works on
 >   a real iPhone), and his phone reported worker version 2 (KV `push:swv` = {GGAmdj: 2}) → it is on the trial from here on.
-> - Known stale comment (engine, noise rule header): says clashes alert "control-centre alert + Telegram" – Telegram never
->   gets these (`staffAlert` is a no-op). Fix the wording with the next engine change.
+> - **4:43pm, engine eee2f10 DEPLOYED (27 bindings, 3 timers) – NEW Vale/Atlas TWIN BLOCKS ARE NOTES** (owner: "switch to
+>   notes … make them consistent … just use the time blocked notes from now onwards"). `mirrorOnSb`: no record yet → POST a
+>   time-blocked note in the twin, text `SYSTEM BLOCK · TWIN · <room> is booked (<first name>) · removed automatically · src
+>   b<booking>` (`mirText`; `MIR_RE`), kv `mir:<booking>` = {note, s, e, u}. Booking changes → the same note is PUT to the new
+>   room/time (404 = deleted by hand → a new one); cancelled / left Vale-Atlas → DELETE. **Records with `blk` (blocks that are
+>   bookings, clients 2472/2476) keep the old path** (editBook / cancelBooking) – nothing existing was converted; a move through
+>   Round2 (`mvExecute`) removes the old block and the re-made one is a note. A note can't be refused for "room taken", so
+>   `mirClash` looks at the twin after making/moving one: real guests there at the same time → humanAlert "<twin> is already
+>   taken – check". SimplyBook sends no callback for notes: a note deleted by hand is caught by `mirAdopt` (System check step
+>   "Moves and Vale/Atlas blocks…", now reads the notes too; `fix=1` re-makes it), not at once.
+>   Also: own-block skips know the note (`mvQuote`, `gLogic`, staff move times; `mirMine` matches `src b<booking>`), clash texts
+>   say "twin room booking" for these notes, and long note reads are paged 200 at a time (`notesRange`: `latelist` 46 days,
+>   guest calendar `gCalItems` 31 days – with one note per Vale/Atlas booking a range can pass 200). Diag (`diag:req`) may ask
+>   `mirror` (forced to status, or `do: adopt` without fix). Make fallback: Make only knows bookings – going back to Make means
+>   new blocks are bookings again; note blocks made meanwhile stay and still block.
+>   Noise-rule header comment fixed (alerts never go to Telegram).
 
 > ## 14 Nov 2026, 6am – second chat (TVs / control centre): review follow-ups, engine ed9d0be DEPLOYED (27 bindings, cron */5)
 > - **A moved booking's noise block follows at once** (`mvExecute` → `noiseSync` old day + new day).
@@ -402,6 +416,7 @@ To confirm in to-do #1 (real test booking): SimplyBook accepts the longer end ti
 
 ## Vale ↔ Atlas mirror runs in the engine (LIVE since 11 Nov 2026) – Make is off
 - Make "[BACKEND] SYSTEM BLOCKS MIRROR ROOMS" (6990225) was switched off 11 Nov 2026, 8:18pm SGT; kept, not deleted (fallback).
+- **Since 14 Nov 4:43pm a NEW twin block is a time-blocked note, not a booking – see the 14 Nov entry at the top.** What follows describes the blocks made before that (still bookings):
 - Engine `mirrorOnSb` (worker/round2-book.js), run from `/sb/notify` when engine mode `mirror === 'engine'`: a guest booking in Vale
   makes a SYSTEM BLOCK booking in Atlas (client 2472) and the other way round (client 2476), with the booking's exact SimplyBook
   start and end (cleaning included). It moves and cancels with the booking. Any service: the same kind (off-peak / peak / early
