@@ -1061,7 +1061,7 @@ async function noteBooking(env, d, q, ref) {
   const s2 = await sb2(env), s = sgMs0(q.date + ' ' + q.time), end = s + (q.hours * 60 + BUF) * 60e3, tw = MIRROR[q.unit], ids = [];
   const nm = String(d.name || 'Guest').replace(/\s+/g, ' ').trim().slice(0, 30);
   const text = `${nm} ${d.pax} pax · ONLINE BOOKING, PAID $${q.total.toFixed(2)} · ref ${ref} · ${d.phone} · ${d.email} · ` +
-    `SimplyBook refused a normal booking, so this note holds the room – please turn it into a booking`;
+    `SimplyBook refused a normal booking, so this note holds the room – please turn it into a booking · confirmation: ${PUBLIC_BOOK}/done?ref=${ref}`;
   const body = (u, txt) => ({ provider_id: u, service_id: null, start_date_time: sgStr(s), end_date_time: sgStr(end), note_type_id: 1, note: txt, mode: 'provider', time_blocked: true });
   const r = await s2('POST', '/admin/calendar-notes', body(q.unit, text)); ids.push(String(r.id));
   if (tw) { const r2 = await s2('POST', '/admin/calendar-notes', body(tw, 'SYSTEM BLOCK · ' + ROOMS[q.unit][0] + ' online booking ' + nm + ' till ' + clock12(end - BUF * 60e3))).catch(() => null); if (r2 && r2.id) ids.push(String(r2.id)); }
@@ -1237,7 +1237,8 @@ async function finalize(env, ref, source) {
       const note = (d.pay === 'test' ? '*** TEST BOOKING (HitPay sandbox, nobody paid) – CANCEL IT ***\n' : '') + `Online booking (round2.sg) · paid $${q.total.toFixed(2)} via HitPay · ref ${ref}\nBooked as: ${d.name} · ${d.phone} · ${d.email} · ${d.pax} guests` +
         `\nGuest session ${q.time}–${q.end} (the SimplyBook end, ${hhmm(eB)}, includes 15 min cleaning)` +
         (q.hours > 3 ? `\nIncludes +${q.hours - 3}h extension (${q.time}–${q.end})` : '') + (d.msg ? `\nTV message: ${d.msg.kind}, ${d.msg.after} min after start` : '') +
-        (d.agreed ? `\nAgreed to T&C, privacy policy and "non-cancellable, non-refundable" at ${new Date(d.agreed + 8 * 3600e3).toISOString().slice(0, 16).replace('T', ' ')}` : '');
+        (d.agreed ? `\nAgreed to T&C, privacy policy and "non-cancellable, non-refundable" at ${new Date(d.agreed + 8 * 3600e3).toISOString().slice(0, 16).replace('T', ' ')}` : '') +
+        (b0 && b0.code ? `\nBooking page: ${PUBLIC_BOOK}/b/${b0.code}` : '');   /* owner, 15 Nov: the guest's link in SimplyBook too */
       if (b0 && b0.id) result.comment = await a('setBookingComment', [b0.id, note]).then(() => 'saved').catch((e) => 'not saved: ' + String(e.message || e).slice(0, 80));
     }
     if (d.msg && !result.dryRun) result.tv = await tvMessage(env, d, q, ref, result.bookingId).catch((e) => ({ problem: String(e.message || e).slice(0, 120) }));
@@ -3691,28 +3692,28 @@ async function bookingPush(env, bid, type) {
   return r && r.msg ? pushAll(env, 'booking', r.msg) : r;
 }
 
-/* ONE-OFF (owner, 15 Nov 2:14am: "turn kikay's booking into a note, we might forget"): Max booking #3241, Sun 22 Nov 11am–2pm
-   (+15 min cleaning), made by Add a session on the shared "Round2 online guest" contact. Runs once, from the side timer, when
-   KV HOLDS › oneoff:go = "kikay3241" (set by Claude after the deploy). Checks the booking is still exactly that one; makes the
-   note FIRST (the room is never free), then cancels the booking without a phone alert; result in KV oneoff:res. Delete this
-   block with the next engine change. */
-async function oneoffKikay(env) {
-  if (!env.HOLDS || (await env.HOLDS.get('oneoff:go')) !== 'kikay3241') return;
-  const hb = book(env); if (await hb.kvGet('oneoff:kikay')) return; await hb.kvSet('oneoff:kikay', Date.now());
-  const res = { t: Date.now() }, done = async () => { await env.HOLDS.put('oneoff:res', JSON.stringify(res)); await env.HOLDS.delete('oneoff:go'); };
+/* ONE-OFF (owner, 15 Nov 2:22am: "put the booking link in the comments"): upcoming online bookings made before this got no
+   "Booking page:" line. Runs once from the side timer when KV HOLDS › oneoff:go = "links". Only adds the line when the
+   booking's current comment is readable and is ours (has "ref <ref>"), so nothing staff wrote is ever overwritten; result in
+   KV oneoff:res. Delete this block with the next engine change. */
+async function oneoffLinks(env) {
+  if (!env.HOLDS || (await env.HOLDS.get('oneoff:go')) !== 'links') return;
+  const hb = book(env); if (await hb.kvGet('oneoff:links')) return; await hb.kvSet('oneoff:links', Date.now());
+  const res = { t: Date.now(), added: [], had: 0, skipped: [] };
   try {
-    const a = await admin(env), b = await a('getBookingDetails', ['3241']), gen = String(await hb.kvGet('sbGenericCid') || '');
-    res.found = { unit: b && b.unit_id, start: b && (b.start_date_time || b.start_date), end: b && (b.end_date_time || b.end_date), client: b && b.client_id, name: b && b.client_name, status: b && b.status };
-    const st = String(res.found.start || ''), en = String(res.found.end || '');
-    if (!b || +b.unit_id !== 11 || !st.startsWith('2026-11-22 11:00') || !en.startsWith('2026-11-22 14:15') || String(b.client_id) !== gen || /cancel/i.test(String(b.status || ''))) { res.stop = 'not the booking expected – nothing changed'; return await done(); }
-    const text = 'kikay 2 pax · till 2pm · control centre · +639153455204 (was booking #3241, turned into a note 15 Nov)';
-    const n = await (await sb2(env))('POST', '/admin/calendar-notes', { provider_id: 11, service_id: null, start_date_time: '2026-11-22 11:00:00', end_date_time: '2026-11-22 14:15:00', note_type_id: 1, note: text, mode: 'provider', time_blocked: true });
-    res.note = n && n.id; if (!res.note) { res.stop = 'SimplyBook didn’t make the note – booking left as is'; return await done(); }
-    await hb.kvSet('quietcancel:3241', Date.now() + 30 * 60e3);
-    res.cancelled = await a('cancelBooking', ['3241']).then(() => true).catch((e) => String(e.message || e).slice(0, 140));
-    await hb.kvSet('gapc', {}).catch(() => null); await hb.kvSet('gcal', null).catch(() => null);
+    const a = await admin(env), today = sgDay(Date.now() - SHADOW_TILL * 60e3);
+    const rows = await hb.rows(`SELECT ref, date, status, data FROM holds WHERE status = 'paid' AND date >= ? ORDER BY date LIMIT 80`, today);
+    for (const r of rows) {
+      const d = JSON.parse(r.data || '{}'), dn = d.done || {};
+      if (d.pay !== 'live' || !dn.bookingId || !dn.code) continue;
+      const b = await a('getBookingDetails', [String(dn.bookingId)]).catch(() => null), c = b && b.comment;
+      if (typeof c !== 'string' || !c.includes('ref ' + r.ref)) { res.skipped.push(r.ref + ' (comment not ours or unreadable)'); continue; }
+      if (c.includes('/b/')) { res.had++; continue; }
+      const ok = await a('setBookingComment', [String(dn.bookingId), c + `\nBooking page: ${PUBLIC_BOOK}/b/${dn.code}`]).then(() => true).catch((e) => String(e.message || e).slice(0, 80));
+      if (ok === true) res.added.push(r.date + ' #' + dn.bookingId); else res.skipped.push(r.ref + ' ' + ok);
+    }
   } catch (e) { res.error = String(e.message || e).slice(0, 160); }
-  await done();
+  await env.HOLDS.put('oneoff:res', JSON.stringify(res)); await env.HOLDS.delete('oneoff:go');
 }
 
 /* ===== Noise rule (owner, 8 Nov) =====
@@ -4282,7 +4283,7 @@ const HANDLER = {
     const cn0 = (await hb.kvGet('cronNet').catch(() => null)) || {}, LN = cn0.lanes || {};
     const stale = (k, ms) => !(LN[k] && LN[k].last && LN[k].last.t > t0 - ms);
     const side = () => {
-      go(oneoffKikay(env).catch(() => null));   /* one-off, 15 Nov – remove next time */
+      go(oneoffLinks(env).catch(() => null));   /* one-off, 15 Nov – remove next time */
       if (env.TV_KEY) go(Promise.all(['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max'].map((r) => fetch(FB_BASE + env.TV_KEY + '/' + r + '/msgAck.json').then((x) => x.json()).then((k) => hb.ackNote(r, k)).catch(() => null))));   /* every OK, kept per message */
       go(paidSweep(env).catch(() => null));   /* paid at HitPay but not booked? book it (every 5 min) */
       /* paid moves that never ran (HitPay's message missed and the guest closed the page): finish them, or alert staff */
