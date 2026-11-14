@@ -3682,10 +3682,37 @@ async function bookingPush(env, bid, type) {
   const hb = book(env), prev = await hb.bkGet(String(bid)).catch(() => null);
   const mvp = type === 'change' ? await hb.kvGet('mvpush:' + bid).catch(() => null) : null;
   if (mvp && mvp > Date.now()) { const r0 = await bookingAlert(env, bid, type, prev); if (r0 && r0.now) await hb.bkPut(String(bid), r0.now).catch(() => null); return { skipped: 'moved through Round2 – its own alert was sent' }; }
+  /* a booking Round2 itself turned into a note (one-off below): no "cancelled" alert to the phones */
+  const quiet = type === 'cancel' ? await hb.kvGet('quietcancel:' + bid).catch(() => null) : null;
+  if (quiet && quiet > Date.now()) { await hb.bkDel(String(bid)).catch(() => null); await hb.vDel(String(bid)).catch(() => null); return { skipped: 'turned into a note by Round2' }; }
   const r = await bookingAlert(env, bid, type, prev);
   if (r && r.now) await (type === 'cancel' ? hb.bkDel(String(bid)) : hb.bkPut(String(bid), r.now)).catch(() => null);
   if (type === 'cancel') await hb.vDel(String(bid)).catch(() => null);   /* a cancelled booking isn't a visit */
   return r && r.msg ? pushAll(env, 'booking', r.msg) : r;
+}
+
+/* ONE-OFF (owner, 15 Nov 2:14am: "turn kikay's booking into a note, we might forget"): Max booking #3241, Sun 22 Nov 11am–2pm
+   (+15 min cleaning), made by Add a session on the shared "Round2 online guest" contact. Runs once, from the side timer, when
+   KV HOLDS › oneoff:go = "kikay3241" (set by Claude after the deploy). Checks the booking is still exactly that one; makes the
+   note FIRST (the room is never free), then cancels the booking without a phone alert; result in KV oneoff:res. Delete this
+   block with the next engine change. */
+async function oneoffKikay(env) {
+  if (!env.HOLDS || (await env.HOLDS.get('oneoff:go')) !== 'kikay3241') return;
+  const hb = book(env); if (await hb.kvGet('oneoff:kikay')) return; await hb.kvSet('oneoff:kikay', Date.now());
+  const res = { t: Date.now() }, done = async () => { await env.HOLDS.put('oneoff:res', JSON.stringify(res)); await env.HOLDS.delete('oneoff:go'); };
+  try {
+    const a = await admin(env), b = await a('getBookingDetails', ['3241']), gen = String(await hb.kvGet('sbGenericCid') || '');
+    res.found = { unit: b && b.unit_id, start: b && (b.start_date_time || b.start_date), end: b && (b.end_date_time || b.end_date), client: b && b.client_id, name: b && b.client_name, status: b && b.status };
+    const st = String(res.found.start || ''), en = String(res.found.end || '');
+    if (!b || +b.unit_id !== 11 || !st.startsWith('2026-11-22 11:00') || !en.startsWith('2026-11-22 14:15') || String(b.client_id) !== gen || /cancel/i.test(String(b.status || ''))) { res.stop = 'not the booking expected – nothing changed'; return await done(); }
+    const text = 'kikay 2 pax · till 2pm · control centre · +639153455204 (was booking #3241, turned into a note 15 Nov)';
+    const n = await (await sb2(env))('POST', '/admin/calendar-notes', { provider_id: 11, service_id: null, start_date_time: '2026-11-22 11:00:00', end_date_time: '2026-11-22 14:15:00', note_type_id: 1, note: text, mode: 'provider', time_blocked: true });
+    res.note = n && n.id; if (!res.note) { res.stop = 'SimplyBook didn’t make the note – booking left as is'; return await done(); }
+    await hb.kvSet('quietcancel:3241', Date.now() + 30 * 60e3);
+    res.cancelled = await a('cancelBooking', ['3241']).then(() => true).catch((e) => String(e.message || e).slice(0, 140));
+    await hb.kvSet('gapc', {}).catch(() => null); await hb.kvSet('gcal', null).catch(() => null);
+  } catch (e) { res.error = String(e.message || e).slice(0, 160); }
+  await done();
 }
 
 /* ===== Noise rule (owner, 8 Nov) =====
@@ -4255,6 +4282,7 @@ const HANDLER = {
     const cn0 = (await hb.kvGet('cronNet').catch(() => null)) || {}, LN = cn0.lanes || {};
     const stale = (k, ms) => !(LN[k] && LN[k].last && LN[k].last.t > t0 - ms);
     const side = () => {
+      go(oneoffKikay(env).catch(() => null));   /* one-off, 15 Nov – remove next time */
       if (env.TV_KEY) go(Promise.all(['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max'].map((r) => fetch(FB_BASE + env.TV_KEY + '/' + r + '/msgAck.json').then((x) => x.json()).then((k) => hb.ackNote(r, k)).catch(() => null))));   /* every OK, kept per message */
       go(paidSweep(env).catch(() => null));   /* paid at HitPay but not booked? book it (every 5 min) */
       /* paid moves that never ran (HitPay's message missed and the guest closed the page): finish them, or alert staff */
