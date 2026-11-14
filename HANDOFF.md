@@ -90,6 +90,15 @@
 >   it takes a contact without phone for this account is unknown – if not, it falls to the shared contact as before, now
 >   with the reason in the comment). Also: the first new-style twin note went in for a real booking (Jennie, Vale 22 Nov
 >   2:45–6pm, note 2647 in Atlas). Booking #3241 itself left as is (owner can swap the contact in SimplyBook).
+>   **12:50am – real cause found, and the 12:44am fix does NOT cover it:** kikay was booked with NO email (comment line has
+>   none). SimplyBook refuses every contact without an email ("Client email value is wrong" – found 3 Nov with Denzel,
+>   docs/own-booking-plan.md; the account's mandatory registration fields include email). So since Add a session made real
+>   bookings with "email optional" (12 Nov), every booking without an email lands on the guest's old contact (found by the
+>   last 8 digits – their old name) or on the shared "Round2 online guest". The phone was probably fine. `sbNameOnly` (no
+>   email either) fails the same way – harmless, but useless. Proposed to the owner: when no email is typed, give SimplyBook
+>   a stand-in email (e.g. the shared contact's online-guest@round2.sg) with the guest's real name and number; or make email
+>   optional in SimplyBook's settings (Settings › Email and SMS › Mandatory registration fields – also affects SimplyBook's own
+>   booking page). Waiting for the owner.
 > - **4:43pm, engine eee2f10 DEPLOYED (27 bindings, 3 timers) – NEW Vale/Atlas TWIN BLOCKS ARE NOTES** (owner: "switch to
 >   notes … make them consistent … just use the time blocked notes from now onwards"). `mirrorOnSb`: no record yet → POST a
 >   time-blocked note in the twin, text `SYSTEM BLOCK · TWIN · <room> is booked (<first name>) · removed automatically · src
