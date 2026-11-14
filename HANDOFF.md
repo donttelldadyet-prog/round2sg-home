@@ -106,6 +106,10 @@
 >   by-phone lookup and `sbNameOnly` are gone from this path; online path unchanged (name-only step removed). Add a session
 >   page: Email field no longer "(optional)", hint says email is needed for a real booking. System check step "Add a session…"
 >   now also expects no email → note (tv-launcher cb98ec2).
+>   **2:21am, one-off DONE (engine 7548df7, deployed 2:16am):** kikay's Max booking #3241 (22 Nov 11am, shared contact 3321)
+>   → time-blocked note 2680 in Max 11:00–14:15 "kikay 2 pax · till 2pm · control centre · +639153455204 (was booking #3241…)",
+>   then #3241 cancelled with no phone alert (kv `quietcancel:3241`). Result in KV `oneoff:res`. **Remove `oneoffKikay` and its
+>   call in the side lane with the next engine change** (the `quietcancel:` check in `bookingPush` can stay).
 > - **4:43pm, engine eee2f10 DEPLOYED (27 bindings, 3 timers) – NEW Vale/Atlas TWIN BLOCKS ARE NOTES** (owner: "switch to
 >   notes … make them consistent … just use the time blocked notes from now onwards"). `mirrorOnSb`: no record yet → POST a
 >   time-blocked note in the twin, text `SYSTEM BLOCK · TWIN · <room> is booked (<first name>) · removed automatically · src
