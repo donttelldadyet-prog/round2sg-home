@@ -98,7 +98,14 @@
 >   email either) fails the same way – harmless, but useless. Proposed to the owner: when no email is typed, give SimplyBook
 >   a stand-in email (e.g. the shared contact's online-guest@round2.sg) with the guest's real name and number; or make email
 >   optional in SimplyBook's settings (Settings › Email and SMS › Mandatory registration fields – also affects SimplyBook's own
->   booking page). Waiting for the owner.
+>   booking page).
+>   **1:39am, engine 53e166c DEPLOYED (27 bindings, 3 timers) – owner's order for Add a session:** 1) real booking with the
+>   guest's own contact; 2) no email, or SimplyBook refuses the contact → a NOTE (`noteWhy` "no email – SimplyBook only makes
+>   a booking with one"; `lateBooking` throws → the existing note fallback); 3) the shared Round2 contact only if the note is
+>   refused too (`lateBooking({generic: true})` in the note's catch, new daytime sessions only, `bookable`). The old-contact-
+>   by-phone lookup and `sbNameOnly` are gone from this path; online path unchanged (name-only step removed). Add a session
+>   page: Email field no longer "(optional)", hint says email is needed for a real booking. System check step "Add a session…"
+>   now also expects no email → note (tv-launcher cb98ec2).
 > - **4:43pm, engine eee2f10 DEPLOYED (27 bindings, 3 timers) – NEW Vale/Atlas TWIN BLOCKS ARE NOTES** (owner: "switch to
 >   notes … make them consistent … just use the time blocked notes from now onwards"). `mirrorOnSb`: no record yet → POST a
 >   time-blocked note in the twin, text `SYSTEM BLOCK · TWIN · <room> is booked (<first name>) · removed automatically · src
