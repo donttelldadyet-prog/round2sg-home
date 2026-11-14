@@ -27,7 +27,12 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4
   .colR .room { grid-template-columns: 215px minmax(0, 1fr); }   /* room name + early-bird chip need ~210px */
   .colL { position: sticky; top: 10px; }
   .colL .cal, .colL .dayhd, .colL .picked { max-width: none; }
-  .colR > .lbl:first-child { margin-top: 0 !important; }
+  /* the view switch stays at the top while guests scroll down the rooms – desktop only, one compact line (owner, 15 Nov) */
+  .viewbar { position: sticky; top: 0; z-index: 6; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 0 -4px; padding: 6px 4px 8px; background: var(--bg); }
+  .viewbar.stuck { box-shadow: 0 10px 14px -10px rgba(0,0,0,.9); border-bottom: 1px solid var(--line); }
+  .viewbar > .lbl { margin: 0 !important; }
+  .viewbar .views { margin: 0; gap: 4px; }
+  .viewbar .views button { font-size: 8px; padding: 7px 9px; }
   .colR .tier:first-of-type { margin-top: 14px; }
 }
 .px { font-family: 'Press Start 2P', monospace; letter-spacing: .12em; }
@@ -220,11 +225,13 @@ h3.nm, .nm { color: var(--rc); }
   <div class="cal" id="days" role="group" aria-label="Pick a day"></div>
   <div class="picked" id="picked" role="status" hidden></div>
   </div><div class="colR">
+  <div class="viewbar">
   <div class="lbl px" style="margin-top:20px"><i data-ic="eye"></i>2 · HOW DO YOU WANT TO LOOK?</div>
   <div class="views" id="views" role="group" aria-label="View">
     <button type="button" data-v="room" aria-pressed="true">BY ROOM</button>
     <button type="button" data-v="time" aria-pressed="false">BY TIME</button>
     <button type="button" data-v="early" aria-pressed="false">EARLIEST</button>
+  </div>
   </div>
   <div class="tiers" id="tiers"></div>
   <div id="board"><div class="state px load">LOADING SAVE SLOTS…</div></div>
@@ -295,6 +302,9 @@ h3.nm, .nm { color: var(--rc); }
   /* EMBED: the website's Book screen loads this page inside itself (?embed=1). Payment then opens in a new tab (payment
      pages can't run inside another site's frame), and the confirmation's "Back to Round2" goes to the website. */
   var EMBED = /[?&]embed=1/.test(location.search);
+  (function () { var vb = document.querySelector('.viewbar'); if (!vb) return; var t0 = 0;
+    function chk() { if (!t0) t0 = vb.getBoundingClientRect().top + scrollY; vb.classList.toggle('stuck', scrollY > t0 - 1 && vb.getBoundingClientRect().top <= 0.5); }
+    addEventListener('scroll', chk, { passive: true }); addEventListener('resize', function () { t0 = 0; chk(); }); })();
   if (EMBED) document.documentElement.classList.add('embed');   /* the SimplyBook booking page (safe mode) */
   /* TEST MODE: the control centre's Test bench opens this page with ?test=<test code>; checkout then uses the HitPay
      SANDBOX (no real money) even when guests pay live. Remembered for this tab only. */
@@ -711,6 +721,9 @@ h3.nm, .nm { color: var(--rc); }
     var b = e.target.closest('button[data-v]'); if (!b) return;
     view = b.getAttribute('data-v'); try { localStorage.setItem('r2.view', view); } catch (x) {}
     if (data && !data.failed) render(); count('board_view_' + view);
+    /* desktop: switched while far down the list → back to the top of the new list, just under the bar */
+    var vb = document.querySelector('.viewbar'), bd = $('board');
+    if (vb && getComputedStyle(vb).position === 'sticky') { var top = $('tiers').getBoundingClientRect().top + scrollY - vb.offsetHeight - 4; if (scrollY > top) scrollTo({ top: top }); }
   });
   $('mClose').onclick = function () { if (!$('hold').hidden) release(''); else if (!$('det').hidden) step('pick'); else closeBook(); };
   addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('modal').hidden && $('hold').hidden) closeBook(); });
