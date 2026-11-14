@@ -2167,7 +2167,7 @@ async function mvExecute(env, mv, how) {
     if (env.VAPID_JWK) {
       const sp = (x) => (x.room === 'Max' || +x.unit === 11 ? 'Max' : x.room) + ' ' + new Date(x.date + 'T12:00:00Z').toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }).replace(/,/g, '') + ', ' + clock12(sgMs0(x.date + ' ' + x.time));
       const paid = +mv.total > 0 ? 'paid $' + (+mv.total).toFixed(2).replace(/\.00$/, '') + ' (fee $' + (+mv.fee) + (+mv.diff > 0 ? ' + $' + (+mv.diff).toFixed(2).replace(/\.00$/, '') + ' difference' : '') + ')' : 'no charge' + (mv.grace ? ' (free 15 min)' : '');
-      await pushAll(env, 'booking', { title: roomTitle(q.unit) + ' · ' + (B.name || 'Guest'), body: '🔁 RESCHEDULED ' + (mv.guest ? 'online by the guest' + (mv.moveNo === 2 ? ' (2nd move)' : '') : 'by ' + (mv.by || 'staff')) + '\nwas ' + sp(mv.from) + '\nnow ' + sp({ room: q.room, unit: q.unit, date: q.date, time: q.time }) + ' · ' + q.hours + 'h\n' + paid, tag: 'bk' + B.bid, url: '/?tab=resched' }).catch(() => null);
+      await pushAll(env, 'booking', { title: roomTitle(q.unit) + ' · ' + (B.name || 'Guest'), body: (mv.addHours || (mv.from.date === q.date && mv.from.time === q.time && +mv.from.unit === +q.unit && q.hours > mv.from.hours) ? '➕ HOURS ADDED ' : '🔁 RESCHEDULED ') + (mv.guest ? 'online by the guest' + (mv.moveNo === 2 ? ' (2nd move)' : '') : 'by ' + (mv.by || 'staff')) + '\nwas ' + sp(mv.from) + (mv.from.hours ? ' · ' + mv.from.hours + 'h' : '') + '\nnow ' + sp({ room: q.room, unit: q.unit, date: q.date, time: q.time }) + ' · ' + q.hours + 'h\n' + paid, tag: 'bk' + B.bid, url: '/?tab=resched', ctx: { type: 'booking', change: 'move', bid: String(B.bid), room: q.room, name: B.name || '' } }).catch(() => null);
     }
     return { ok: true, moved: rec };
   } finally { await hb.kvSet('mvlock:' + mv.from.bid, 0); }
@@ -2235,10 +2235,27 @@ function gLogic(C) {
     if (i === o.day && room === o.room && t === o.t && h === o.h) return 'same';
     if (i * 1440 + t - NOW < 180) return 'soon';
     if (st === 'day') { if (i !== o.day) return 'sameday'; if (price(room, i, t, h) < price(o.room, o.day, o.t, o.h) || (t < o.t && room === o.room && h <= o.h)) return 'upgrade'; }
-    if (st === 'late' && t < LOCK) return 'lock';
-    if (deadGap(i, room, t, h)) return 'gap';
+    /* owner, 14 Nov: early-bird slots are prized – we want that guest to come. On their own day they may always start later or
+       add hours; another day only while 3+ days away (a slot given up later than that rarely sells again). And for everyone:
+       later on your OWN day is never "a new morning slot", so the 2:15pm rule doesn't apply to it. */
+    if (st === 'late' && o.eb && i !== o.day) return 'sameday';
+    if (st === 'late' && t < LOCK && !(i === o.day && t >= o.t)) return 'lock';
+    /* ADD HOURS (owner, 14 Nov, option C): measured from the day as it really is – the room's actual bookings, with this
+       booking where it sits now. If the longer session leaves room for just as many 3h bookings after it, it's always offered.
+       If it costs one, it's offered only when the extra hours earn at least what is lost (each lost slot's price × its chance
+       of still selling) – else 'gapadd' = "WhatsApp us". Every other move keeps the dead-gap rule. */
+    if (i === o.day && room === o.room && t === o.t && h > o.h) { if (!addPays(h)) return 'gapadd'; }
+    else if (deadGap(i, room, t, h)) return 'gap';
     return '';
   }
+  /* the 3h bookings that still fit after an end time e, packed back to back up to the next booking, and what they're worth */
+  function packAfter(e) {
+    var o = O(), ns = CLOSE + BUF, U = 180 + BUF, n = 0, v = 0;
+    taken(o.day, o.room).forEach(function (x) { if (x[0] >= o.t + o.h * 60 + BUF && x[0] < ns) ns = x[0]; });
+    for (var s = e; s <= LAST && s + U <= ns; s += U) { n++; v += expV(o.room, o.day, s, Math.max(0, (o.day * 1440 + s - NOW) / 60)); }
+    return [n, v];
+  }
+  function addPays(h) { var o = O(), a = packAfter(o.t + o.h * 60 + BUF), b = packAfter(o.t + h * 60 + BUF); if (b[0] >= a[0]) return true; return price(o.room, o.day, o.t, h) - price(o.room, o.day, o.t, o.h) >= a[1] - b[1]; }
   function okStart(i, room, t) { var o = O(); if (i === o.day && room === o.room && t === o.t) return true; return [3, 4, 5, 6].some(function (h) { return why(i, room, t, h) === ''; }); }
   function starts(i, room) { var a = []; for (var t = OPEN; t <= LAST; t += 15) if (okStart(i, room, t)) a.push(t); return a; }
   function locked(i, room) { if (stage() !== 'late') return []; var a = []; for (var t = OPEN; t < LOCK; t += 15) if (fits(i, room, t, 3) === true && i * 1440 + t - NOW >= 180) a.push(t); return a; }
@@ -2390,7 +2407,7 @@ async function gApi(env, f, origin) {
   const X = await gCtx(env, ref, f.act === 'pay');
   if (X.stop) return { stop: X.stop };
   const info = { name: X.d.name || '', room: X.C.bk.room, code: (X.d.done && X.d.done.code) || '', ext: X.ext ? Math.round(X.ext / 60e3) : 0, graceEnd: X.graceEnd, made: (X.d.done && X.d.done.at) || X.h.created, paid0: +(X.d.qWas || X.d.q).total,
-    staff: X.d.pay === 'staff', test: X.d.pay === 'test' || !!X.dry, dry: !!X.dry, pax: X.d.pax || '', tv: (X.d.done && X.d.done.tv && X.d.done.tv.code) || '', msg: X.d.msg ? { title: String(X.d.msg.title || '').slice(0, 60), after: +X.d.msg.after || 0 } : null, moves: (X.d.moves || []).map((m) => ({ t: m.t, guest: !!m.guest, from: m.from, to: m.to, fee: m.fee, diff: m.diff, total: m.total, ref: m.ref || '', how: m.how })) };
+    staff: X.d.pay === 'staff', test: X.d.pay === 'test' || !!X.dry, dry: !!X.dry, pax: X.d.pax || '', tv: (X.d.done && X.d.done.tv && X.d.done.tv.code) || '', msg: X.d.msg ? { title: String(X.d.msg.title || '').slice(0, 60), after: +X.d.msg.after || 0 } : null, moves: (X.d.moves || []).map((m) => ({ t: m.t, guest: !!m.guest, from: m.from, to: m.to, fee: m.fee, diff: m.diff, total: m.total, ref: m.ref || '', how: m.how, add: !!m.addHours })) };
   if (f.act !== 'pay') return { ok: true, C: X.C, info };
   /* PAY: the same rules and fee on fresh data */
   if (X.dry) return { error: 'This is a test booking that was never put in our calendar, so it can’t really be moved. Everything up to here works the same as a real booking.' };
@@ -2398,7 +2415,7 @@ async function gApi(env, f, origin) {
   const L = gLogic(X.C), room = String(f.room || ''), i = X.C.days.findIndex((x) => x.date === f.date), t = +f.t, hrs = +f.h;
   if (i < 0 || !L.ROOMS[room]) return { error: 'Pick a day and room again.' };
   const w = L.why(i, room, t, hrs);
-  if (w) return { error: { taken: 'That time was just taken – pick another.', soon: 'New times must be at least 3 hours from now.', closed: 'No rescheduling within 3 hours of your session.', sameday: 'Under 24 hours before: same-day changes only.', upgrade: 'Under 24 hours before: upgrades only.', lock: 'Under 3 days before: new times from 2:15pm only.', gap: 'That time isn’t available.', same: 'That’s your booking as it is.' }[w] || 'That time isn’t available.', why: w, C: X.C };
+  if (w) return { error: { taken: 'That time was just taken – pick another.', soon: 'New times must be at least 3 hours from now.', closed: 'No rescheduling within 3 hours of your session.', sameday: 'Under 24 hours before: same-day changes only.', upgrade: 'Under 24 hours before: upgrades only.', lock: 'Under 3 days before: new times from 2:15pm only.', gap: 'That time isn’t available.', gapadd: 'Those extra hours can’t be added online – WhatsApp us and we’ll check.', same: 'That’s your booking as it is.' }[w] || 'That time isn’t available.', why: w, C: X.C };
   const F = L.feeOf(i, room, t, hrs), fee = L.fee(i, room, t, hrs), diff = L.diff(i, room, t, hrs), total = L.total(i, room, t, hrs);
   if (X.C.moves >= 2 && !F.addOnly) return { error: 'You’ve used both moves for this booking – WhatsApp us.' };
   if (f.total != null && Math.abs(+f.total - total) > 0.004) return { changed: true, total, fee, diff, C: X.C };

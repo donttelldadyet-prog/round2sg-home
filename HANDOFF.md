@@ -498,3 +498,19 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   and start, just longer): booking history line "Hours added: 3h → 4h … no move used"; its receipt is "ADD HOURS RECEIPT" with
   one row "Extra hour (3h → 4h) · no change fee"; the receipt tile says "moved once · hours added"; review screen says "▼ ADDING
   HOURS ▼" and "adding hours doesn't use a move"; done screen "HOURS ADDED!". After 2 moves the button stays hidden (owner: intended).
+
+### 14 Nov 2026, 11:45pm – rescheduling rules, owner's decisions (engine + page + System check)
+- **Early birds (owner: "we WANT the early birder to come, but not to reschedule to another day – the slots are prized"):**
+  under 3 days an 11am booking is **own day only** (`why` → `sameday`; page greys the other days like under 24 h, with the reason
+  and a WhatsApp link). On their own day they can start later (any room) or add hours – $15 + difference to full price; add hours
+  no fee. 3+ days away: unchanged (any day, incl. another early-bird slot for $15) – owner hasn't objected, not explicitly confirmed.
+- **Everyone:** the 2:15pm rule no longer blocks a time at/after your own start on your own day (it was already allowed under 24 h).
+- **ADD HOURS vs the gap rule (owner: option C, "adapt from the room's real bookings"):** `packAfter(e)` packs 3h bookings after
+  an end time up to the next real booking; same count after extending → always offered (before, a 2pm booking on an open day
+  couldn't add an hour at all); one fewer → offered only if the extra hours ≥ the expected value lost; else `gapadd`: hour button
+  says "WhatsApp us" + a note with a prefilled WhatsApp link.
+- **Alerts:** adding hours pushes "➕ HOURS ADDED … was … 3h / now … 4h"; reschedule/add-hours alerts carry `ctx` (bid, room, name)
+  so the alert page finds phone/email. `/move/api` moves carry `add`.
+- **Under-24h wording (owner picked):** "We're getting your room ready! This slot has been kept for you and it's too late for
+  another guest to take it, so the day can't be changed online – but you can still upgrade on <day>…".
+- System check step "Guest rescheduling: page, rules and fees" tests the three new rules.

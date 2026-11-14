@@ -214,7 +214,12 @@ Early-bird bookings: $15 under all. Best value box shows per room type after a d
   next to another booking (guests aren't told why); Vale/Atlas same twin back-to-back +$10, other twin −$10 where covered; early-bird
   bookings always $15; 2nd move +$10; free in the first 15 min after booking or a move (price difference still paid).
 - Stages by how far away the CURRENT booking is: 3+ days any slot · under 3 days from 2:15pm · under 24 h same-day upgrades ·
-  under 3 h closed. New time ≥ 3 h from now. Max 2 guest moves (staff moves don't count). Cheaper: no refund.
+  under 3 h closed.
+  **Since 14 Nov (night):** later on your OWN day is never blocked by the 2:15pm rule (start later / add hours); an **early-bird
+  booking under 3 days = own day only** (the slots are prized – we want that guest to come, and a slot given up late rarely
+  sells again); 3+ days it can still go anywhere. **ADD HOURS** is no longer stopped by the dead-gap rule outright: it is
+  measured from the day as it is (`packAfter`) – costs no 3h slot → offered; costs one → offered only if the extra hours earn
+  at least that slot's expected value (`addPays`), else `gapadd` = "WhatsApp us". New time ≥ 3 h from now. Max 2 guest moves (staff moves don't count). Cheaper: no refund.
 - Engine `gLogic` = the only copy of these rules (page and charge). Staff Move a booking uses `mvQuote` with the same $5 steps.
 - How guests get in, the booking page, Add a session bookings and the flow end to end: HANDOFF.md, top section.
 - **14 Nov (owner):** ADD HOURS – same day, room and start, just longer – has no change fee (only the extra hours' price) and
