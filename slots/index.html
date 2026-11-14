@@ -24,6 +24,7 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4
 @media (min-width: 900px) {
   /* the page's bottom space sits INSIDE the columns, so the pinned calendar and Browse-by bar never get pushed up when the
      rooms are scrolled to the very end (owner, 15 Nov) */
+  html { overscroll-behavior: none; }   /* scrolling past the end never pulls the website's box along */
   .wrap { max-width: 1180px; padding-bottom: 0; }
   .colR { padding-bottom: 40px; }
   .cols { display: grid; grid-template-columns: minmax(310px, 350px) minmax(0, 1fr); gap: 0 28px; align-items: start; }
@@ -310,6 +311,34 @@ h3.nm, .nm { color: var(--rc); }
   /* EMBED: the website's Book screen loads this page inside itself (?embed=1). Payment then opens in a new tab (payment
      pages can't run inside another site's frame), and the confirmation's "Back to Round2" goes to the website. */
   var EMBED = /[?&]embed=1/.test(location.search);
+  /* DESKTOP ONLY (owner, 15 Nov): soft menu sounds like the room TVs' "Kai bamboo" set – a bamboo knock when choosing, a
+     temple-bell when going on (Choose a time, Continue, Pay), a lower knock for Back. Same synth as round2-tv-launcher
+     web/index.html (Sfx, set "zen"). Phones and touch screens stay silent. */
+  (function () {
+    var on = window.matchMedia && matchMedia('(min-width: 900px) and (hover: hover) and (pointer: fine)').matches;
+    if (!on) return;
+    var ctx = null, nb = null;
+    function ac() { if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } } if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) {} } return ctx; }
+    function voice(o) {
+      var c = ac(); if (!c) return;
+      var t = c.currentTime + (o.at || 0), g = c.createGain(), f = c.createBiquadFilter(), src;
+      f.type = o.filter || 'lowpass'; f.frequency.value = o.cut || 6000; f.Q.value = o.q || 0.7;
+      if (o.wave === 'noise') { if (!nb) { nb = c.createBuffer(1, c.sampleRate * 0.2, c.sampleRate); var d = nb.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; } src = c.createBufferSource(); src.buffer = nb; }
+      else { src = c.createOscillator(); src.type = o.wave || 'sine'; src.frequency.setValueAtTime(o.f0, t); if (o.f1) src.frequency.exponentialRampToValueAtTime(o.f1, t + (o.glide || o.dur)); }
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(o.vol || 0.12, t + (o.atk || 0.004)); g.gain.exponentialRampToValueAtTime(0.0001, t + o.dur);
+      src.connect(f); f.connect(g); g.connect(c.destination); src.start(t); src.stop(t + o.dur + 0.02);
+    }
+    var SND = {
+      move: function () { voice({ wave: 'triangle', f0: 620, f1: 480, dur: 0.07, vol: 0.12, cut: 2200 }); voice({ wave: 'noise', dur: 0.02, vol: 0.03, filter: 'bandpass', cut: 2400, q: 6 }); },
+      ok: function () { voice({ wave: 'sine', f0: 880, dur: 0.6, vol: 0.08, atk: 0.003 }); voice({ wave: 'sine', f0: 1320, dur: 0.4, vol: 0.04 }); voice({ wave: 'sine', f0: 2210, dur: 0.25, vol: 0.02 }); },
+      back: function () { voice({ wave: 'triangle', f0: 440, f1: 330, dur: 0.1, vol: 0.1, cut: 1600 }); }
+    };
+    document.addEventListener('click', function (e) {
+      var t = e.target.closest && e.target.closest('button, a, .room'); if (!t || t.disabled || t.getAttribute('aria-disabled') === 'true') return;
+      var k = t.matches('#mClose, #hChange, #tCancel, .x') ? 'back' : t.matches('#pGo, #dGo, #hPay, .pickb, .go') ? 'ok' : 'move';
+      try { SND[k](); } catch (x) {}
+    }, true);
+  })();
   (function () { var vb = document.querySelector('.viewbar'); if (!vb) return; var t0 = 0;
     function chk() { if (!t0) t0 = vb.getBoundingClientRect().top + scrollY; vb.classList.toggle('stuck', scrollY > t0 - 1 && vb.getBoundingClientRect().top <= 0.5); }
     addEventListener('scroll', chk, { passive: true }); addEventListener('resize', function () { t0 = 0; chk(); }); })();
