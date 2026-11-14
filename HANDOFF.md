@@ -53,6 +53,18 @@
 >   - Seen on the way (not fixed): SimplyBook requests today 4,469 by 2:30pm, yesterday 7,680 (guideline ~5,000). Biggest:
 >     booking page `/day › getAvailableTimeIntervals` 1,162, cron 656, `gm late` (Add a session page) 523, `/mode` 252.
 >   - Old sign-up hGptkT last showed an alert 11 Nov 1:40pm (owner re-added the app 1:45pm) → the prune takes it ~18 Nov 1:40pm.
+> - **3:40pm, engine 8ded960 DEPLOYED (27 bindings, 3 timers) – DECLARATIVE WEB PUSH TRIAL on the owner's phone.** 3:30pm
+>   Scarlett reminder: sent 15:30:16, phones showed it +3 s / +53 s / owner +115 s **as 3 copies** (original + 2 re-sends).
+>   iPhones ignore the alert `tag` (WebKit 258922), refuse `close()` in an alert's first ~30 s, and Apple's `Topic` didn't
+>   merge them – so "one copy" can't be promised while we re-send. Root-cause candidate: a locked iPhone puts off STARTING the
+>   control centre's service worker. Declarative Web Push (iOS 18.4+) lets the phone show the alert itself:
+>   `pushOne` sends `declBody(msg)` (`{web_push: 8030, notification: {title, body, navigate, tag, data: {url, kind}}, mutable:
+>   true}`) when `declOn(env, endpoint)`: KV `HOLDS` › **`push:decl`** = `{"ids": ["GGAmdj"]}` (set now; `{"all": true}` later;
+>   delete = off) AND the phone's worker reported version 2+ (KV `push:swv`, written by `/push/seen` field `v`). Such a phone
+>   gets one re-send at most (`pushRetry`). gm `pushsubs` returns `decl`. Control centre 14ee38b: `sw.js` `SWV = 2` (three
+>   alert shapes, reports `v`, test alerts report as `a: "test"`), `r2TidyAlerts` closes extra copies when the app is opened.
+>   The trial starts by itself once the owner opens the control centre on his phone and it shows one alert (Test alert).
+>   How to read it and what to do next: round2-tv-launcher `docs/staff-alerts.md` "Declarative Web Push".
 > - Known stale comment (engine, noise rule header): says clashes alert "control-centre alert + Telegram" – Telegram never
 >   gets these (`staffAlert` is a no-op). Fix the wording with the next engine change.
 
