@@ -457,3 +457,11 @@ the Round2 entrance** (the shoe rack) – nobody brings food to the room. The TV
 guest to collect it there; the room name on the slip is how guests (and staff) find the right bag. Never describe Round2
 food as "delivered to your room" (website, blog, menu, TV). Without `?room=` the menu can be browsed but not ordered from ("scan the QR code in your room").
 Check each room's Wix links page uses its own `?room=` before printing QR codes.
+
+### 14 Nov 2026 (night) – "why is it only am??" (guest screenshot, Vale Sun 15 → Sun 22)
+- Cause: guest was under 24 h before their session (stage `day`: same-day upgrades only), so Sun 22 had **no allowed start**.
+  `move/index.html` drew that empty state (`sel.t == null`) as "12am – 3am", "taken from 12:01am" and a wrong total. Continue was
+  disabled, so nobody could pay for it – display bug only.
+- Fix (page only, commit 527412c): empty state now says why – under 24 h → "only same-day upgrades online, WhatsApp us to move
+  to another day" (prefilled WhatsApp link); otherwise "<room> has no free time on <day>" + which rooms are free. No engine change.
+- Not done: System check not re-run (session wasn't linked to the browser) – run it next time. Idea: grey out other days in stage `day`.
