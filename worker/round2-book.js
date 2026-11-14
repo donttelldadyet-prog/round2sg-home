@@ -1054,6 +1054,13 @@ async function sbGeneric(env, a) {
   if (cid) await hb.kvSet('sbGenericCid', cid);
   return cid || null;
 }
+/* before the shared contact (owner, 15 Nov: Max booking for "kikay" with a Philippine number, +63…, landed on "Round2 online
+   guest"): SimplyBook refused the contact WITH that number, so try one with the name only – staff greet the guest by that
+   name, and the number is in the booking's comment anyway. */
+async function sbNameOnly(a, name, errs) {
+  if (!String(name || '').trim()) return null;
+  return a('addClient', [{ name }]).catch((e) => { if (errs) errs.push('name only: ' + String(e.message || e).slice(0, 140)); return null; });
+}
 /* the very last resort (owner, 3 Nov: "always make a note booking with phone number and details"): SimplyBook refused the
    booking itself, so the room is blocked with a calendar note carrying everything staff need to reach the guest. Our own
    screens treat it as a session (name first, like Late session notes); the twin room is blocked too. */
@@ -1215,6 +1222,7 @@ async function finalize(env, ref, source) {
         const found = Object.values((await a('getClientList', [d.email, 1]).catch(() => null)) || {})[0] || Object.values((await a('getClientList', [p8, 1]).catch(() => null)) || {})[0];
         if (found) { cid = found.id; late = false; how.push('their existing SimplyBook contact'); }
       }
+      if (!cid) { cid = await sbNameOnly(a, d.name, cErr); if (cid) { late = false; how.push('a contact with the name only (SimplyBook refused it with the number/email) – the guest gets no email'); } }
       if (!cid) { cid = await sbGeneric(env, a).catch(() => null); if (cid) { late = false; how.push('the shared "Round2 online guest" contact – the guest gets no email'); } }
       /* SimplyBook's own bookings end 15 min after the session (its "buffer after" = cleaning time, e.g. 11:00–14:15 for 3 h),
          so ours do too – the calendar then blocks the cleaning time and nobody can book into it */
@@ -1711,11 +1719,13 @@ async function late(env, hb, f) {
    like an online booking (end + 15 min cleaning, pax), then a booking record so /b/<code> and /done work and the guest can
    reschedule online. Returns the link for staff to copy and send on WhatsApp. */
 async function lateBooking(env, hb, x) {
-  const q = await quote(env, { unit: x.unit, date: x.day, time: x.st, hours: x.hrs }), a = await admin(env), how = [];
+  const q = await quote(env, { unit: x.unit, date: x.day, time: x.st, hours: x.hrs }), a = await admin(env), how = [], cErr = [];
   let cid = null, late = false;
-  const c = await sbContact(a, x.name, x.email || undefined, x.phone, []).catch(() => null); if (c) { cid = c.cid; late = c.late; }
+  const c = await sbContact(a, x.name, x.email || undefined, x.phone, cErr).catch(() => null); if (c) { cid = c.cid; late = c.late; }
   if (!cid) { const p8 = x.phone.replace(/\D/g, '').slice(-8); const found = Object.values((await a('getClientList', [p8, 1]).catch(() => null)) || {})[0]; if (found) { cid = found.id; how.push('their existing SimplyBook contact'); } }
+  if (!cid) { cid = await sbNameOnly(a, x.name, cErr); if (cid) { late = false; how.push('a contact with the name only (SimplyBook refused the number ' + x.phone + ')'); } }
   if (!cid) { cid = await sbGeneric(env, a).catch(() => null); if (cid) how.push('the shared "Round2 online guest" contact'); }
+  if (cErr.length && how.length) how.push('SimplyBook said: ' + cErr.join(' | ').slice(0, 300));   /* why, for next time (before: thrown away) */
   if (!cid) throw new Error('SimplyBook wouldn’t make a contact');
   const eB = mins(q.time) + q.hours * 60 + BUF, endDate = eB >= 1440 ? addDays(q.date, 1) : q.date;
   let bErr = ''; const bk = await a('book', [q.eventId, q.unit, cid, q.date, q.time + ':00', endDate, hhmm(eB % 1440) + ':00', 0, { [PAX_FIELD]: String(x.pax) }]).catch((e) => { bErr = String(e.message || e).slice(0, 100); return null; });
