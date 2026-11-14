@@ -376,7 +376,10 @@ export class HoldBook extends DurableObject {
      from `pseen`, which only holds the last 300 alerts). Nothing is dropped unless ANOTHER phone reported in the last 2 days –
      so a quiet week, or the reporting itself breaking, can't empty the list. The dropped sign-up's choices are kept 60 days
      (`pushDropped`): if that phone opens the control centre again it is signed up again by itself (/push/state → dropped). */
-  pushPrune() {
+  /* 14 Nov 5:35pm: a phone on the declarative trial is shown its alerts by the iPhone itself – the background worker isn't
+     started, so it never reports (owner: 4 of 4 on time, one copy, none reported). Such a phone is never dropped for silence. */
+  async pushPrune() {
+    const DC = await declInfo(this.env).catch(() => null), quiet = (id) => !!DC && (DC.all || DC.ids.includes(id));
     this.pushInit(); const now = Date.now(), WEEK = 7 * 86400e3, seen = this.kvGet('pseen') || {}, shown = this.kvGet('pshown') || {}; let ch = false;
     for (const a in seen) for (const k in seen[a]) if (+seen[a][k] > (shown[k] || 0)) { shown[k] = +seen[a][k]; ch = true; }
     const rows = this.rows(`SELECT id, kinds, label, t FROM push`), sid = (r) => String(r.id).slice(0, 6), out = [];
@@ -385,7 +388,7 @@ export class HoldBook extends DurableObject {
     const D = this.kvGet('pushDropped') || {}; let dch = false;
     for (const k in D) if (D[k].t < now - 60 * 86400e3) { delete D[k]; dch = true; }
     for (const r of rows) {
-      if (Math.max(+r.t || 0, shown[sid(r)] || 0) > now - WEEK) continue;
+      if (quiet(sid(r)) || Math.max(+r.t || 0, shown[sid(r)] || 0) > now - WEEK) continue;
       if (!rows.some((o) => o.id !== r.id && (shown[sid(o)] || 0) > now - 2 * 86400e3)) continue;
       this.sql.exec(`DELETE FROM push WHERE id = ?`, r.id);
       D[r.id] = { t: now, kinds: r.kinds, label: r.label, since: r.t, shown: shown[sid(r)] || 0 }; dch = true; out.push(sid(r) + ' ' + (r.label || ''));
