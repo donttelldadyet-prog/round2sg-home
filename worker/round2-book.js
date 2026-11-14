@@ -3257,7 +3257,7 @@ async function pushEncrypt(sub, payload) {
    and the phone shows the alert by itself if the worker doesn't answer. No "silent push" penalty either.
    Which phones: KV HOLDS › push:decl = {"ids": ["GGAmdj"]} (first 6 letters, as in "Did the alerts arrive?") or {"all": true};
    delete the key = everything as before, no deploy needed. Only phones whose background worker has reported version 2+
-   (KV push:swv, from /push/seen) get it – an older worker would show an empty alert. Such a phone gets NO re-sends (it can't report). */
+   (KV push:swv, from /push/seen) get it – an older worker would show an empty alert. Such a phone gets ONE re-send at most. */
 let DECL_C = null;
 const CC_ORIGIN = 'https://staff.round2.sg';
 async function declInfo(env) {
@@ -3327,9 +3327,7 @@ async function pushRetry(env, hb0) {
   for (const x of L) for (const sb of subs) {
     const sid = String(sb.id).slice(0, 6); if (!reports.has(sid) || (seen[x.id] || {})[sid] || !sb.kinds.includes(x.kind === 'human' ? sb.kinds[0] : x.kind)) continue;
     const k = x.id + ':' + sid, r = typeof T[k] === 'number' ? { n: 99, t: 0 } : T[k] || { n: 0, t: x.t };
-    /* a phone on the declarative trial is shown the alert by the iPhone itself and never reports, so "not reported" says nothing
-       – a re-send is just a second copy (owner, 14 Nov 9:12pm: Max booking alert, 2 copies). No re-sends to such a phone. */
-    if (r.n >= PUSH_RETRY_GAPS.length || await declOn(env, sb.sub.endpoint)) continue;
+    if (r.n >= PUSH_RETRY_GAPS.length || (r.n >= 1 && await declOn(env, sb.sub.endpoint))) continue;   /* a phone on the declarative trial: one re-send at most */
     if (now - r.t < PUSH_RETRY_GAPS[r.n]) { more = true; continue; }
     T[k] = { n: r.n + 1, t: now }; if (r.n + 1 < PUSH_RETRY_GAPS.length) more = true;
     out.push(sid + ' ' + x.id + ' ' + (await pushOne(env, sb.sub, { kind: x.kind, title: x.title, body: x.body, tag: x.tag || 'r' + x.id, url: '/?alert=' + x.id })));
