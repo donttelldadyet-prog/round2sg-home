@@ -16,6 +16,15 @@
 > - **1:15pm, first real alerts through the DO (2 reminders):** all 5 phones `ok`, no "topic refused" – Apple accepts `Topic`.
 >   Shown: one phone +1–3 s, one +57–60 s (first re-send), one +235 s (second re-send). So re-sends now come about every minute
 >   at first (`PUSH_RETRY_GAPS` 50 s, 2, 3, 4½, 9 min; engine deployed 1:28pm, 27 bindings).
+> - **2:08pm, engine 774e2cf DEPLOYED (27 bindings): silent sign-ups clear themselves** (owner: yes). `pushPrune()` in the DO,
+>   hourly at minute 25: a phone that signed up 7+ days ago and hasn't reported showing ANY alert for 7 days is deleted from
+>   `push` – only while another phone reported in the last 2 days. Last report per phone = DO kv `pshown` (built from `pseen`).
+>   The dropped row's choices stay 60 days in kv `pushDropped`; `/push/state` answers `{on:false, dropped, kinds}` and the
+>   control centre signs that phone up again by itself at start-up (`Alerts.wake`). gm `pushsubs` now also returns `shown`,
+>   `dropDays`, `dropped`. System check has a reading-only step for it. Docs: round2-tv-launcher `docs/staff-alerts.md`
+>   (item 6, and a new plain-words section "How an alert travels").
+> - Known stale comment (engine, noise rule header): says clashes alert "control-centre alert + Telegram" – Telegram never
+>   gets these (`staffAlert` is a no-op). Fix the wording with the next engine change.
 
 > ## 14 Nov 2026, 6am – second chat (TVs / control centre): review follow-ups, engine ed9d0be DEPLOYED (27 bindings, cron */5)
 > - **A moved booking's noise block follows at once** (`mvExecute` → `noiseSync` old day + new day).
