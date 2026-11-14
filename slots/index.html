@@ -25,12 +25,13 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4
   .wrap { max-width: 1180px; }
   .cols { display: grid; grid-template-columns: minmax(310px, 350px) minmax(0, 1fr); gap: 0 28px; align-items: start; }
   .colR .room { grid-template-columns: 215px minmax(0, 1fr); }   /* room name + early-bird chip need ~210px */
-  .colL { position: sticky; top: 10px; }
+  /* the scaled desktop stage can leave a hairline above a stuck part: each one also paints 8px of page colour above itself */
+  .colL { position: sticky; top: 0; padding-top: 10px; background: var(--bg); box-shadow: 0 -8px 0 var(--bg); }
   .colL .cal, .colL .dayhd, .colL .picked { max-width: none; }
   /* the view switch stays at the top while guests scroll down the rooms – desktop only, one compact line (owner, 15 Nov) */
   /* one row on an 8px rhythm: step label (quiet) · 24px · a segmented switch (one outlined unit, equal 32px-high parts) */
-  .viewbar { position: sticky; top: 0; z-index: 6; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; margin: 0 -4px; padding: 8px 4px; background: var(--bg); }
-  .viewbar.stuck { box-shadow: 0 10px 14px -10px rgba(0,0,0,.9); border-bottom: 1px solid var(--line); }
+  .viewbar { position: sticky; top: 0; z-index: 6; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; margin: 0 -4px; padding: 8px 4px; background: var(--bg); box-shadow: 0 -8px 0 var(--bg); }
+  .viewbar.stuck { box-shadow: 0 -8px 0 var(--bg), 0 10px 14px -10px rgba(0,0,0,.9); border-bottom: 1px solid var(--line); }
   .viewbar > .lbl { margin: 0 !important; line-height: 1; }
   .viewbar .views { display: inline-flex; flex-wrap: nowrap; gap: 0; margin: 0; border: 1px solid var(--line); }
   .viewbar .views button { height: 32px; padding: 0 16px; font-size: 8px; letter-spacing: .12em; border: 0; border-left: 1px solid var(--line); }
