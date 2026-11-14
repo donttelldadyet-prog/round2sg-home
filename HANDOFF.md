@@ -6,10 +6,13 @@
 >   calls + every push to Apple). The new ~50 s re-send (runs in the DO) got them out 48 s and 112 s late.
 > - **Fix:** alerts are now sent from INSIDE the DO (`pushAll` → `hb.pushRun` → `pushAllHere`; the cron's re-send backstop too,
 >   `pushRetryRun`) – each has its own allowance. Falls back to sending from the caller if the DO call fails.
-> - **Not fixed, for whoever works on the engine next:** the top-of-the-hour cron run is at or near 50 outside requests WITHOUT the
->   alerts (hourly week-ahead noise sweep + mirror sweep + auto wrap-up + reminders' guest-count look-ups …). Anything late in that
->   run can fail the same silent way (each job is wrapped in `go(…catch)`). Worth: count `fetch`es per run (`sbHit` already counts
->   SimplyBook ones) and move the heavy sweeps into the DO or onto different minutes.
+> - **Measured and eased (engine 6afa1f9 DEPLOYED 12:37pm, 27 bindings):** every outside request is now counted
+>   (`NET`, a wrapper round `fetch`) and each cron run's total is kept in DO kv `cronNet` {last, max of 24 h, fails} – read it with
+>   gm `cronnet` (also allowed over the KV `diag:req` channel). First reading: the :40 run with the week-ahead noise sweep AND the
+>   after-midnight notes = **24** (7 Firebase + 17 SimplyBook). So 10:00 was ≈ 24 + ~10 reminder look-ups + 20 pushes > 50.
+>   Heavy sweeps are now OFF minutes 0 and 30 (week-ahead noise :40, after-midnight notes :10/:40), alerts are out of the cron's
+>   allowance, and a reminder whose SimplyBook read failed is retried on the next 5-min tick (`soonAgain`). Each job is still
+>   wrapped in `go(…catch)`, so a refused request fails silently – `cronNet.fails` is where it shows.
 > - Unknown yet: whether Apple accepts our `Topic` header. If it refuses (HTTP 400) the alert is re-sent without it, the push
 >   service is remembered (`TOPIC_NO`) and the phone's last result reads `ok (topic refused)` in `diag:push`.
 
