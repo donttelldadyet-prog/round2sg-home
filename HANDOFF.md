@@ -109,7 +109,13 @@
 >   **2:21am, one-off DONE (engine 7548df7, deployed 2:16am):** kikay's Max booking #3241 (22 Nov 11am, shared contact 3321)
 >   → time-blocked note 2680 in Max 11:00–14:15 "kikay 2 pax · till 2pm · control centre · +639153455204 (was booking #3241…)",
 >   then #3241 cancelled with no phone alert (kv `quietcancel:3241`). Result in KV `oneoff:res`. **Remove `oneoffKikay` and its
->   call in the side lane with the next engine change** (the `quietcancel:` check in `bookingPush` can stay).
+>   call in the side lane with the next engine change** (the `quietcancel:` check in `bookingPush` can stay). → removed in 86ed06b.
+>   **2:24am, engine 86ed06b DEPLOYED (27 bindings, 3 timers) – booking link in SimplyBook comments** (owner): online
+>   bookings' comment now ends "Booking page: https://book.round2.sg/b/<code>"; the last-resort note of a paid online booking
+>   carries "confirmation: …/done?ref=<ref>" (Add a session bookings already had the link; Add a session notes have no page).
+>   One-off `oneoffLinks` (KV oneoff:go = links) ran 2:26am: link appended to 21 upcoming online bookings; 7 skipped because
+>   their comment isn't the engine's any more (no "ref <ref>" – edited by staff or moved), nothing overwritten. Result in KV
+>   `oneoff:res`. **Remove `oneoffLinks` and its side-lane call with the next engine change.**
 > - **4:43pm, engine eee2f10 DEPLOYED (27 bindings, 3 timers) – NEW Vale/Atlas TWIN BLOCKS ARE NOTES** (owner: "switch to
 >   notes … make them consistent … just use the time blocked notes from now onwards"). `mirrorOnSb`: no record yet → POST a
 >   time-blocked note in the twin, text `SYSTEM BLOCK · TWIN · <room> is booked (<first name>) · removed automatically · src
