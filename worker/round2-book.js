@@ -4100,62 +4100,94 @@ async function keyDaily(env) {
   return { sent };
 }
 const HANDLER = {
-  /* every 10 minutes (Cloudflare cron trigger, every-10-minutes schedule): staff "in 1 hour" alerts */
-  /* every 5 minutes (Cloudflare cron every 5 min, since 2 Nov): the "in 1 hour" reminder goes exactly 1 hour before a
-     booking (bookings start on the quarter hour, so a 5-minute tick always lands on it), at the same time as SimplyBook's
-     own 1-hour reminder email (owner, 2 Nov). Everything else still runs every 10 minutes. */
+  /* THREE TIMERS (14 Nov, owner: "let's try 1" – split the one timer). Until today one 5-minute timer did everything in one
+     run, and one run may make only 50 outside requests (free plan): at 10am the 1-hour reminders lost to the sweeps. Each
+     Cloudflare timer (Triggers) starts its OWN run with its own 50, so the jobs are now three separate "lanes", picked by the
+     minute the run was scheduled for:
+       now   – minutes 0, 5, 10 …  (every 5 min)              what staff and guests are waiting for: the 1-hour reminder,
+               alert re-sends, and on the 10-minute ticks tonight's calendar work that shares ONE read of today + tomorrow
+               (Auto wrap-up, left-over wrap-up messages, link heads-up, hold notes, noise rule for tonight + tomorrow)
+       side  – minutes 1, 6, 11 …  (1,6,11,…,56)              nothing to do with tonight's calendar: TVs' OKs (Firebase),
+               paid-but-not-booked and paid-but-not-moved (HitPay), the daily key check, staff questions left in KV
+       sweep – minutes 3, 13, 23 … (3,13,…,53)                slow look-aheads: after-midnight notes, noise rule for the
+               days after tomorrow, one far day each half hour
+     Rule for anything new (PS4 daily prep and parked-save clean-up, membership reminders, Madd payout …): it goes in side or
+     sweep, or gets its own timer (5 allowed on the account, 3 used) – never in "now" unless it needs tonight's calendar AND
+     is small. Work a PS4 or a page asks for arrives as its own request and has its own allowance anyway.
+     Safety: the "now" run looks at when the other two last ran (kv cronNet.lanes). If one hasn't for a while (its trigger was
+     removed, or the code is live before the triggers are added) "now" does that lane's jobs itself, as before the split, and
+     says so in its record (`fb`) – the System check flags it. */
   async scheduled(ev, env0, ctx) {
-    const base = envFor(env0, 'live'), env = Object.assign(Object.create(base), base, { __tick: new Map() }), hb = book(env); sbWho = 'cron';
-    const mm = new Date(ev.scheduledTime || Date.now()).getUTCMinutes(), ten = mm % 10 < 5, quarter = mm % 15 < 5, jobs = [];
+    const mm = new Date(ev.scheduledTime || Date.now()).getUTCMinutes(), lane = mm % 5 === 0 ? 'now' : mm % 5 === 1 ? 'side' : mm % 10 === 3 ? 'sweep' : 'now';
+    const base = envFor(env0, 'live'), env = Object.assign(Object.create(base), base, { __tick: new Map() }), hb = book(env); sbWho = lane === 'now' ? 'cron' : 'cron ' + lane;
+    const ten = mm % 10 < 5, quarter = mm % 15 < 5, jobs = [], fb = [];
     const go = (p) => { const q = p.catch(() => null); jobs.push(q); ctx.waitUntil(q); };
-    const net0 = NET.n, by0 = Object.assign({}, NET.by), fail0 = NET.fails.length, t0 = Date.now();
-    if (env.TV_KEY) go(Promise.all(['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max'].map((r) => fetch(FB_BASE + env.TV_KEY + '/' + r + '/msgAck.json').then((x) => x.json()).then((k) => hb.ackNote(r, k)).catch(() => null))));   /* every OK, kept per message */
-    go((async () => { const prev = await hb.kvGet('cronLast'); await hb.kvSet('cronPrev', prev || 0); await hb.kvSet('cronLast', Date.now()); })());
-    /* the reminder only needs the 10-min ticks plus :15 and :45 (bookings start on the quarter hour) */
-    /* 14 Nov: if that read fails (SimplyBook down, or the run out of outside requests) the next 5-minute tick tries once more –
-       55 min before is still inside the window, and a reminder is only ever sent once (soonMark) */
-    if (ten || quarter) go(soonRun(env));
-    else go((async () => { if (await hb.kvGet('soonAgain')) { await hb.kvSet('soonAgain', 0); await soonRun(env); } })());
-    go(paidSweep(env).catch(() => null));
-    /* paid moves that never ran (HitPay's message missed and the guest closed the page): finish them, or alert staff */
-    go((async () => { for (const m of await hb.mvRecent(Date.now() - 48 * 3600e3)) if (m.status === 'pending' && Date.now() - m.t > 60e3) {
-      const r = await mvComplete(env, m.ref, 'sweep').catch((e) => ({ error: String(e.message || e) }));
-      { const m1 = await hb.kvGet('mv:' + m.ref), over = m1 && m1.guest && m1.status === 'pending' && Date.now() > (m1.hold ? m1.hold.exp : m1.t + 30 * 60e3);
-        if (over && !(await mvPayStatus(env, m1).catch(() => ({ paid: true }))).paid) { await mvHoldRelease(env, m1, 'expired').catch(() => null); continue; } }   /* unpaid and its 10 minutes are over: closed, slot free */
-      /* paid but still not moved after 15 min (any reason) → a Round2 alert, once */
-      const m2 = await hb.kvGet('mv:' + m.ref);
-      if (m2 && m2.status === 'pending' && Date.now() - m.t > 15 * 60e3 && (await mvPayStatus(env, m2).catch(() => ({}))).paid && !(await hb.kvGet('mvstuck:' + m.ref))) {
-        await hb.kvSet('mvstuck:' + m.ref, 1);
-        await humanAlert(env, 'move-' + m.ref, 'Paid move not done yet', `${m.from.name || 'Guest'} paid $${(+m.total).toFixed(2)} to move ${m.from.room} ${m.from.date} ${m.from.time} → ${m.to.room} ${m.to.date} ${m.to.time}, still not moved after 15 min (${(r && (r.error || (r.busy ? 'busy' : ''))) || 'no answer'}). Bookings › Rescheduling, or ask Claude (mvfinish ${m.ref}).`).catch(() => null);
-      }
-    } })());
-    go(book(env).pushRetryRun().catch(() => pushRetry(env)).then(() => (mm >= 25 && mm < 30 ? book(env).pushPrune() : null)).catch(() => null).then(() => pushDiag(env)).catch(() => null));   /* in the store: its own allowance of outside requests */
-    go(diagReq(env).catch(() => null));   /* staff questions left in KV (diag:req → diag:res) */   /* resend alerts a phone hasn't shown; delivery report copy (KV diag:push) */   /* paid at HitPay but not booked? book it (every 5 min) */
-    /* a SimplyBook change a few minutes ago: Auto wrap-up looks again on the next 5-min tick (owner, 3 Nov: a quick fix was
-       only picked up after a refresh); the 10-min ticks run it anyway */
-    go((async () => { const na = await hb.kvGet('noiseAgain'); if (na && na.at && Date.now() >= na.at) { await hb.kvSet('noiseAgain', null); await noiseSync(env, na.days || [], 'recheck'); } })().catch(() => null));
-    go((async () => { const ag = await hb.kvGet('autoAgain'); if (ag && Date.now() >= ag) { await hb.kvSet('autoAgain', 0); if (!ten) await autoRun(env, 'recheck'); } })());
-    if (ten) {
-      go(autoRun(env, 'cron')); go(msgOrphans(env, 'cron')); go(waitWarn(env)); go(keyDaily(env)); go(holdSweep(env));
-      /* 14 Nov: the heavy sweeps are kept OFF minute 0 and 30 – that is when most 1-hour reminders go (sessions start on the
-         hour), and one run may make only 50 outside requests. After-midnight notes: :10 and :40; the week-ahead noise sweep: :40
-         (was minute 0); tonight + tomorrow's noise check stays on every 10-minute tick. */
-      if ((mm >= 10 && mm < 20) || (mm >= 40 && mm < 50)) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(shadowSync(env, [t, addDays(t, 1)])); }
-      { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(noiseSync(env, mm >= 40 && mm < 50 ? Array.from({ length: 7 }, (_, i) => addDays(t, i)) : [t, addDays(t, 1)], 'cron')); }   /* noise rule: tonight + tomorrow, hourly the week ahead */
+    const net0 = NET.n, by0 = Object.assign({}, NET.by), t0 = Date.now();
+    const cn0 = (await hb.kvGet('cronNet').catch(() => null)) || {}, LN = cn0.lanes || {};
+    const stale = (k, ms) => !(LN[k] && LN[k].last && LN[k].last.t > t0 - ms);
+    const side = () => {
+      if (env.TV_KEY) go(Promise.all(['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max'].map((r) => fetch(FB_BASE + env.TV_KEY + '/' + r + '/msgAck.json').then((x) => x.json()).then((k) => hb.ackNote(r, k)).catch(() => null))));   /* every OK, kept per message */
+      go(paidSweep(env).catch(() => null));   /* paid at HitPay but not booked? book it (every 5 min) */
+      /* paid moves that never ran (HitPay's message missed and the guest closed the page): finish them, or alert staff */
+      go((async () => { for (const m of await hb.mvRecent(Date.now() - 48 * 3600e3)) if (m.status === 'pending' && Date.now() - m.t > 60e3) {
+        const r = await mvComplete(env, m.ref, 'sweep').catch((e) => ({ error: String(e.message || e) }));
+        { const m1 = await hb.kvGet('mv:' + m.ref), over = m1 && m1.guest && m1.status === 'pending' && Date.now() > (m1.hold ? m1.hold.exp : m1.t + 30 * 60e3);
+          if (over && !(await mvPayStatus(env, m1).catch(() => ({ paid: true }))).paid) { await mvHoldRelease(env, m1, 'expired').catch(() => null); continue; } }   /* unpaid and its 10 minutes are over: closed, slot free */
+        /* paid but still not moved after 15 min (any reason) → a Round2 alert, once */
+        const m2 = await hb.kvGet('mv:' + m.ref);
+        if (m2 && m2.status === 'pending' && Date.now() - m.t > 15 * 60e3 && (await mvPayStatus(env, m2).catch(() => ({}))).paid && !(await hb.kvGet('mvstuck:' + m.ref))) {
+          await hb.kvSet('mvstuck:' + m.ref, 1);
+          await humanAlert(env, 'move-' + m.ref, 'Paid move not done yet', `${m.from.name || 'Guest'} paid $${(+m.total).toFixed(2)} to move ${m.from.room} ${m.from.date} ${m.from.time} → ${m.to.room} ${m.to.date} ${m.to.time}, still not moved after 15 min (${(r && (r.error || (r.busy ? 'busy' : ''))) || 'no answer'}). Bookings › Rescheduling, or ask Claude (mvfinish ${m.ref}).`).catch(() => null);
+        }
+      } })());
+      go(diagReq(env).catch(() => null));   /* staff questions left in KV (diag:req → diag:res) */
+      go(keyDaily(env));
+    };
+    const sweep = () => {
+      const t = sgDay(Date.now() - SHADOW_TILL * 60e3);
+      /* after-midnight notes: twice an hour (:13 and :43) */
+      if ((mm >= 10 && mm < 20) || (mm >= 40 && mm < 50)) go(shadowSync(env, [t, addDays(t, 1)]));
+      /* noise rule, the days after tomorrow up to a week ahead: hourly (:43). Tonight + tomorrow are done by "now" every 10 min */
+      if (mm >= 40 && mm < 50) go(noiseSync(env, Array.from({ length: 5 }, (_, i) => addDays(t, i + 2)), 'cron week'));
       /* ...and further ahead, one day every half hour, 8–91 days out (owner, 10 Nov: Anisah's 6 pax on 11 Dec hadn't blocked
          Bella – bookings made before the rule started, or a change SimplyBook didn't tell us about, were only caught a week
          before). The whole 12 weeks are gone through every ~42 hours, about one SimplyBook day per half hour. */
-      if ((mm >= 20 && mm < 30) || mm >= 50) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(noiseSync(env, [addDays(t, 7 + Math.floor(Date.now() / 1800e3) % 84)], 'cron far')); }
+      if ((mm >= 20 && mm < 30) || mm >= 50) go(noiseSync(env, [addDays(t, 7 + Math.floor(Date.now() / 1800e3) % 84)], 'cron far'));
+    };
+    if (lane === 'side') side();
+    else if (lane === 'sweep') sweep();
+    else {
+      go((async () => { const prev = await hb.kvGet('cronLast'); await hb.kvSet('cronPrev', prev || 0); await hb.kvSet('cronLast', Date.now()); })());
+      /* the reminder only needs the 10-min ticks plus :15 and :45 (bookings start on the quarter hour) */
+      /* 14 Nov: if that read fails (SimplyBook down, or the run out of outside requests) the next 5-minute tick tries once more –
+         55 min before is still inside the window, and a reminder is only ever sent once (soonMark) */
+      if (ten || quarter) go(soonRun(env));
+      else go((async () => { if (await hb.kvGet('soonAgain')) { await hb.kvSet('soonAgain', 0); await soonRun(env); } })());
+      /* resend alerts a phone hasn't shown (in the store: its own allowance of outside requests); hourly: drop sign-ups silent
+         for a week; delivery report copy (KV diag:push) */
+      go(book(env).pushRetryRun().catch(() => pushRetry(env)).then(() => (mm >= 25 && mm < 30 ? book(env).pushPrune() : null)).catch(() => null).then(() => pushDiag(env)).catch(() => null));
+      /* a SimplyBook change a few minutes ago: Auto wrap-up looks again on the next 5-min tick (owner, 3 Nov: a quick fix was
+         only picked up after a refresh); the 10-min ticks run it anyway */
+      go((async () => { const na = await hb.kvGet('noiseAgain'); if (na && na.at && Date.now() >= na.at) { await hb.kvSet('noiseAgain', null); await noiseSync(env, na.days || [], 'recheck'); } })().catch(() => null));
+      go((async () => { const ag = await hb.kvGet('autoAgain'); if (ag && Date.now() >= ag) { await hb.kvSet('autoAgain', 0); if (!ten) await autoRun(env, 'recheck'); } })());
+      if (ten) {
+        go(autoRun(env, 'cron')); go(msgOrphans(env, 'cron')); go(waitWarn(env)); go(holdSweep(env));
+        { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(noiseSync(env, [t, addDays(t, 1)], 'cron')); }   /* noise rule: tonight + tomorrow */
+      }
+      /* the other two timers missing? do their jobs here, as before the split */
+      if (stale('side', 12 * 60e3)) { fb.push('side'); side(); }
+      if (ten && stale('sweep', 25 * 60e3)) { fb.push('sweep'); sweep(); }
     }
     ctx.waitUntil(Promise.all(jobs).then(() => sbFlush(env)).catch(() => null));
-    /* how many outside requests this run made (see NET): the last run, the biggest of the last 24 h, and any that were refused */
+    /* how many outside requests this run made (see NET), per lane: its last run, its biggest of the last 24 h, and any refused */
     ctx.waitUntil(Promise.all(jobs).then(async () => {
       const by = {}; for (const h in NET.by) { const d = NET.by[h] - (by0[h] || 0); if (d > 0) by[h] = d; }
-      const run = { t: t0, mm, n: NET.n - net0, by, ms: Date.now() - t0 }, fails = NET.fails.splice(0, NET.fails.length);
-      const c = (await hb.kvGet('cronNet')) || {};
-      const max = c.max && c.max.t > t0 - 86400e3 && c.max.n >= run.n ? c.max : run;
+      const run = { t: t0, mm, lane, n: NET.n - net0, by, ms: Date.now() - t0 }, fails = NET.fails.splice(0, NET.fails.length);
+      if (fb.length) run.fb = fb;
+      const c = (await hb.kvGet('cronNet')) || {}, big = (m) => (m && m.t > t0 - 86400e3 && m.n >= run.n ? m : run);
+      const lanes = c.lanes || {}; lanes[lane] = { last: run, max: big((lanes[lane] || {}).max) };
       const fl = (c.fails || []).concat(fails).filter((x) => x.t > t0 - 3 * 86400e3).slice(-60);
-      await hb.kvSet('cronNet', { last: run, max, fails: fl, limit: 50 });
+      await hb.kvSet('cronNet', { last: run, max: big(c.max), fails: fl, limit: 50, lanes });
     }).catch(() => null));
   },
   async fetch(req, env0, ctx) { try { return await HANDLER.fetch0(req, env0, ctx); } finally { ctx.waitUntil(sbFlush(rawEnv(env0)).catch(() => null)); } },
