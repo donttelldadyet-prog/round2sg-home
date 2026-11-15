@@ -3365,7 +3365,7 @@ async function pushRetry(env, hb0) {
 /* a read-only staff question left in the engine's KV (HOLDS › diag:req, JSON form fields) is answered within 5 minutes into
    diag:res – for when the browser link to the owner's computer is down (6 Nov). Only reading actions; only someone with
    Cloudflare access to this account can write the KV. */
-const DIAG_OK = ['mirror', 'cronnet', 'noise', 'paxof', 'tvmsgs', 'alerts', 'pushsubs', 'tvlog', 'guestlook', 'list', 'auto', 'insess', 'holdsday', 'acks', 'latelist', 'paytimes', 'prinfo', 'queue', 'links'];
+const DIAG_OK = ['mirror', 'cronnet', 'noise', 'paxof', 'tvmsgs', 'alerts', 'pushsubs', 'tvlog', 'guestlook', 'list', 'auto', 'insess', 'holdsday', 'acks', 'latelist', 'paytimes', 'prinfo', 'queue', 'links', 'ps4list'];   /* ps4list (16 Nov): each PS4's last check-in, read only */
 async function diagReq(env) {
   if (!env.HOLDS) return;
   const q = await env.HOLDS.get('diag:req', 'json').catch(() => null); if (!q) return;
@@ -3690,30 +3690,6 @@ async function bookingPush(env, bid, type) {
   if (r && r.now) await (type === 'cancel' ? hb.bkDel(String(bid)) : hb.bkPut(String(bid), r.now)).catch(() => null);
   if (type === 'cancel') await hb.vDel(String(bid)).catch(() => null);   /* a cancelled booking isn't a visit */
   return r && r.msg ? pushAll(env, 'booking', r.msg) : r;
-}
-
-/* ONE-OFF (owner, 15 Nov 2:22am: "put the booking link in the comments"): upcoming online bookings made before this got no
-   "Booking page:" line. Runs once from the side timer when KV HOLDS › oneoff:go = "links". Only adds the line when the
-   booking's current comment is readable and is ours (has "ref <ref>"), so nothing staff wrote is ever overwritten; result in
-   KV oneoff:res. Delete this block with the next engine change. */
-async function oneoffLinks(env) {
-  if (!env.HOLDS || (await env.HOLDS.get('oneoff:go')) !== 'links') return;
-  const hb = book(env); if (await hb.kvGet('oneoff:links')) return; await hb.kvSet('oneoff:links', Date.now());
-  const res = { t: Date.now(), added: [], had: 0, skipped: [] };
-  try {
-    const a = await admin(env), today = sgDay(Date.now() - SHADOW_TILL * 60e3);
-    const rows = await hb.rows(`SELECT ref, date, status, data FROM holds WHERE status = 'paid' AND date >= ? ORDER BY date LIMIT 80`, today);
-    for (const r of rows) {
-      const d = JSON.parse(r.data || '{}'), dn = d.done || {};
-      if (d.pay !== 'live' || !dn.bookingId || !dn.code) continue;
-      const b = await a('getBookingDetails', [String(dn.bookingId)]).catch(() => null), c = b && b.comment;
-      if (typeof c !== 'string' || !c.includes('ref ' + r.ref)) { res.skipped.push(r.ref + ' (comment not ours or unreadable)'); continue; }
-      if (c.includes('/b/')) { res.had++; continue; }
-      const ok = await a('setBookingComment', [String(dn.bookingId), c + `\nBooking page: ${PUBLIC_BOOK}/b/${dn.code}`]).then(() => true).catch((e) => String(e.message || e).slice(0, 80));
-      if (ok === true) res.added.push(r.date + ' #' + dn.bookingId); else res.skipped.push(r.ref + ' ' + ok);
-    }
-  } catch (e) { res.error = String(e.message || e).slice(0, 160); }
-  await env.HOLDS.put('oneoff:res', JSON.stringify(res)); await env.HOLDS.delete('oneoff:go');
 }
 
 /* ===== Noise rule (owner, 8 Nov) =====
@@ -4283,7 +4259,6 @@ const HANDLER = {
     const cn0 = (await hb.kvGet('cronNet').catch(() => null)) || {}, LN = cn0.lanes || {};
     const stale = (k, ms) => !(LN[k] && LN[k].last && LN[k].last.t > t0 - ms);
     const side = () => {
-      go(oneoffLinks(env).catch(() => null));   /* one-off, 15 Nov – remove next time */
       if (env.TV_KEY) go(Promise.all(['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max'].map((r) => fetch(FB_BASE + env.TV_KEY + '/' + r + '/msgAck.json').then((x) => x.json()).then((k) => hb.ackNote(r, k)).catch(() => null))));   /* every OK, kept per message */
       go(paidSweep(env).catch(() => null));   /* paid at HitPay but not booked? book it (every 5 min) */
       /* paid moves that never ran (HitPay's message missed and the guest closed the page): finish them, or alert staff */
