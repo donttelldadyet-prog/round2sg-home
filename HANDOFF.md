@@ -200,6 +200,11 @@
 >   switch rooms on at opening). **Room OFF works:** `adb shell input keyevent 223` to Kai's TV → TV + PS4 both sleep. Next:
 >   a "Room off" command in the TV app (Kai first). Detail: project doc ps4-game-saves.md.
 
+>   **16 Nov 1am:** engine 3832c29 (staff `ps4list g=1` → game versions). **The live module is named `worker.js` now** – deploy
+>   with main_module "worker.js". Game versions differ in 21 of 45 shared games (It Takes Two 01.03 on Vale/Bella vs 01.00
+>   elsewhere, God of War / Outer Wilds unpatched on Max…); helper 1.1.12 reads extended-drive patches. **System check: "side"
+>   timer made 57 outside requests in one run (limit 50) – bad before and after this change; someone should look.**
+
 > ## PS4 game saves – WHERE IT STANDS (14 Nov 2026, 4:30am) – read this first, detail in the session log below
 > **Proven remotely (Max):** profile rename · sign-in/out · open a save decrypted · backup to R2 · restore into another profile
 >   (GT Sport Max → User4, owner saw it on the TV) · rest mode. **Not proven:** 9.00 ↔ 11.00 restore · restore where no save
