@@ -25,7 +25,12 @@
 > - **How to read the TVs' versions without the owner's browser:** KV `diag:req` = `[{"action":"tvmsgs"}]` → `diag:res` (side
 >   timer, minute 1/6/…) gives each room's `tv.v`, `tv.t`, `front`, `pw`. It does not pass `ip` through (add it with the next
 >   engine change if wanted).
-> - **Still open:** System check NOT run since the 14–15 Nov engine changes (needs the staff code on the owner's device);
+> - **16 Nov 4:30am, engine 4c1a117 DEPLOYED (27 bindings, 3 timers):** diag channel may read `ps4list` (KV `diag:req` =
+>   `[{"action":"ps4list"}]`); one-off `oneoffLinks` and its side-lane call removed. (Live was 3832c29 from the other chat –
+>   checked identical before patching.) First reading 4:31am: all 6 PS4s silent – Vale 1.1.13 last in ~1:44am, Kai 1.1.13 ~1:15am,
+>   Max 1.1.8 ~10:35pm (ACC was running), Scarlett 1.1.10 ~7pm, Bella 1.1.9 ~3pm, Atlas helper 1.0.7 (!) ~1:45pm. Helpers stop in
+>   rest mode, so the engine can't tell rest mode from off / jailbreak lost – only "last check-in".
+> - **Still open:** System check NOT run since the 14–16 Nov engine changes (needs the staff code on the owner's device);
 >   remove `oneoffLinks` + its side-lane call with the next engine change; Kai remote/helper options ON HOLD (launcher README);
 >   unanswered: Atlas Home-6× rule + HomeGuard leftovers and "Send log" (branch `send-log`) for a next TV update; old alert
 >   sign-up hGptkT drops itself ~18 Nov 1:40pm; SimplyBook request count was 7,680 on 13 Nov (guideline ~5,000) – only noted.
