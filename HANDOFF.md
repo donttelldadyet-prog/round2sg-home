@@ -1,5 +1,35 @@
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
 
+> ## 15–16 Nov 2026 – website booking page (desktop), stats, reschedule page, PC toolkit finds the TVs (no engine change; live engine still 86ed06b)
+> - **Booking page on desktop** (`slots/index.html`, `index.html`; mobile untouched – owner: "mobile view is fine"). One scroll bar
+>   (the website's desktop stage is a fixed 1440×900 box scaled to the screen, so the booking frame must FILL its section –
+>   `<r2-simplybook fill="1">`, never 100vh). Two columns from 900px: calendar left (sticky), rooms right; "2 · BROWSE BY" bar
+>   (ROOM / START TIME / EARLIEST FREE) sticks while scrolling the rooms, desktop only. Lessons: a sticky bar shows a hairline of
+>   the page under it unless it has an 8px background box-shadow above; the bottom padding must sit inside the right column
+>   (`.colR`), not on `.wrap`, or the sticky parts slide up at the bottom of the page. "Already booked? View your booking" line
+>   REMOVED everywhere (owner: guests get their link by email / after booking / from Add a session).
+> - **Click sounds (Kai bamboo), desktop only** – real mouse devices only (`(min-width:900px) and (hover:hover) and (pointer:fine)`).
+>   Owner said "sounds dont play"; the code was seen running on his machine, so: louder, booking frame allowed `autoplay`, and the
+>   frame's address carries `&v=<10-minute number>` so a stale copy can't linger. **Owner has NOT confirmed they play now**, nor
+>   that the sticky slide is gone – ask.
+> - **Website stats:** `room_<name>` counts a room only when it is CHOSEN (Vale was inflated – Rooms opens on Vale). `deepRoom` keeps
+>   ?room= links counting. round2-tv-launcher `docs/site-stats.md`.
+> - **Reschedule page** (`move/index.html`, mobile): week arrows no longer drag the page down (cause: `scrollIntoView` on the hour
+>   strip – use `scrollLeft` only) and the week now slides left/right (`wkSlide`, off for reduced-motion). Commit 21230d3.
+> - **PC toolkit `connect <room>` uses the TV's own reported address** (round2-tv-launcher d7e7530 + e266f96, TV app **1.0.286**):
+>   Android check-in (`helper`) now has `ip`; TV tile shows "ADB x.x.x.x:5555"; `round2tv.ps1 connect kai` reads Firebase with the
+>   TV messages key (asked once on the PC, kept in its round2-tv folder as `tv-key` – never in chat), falls back to the Theme
+>   manager address. NOT yet run on a real PC (no PowerShell in Claude's container). Kai updated to 1.0.286 (16 Nov 12:56am);
+>   other Android TVs (Atlas 1.0.280, Max/Kaeden 1.0.278) not yet. Atlas: `connect usb` now also TRIES to open network debugging
+>   (`adb tcpip 5555`) – untested, see round2-tv-launcher README "Atlas network debugging – TRIAL".
+> - **How to read the TVs' versions without the owner's browser:** KV `diag:req` = `[{"action":"tvmsgs"}]` → `diag:res` (side
+>   timer, minute 1/6/…) gives each room's `tv.v`, `tv.t`, `front`, `pw`. It does not pass `ip` through (add it with the next
+>   engine change if wanted).
+> - **Still open:** System check NOT run since the 14–15 Nov engine changes (needs the staff code on the owner's device);
+>   remove `oneoffLinks` + its side-lane call with the next engine change; Kai remote/helper options ON HOLD (launcher README);
+>   unanswered: Atlas Home-6× rule + HomeGuard leftovers and "Send log" (branch `send-log`) for a next TV update; old alert
+>   sign-up hGptkT drops itself ~18 Nov 1:40pm; SimplyBook request count was 7,680 on 13 Nov (guideline ~5,000) – only noted.
+
 > ## 14 Nov 2026, 10:25am – ⚠️ the 5-minute timer's run hits the free plan's 50-outside-requests limit (engine 810c91d DEPLOYED, 27 bindings)
 > - **What happened:** at 10:00 two of the four 1-hour reminders failed for EVERY phone: `failed Too many subrequests by single
 >   Worker invocation` (KV `diag:push` › phones › last). One cron run = one invocation = 50 outside requests in all (SimplyBook
