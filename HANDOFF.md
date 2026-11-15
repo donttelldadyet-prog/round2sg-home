@@ -195,7 +195,10 @@
 > **PS4 network wake (14–16 Nov):** helper 1.1.10 has `/_ddp.<ip>` (on/standby), `/_ddpall` (broadcast), `/_wake.<ip>.<key>`,
 >   `/_wkey`. A PS4 in rest answers only with "Stay Connected" on and ~2 min after sleeping (Kai yes; Bella, Scarlett silent).
 >   **A home-made key (SHA-256 of an account ID) does NOT wake it** – clean test on Kai with an ID'd empty profile, both byte
->   orders. Needs a registered device. Next: HDMI-CEC (TV on → PS4 wakes). Detail: project doc ps4-game-saves.md.
+>   orders. Needs a registered device. HDMI-CEC on Kai (T-Link on, 16 Nov): PS4 on → TV on; TV off → PS4 rests; TV on does
+>   NOT wake the PS4 (it drops off the CEC list when asleep); WoL to the TCL TV didn't wake it. → Remote WAKE parked (staff
+>   switch rooms on at opening). **Room OFF works:** `adb shell input keyevent 223` to Kai's TV → TV + PS4 both sleep. Next:
+>   a "Room off" command in the TV app (Kai first). Detail: project doc ps4-game-saves.md.
 
 > ## PS4 game saves – WHERE IT STANDS (14 Nov 2026, 4:30am) – read this first, detail in the session log below
 > **Proven remotely (Max):** profile rename · sign-in/out · open a save decrypted · backup to R2 · restore into another profile
