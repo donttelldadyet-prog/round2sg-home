@@ -30,6 +30,7 @@
 >   checked identical before patching.) First reading 4:31am: all 6 PS4s silent – Vale 1.1.13 last in ~1:44am, Kai 1.1.13 ~1:15am,
 >   Max 1.1.8 ~10:35pm (ACC was running), Scarlett 1.1.10 ~7pm, Bella 1.1.9 ~3pm, Atlas helper 1.0.7 (!) ~1:45pm. Helpers stop in
 >   rest mode, so the engine can't tell rest mode from off / jailbreak lost – only "last check-in".
+>   4:38am owner: Kai's PS4 light is ORANGE → the 1:15am remote `/_rest` (other chat's wake test) really put it in rest mode.
 > - **Still open:** System check NOT run since the 14–16 Nov engine changes (needs the staff code on the owner's device);
 >   remove `oneoffLinks` + its side-lane call with the next engine change; Kai remote/helper options ON HOLD (launcher README);
 >   unanswered: Atlas Home-6× rule + HomeGuard leftovers and "Send log" (branch `send-log`) for a next TV update; old alert
