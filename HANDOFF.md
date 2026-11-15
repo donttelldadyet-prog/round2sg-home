@@ -192,6 +192,11 @@
 > **7. Checks.** System check steps: "Guest rescheduling: page, rules and fees" and "Add a session: daytime with a mobile = real
 >   booking, late = note". Deploy: see "How to deploy the engine" in the PS4 block below (the helper's cron is gone – open its link).
 
+> **PS4 network wake (14–16 Nov):** helper 1.1.10 has `/_ddp.<ip>` (on/standby), `/_ddpall` (broadcast), `/_wake.<ip>.<key>`,
+>   `/_wkey`. A PS4 in rest answers only with "Stay Connected" on and ~2 min after sleeping (Kai yes; Bella, Scarlett silent).
+>   **A home-made key (SHA-256 of an account ID) does NOT wake it** – clean test on Kai with an ID'd empty profile, both byte
+>   orders. Needs a registered device. Next: HDMI-CEC (TV on → PS4 wakes). Detail: project doc ps4-game-saves.md.
+
 > ## PS4 game saves – WHERE IT STANDS (14 Nov 2026, 4:30am) – read this first, detail in the session log below
 > **Proven remotely (Max):** profile rename · sign-in/out · open a save decrypted · backup to R2 · restore into another profile
 >   (GT Sport Max → User4, owner saw it on the TV) · rest mode. **Not proven:** 9.00 ↔ 11.00 restore · restore where no save
