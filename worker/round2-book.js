@@ -4174,10 +4174,10 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
     if (t) n[id] = t; else delete n[id];
     await hb.kvSet('ps4names', n); return { ok: true, names: n };
   }
-  /* ps4list */
+  /* ps4list (16 Nov: g=1 also returns each PS4's games with version v / patch pv – the save system needs the same version in every room) */
   const ids = (await hb.kvGet('ps4ids')) || [], now = Date.now(), list = [];
   const map = (await hb.kvGet('ps4map')) || {};
-  for (const id of ids) { const r = await hb.kvGet('ps4:' + id); if (r) list.push(Object.assign({}, r, { room: map[id] || null, poll: (await hb.kvGet('ps4poll:' + id)) || 0, cmd: (await hb.kvGet('ps4cmd:' + id)) || null, runName: r.running ? (((r.games || []).find((g) => g && g.id === r.running) || {}).t || '') : '', games: undefined, nGames: (r.games || []).length, ago: Math.round((now - r.t) / 60e3) })); }
+  for (const id of ids) { const r = await hb.kvGet('ps4:' + id); if (r) list.push(Object.assign({}, r, { room: map[id] || null, poll: (await hb.kvGet('ps4poll:' + id)) || 0, cmd: (await hb.kvGet('ps4cmd:' + id)) || null, runName: r.running ? (((r.games || []).find((g) => g && g.id === r.running) || {}).t || '') : '', games: f.g === '1' ? (r.games || []) : undefined, nGames: (r.games || []).length, ago: Math.round((now - r.t) / 60e3) })); }
   const night = sgDay(now - SHADOW_TILL * 60e3);
   const rel = await ps4Latest(env).catch(() => null);
   return { ok: true, now, list, latest: rel ? rel.v : null, selfUp: PS4_SELFUP, auto: (await hb.kvGet('ps4auto')) !== false, map: (await hb.kvGet('ps4map')) || {}, played: (await hb.kvGet('ps4play:' + night)) || {}, discs: (await hb.kvGet('ps4discs')) || [], names: (await hb.kvGet('ps4names')) || {} };
