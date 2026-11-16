@@ -3,6 +3,10 @@
 - **Run the System check before and after any change** (control centre at staff.round2.sg › Tests & systems › System
   check; code: round2-tv-launcher `manager/index.html`, `SysCheck`). Add a step for every new feature that touches another
   part. Why and how: round2-tv-launcher `docs/system-check.md`. This is the owner's standing rule.
+  **Two sizes (owner, 16 Nov 2026):** **Light check** (no SimplyBook requests) for changes that can't touch bookings (PS4
+  helper, TV app, control centre screens); **Full check** (~650 SimplyBook requests a run; guideline ~5,000 a day, hard stop
+  ~10,000) for anything touching bookings, notes, messages, payments or this engine's booking code. Check "SimplyBook requests
+  today" before a full run.
 - Read `HANDOFF.md` and `docs/booking-times.md` before touching anything time-based. Times are Singapore time; the shop
   night runs to 7am (before 7am belongs to the night before; every screen switches at 7am); guest end = SimplyBook end − 15 min cleaning.
 - `worker/round2-book.js` is the live Cloudflare engine `round2-book`. Deploy carefully (keep bindings), then run the check.
