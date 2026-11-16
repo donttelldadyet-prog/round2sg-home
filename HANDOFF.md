@@ -1036,3 +1036,12 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   broadcast permission) – cosmetic, the wake itself is sent with it.
   → **Atlas is ON (answers "200 Ok") but its helper (1.1.25) has made no check-in since 8:06:14pm** – this one really is
   "silent while on", 1 h 45 min and counting. Bella is left asleep; someone has to press its PS button.
+- **9:55pm** owner: Bella's rest-mode boxes are correct (both ticked) – so Bella (11.00) still drops off the network in rest.
+  **Max ping from Kai:** status question to .23 "no answer in 4 s", no reply to the broadcast either (answers: Kai, Atlas,
+  Vale only). Max's starter wrote its last hourly line at 7:15pm and none at 8:15/9:15 → Max's payload process has stood
+  still since ~7:35pm (guests till 7:30) = rest mode or switched off. A resting Kai answers "620 Standby"; Max doesn't →
+  either fully off, or its "Stay Connected" box is off (14 Nov: Max also silent in rest). Asked the owner: light orange or off?
+  **Atlas came back by itself ~9:54pm** and took 1.1.26 in quiet time. Its starter kept writing "hourly: helper running"
+  (8:54, 9:54) and there is no wake record → like Bella: the PS4 ran, the helper alone stood still 8:06–9:54pm (1 h 48 min),
+  then carried on. Two rooms, same pattern, both on 1.1.25, both resumed after 1–2 h. Both now on 1.1.26 → next time
+  `log.slow` names the step. (Atlas' PS4 clock runs ~8 min fast – display only.)
