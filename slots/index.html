@@ -8,7 +8,7 @@
 <base target="_top">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
 :root { --bg: #06050a; --panel: #15121f; --line: rgba(244,241,251,.2); --cell: rgba(244,241,251,.06); --ink: #f4f1fb; --mute: #a79fbd; --acc: #f4f1fb; --acc-ink: #0b0914; --dot: #b9b0cf; --free: #5BE37D; --eb: #66C7FF; --tc: #5BE37D; }
 * { box-sizing: border-box; }
@@ -655,7 +655,7 @@ h3.nm, .nm { color: var(--rc); }
   }
   function drawLens() {
     var o = cur.start != null ? startObj() : null, h = '';
-    if (!o) { $('pSave').textContent = ''; $('pLens').innerHTML = '<span class="hint">Pick a start time first.</span>'; summary(); return; }
+    if (!o) { $('pSave').textContent = ''; $('pLens').innerHTML = '<span class="hint"><i>Pick a start time first.</i></span>'; summary(); return; }
     for (var hrs = 3; hrs <= 6; hrs++) {
       var fits = hrs <= o.maxH;
       var sv = fits ? saving(o, hrs) : null;
@@ -670,7 +670,7 @@ h3.nm, .nm { color: var(--rc); }
   function when() { var o = startObj(); return dayLabel(day) + ' · ' + clock(o.m) + '–' + clock(o.m + cur.len * 60) + (o.eb ? ' · Early bird' : ''); }
   function summary() {
     var o = cur.start != null ? startObj() : null;
-    if (o) $('pWhen').innerHTML = '<span class="sumrm" style="color:' + ROOMS[cur.uid][1] + '">' + ic(CHARIC[cur.uid]) + ROOMS[cur.uid][0] + '’s room</span><br>' + when();   /* room in its own colour + icon, like the room cards */ else $('pWhen').textContent = 'Pick a start time';
+    if (o) $('pWhen').innerHTML = '<span class="sumrm" style="color:' + ROOMS[cur.uid][1] + '">' + ic(CHARIC[cur.uid]) + ROOMS[cur.uid][0] + '’s room</span><br>' + when();   /* room in its own colour + icon, like the room cards */ else $('pWhen').innerHTML = '<i>Pick a start time</i>';
     var sv = o ? saving(o, cur.len) : null;
     $('pPrice').innerHTML = o ? money(o.prices[cur.len]) + (sv ? '<span class="saved">you save ' + money(Math.round(sv.amt * 100) / 100) + ' (' + sv.pct + '%)</span>' : '') : '';
     $('pGo').disabled = !o;
