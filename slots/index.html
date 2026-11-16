@@ -189,6 +189,9 @@ h3.nm, .nm { color: var(--rc); }
 .saved { color: #3DDC84; font-size: 13px; margin-left: 8px; font-weight: 600; }
 .sum { padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
 .sum b { font-size: 18px; }
+.sum > div { flex: 1; min-width: 0; }
+.sum .sumh .ic { width: 11px; height: 11px; margin-right: 7px; vertical-align: -1px; color: var(--mute); }
+.sum .sumh { flex-basis: 100%; margin: 0 0 -4px; font: 9px 'Press Start 2P', monospace; letter-spacing: .12em; color: var(--acc); }
 .go { font: 10px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 13px 16px; background: var(--acc); color: var(--acc-ink); border: 0; cursor: pointer; }
 .go:disabled { opacity: .35; cursor: not-allowed; }
 .go.off { opacity: .35; pointer-events: none; }
@@ -260,7 +263,7 @@ h3.nm, .nm { color: var(--rc); }
     <div id="pick">
       <div class="step"><h4><i data-ic="clock"></i>1 · START TIME</h4><div class="chips" id="pTimes"></div></div>
       <div class="step"><h4><i data-ic="glass"></i>2 · HOW LONG</h4><p class="hint" id="pSave" style="margin:-4px 0 12px"></p><div class="chips" id="pLens"></div><p class="hint" style="margin:12px 0 0"><i data-ic="moon"></i> Late-night sessions and extensions past 11:15pm: <a style="color:var(--acc)" href="https://wa.me/6591625767?text=Hi%20Round2%2C%20I%27d%20like%20a%20late-night%20session%20(past%2011%3A15pm)" target="_blank" rel="noopener">WhatsApp us</a>, subject to staff availability.</p></div>
-      <div class="sum"><div><div id="pWhen" class="hint"></div><b id="pPrice"></b></div><button class="go" id="pGo" type="button" disabled>CONTINUE</button></div>
+      <div class="sum"><h4 class="sumh"><i data-ic="cal"></i>YOUR BOOKING</h4><div><div id="pWhen" class="hint"></div><b id="pPrice"></b></div><button class="go" id="pGo" type="button" disabled>CONTINUE</button></div>
       <p class="note" id="pNote"></p>
     </div>
     <div id="det" hidden>
@@ -600,7 +603,7 @@ h3.nm, .nm { color: var(--rc); }
   function when() { var o = startObj(); return dayLabel(day) + ' · ' + clock(o.m) + '–' + clock(o.m + cur.len * 60) + (o.eb ? ' · Early bird' : ''); }
   function summary() {
     var o = cur.start != null ? startObj() : null;
-    $('pWhen').textContent = o ? when() : 'Pick a start time';
+    if (o) $('pWhen').innerHTML = '<span style="color:var(--ink)">' + ROOMS[cur.uid][0] + '</span><br>' + when(); else $('pWhen').textContent = 'Pick a start time';
     var sv = o ? saving(o, cur.len) : null;
     $('pPrice').innerHTML = o ? money(o.prices[cur.len]) + (sv ? '<span class="saved">you save ' + money(Math.round(sv.amt * 100) / 100) + ' (' + sv.pct + '%)</span>' : '') : '';
     $('pGo').disabled = !o;
