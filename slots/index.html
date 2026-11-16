@@ -179,9 +179,11 @@ h3.nm, .nm { color: var(--rc); }
 #ph h3 { margin: 0; font: 600 18px 'Chakra Petch', sans-serif; color: var(--rc); }
 #ph .x { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 9px 12px; background: transparent; color: var(--ink); border: 1px solid var(--line); cursor: pointer; }
 #ph .pic { position: relative; width: 100%; max-width: 720px; }
-#ph img { display: block; width: 100%; aspect-ratio: 3 / 2; max-height: 70vh; object-fit: contain; background: #000; border: 1px solid var(--line); border-left: 4px solid var(--rc); }
+#ph img { display: block; width: 100%; aspect-ratio: 4 / 3; max-height: 70vh; object-fit: cover; background: transparent; transition: opacity .28s ease; border: 1px solid var(--line); border-left: 4px solid var(--rc); }
 #ph .nav { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; background: rgba(6,5,10,.7); color: var(--ink); font-size: 22px; cursor: pointer; }
 #ph .prev { left: 6px; } #ph .next { right: 6px; }
+#ph img.fade { opacity: 0; }
+@media (prefers-reduced-motion: reduce) { #ph img { transition: none; } }
 #ph .dots { display: flex; gap: 6px; margin-top: 12px; }
 #ph .dots i { width: 8px; height: 8px; background: var(--line); }
 #ph .dots i.on { background: var(--rc); }
@@ -415,9 +417,12 @@ h3.nm, .nm { color: var(--rc); }
 ;
   function photoBtn(uid) { return PHOTOS[uid] ? '<button class="photob" type="button" data-ph="' + uid + '"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M1 3h14v10H1zm1 1v6l3-3 3 3 2-2 4 4V4zm9 1h2v2h-2z"/></svg>Room preview</button>' : ''; }
   var phU = null, phI = 0;
-  function phShow() { var L = PHOTOS[phU]; $('phImg').src = L[phI]; $('phImg').alt = ROOMS[phU][0] + ' room, photo ' + (phI + 1) + ' of ' + L.length;
-    $('phDots').innerHTML = L.map(function (x, i) { return '<i' + (i === phI ? ' class="on"' : '') + '></i>'; }).join(''); }
-  function phOpen(uid) { phU = uid; phI = 0; var p = $('ph'); p.style.setProperty('--rc', ROOMS[uid][1]); $('phName').textContent = ROOMS[uid][0] + '’s room'; phShow(); p.hidden = false; $('phX').focus(); }
+  var phT = null;
+  function phShow(fade) { var L = PHOTOS[phU], img = $('phImg'), u = phU, i = phI;
+    $('phDots').innerHTML = L.map(function (x, k) { return '<i' + (k === phI ? ' class="on"' : '') + '></i>'; }).join('');
+    var put = function () { if (phU !== u || phI !== i) return; img.onload = img.onerror = function () { img.classList.remove('fade'); }; img.src = L[i]; img.alt = ROOMS[u][0] + ' room, photo ' + (i + 1) + ' of ' + L.length; if (img.complete) img.classList.remove('fade'); };
+    clearTimeout(phT); if (fade) { img.classList.add('fade'); phT = setTimeout(put, 280); } else put(); }   /* fade out, swap, fade back in once loaded */
+  function phOpen(uid) { phU = uid; phI = 0; var p = $('ph'); p.style.setProperty('--rc', ROOMS[uid][1]); $('phName').textContent = ROOMS[uid][0] + '’s room'; PHOTOS[uid].forEach(function (x) { new Image().src = x; }); phShow(); p.hidden = false; $('phX').focus(); }   /* preload all 3 so the fades are quick */
   function phClose() { $('ph').hidden = true; phU = null; }
   var TIERIC = { 'NETFLIX ROOMS': 'sofa', 'DELUXE ROOMS': 'gem', 'VIP ROOM': 'crown' };
   [].forEach.call(document.querySelectorAll('i[data-ic]'), function (el) { el.outerHTML = ic(el.getAttribute('data-ic')); });
@@ -807,8 +812,8 @@ h3.nm, .nm { color: var(--rc); }
   addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('modal').hidden && $('hold').hidden) closeBook(); });
   $('phX').addEventListener('click', phClose);
   $('ph').addEventListener('click', function (e) { if (e.target.id === 'ph') phClose(); });
-  $('phPrev').addEventListener('click', function () { var n = PHOTOS[phU].length; phI = (phI + n - 1) % n; phShow(); });
-  $('phNext').addEventListener('click', function () { phI = (phI + 1) % PHOTOS[phU].length; phShow(); });
+  $('phPrev').addEventListener('click', function () { var n = PHOTOS[phU].length; phI = (phI + n - 1) % n; phShow(true); });
+  $('phNext').addEventListener('click', function () { phI = (phI + 1) % PHOTOS[phU].length; phShow(true); });
   addEventListener('keydown', function (e) { if ($('ph').hidden) return; if (e.key === 'Escape') { e.stopImmediatePropagation(); phClose(); } else if (e.key === 'ArrowRight') $('phNext').click(); else if (e.key === 'ArrowLeft') $('phPrev').click(); }, true);
   (function () { var x0 = null; $('phImg').addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
     $('phImg').addEventListener('touchend', function (e) { if (x0 == null) return; var dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 40) $(dx < 0 ? 'phNext' : 'phPrev').click(); }); })();
