@@ -976,3 +976,10 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   Internet Connection on Kai only; if Kai's helper comes back, read `/_ps`, `/_thr`, the nanoDNS log and rest.log, then
   fix (use the remembered engine address first / put the lookup under a time limit / a watchdog that restarts the loop).
   Remote wake is NOT reliable until this is fixed – a silent helper can't be the sender or take a rest command.
+  **8:13–8:18pm:** owner ran Test Internet Connection on Bella (passed) – helper did NOT come back within 5 minutes, so
+  the "connection test shakes it loose" idea is not confirmed (7:58 may have been chance). Kai/Atlas still silent, Vale
+  fine. Other candidates read from the code, none proven: (1) a stop signal anywhere in the shared GoldHEN process
+  (SIGSEGV/SIGBUS/… from ANY payload thread runs the helper's `on_sig` → that thread sleeps for good; the record is
+  /data/round2/helper-stopped.txt), (2) a step in the main loop that blocks (running_title, update_guard, check_cmd).
+  Evidence is on the PS4s' disks and survives a restart: after a restart + jailbreak read
+  `/_tail.helper-stopped.txt|12;/_tail.rest.log|5;/_tail.own-spawn.log|8` and the starter's log BEFORE anything else.
