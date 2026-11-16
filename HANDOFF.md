@@ -890,3 +890,18 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   screen the shell's own way (find what the PS button press calls), or sign the wake-key profile out before rest and test
   what the PS4 shows; until then a remotely woken PS4 waits at "press the PS button" – fine for prep work (helper runs,
   nobody signed in), a guest/staff presses PS and picks the profile.
+- 6:55pm owner woke Kai by controller → normal again (1.1.24).
+- **Owner decisions 6:55–7:02pm (change earlier rules):** each PS4 = **main profile + 4 others** (5 in all; 4 controllers,
+  friends get their own names in co-op); the helper can't create profiles, so the 4 others are permanent slots that get
+  renamed. **The wake key should sit on the MAIN profile** (consistent, no extra profile) → main profiles get an account ID
+  after all; **all main profiles may share ONE ID** (offline anyway). Guest saves on the room PS4s may be wiped ("clean
+  slate"; "kai's ps4 can delete all saves if needed") – back up a session's saves to the cloud first. The earlier rule "main
+  profiles are never activated" is lifted by the owner for this; still untouched until proven: **Max (unlocked GT Sport save)**
+  and the three Vue rooms' existing IDs (Vale/Scarlett/Bella – their Vue jailbreak used an Apollo-activated account).
+- **7:10pm test on Kai started:** main "Kai" 12ae5b27 has 139 saves in 45 games (3.6 GB of images). Backed up (0 failed):
+  Overcooked 2 CUSA10870 METASAVE, CAMPAIGNSAVE0/1/2, DLC8CAMPAIGNSAVE0 and Moving Out 2 CUSA34284 SaveData + sce_bu_SaveData
+  → saves/f6ed105a…/12ae5b27/<title>/<save>/<stamp>. Then `ps4prof acct` on the main profile: **account ID
+  52326d61696e3031 ("R2main01") set, result 0** (proposed shared ID for every main). Kai still signed in. Next: owner
+  restarts Kai + jailbreak (the PS4 may keep the old ID until then) → open Overcooked 2 as Kai: loads or "corrupted"? If
+  corrupted: try restoring the backup into it / delete + new save + restore. Then register the wake key through the main
+  profile (Add Device as Kai) and repeat the wake.
