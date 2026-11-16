@@ -1077,3 +1077,11 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   something about Kai itself (model, how it joins the Wi-Fi) – ask for the model number (CUH-xxxx) of Kai, Atlas, Bella.
   Bella woken by the owner ~10:13pm and took 1.1.27 by itself. All six on 1.1.27; no `log.netfail` lines anywhere at
   10:19pm. Atlas left asleep (needs its PS button).
+- **10:30pm owner: Atlas had "Stay Connected to the Internet" OFF** – he ticked it and "Enable Turning On PS4 from Network".
+  **Re-test 10:30–10:39pm: still NOT reachable.** Rested 10:30:35; Kai's status question + broadcast at 2.5, 3.5, 6 and
+  8 min in rest: never an answer from .15 or Atlas' hardware id; engine wake via Vale at ~4.5 min (.255, 3×) → not woken.
+  So settings were wrong but are not the whole story. Only Kai answers from rest.
+  Hardware ids (from the broadcast answers / registration): Kai BC60A7E246E8, Vale BC60A7929148 (same batch as Kai),
+  Max F8461C4755FE, Bella 78C8810636C1, Atlas 2CCC441E241F, Scarlett 709E294E9D39 (Scarlett is now at .88.4).
+  Next ideas: Vale rest test (same hardware batch as Kai, no registration needed for the status question) · Atlas'
+  "Supply Power to USB Ports" (Kai = Always) · model numbers (CUH-) of all six. Atlas asleep again (PS button).
