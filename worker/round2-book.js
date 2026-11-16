@@ -2598,7 +2598,7 @@ async function gm(env, req) {
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await mvApi(env, hb, f, new URL(req.url).origin)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
-  if (/^ps4(list|map|discs|names|clean|update|look|lookres|rel|prof|saves)$/.test(act)) {   /* staff: control centre › PS4s (13 Nov) */
+  if (/^ps4(list|map|discs|names|clean|update|look|lookres|rel|prof|saves|dns|dnsget)$/.test(act)) {   /* staff: control centre › PS4s (13 Nov) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await ps4Gm(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
@@ -4031,7 +4031,7 @@ async function ps4AutoUpdate(env, hb, id, room) {   /* quiet time? hand out an u
   await hb.kvSet('ps4autoTry:' + id, { v: rel.v, t: now }); await hb.kvSet('ps4cmd:' + id, c);
   return c;
 }
-const ps4Out = (c) => c.do === 'update' ? { cid: c.cid, do: 'update', v: c.v, sha: c.sha, size: c.size } : c.do === 'look' && c.p ? { cid: c.cid, do: 'look', p: c.p } : c.do === 'prof' ? { cid: c.cid, do: 'prof', op: c.op, u: c.u, v: c.pv || '' } : { cid: c.cid, do: c.do };
+const ps4Out = (c) => c.do === 'update' ? { cid: c.cid, do: 'update', v: c.v, sha: c.sha, size: c.size } : c.do === 'look' && c.p ? { cid: c.cid, do: 'look', p: c.p } : c.do === 'prof' ? { cid: c.cid, do: 'prof', op: c.op, u: c.u, v: c.pv || '' } : c.do === 'dns' ? { cid: c.cid, do: 'dns', sha: c.sha } : { cid: c.cid, do: c.do };
 async function ps4Cmd(env, req) {   /* the helper, every minute: anything for me? */
   if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
   let r = {}; try { r = JSON.parse(await req.text()); } catch (e) {}
@@ -4058,13 +4058,61 @@ async function ps4Done(env, req) {   /* the helper: how the command went */
   c.state = r.ok ? 'done' : r.refused ? 'refused' : 'failed'; c.doneAt = Date.now();
   c.res = { dlMB: +r.dlMB || 0, capMB: +r.capMB || 0, files: +r.files || 0, why: String(r.why || '').slice(0, 120) };
   await hb.kvSet('ps4cmd:' + id, c);
-  if ((c.do === 'look' || c.do === 'prof') && r.list && typeof r.list === 'object') await hb.kvSet('ps4look:' + id, { at: Date.now(), list: Object.fromEntries(Object.entries(r.list).slice(0, 400).map(([k, v]) => [String(k).slice(0, 200), String(v).slice(0, 40)])) });
+  /* tail/… = lines of a text file and dns/… = blocker-settings steps (helper 1.1.16) keep up to 300 characters; the rest 40 */
+  if ((c.do === 'look' || c.do === 'prof' || c.do === 'dns') && r.list && typeof r.list === 'object') await hb.kvSet('ps4look:' + id, { at: Date.now(), list: Object.fromEntries(Object.entries(r.list).slice(0, 400).map(([k, v]) => [String(k).slice(0, 200), String(v).slice(0, /^(tail|dns)\//.test(String(k)) ? 300 : 40)])) });
+  if (c.do === 'dns') {   /* change log: who, when, which room, what happened */
+    const L = (await hb.kvGet('ps4dnslog')) || [], e = L.find((x) => x.cid === c.cid);
+    if (e) { e.state = c.state; e.why = c.res.why; e.doneAt = c.doneAt; e.steps = r.list && typeof r.list === 'object' ? Object.fromEntries(Object.entries(r.list).slice(0, 12).map(([k, v]) => [String(k).slice(0, 40), String(v).slice(0, 120)])) : undefined; await hb.kvSet('ps4dnslog', L); }
+  }
   return J({ ok: true });
 }
 /* PS4 game saves (helper 1.1.4+, owner 14 Nov): the helper uploads the files of an opened save, 8 MB pieces, into Cloudflare
    storage (bucket round2-saves, binding SAVES) under saves/<console>/<user>/<title>/<save>/<stamp>/ (f/<file>~<n> + manifest.txt),
    and downloads them again to restore. Header x-r2-ps4 = PS4_KEY. */
 function ps4SaveKey(k) { k = String(k || ''); return k.length > 0 && k.length < 600 && !k.includes('..') && !k.startsWith('/') && /^[\w.@~ +=,()\[\]{}'&!$#%-]+(\/[\w.@~ +=,()\[\]{}'&!$#%-]+)*$/.test(k) ? k : ''; }
+/* PS4 blocker (nanoDNS) settings, managed remotely (owner 13 Nov "tradeoffs are better in our favour", built 16 Nov, helper
+   1.1.16+). The same rules are checked here before anything is sent AND again by the helper before it writes. */
+const PS4_DNS_BAD = ['playstation', 'sony', 'psn', 'akamai', 'akadns', 'edgesuite', 'edgekey', 'llnw', 'scea', 'scee', 'sie-'];
+function ps4DnsCheck(t) {
+  t = String(t || '');
+  const n = new TextEncoder().encode(t).length;
+  if (n < 40 || n > 8192) return 'size ' + n + ' bytes (40–8192 allowed)';
+  if (/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/.test(t)) return 'not plain text';
+  let sec = '', blockall = false, engine = false;
+  for (const raw of t.split('\n')) {
+    const a = raw.replace(/^[ \t]+|[ \t\r]+$/g, '');
+    if (!a || a[0] === '#' || a[0] === ';') continue;
+    if (a[0] === '[') { sec = a; continue; }
+    if (sec === '[general]') {
+      if (a.startsWith('bind=') && a.slice(5) !== '127.0.0.1') return 'bind must be 127.0.0.1';
+      if (a.startsWith('bind6=') && !['::1', 'off'].includes(a.slice(6))) return 'bind6 must be ::1 or off';
+      if (a.startsWith('log=') && a.slice(4) !== '/data/nanodns/nanodns.log') return 'log must stay /data/nanodns/nanodns.log';
+    } else if (sec === '[overrides]') {
+      const i = a.indexOf('='); if (i < 0) return 'override without =';
+      if (a.slice(i + 1).replace(/^ +/, '') !== '0.0.0.0') return 'overrides may only block (=0.0.0.0)';
+      if (a.slice(0, i).replace(/ +$/, '') === '*') blockall = true;
+    } else if (sec === '[exceptions]') {
+      const lo = a.toLowerCase(); const b = PS4_DNS_BAD.find((x) => lo.includes(x)); if (b) return 'Sony-looking exception: ' + a.slice(0, 60);
+      if (!a.replace(/\*/g, '').replace(/^\.+/, '').includes('.')) return 'catch-all exception: ' + a.slice(0, 60);
+      if (lo === 'round2-book.donttelldadyet.workers.dev') engine = true;
+    } else if (sec === '[upstream]') {
+      if (a.startsWith('server=') && !/^[0-9.]+$/.test(a.slice(7))) return 'upstream server must be a number address';
+    }
+  }
+  if (!blockall) return 'missing the block-everything line *=0.0.0.0';
+  if (!engine) return 'the engine (round2-book.donttelldadyet.workers.dev) must be in [exceptions]';
+  return '';
+}
+async function ps4Sha(t) { return [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)))].map((b) => b.toString(16).padStart(2, '0')).join(''); }
+async function ps4DnsIni(env, req) {   /* the helper: the settings file for its dns command (raw text) */
+  if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
+  let r = {}; try { r = JSON.parse(await req.text()); } catch (e) {}
+  const id = ps4Id(r.id), hb = book(env), c = await hb.kvGet('ps4cmd:' + id);
+  if (!c || c.do !== 'dns' || c.cid !== r.cid) return J({ error: 'unknown command' }, 404);
+  const ini = await hb.kvGet('ps4dnsini:' + c.sha.slice(0, 16));
+  if (!ini) return J({ error: 'gone' }, 404);
+  return new Response(ini, { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
+}
 async function ps4SPut(env, req, u) {
   if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
   if (!env.SAVES) return J({ error: 'no storage' }, 503);
@@ -4126,6 +4174,31 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
     await hb.kvSet('ps4cmd:' + id, c); return { ok: true, cmd: c };
   }
   if (act === 'ps4lookres') return { ok: true, look: await hb.kvGet('ps4look:' + ps4Id(f.id)) };
+  if (act === 'ps4dnsget') return { ok: true, cur: await hb.kvGet('ps4dns:cur'), log: ((await hb.kvGet('ps4dnslog')) || []).slice(0, 40) };   /* staff: last settings sent + change log */
+  if (act === 'ps4dns') {   /* staff: check (dry=1) or send new blocker settings to PS4s (ids = comma list) – helper 1.1.16+ */
+    const ini = String(f.ini || '').replace(/\r\n/g, '\n'), bad = ps4DnsCheck(ini);
+    if (bad) return { error: 'Refused: ' + bad, refused: true };
+    const sha = await ps4Sha(ini);
+    if (f.dry === '1') return { ok: true, dry: true, sha };
+    if (f.confirm !== 'SEND') return { error: 'Type SEND to confirm.' };
+    const ids = String(f.ids || f.id || '').split(',').map(ps4Id).filter((x) => x.length >= 16).slice(0, 10), map = (await hb.kvGet('ps4map')) || {}, now = Date.now(), out = [];
+    if (!ids.length) return { error: 'Pick at least one PS4.' };
+    await hb.kvSet('ps4dnsini:' + sha.slice(0, 16), ini);
+    const by = String(f.by || 'control centre').slice(0, 40), L = (await hb.kvGet('ps4dnslog')) || [];
+    for (const id of ids) {
+      const room = map[id], rep = await hb.kvGet('ps4:' + id);
+      let why = !room || !rep ? 'not linked to a room' : now - ((await hb.kvGet('ps4poll:' + id)) || 0) > 3 * 60e3 ? 'not answering (off or in rest mode)' : ps4Newer('1.1.16', rep.v) ? 'helper ' + rep.v + ' is too old (needs 1.1.16)' : '';
+      if (!why) { const busy = await ps4Busy(env, room, 10); if (busy) why = busy; }
+      if (why) { out.push({ id, room: room || '', error: why }); continue; }
+      const c = { cid: 'd' + (now + out.length).toString(36), do: 'dns', sha, at: now, by, state: 'sent' };
+      await hb.kvSet('ps4cmd:' + id, c);
+      L.unshift({ cid: c.cid, t: now, by, id, room, sha: sha.slice(0, 12), state: 'sent' });
+      out.push({ id, room, ok: true, cid: c.cid });
+    }
+    await hb.kvSet('ps4dnslog', L.slice(0, 100));
+    if (out.some((x) => x.ok)) await hb.kvSet('ps4dns:cur', { ini, sha, at: now, by });
+    return { ok: true, sha, sent: out };
+  }
   if (act === 'ps4update') {
     const id = ps4Id(f.id), room = ((await hb.kvGet('ps4map')) || {})[id], now = Date.now(), rep = await hb.kvGet('ps4:' + id);
     if (!room || !rep) return { error: 'Link this PS4 to a room first.' };
@@ -4487,6 +4560,7 @@ const HANDLER = {
       if (u.pathname === '/ps4/cmd' && req.method === 'POST') return await ps4Cmd(env, req);   /* helper: waiting command? (every minute) */
       if (u.pathname === '/ps4/done' && req.method === 'POST') return await ps4Done(env, req);
       if (u.pathname === '/ps4/app' && req.method === 'POST') return await ps4App(env, req);
+      if (u.pathname === '/ps4/dnsini' && req.method === 'POST') return await ps4DnsIni(env, req);   /* helper 1.1.16: blocker settings for its dns job */
       if (u.pathname === '/ps4/sput' && req.method === 'POST') return await ps4SPut(env, req, u);   /* helper: one piece of a save backup (1.1.4) */
       if (u.pathname === '/ps4/sget' && req.method === 'GET') return await ps4SGet(env, req, u);   /* helper: a piece back, to restore */   /* helper: download the newest version */   /* helper: command result */
       if (u.pathname === '/gm' && req.method === 'POST') return await gm(env, req);
