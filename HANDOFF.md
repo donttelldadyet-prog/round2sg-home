@@ -1151,5 +1151,7 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   **Tomorrow, in order:** (1) read Atlas/Bella records when they're on (1.1.28/1.1.29 slow.log, net-fail, where.txt) and
   make the helper save EVERY step + a 3-min watchdog note, so a stuck helper names its step; (2) models of all six (hw in
   the 1.1.29 report) – are Atlas/Bella a different model?; (3) "Welcome back" screen after a network wake: research a
-  virtual PS-button press from the helper (should also stop the 5-min fall-back to rest); (4) morning trigger test;
+  virtual PS-button press from the helper (should also stop the 5-min fall-back to rest); owner 12:17am: ALSO research other wake
+  methods that behave like a real power-on (auto-login): HDMI-CEC from the room TV (TV-on already wakes Atlas' PS4), a
+  small Bluetooth device acting as a paired controller pressing PS, a button-pusher; (4) morning trigger test;
   (5) owner opens GT Sport on Max once (main profile now has an ID).
