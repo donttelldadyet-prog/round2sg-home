@@ -792,3 +792,38 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   the "before and after every change" rule + ~650 requests a run doesn't fit SimplyBook's allowance → (a) a light System check
   for changes that can't touch bookings (PS4 helper, control-centre-only): skip the test-night steps; (b) the test-night steps
   reuse one bookings/notes fetch; (c) the check shows "today's runs: n" and warns before a run that would pass ~5,000.
+### 16 Nov 2026, 6–6:30pm – LIGHT CHECK built (owner: "yes build a mini system check that doesnt ping simplybook") + remote-wake research
+- **Control centre › System check has two buttons** (round2-tv-launcher f91b69a, c665b89, 373f0eb): **Light check (no
+  SimplyBook)** runs only the steps named in `LIGHT_OK` (engine + keys, one clock, 7am rule + watchdog, timers, today's
+  SimplyBook count, food menu, TVs, PS4 helpers + storage, PS4 blocker settings, TV setup save, key expiry, public pages) and
+  ends with "Light check: no SimplyBook requests made by this run" (compares the engine's per-caller counts `sbBy` before and
+  after; timers' own requests are set aside). No clean-up call in light mode. **Full check** unchanged, but asks first when
+  the day is past 4,000 SimplyBook requests and says it costs ~650. New steps are NOT in the light check until added to
+  `LIGHT_OK`. Rule written into both CLAUDE.md files + round2-tv-launcher docs/system-check.md: light for changes that can't
+  touch bookings (PS4 helper, TV app, control centre), full for bookings/notes/messages/payments/engine booking code.
+- Found by the light check's own last step: staff `auto` cost 2 SimplyBook requests a call (it loads the session list) →
+  **engine 6a0cf81 DEPLOYED** (27 bindings incl. R2, 3 timers; live was = main a912159 before): `auto` with `lite=1` returns
+  heartbeat + counters only. And the 7am-rule step opens late/ hidden, which loaded its list (1 request) → late/index.html
+  skips the list when opened with check=1. Engine's SimplyBook day count = `sbn:<SG date>` (resets at Singapore midnight; when
+  SimplyBook's own allowance resets is not known). 6:20pm: 10,273 today.
+- **Remote wake – how the references really do it (read: dhleong/ps4-waker, dhleong/playactor, chiaki-ng lib/src/regist.c +
+  discovery.c; owner: "willing to commit to this feature"):**
+  - Two kinds of wake key, both only accepted from a device the PS4 has REGISTERED:
+    (C) Second Screen: ps4-waker pretends to be a PS4 so Sony's phone app hands over the account's credential, then logs in
+    to the real PS4 on TCP 997 with the PIN from Settings › Mobile App Connection Settings › Add Device (LOGIN result 20 =
+    PIN needed). Needs Sony's app + a PSN account → not for us.
+    (R) **Remote Play: chiaki registers straight with the PS4** – HTTP POST to the PS4's port 9295 (`/sce/rp/regist` up to
+    firmware 9.x, `/sie/ps4/rp/sess/rgst` from 10.00), body encrypted with a key made from the 8-digit PIN the PS4 shows at
+    Settings › Remote Play Connection Settings › Add Device, carrying the profile's account ID (base64 of the 8 bytes,
+    little-endian). The PS4 answers with RP-RegistKey. Wake = UDP 987 `WAKEUP * HTTP/1.1 / client-type:vr / auth-type:R /
+    user-credential:<regist key as a number>`. **No Sony server is involved** – only the PS4 and the registering device.
+  - Why it should work on our PS4s: GoldHEN lists "Remote Play Enabler"; a public guide registers chiaki on jailbroken 9.00
+    with an Apollo offline-activated account (no PSN) by exactly this route; Kai's SceRemotePlay already listens on 9295
+    (seen in `/_sock`). Our 15 Nov test failed because we sent a type-C key that no device had ever registered.
+  - Plan: (1) owner checks on Kai, signed into User5 (the profile with an ID): Remote Play Connection Settings › Enable
+    Remote Play on, Add Device shows an 8-digit number. (2) Helper learns to register (port of chiaki's regist + rpcrypt,
+    AGPL-3.0, on our mbedTLS) from another PS4: `/_rpreg.<ip>.<account id>.<pin>` → regist key kept by the engine; and
+    `/_wake` type R. (3) Test: Vale registers with Kai, Kai to rest, Vale wakes it. (4) If it works: helper makes the PIN
+    itself (PS4 library call sceRemoteplayGeneratePinCode – to try) so no typing; a wake-key profile per PS4 (mains without an
+    ID stay untouched); and decide the always-on sender for mornings (all PS4s asleep = nobody to send): candidates = a room
+    TV app that stays alive in standby, one PS4 left on, or a small always-on device.
