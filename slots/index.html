@@ -173,29 +173,31 @@ h3.nm, .nm { color: var(--rc); }
 .room .photob:hover { border-color: var(--rc); color: var(--rc); }
 .room .photob svg { width: 13px; height: 13px; }
 /* Room preview – same look as the homepage ROOM PREVIEW (full-bleed photos, crossfade + slight zoom, thumbnails) */
-#ph { position: fixed; inset: 0; z-index: 60; background: #0b0914; display: flex; flex-direction: column; overflow: hidden; }
+#ph { position: fixed; inset: 0; z-index: 60; background: #0b0914; display: flex; flex-direction: column; overflow-y: auto; --sh: min(83vw, 56vh, 520px); }
 #ph[hidden] { display: none; }
-#ph .stage { position: relative; flex: 1; min-height: 200px; overflow: hidden; }
+#ph .stage { position: relative; flex: none; height: var(--sh); overflow: hidden; }   /* photo keeps a landscape-ish shape like the homepage, never stretched tall */
 #ph .shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.04); transition: opacity .45s ease, transform .6s ease; }
 #ph .shot.on { opacity: 1; transform: scale(1); }
 #ph .tag { position: absolute; left: 16px; top: 18px; display: flex; align-items: center; gap: 8px; font: 8px 'Press Start 2P', monospace; letter-spacing: .12em; color: #f4f1fb; }
 #ph .tag span:first-child { padding: 6px 7px; background: var(--rc); color: var(--rci); }
 #ph .cls { position: absolute; right: 12px; top: 8px; width: 44px; height: 44px; border: 1px solid rgba(244,241,251,.4); background: rgba(11,9,20,.6); color: #f4f1fb; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-#ph .arw { position: absolute; top: 34%; width: 44px; height: 52px; border: 1px solid rgba(244,241,251,.4); background: rgba(11,9,20,.55); color: #f4f1fb; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#ph .arw { position: absolute; top: calc(var(--sh) / 2 - 26px); width: 44px; height: 52px; border: 1px solid rgba(244,241,251,.4); background: rgba(11,9,20,.55); color: #f4f1fb; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 #ph .arw.prev { left: 10px; clip-path: polygon(30% 0, 100% 0, 100% 100%, 30% 100%, 0 50%); padding-left: 10px; }
 #ph .arw.next { right: 10px; clip-path: polygon(0 0, 70% 0, 100% 50%, 70% 100%, 0 100%); padding-right: 10px; }
-#ph .panel { position: relative; padding: 0 16px 16px; margin-top: -40px; background: linear-gradient(180deg, rgba(11,9,20,0) 0, #0b0914 40px); }
+#ph .panel { position: relative; flex: 1; display: flex; flex-direction: column; padding: 0 16px 16px; margin-top: -34px; }
 #ph .stage::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11,9,20,.6) 0%, rgba(11,9,20,0) 26%, rgba(11,9,20,0) 70%, #0b0914 100%); pointer-events: none; }
 #ph .thumbs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding-top: 4px; }
 #ph .thumbs button { position: relative; padding: 0; border: 0; background: none; opacity: .5; outline: 2px solid transparent; outline-offset: 2px; cursor: pointer; transition: opacity .25s; }
 #ph .thumbs button[aria-current="true"] { opacity: 1; outline-color: var(--rc); }
 #ph .thumbs img { display: block; width: 100%; height: 62px; object-fit: cover; }
 #ph .thumbs svg { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; }
-#ph .who { display: flex; align-items: center; gap: 14px; margin: 16px 0 14px; }
+#ph .who { display: flex; align-items: center; gap: 14px; margin: 18px 0 12px; }
 #ph .who img { max-height: 56px; max-width: 140px; }
 #ph .who .ty { display: inline-block; font: 8px 'Press Start 2P', monospace; letter-spacing: .12em; padding: 5px 7px; background: var(--rc); color: var(--rci); margin-right: 8px; }
-#ph .who .px { font-size: 14px; color: #d6d0e3; }
-#ph .book { display: block; width: 100%; height: 50px; border: 0; background: var(--rc); color: var(--rci); font: 600 15px 'Chakra Petch', sans-serif; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+#ph .spec { font: 400 15px 'Chakra Petch', sans-serif; color: #d6d0e3; margin: 0 0 4px; }
+#ph .spec b { color: #f4f1fb; font-weight: 600; }
+#ph .desc { font: 400 15px/1.5 'Chakra Petch', sans-serif; color: #b9b0cf; margin: 8px 0 18px; }
+#ph .book { display: block; margin-top: auto; width: 100%; flex: none; height: 50px; border: 0; background: var(--rc); color: var(--rci); font: 600 15px 'Chakra Petch', sans-serif; letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { #ph .shot { transition: none; transform: none; } }
 #ph .dots { display: flex; gap: 6px; margin-top: 12px; }
 #ph .dots i { width: 8px; height: 8px; background: var(--line); }
@@ -347,7 +349,7 @@ h3.nm, .nm { color: var(--rc); }
   <button type="button" class="arw prev" id="phPrev" aria-label="Previous"><svg width="14" height="14" viewBox="0 0 14 16" aria-hidden="true"><path d="M13 1L1 8l12 7z" fill="currentColor"/></svg></button>
   <button type="button" class="arw next" id="phNext" aria-label="Next"><svg width="14" height="14" viewBox="0 0 14 16" aria-hidden="true"><path d="M1 1l12 7-12 7z" fill="currentColor"/></svg></button>
   <div class="panel"><div class="thumbs" id="phThumbs"></div>
-    <div class="who"><img id="phName" alt=""><div><span class="ty" id="phType"></span><span class="px" id="phPax"></span></div></div>
+    <div class="who"><img id="phName" alt=""><span class="ty" id="phType"></span></div><p class="spec" id="phSpec"></p><p class="desc" id="phDesc"></p>
     <button type="button" class="book" id="phBook">Choose a time ›</button></div>
 </div>
 <script>
@@ -437,6 +439,8 @@ h3.nm, .nm { color: var(--rc); }
      ROOM PREVIEW – full-bleed, crossfade with a slight zoom, thumbnails, and "Choose a time" straight into this room */
   var MEDIA = {"5": {"v": "https://video.wixstatic.com/video/a46627_27ca30ceedbf4b81a16c2702c1125ffc/480p/mp4/file.mp4", "p": "https://static.wixstatic.com/media/a46627_27ca30ceedbf4b81a16c2702c1125ffcf001.jpg", "ph": ["https://static.wixstatic.com/media/a46627_8915206851034ccb949dfae7f7840715~mv2.webp", "https://static.wixstatic.com/media/a46627_bb4db4e81e9e4837800381c577783aae~mv2.webp", "https://static.wixstatic.com/media/a46627_1377d574756a4ff8aed1d44d8d69cb9b~mv2.webp"], "nm": "https://static.wixstatic.com/media/a46627_2157d85c480e486ab21d692e65b5c499~mv2.webp"}, "7": {"v": "https://video.wixstatic.com/video/a46627_73533f0e62e942038bc0e4c0469e3b3d/480p/mp4/file.mp4", "p": "https://static.wixstatic.com/media/a46627_73533f0e62e942038bc0e4c0469e3b3df001.jpg", "ph": ["https://static.wixstatic.com/media/a46627_d8534727eaec41b4a40b6875f1a8773f~mv2.webp", "https://static.wixstatic.com/media/a46627_3858ff524cee4e0c92a43f430684ed46~mv2.webp", "https://static.wixstatic.com/media/a46627_9dcb3d7422d74a5db06ea317da44a72e~mv2.webp"], "nm": "https://static.wixstatic.com/media/a46627_a7f07e83194144ab8c08cd0336652cec~mv2.webp"}, "8": {"v": "https://video.wixstatic.com/video/a46627_0b76e719b7964ad88f35db7f7e4fd648/480p/mp4/file.mp4", "p": "https://static.wixstatic.com/media/a46627_0b76e719b7964ad88f35db7f7e4fd648f001.jpg", "ph": ["https://static.wixstatic.com/media/a46627_f6a639578bb649ae9ab7171d8b53d42a~mv2.webp", "https://static.wixstatic.com/media/a46627_74c8f643ea4146c3b466affe1b458ecb~mv2.webp", "https://static.wixstatic.com/media/a46627_71879df9e36141b4bc4682820411c4fa~mv2.webp"], "nm": "https://static.wixstatic.com/media/a46627_2cb5c1fd8c234d5ebfae1ea3669dff5b~mv2.webp"}, "9": {"v": "https://video.wixstatic.com/video/a46627_d265d49a2a684bdaa09eacb2d27aec48/480p/mp4/file.mp4", "p": "https://static.wixstatic.com/media/a46627_d265d49a2a684bdaa09eacb2d27aec48f001.jpg", "ph": ["https://static.wixstatic.com/media/a46627_cba34d42d720404f9d8eba243e6bff17~mv2.webp", "https://static.wixstatic.com/media/a46627_ba20734453e242b0820f39f703e51f82~mv2.webp", "https://static.wixstatic.com/media/a46627_007c615739c94b33967e8cdb9fafc3ea~mv2.webp"], "nm": "https://static.wixstatic.com/media/a46627_e2b752e9794544aba3d05947bc0290ca~mv2.webp"}, "10": {"v": "https://video.wixstatic.com/video/a46627_1772459f49624f40ad94bd449e946930/480p/mp4/file.mp4", "p": "https://static.wixstatic.com/media/a46627_1772459f49624f40ad94bd449e946930f001.jpg", "ph": ["https://static.wixstatic.com/media/a46627_8be531aba0154917960845485a1a05b5~mv2.webp", "https://static.wixstatic.com/media/a46627_024f6349f943406785419c6b7164e19c~mv2.webp", "https://static.wixstatic.com/media/a46627_2e16bd912f2d48d3997d093bbd6f2d04~mv2.webp"], "nm": "https://static.wixstatic.com/media/a46627_ed2d5ea517cb422a9639a79ff6647cb2~mv2.webp"}, "12": {"v": "https://video.wixstatic.com/video/a46627_0cf9458d00fc4bed8a19031462016d54/480p/mp4/file.mp4", "p": "https://static.wixstatic.com/media/a46627_0cf9458d00fc4bed8a19031462016d54f001.jpg", "ph": ["https://static.wixstatic.com/media/a46627_e3bfb91790b044aba0e51090d693e699~mv2.webp", "https://static.wixstatic.com/media/a46627_4fc612195b5a444aaddf388daec9eb37~mv2.webp", "https://static.wixstatic.com/media/a46627_f892843cca7d488ba25e5448fe329799~mv2.webp"], "nm": "https://static.wixstatic.com/media/a46627_db8a7ce8c5574612ae5731fe2c5970d3~mv2.webp"}, "11": {"v": "https://video.wixstatic.com/video/4c079c_dd1c58bc046e459897e48c343cc0a164/480p/mp4/file.mp4", "p": "https://static.wixstatic.com/media/4c079c_dd1c58bc046e459897e48c343cc0a164f001.jpg", "ph": ["https://static.wixstatic.com/media/a46627_51d582707fae40c6b3213abb8df0ac97~mv2.webp", "https://static.wixstatic.com/media/a46627_f41acfb8a4134f5eb4b8b0f76a9a2481~mv2.webp", "https://static.wixstatic.com/media/a46627_ed115c81e4324adb975d2d0bb26118c1~mv2.webp"], "nm": "https://static.wixstatic.com/media/a46627_339ca9e7c1784efbb6989219a3dd71d7~mv2.webp"}};
   function photoBtn(uid) { return MEDIA[uid] ? '<button class="photob" type="button" data-ph="' + uid + '"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M1 3h14v10H1zm1 1v6l3-3 3 3 2-2 4 4V4zm9 1h2v2h-2z"/></svg>Room preview</button>' : ''; }
+  var INFO = {"5": {"pax": "1–3 pax", "tv": "65\" TV", "st": "Netflix · Prime", "ex": "PS4", "d": "A playful rebel with a softer side. Bauhaus-inspired pink and grey tones with warm lighting."}, "7": {"pax": "1–3 pax", "tv": "65\" TV", "st": "Netflix · Prime", "ex": "PS4", "d": "A guy who makes simplicity look good. Soft greys, warm rattan and living greenery create a calm, laid-back vibe."}, "8": {"pax": "1–3 pax", "tv": "65\" TV", "st": "Netflix · Prime", "ex": "PS4", "d": "A dark cosmic escape with starlight and dreamy projections. Perfect for those who love dark, moody vibes."}, "10": {"pax": "1–4 pax", "tv": "75\" TV", "st": "Netflix · Prime · HBO Max", "ex": "PS4 Pro · Enhanced audio", "d": "Mischievous with a dark side. Mystic lore, vintage books, candlelit shadows and dark-academia charm."}, "9": {"pax": "1–4 pax", "tv": "75\" TV", "st": "Netflix · Prime · HBO Max", "ex": "PS4 Pro · Enhanced audio", "d": "Calm and grounded, with natural textures, soft neutrals and a minimalist setting for a quiet, peaceful escape."}, "12": {"pax": "1–5 pax", "tv": "75\" TV", "st": "Netflix · Prime · HBO Max", "ex": "PS4 Pro · Enhanced audio", "d": "Graceful, intelligent and dreamy. Greek-inspired details, warm whites and timeless accents."}, "11": {"pax": "1–6 pax", "tv": "85\" TV", "st": "Netflix · Prime · HBO Max", "ex": "PS4 Pro · Home theatre audio · Racing sim", "d": "He lives for speed, and when he is off the track he is grinding laps on his racing simulator."}}
+;   /* the room details + description shown on the homepage */
   var phU = null, phI = 0;
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
   function phGo(i) { if (phU == null) return; phI = (i + 4) % 4;
@@ -450,7 +454,8 @@ h3.nm, .nm { color: var(--rc); }
       m.ph.map(function (x, k) { return '<img class="shot" src="' + x + '" alt="' + R[0] + ' room, photo ' + (k + 2) + ' of 4">'; }).join('');
     $('phThumbs').innerHTML = '<button type="button" data-g="0" aria-label="Play video"><img src="' + m.p + '" alt=""><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="rgba(11,9,20,.7)"/><path d="M8.5 6.5l7 4.5-7 4.5z" fill="#fff"/></svg></button>' +
       m.ph.map(function (x, k) { return '<button type="button" data-g="' + (k + 1) + '" aria-label="Show photo ' + (k + 2) + '"><img src="' + x + '" alt=""></button>'; }).join('');
-    $('phName').src = m.nm; $('phName').alt = R[0]; $('phType').textContent = R[2].toUpperCase(); $('phPax').textContent = '1–' + R[3] + ' pax';
+    $('phName').src = m.nm; $('phName').alt = R[0]; $('phType').textContent = R[2].toUpperCase(); var I = INFO[uid] || {};
+    $('phSpec').innerHTML = esc([I.pax, I.tv].filter(Boolean).join(' · ')) + '<br><b>' + esc([I.ex, I.st].filter(Boolean).join(' · ')) + '</b>'; $('phDesc').textContent = I.d || ''; $('ph').scrollTop = 0;
     $('phBook').textContent = 'Choose a time ›'; p.hidden = false; document.documentElement.style.overflow = 'hidden'; phGo(0); $('phX').focus(); }
   function phClose() { var v = $('phStage').querySelector('video'); if (v) v.pause(); $('ph').hidden = true; $('phStage').innerHTML = ''; document.documentElement.style.overflow = ''; phU = null; }
   var TIERIC = { 'NETFLIX ROOMS': 'sofa', 'DELUXE ROOMS': 'gem', 'VIP ROOM': 'crown' };
