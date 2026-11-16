@@ -882,3 +882,11 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   activated, → Kai User3, not activated – the restore keeps the receiving save's own sce_sys/param.sfo, so the stamp always
   matches the receiver). User5 has no saves; the helper can't create profiles (owner makes "User6" on the PS4, helper renames
   it); restore still needs an existing save of the game in the receiving profile (step 3 not built).
+- ⚠️ **6:42pm BUG from 1.1.23's auto sign-in (owner):** after the remote wake the helper signed "Kai" in (login 0) while the
+  PS4 still showed its own "press the PS button" screen; when the owner switched the controller on, that screen could not be
+  left. `sceUserServiceLogin` at the login screen = profile in at service level, shell UI stuck. **Helper 1.1.24** (ps4-release
+  2725793; Kai + Vale on it 6:45pm): no automatic sign-in after a wake (`woke.login` −2). Only Kai and Vale ever ran 1.1.23.
+  Un-stick: Kai rested by `/_rest` 6:46pm → owner wakes it by controller. To do properly later: get past the shell's login
+  screen the shell's own way (find what the PS button press calls), or sign the wake-key profile out before rest and test
+  what the PS4 shows; until then a remotely woken PS4 waits at "press the PS button" – fine for prep work (helper runs,
+  nobody signed in), a guest/staff presses PS and picks the profile.
