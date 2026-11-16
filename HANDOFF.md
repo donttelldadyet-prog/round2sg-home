@@ -720,3 +720,27 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   community, rnps-crl.dl – all *.playstation.net → 0.0.0.0) + the engine allowed. The 3:29pm game-test lines are too far back for
   a 24 KB tail → idea: a search/filter option on "Read a file". Remote blocker change needs another way (proposed: apply at the
   next restart + helper tests at start and reverts by itself) – owner to choose.
+### 16 Nov 2026, 5pm – where the payloads live, why the blocker can't be restarted, and two ways out (owner: "B first", then "yes lets try" + "own program?")
+- **Helper 1.1.17** (released, on Kai; clean hand-over): look `/_sock` (which program holds which port) and `/_thr.<pid>`
+  (threads; returned errno 2 for pid 45 – not working yet). **Result on Kai (9.00, GoldHEN 2.4b18.12):** DNS 127.0.0.1:53 is
+  held by **pid 45 = ScePartyDaemon** – and so is the helper (getpid 45) → **nanoDNS, round2d and round2-boot all run as
+  threads inside ScePartyDaemon** (GoldHEN's payload host). BinLoader 9090, FTP 2121 and klog 3232 are in pid 49
+  (SceCloudClientDaemo). So: no own pid, signals hit all three (this is why SIGCONT at wake stopped the helper), and the
+  blocker can't be stopped alone. nanoDNS re-opens its socket if it is closed (read in its code) → no live restart possible.
+- **GoldHEN is closed source** (README: source private) – nothing to read; only its behaviour can be measured, as above.
+- **Own program IS possible in principle:** ps4-payload-dev/elfldr (John Törnblom, GPLv3, same family as the SDK we build
+  with) starts each payload in its OWN process: rfork → execve of a system daemon binary (SceSpZeroConf) → ptrace attach →
+  load the ELF into it → raise its rights (authid 3801000000000013, as our helper has). SDK has 9.00 + 11.00 offsets;
+  elfldr.c + pt.c compile with our toolchain (tried). Unproven under GoldHEN on our PS4s; a wrong step can crash
+  ScePartyDaemon (helper + blocker + starter gone until restart + jailbreak) or panic the PS4 → test only on a free room with
+  the owner there. If it works: starter spawns helper and blocker as own programs → live blocker restart (kill + start),
+  helper can be restarted remotely, a crash in one doesn't take the others. **It does NOT give remote wake:** in rest mode
+  every program is frozen whichever process it is in; only the PS4's standby chip listens (paired-device wake, power button).
+- **Round2 blocker built (ps4-helper bbb5756, `ps4/nanodns/main.c`, out `nanodns-r2.elf` 108,792 B, NOT released, on no PS4):**
+  nanoDNS 0.4 (upstream fc48a51) + settings reload: checks the file once a second, change must be stable for two checks,
+  refused (current settings stay) if unreadable or no override rule or no upstream; bind/log changes need a restart.
+  Computer test (Makefile.host, port 5354): add an exception → applied in ~3 s; file without the block rule → refused; file
+  deleted / random bytes → refused, still blocking; good file back → applied. Still to build: delivery (helper downloads it,
+  sha-checked, swaps the AutoRun file `/user/data/payloads/nanodns-ps4.elf` keeping the old one; active after the next
+  restart + jailbreak) and making the `dns` job use "write file → wait for reload → test" when the blocker is the Round2 one.
+- Nothing live changed in this block except helper 1.1.17 (read-only additions).
