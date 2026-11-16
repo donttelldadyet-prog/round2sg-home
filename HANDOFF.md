@@ -905,3 +905,10 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   restarts Kai + jailbreak (the PS4 may keep the old ID until then) → open Overcooked 2 as Kai: loads or "corrupted"? If
   corrupted: try restoring the backup into it / delete + new save + restore. Then register the wake key through the main
   profile (Add Device as Kai) and repeat the wake.
+- **7:15pm owner asked for a remote restart of Kai.** Helper **1.1.25** (ps4-release 843decc): look `/_reboot` →
+  `sceSystemStateMgrReboot()` 3 s after the reply (refused with a game open; logged in rest.log). **Not run:** Kai could not
+  take 1.1.25 – twice "download size 1047979, expected 1260864" (GitHub serves the full file, sha ok). 1,047,979 + headers
+  = the 1 MB step of the download buffer → growing it to 2 MB failed = **the shared program on Kai is out of memory**: every
+  helper update leaves the old helper asleep inside ScePartyDaemon (step_aside never exits there) and Kai has had ~14 updates
+  since its last restart. A PS4 restart clears it. Lesson: many updates in one sitting exhaust the host; the own-program
+  starter (helper really exits) is the cure; until then restart a PS4 after ~10 helper updates. `/_reboot` untested.
