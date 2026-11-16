@@ -656,3 +656,35 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   room updated by hand. Note: rooms still on 1.1.10–1.1.14 may stick once more on THIS hand-over (old code); a restart clears
   it. System check before and after: 39 passed, 2 to look at (watchdog 7am-rule places, Kaeden TV offline), 0 failed – the
   earlier "side timer 57 requests" bad no longer shows.
+- **Kai game test (owner, 3:29pm):** opened FC 26 + Overcooked 2. No new stuck download; FC 26's old one (CUSA52342,
+  download0.dat exactly 1 GiB, queued 13 Nov 9:47pm) got its time touched at 3:29pm = the PS4 retries the queued patch when the
+  game opens and the blocker stops it. Notifications › Downloads on Kai shows NO entry. Clean-up test (does it come back after
+  Clean up + opening FC 26?) still to do – owner presses Clean up (my ps4clean call wasn't approved here). Max: CUSA48576 =
+  WWE 2K25 (11.5 GB stuck), GT Sport 5.4 GB (patch 01.69 is its last – a leftover; leave alone).
+### 16 Nov 2026, 3:40–4:30pm – helper 1.1.16: read a file on a PS4 + remote blocker (nanoDNS) settings (owner: "do both in 1.1.16")
+- **Helper 1.1.16** (ps4-helper 2f67eff, ps4-release 78bc916, sha 79c095fe…, 1,142,096 B): look `/_tail.<file>|<lines>`
+  (read-only, last ≤200 lines/24 KB, lines ≤280 chars, only .log/.txt/.ini/.prev/.ver under /data/round2, /data/nanodns,
+  /data/GoldHEN) · look `/_ps` (pid → comm|thread name – tells us the blocker's process name, unknown so far on PS4) · job
+  `dns` {sha}: refuses (changes NOTHING) unless exactly one process named *nanodns* is found, nanodns.elf is found (GoldHEN
+  payloads.ini, else /data/payloads/) and BinLoader 9090 answers; downloads POST /ps4/dnsini, checks SHA-256 + the same rules
+  as the engine, keeps nanodns.ini.prev, writes via .new + rename, SIGTERM (then SIGKILL) the old nanoDNS, launches it through
+  BinLoader, tests ≤25 s (Sony update name must be 0.0.0.0 AND engine resolves + /time 200); else copies .prev back, restarts,
+  retests, reports "rolled back" (+ "CHECK THIS PS4" if the old one isn't confirmed). Report has `dns:{sha (12), prev}`.
+  r2tls: remembers each host's last good address in /data/round2/addr-<host>.txt and uses it when DNS fails or answers
+  0.0.0.0 (a bad blocker file can't cut the helper off). **Untested on a real PS4.** First real use: read a file + /_ps on one
+  room; only then try a dns change on a free room (Kai) with the Round2 standard file (sha 3eeb2b5a…).
+- **Engine d8156e8 DEPLOYED** (27 bindings incl. R2 SAVES, 3 timers; live source hash = main): staff `ps4dns` (ini, dry=1 check;
+  send needs confirm=SEND, ids comma list, refused per PS4 if offline / helper < 1.1.16 / guests within 10 min), `ps4dnsget`
+  (last sent + change log, kv ps4dns:cur / ps4dnslog / ps4dnsini:<sha16>), POST `/ps4/dnsini` (PS4 key). Look values for
+  `tail/…` and `dns/…` keys keep 300 chars (others 40). No owner-only key exists – staff code + typed SEND is the gate.
+  Rules (both sides): 40–8192 bytes, no control chars (UTF-8 comments OK – the standard file has "–"), [overrides] only
+  =0.0.0.0 and must include `*=0.0.0.0`, [exceptions] nothing with playstation/sony/psn/akamai/akadns/edgesuite/edgekey/llnw/
+  scea/scee/sie-, no catch-alls (*, *.com), must include round2-book.donttelldadyet.workers.dev, bind=127.0.0.1, bind6 ::1/off,
+  log path fixed, upstream servers as numbers. Tested on 8 files (helper C + engine JS agree).
+- **Control centre (round2-tv-launcher 90766ae)** › PS4s: "📄 Read a file on a PS4" (room, file, lines → shows the lines) and
+  "🛡️ Blocker settings" (Load last sent / Round2 standard, Check, tick rooms, type SEND, change log); tile More shows the
+  blocker settings sha. New System check step "PS4 blocker settings: bad files refused, nothing sent (dry run)". systems.json:
+  save steps done 16 Nov + "PS4 remote tools" (test).
+- System check before: 37 passed · 3 to look at · 1 failed; after: 38 · 3 · 1 (the new step passes). The failed one = "side"
+  timer at 50 outside requests (pre-existing, not from this); new warning today: SimplyBook 6,805 requests (biggest
+  /day › getAvailableTimeIntervals) – from the booking-page work in the other chat? needs a look.
