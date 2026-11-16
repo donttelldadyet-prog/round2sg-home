@@ -177,7 +177,7 @@ function waText(){var t='Hi Round2, about my booking '+REF+(INFO.name?' ('+INFO.
 function boot(){go('load');load().then(function(j){if(j.stop){var s=STOP[j.stop]||STOP.gone;return stop(s[0],s[1])}if(!j.C)return stop('SOMETHING WENT WRONG',(j.error||'Try again in a minute.'));use(j);
  $('h-test').classList.toggle('hidden',!INFO.test);if(INFO.dry)$('h-test').textContent='TEST BOOKING · not in our calendar, nothing was charged';
  if(/[?&]new=1/.test(location.search)){$('h-k').textContent='SAVE FILE CREATED';$('h-t').textContent='YOU’RE BOOKED!'}
- var tv=INFO.tv;$('a-tv').href=tv?'https://cue.round2.sg/'+tv:'/done/message?ref='+REF;$('a-tv').target=tv?'_top':'_self';$('a-tv-sub').textContent=tv?(INFO.msg&&INFO.msg.title?'“'+INFO.msg.title+'”'+(INFO.msg.after?' · '+INFO.msg.after+' min in':'')+' · edit':'Write or edit your message'):'Birthday or celebration on the big screen';
+ var tv=INFO.tv;$('a-tv').href=tv?'https://cue.round2.sg/'+tv:INFO.note?'/c/'+REF+'/tv':'/done/message?ref='+REF;$('a-tv').target=tv?'_top':'_self';$('a-tv-sub').textContent=tv?(INFO.msg&&INFO.msg.title?'“'+INFO.msg.title+'”'+(INFO.msg.after?' · '+INFO.msg.after+' min in':'')+' · edit':'Write or edit your message'):'Birthday or celebration on the big screen';
  $('a-cal').onclick=function(e){e.preventDefault();ics()};$('a-wa').href='https://wa.me/6591625767?text='+encodeURIComponent(waText());
  if(MV){var m=MV,hp=(location.search.match(/[?&]status=([a-z_]+)/i)||[])[1]||'';MV='';try{sessionStorage.removeItem('r2mv')}catch(e){}
   /* HitPay sent them back saying it wasn't paid: let the held time go now (the engine checks with HitPay first) instead of "confirming" for 2 minutes */
@@ -219,7 +219,17 @@ function state(){var o=O(),st=stage();go('home');
  o.mvs.forEach(function(m,k){var fr=G2(m.from),to=G2(m.to),ad=isAdd(m),dot=function(r){return '<span class="mvdot" style="background:'+ROOMS[r][0]+'"></span>'},rb=m.total>0?' <button class="rlink" onclick="rcpt('+k+')">Receipt</button>':'';
   if(ad)h.push('<li>'+dot(to.room)+'<b>Hours added: '+fr.h+'h → '+to.h+'h</b> · '+rn(to.room)+' '+to.lbl+'<small> · added '+fm(m.t)+(m.guest?'':' by our team')+' · '+(m.total>0?'paid '+money(m.total)+' for the extra '+(to.h-fr.h>1?(to.h-fr.h)+' hours':'hour'):'no charge')+' · no move used</small>'+rb+'</li>');
   else h.push('<li>'+dot(fr.room)+rn(fr.room)+' '+fr.lbl+' → '+dot(to.room)+'<b>'+rn(to.room)+' '+to.lbl+(to.h!==fr.h?' · '+to.h+'h':'')+'</b><small> · moved '+fm(m.t)+(m.guest?'':' by our team')+' · '+(m.total>0?'paid '+money(m.total)+' ('+money(m.fee)+' fee'+(m.diff>0?' + '+money(m.diff)+' difference':'')+')':'no charge')+'</small>'+rb+'</li>')});
- $('hist').innerHTML=h.join('')}
+ $('hist').innerHTML=h.join('');noteMode()}
+/* a session our team keyed in as a NOTE (late night or an odd length – SimplyBook doesn't sell those times): the same page,
+   but it's changed on WhatsApp, has no online payment and no receipt (owner, 16 Nov) */
+function noteMode(){if(!INFO||!INFO.note)return;
+ var p=$('t-paid');p.style.display='none';if(p.previousElementSibling)p.previousElementSibling.style.display='none';
+ [].forEach.call($('chips').querySelectorAll('.chip'),function(c){if(/Moves used|Free change/.test(c.textContent))c.remove()});
+ var b=$('a-move');b.disabled=true;$('a-move-sub').textContent='Booked with our team – WhatsApp us to change';
+ $('myrule').innerHTML='<span class="lead">This session was arranged with our team, so it’s changed on WhatsApp rather than online.</span><span>'+waLink(waText(),'WhatsApp us to change it')+'</span>';
+ var m=document.querySelector('#myrule + details.more');if(m)m.style.display='none';
+ var rc=document.querySelector('button.act[onclick="rcpt(-1)"]');if(rc){var a=document.createElement('a');a.className='act';a.style.textDecoration='none';a.target='_blank';a.rel='noopener';a.href='https://wa.me/6591625767?text='+encodeURIComponent(waText());a.innerHTML='<b>WHATSAPP US</b><span>Questions or changes</span>';rc.replaceWith(a)}
+ $('hist').innerHTML='<li>Booked with our team</li>'}
 function G2(x){var r=x.unit===11||x.room==='Max'?'Maximillion':x.room,i=iOf(x.date),t=+x.time.slice(0,2)*60+ +x.time.slice(3,5);return {room:r,day:i,t:t,h:x.hours,date:x.date,lbl:new Date(x.date+'T12:00:00Z').toLocaleDateString('en-SG',{weekday:'short',day:'numeric',month:'short',timeZone:'UTC'}).replace(/,/g,'')+' '+hm(t)}}
 /* an ADD HOURS entry in the history (same day, room and start, longer, no fee) – it never used a move */
 function isAdd(m){return !!(m&&(m.add||m.from&&m.to&&m.from.date===m.to.date&&m.from.time===m.to.time&&m.to.hours>m.from.hours&&G2(m.from).room===G2(m.to).room))}

@@ -1651,16 +1651,21 @@ async function late(env, hb, f) {
      Anything else (late, odd lengths, clashes, Change) stays a note, exactly as before. */
   const phone = String(f.phone || '').replace(/[^\d+]/g, ''), email = String(f.email || '').trim().slice(0, 80), p8 = phone.replace(/\D/g, '').slice(-8);
   const stM = (s - sgMs0(day + ' 00:00')) / 60e3, geM = (guestEnd - sgMs0(day + ' 00:00')) / 60e3;
-  const noteWhy = f.replace ? 'change of a session' : f.kind === 'note' ? 'staff chose a note' : p8.length < 8 ? 'no mobile number' : ![3, 4, 5, 6].includes(hrs) ? 'not 3–6 whole hours' : stM < 660 || stM > 1215 || geM > CLOSE ? 'outside opening hours (late)' : clash.length ? 'something in the way' : email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? 'email doesn’t look right' : !email ? 'no email – SimplyBook only makes a booking with one' : '';
+  const noteWhy = f.replace ? 'change of a session' : f.kind === 'note' ? 'staff chose a note' : p8.length < 8 ? 'no mobile number' : ![3, 4, 5, 6].includes(hrs) ? 'not 3–6 whole hours' : stM < 660 || stM > 1215 || geM > CLOSE ? 'outside opening hours (late)' : clash.length ? 'something in the way' : '';
+  /* owner, 16 Nov: no email (or one that doesn't look right) → STILL a real booking, with a random stand-in email nobody reads
+     (example.com never delivers – SimplyBook's confirmation email goes nowhere, nobody at Round2 is notified). The guest gets
+     the booking page link on WhatsApp instead, with self-rescheduling like online guests. */
+  const emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email), standIn = !emailOk;
+  const sbEmail = emailOk ? email : 'noemail.' + crypto.randomUUID().replace(/-/g, '').slice(0, 10) + '@example.com';
   /* owner, 15 Nov (kikay: no email → the shared "Round2 online guest" contact): a booking with the guest's own contact first;
      no email, or SimplyBook refuses the contact → a NOTE (2nd option); the shared Round2 contact only if the note is refused too */
-  const bookable = !noteWhy || /^no email|^email doesn/.test(noteWhy);
-  plan.as = noteWhy ? 'note' : 'booking'; plan.whyNote = noteWhy;
+  const bookable = !noteWhy;
+  plan.as = noteWhy ? 'note' : 'booking'; plan.whyNote = noteWhy; plan.standIn = standIn; plan.badEmail = !!email && !emailOk;
   if (!noteWhy) { try { const q0 = await quote(env, { unit, date: day, time: st, hours: hrs }); plan.price = q0.total; } catch (e) { plan.as = 'note'; plan.whyNote = String(e.message || e).slice(0, 60); } }
   if (f.dry) return { ok: true, dry: true, plan };
   if (clash.length && f.force !== 'yes') return { ok: false, clash: true, plan };
   if (plan.as === 'booking') {
-    const r = await lateBooking(env, hb, { unit, day, st, hrs, name, pax, phone, email, by: String(f.by || '').slice(0, 30), msgs: f.msgs }).catch((e) => ({ error: String(e.message || e).slice(0, 160) }));
+    const r = await lateBooking(env, hb, { unit, day, st, hrs, name, pax, phone, email: sbEmail, standIn, by: String(f.by || '').slice(0, 30), msgs: f.msgs }).catch((e) => ({ error: String(e.message || e).slice(0, 160) }));
     if (r.ok) {
       const msgs = [];
       if (wantMsgs && soonEnough) {
@@ -1689,7 +1694,7 @@ async function late(env, hb, f) {
     await extRevert(s2, done);
     /* the final failsafe (owner, 15 Nov): a new daytime session SimplyBook could book → book it on the shared Round2 contact */
     if (!old && bookable && (!clash.length || f.force === 'yes')) {
-      const r = await lateBooking(env, hb, { unit, day, st, hrs, name, pax, phone, email, by: String(f.by || '').slice(0, 30), msgs: f.msgs, generic: true }).catch((e2) => ({ error: String(e2.message || e2).slice(0, 120) }));
+      const r = await lateBooking(env, hb, { unit, day, st, hrs, name, pax, phone, email: emailOk ? email : '', by: String(f.by || '').slice(0, 30), msgs: f.msgs, generic: true }).catch((e2) => ({ error: String(e2.message || e2).slice(0, 120) }));
       if (r.ok) { plan.as = 'booking'; plan.whyNote = 'the note was refused (' + String(e.message || e).slice(0, 80) + ') – booked on the shared Round2 contact'; return { ok: true, plan, booking: r, msgs: [], notes: [] }; }
     }
     if (old) await lateRestore(s2, old.notes, hb).catch(() => null);
@@ -1750,12 +1755,25 @@ async function latelink(env, hb, f) {
   const r = await noteLink(hb, F.S.key.slice(1), { day: sgDay(F.S.s), unit: F.S.unit, name: txt.split(' · ')[0].replace(/\s*\d+\s*(?:pax|ppl|pp)\b.*$/i, '').trim().slice(0, 40), pax: pm ? +pm[1] : 0, phone: '' });
   return { ok: true, link: r.link };
 }
+/* the 4-box booking page for a NOTE (owner, 16 Nov: "the same page, consistent"): ticket, TV message, WhatsApp, add to calendar;
+   late-night / odd-length sessions can't be moved online (SimplyBook doesn't sell those times) → the Reschedule box says WhatsApp us */
+async function noteApi(env, hb, ref, f) {
+  const r = await hb.kvGet('nconf:' + ref); if (!r) return { stop: 'notfound' };
+  const F = await lateFind(env, r.nid, r.day).catch(() => null); if (!F) return { stop: 'gone' };
+  if (f.act === 'pay') return { error: 'This session is changed with our team – WhatsApp us.' };
+  const S = F.S, now = Date.now(), today = sgDay(now), d0 = sgMs0(today + ' 00:00'), bDay = Math.round((sgMs0(sgDay(S.s) + ' 00:00') - d0) / 86400e3);
+  const ND = Math.min(70, Math.max(G_DAYS, bDay + 8)), ph = await holidays(), days = [], cal = [];
+  for (let i = 0; i < ND; i++) { const date = addDays(today, i), w = new Date(date + 'T00:00:00Z').getUTCDay(); days.push({ date, peak: w === 0 || w === 5 || w === 6 || ph.has(date) }); const o = {}; for (const u of Object.keys(ROOMS)) o[G_NAME(u)] = []; cal.push(o); }
+  const C = { now: Math.floor((now - d0) / 60e3), days, cal, bk: { room: G_NAME(S.unit), day: bDay, t: sgMins(S.s), h: Math.round((S.guestEnd - S.s) / 36e3) / 100, paid: 0 }, moves: 0, grace: false };
+  return { ok: true, C, info: { name: r.name || 'guest', room: C.bk.room, code: ref, ext: S.ext.length ? 1 : 0, graceEnd: 0, made: r.t, paid0: 0, staff: true, test: false, dry: false, pax: r.pax || '',
+    tv: r.tv ? r.tv.code : '', msg: null, moves: [], note: true } };
+}
 async function notePage(env, u) {
   const parts = u.pathname.slice(3).split('/'), code = String(parts[0] || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12), hb = book(env);
   const gone = () => H(PAGE(`<h1>Your booking</h1><p>We can’t show this session here – it may have been changed or cancelled. Message us on WhatsApp and we’ll sort it out.</p><a class="btn" target="_top" href="https://wa.me/6591625767?text=${encodeURIComponent('Hi Round2, about my booking ' + code)}">WhatsApp us</a>`));
   const r = NC_RE.test(code) ? await hb.kvGet('nconf:' + code) : null; if (!r) return gone();
   const F = await lateFind(env, r.nid, r.day).catch(() => null); if (!F) return gone();
-  const S = F.S, hhmm = (ms) => new Date(ms + 8 * 3600e3).toISOString().slice(11, 16);
+  const S = F.S;
   if (parts[1] === 'tv') {
     if (!r.tv) {
       const j = await gmFwd(env, { action: 'create', staff: env.GM_STAFF, room: GM_ROOM[S.unit], start: S.s, label: 'Note · ' + String(r.name || 'guest').slice(0, 30) }).then((x) => JSON.parse(x)).catch(() => ({}));
@@ -1765,8 +1783,7 @@ async function notePage(env, u) {
     }
     return Response.redirect('https://cue.round2.sg/' + r.tv.code, 302);
   }
-  const q = { unit: S.unit, room: ROOMS[S.unit][0], date: sgDay(S.s), time: hhmm(S.s), end: hhmm(S.guestEnd), endDate: sgDay(S.guestEnd), hours: Math.round((S.guestEnd - S.s) / 36e3) / 100, total: null };
-  return H(bookedPage(env, code, { q, name: r.name || 'guest', pax: r.pax || '', phone: r.phone || '', email: '', done: { note: true, tv: r.tv || null }, notePage: true }, u.origin));
+  return Response.redirect(u.origin + '/move?ref=' + code, 302);   /* the same 4-box page as every booking (owner, 16 Nov) */
 }
 /* Add a session as a real SimplyBook booking (see late): its own contact (the name typed – never an old contact's name), booked
    like an online booking (end + 15 min cleaning, pax), then a booking record so /b/<code> and /done work and the guest can
@@ -1781,18 +1798,19 @@ async function lateBooking(env, hb, x) {
   const eB = mins(q.time) + q.hours * 60 + BUF, endDate = eB >= 1440 ? addDays(q.date, 1) : q.date;
   let bErr = ''; const bk = await a('book', [q.eventId, q.unit, cid, q.date, q.time + ':00', endDate, hhmm(eB % 1440) + ':00', 0, { [PAX_FIELD]: String(x.pax) }]).catch((e) => { bErr = String(e.message || e).slice(0, 100); return null; });
   const b0 = bk && bk.bookings && bk.bookings[0]; if (!b0 || !b0.id) throw new Error(bErr || 'no booking id');
-  if (late && x.email) await a('editClient', [cid, { name: x.name, email: x.email, phone: x.phone }]).catch(() => null);
+  if (late && x.email && !x.standIn) await a('editClient', [cid, { name: x.name, email: x.email, phone: x.phone }]).catch(() => null);
+  const gEmail = x.standIn ? '' : (x.email || '');   /* the stand-in (example.com) is never the guest's email anywhere else */
   const ref = 'R2B' + crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase();
-  await a('setBookingComment', [b0.id, `Booked by staff (control centre › Add a session${x.by ? ', ' + x.by : ''}) · ref ${ref}\nBooked as: ${x.name} · ${x.phone}${x.email ? ' · ' + x.email : ''} · ${x.pax} pax\nBooking page: ${PUBLIC_BOOK}/b/${b0.code}` + (how.length ? '\nContact: ' + how.join(', ') : '')]).catch(() => null);
+  await a('setBookingComment', [b0.id, `Booked by staff (control centre › Add a session${x.by ? ', ' + x.by : ''}) · ref ${ref}\nBooked as: ${x.name} · ${x.phone}${x.standIn ? ' · no email (SimplyBook has a stand-in: ' + x.email + ')' : x.email ? ' · ' + x.email : ''} · ${x.pax} pax\nBooking page: ${PUBLIC_BOOK}/b/${b0.code}` + (how.length ? '\nContact: ' + how.join(', ') : '')]).catch(() => null);
   const s = mins(q.time), e = s + q.hours * 60;
-  await hb.addPaid({ ref, date: q.date, unit: q.unit, s, e, phone: x.phone.replace(/\D/g, '').slice(-8), email: (x.email || '').toLowerCase(), data: { q, name: x.name, email: x.email || '', phone: x.phone, pax: x.pax, pay: 'staff', by: x.by || '', done: { bookingId: String(b0.id), code: String(b0.code || ''), at: Date.now(), source: 'Add a session' } } });
+  await hb.addPaid({ ref, date: q.date, unit: q.unit, s, e, phone: x.phone.replace(/\D/g, '').slice(-8), email: gEmail.toLowerCase(), data: { q, name: x.name, email: gEmail, standIn: !!x.standIn, phone: x.phone, pax: x.pax, pay: 'staff', by: x.by || '', done: { bookingId: String(b0.id), code: String(b0.code || ''), at: Date.now(), source: 'Add a session' } } });
   await hb.kvSet('gapc', {}).catch(() => null); await hb.kvSet('gcal', null).catch(() => null);
   if ((await hb.getMode()).mirror === 'engine') await mirrorOnSb(env, String(b0.id), 'create').catch(() => null);   /* Vale/Atlas: the twin blocked straight away (SimplyBook's callback would too; the lock stops doubles) */
   await hb.onSb(String(b0.id), 'create').catch(() => null);
   if (+x.pax >= NOISE_PAX && NOISE[q.unit]) await noiseSync(env, [q.date], 'Add a session').catch(() => null);
   if (x.msgs === 'no') { const m = await hb.getMode(), o = new Set(m.autoOff || []); o.add('b' + b0.id); m.autoOff = [...o].slice(-200); await hb.setMode(m); }
   await autoRun(env, 'late session').catch(() => null);
-  return { ok: true, bid: String(b0.id), code: String(b0.code || ''), ref, link: PUBLIC_BOOK + '/b/' + b0.code, price: q.total, emailed: !!x.email, how };
+  return { ok: true, bid: String(b0.id), code: String(b0.code || ''), ref, link: PUBLIC_BOOK + '/b/' + b0.code, price: q.total, emailed: !!gEmail, standIn: !!x.standIn, how };
 }
 /* ===== Upcoming late sessions (owner, 1 Nov): list / change / cancel from the Late session page =====
    A session starting after midnight is hidden in SimplyBook's calendar, so staff can't move or delete it there (the
@@ -2457,6 +2475,7 @@ async function gCtx(env, ref, fresh) {
 function sgMins(ms) { const x = new Date(ms + 8 * 3600e3); return x.getUTCHours() * 60 + x.getUTCMinutes(); }
 async function gApi(env, f, origin) {
   const hb = book(env), ref = String(f.ref || '').replace(/[^A-Z0-9]/g, '');
+  if (NC_RE.test(ref)) return noteApi(env, hb, ref, f);   /* a session saved as a note (16 Nov) */
   const beta = await hb.getMode();
   if (beta.gResched === false) return { stop: 'off' };
   if (f.mv) {   /* after paying: did it go through? */
