@@ -918,3 +918,11 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   restart.** (13 Nov's "corrupted" was the other way: a save made/stamped under an ID, then the ID removed.) So Kai/Atlas/Max
   mains can get the shared ID without wiping – still test GT Sport on Max with its cloud backup at hand before relying on it.
   Next: wake key through the main profile (Add Device signed in as Kai), wake test, then decide what to do with User5's key.
+- 7:25pm owner: Overcooked 2 shows the OLD progress (about stage 2-6) → confirmed, saves intact under the new main ID.
+- **7:26pm Kai registered through the MAIN profile** (Add Device as "Kai", number 72806180, account 52326d61696e3031):
+  **regist key e55667bb** (RP-Key ec18392dd5814c1f0c7c877f87452535). **7:33pm wake with it, Bella → Kai** (Vale's job was
+  refused – guests till 10pm; Atlas + Bella were restarted by the owner and took 1.1.25 by themselves): 620 Standby →
+  WAKEUP ×3 → 200 Ok; Kai's helper woke 7:33:15pm (slept 276 s), nobody signed in (as expected without auto sign-in).
+  Kai now holds two keys (User5's 83ba890f, main's e55667bb); whether the old one still works was not checked.
+  Kai on 1.1.25 (updates work again after the restart). Rooms on 1.1.25: Kai, Atlas, Bella; Vale 1.1.24; Scarlett 1.1.15,
+  Max 1.1.14 (guests).
