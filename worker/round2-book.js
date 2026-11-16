@@ -1039,12 +1039,31 @@ function mailFix(em) {
   return f ? u + '@' + f : null;
 }
 /* a SimplyBook contact for this guest: without the email first (so only the confirmation email reaches them), else with it */
+/* ONE CONTACT PER MOBILE NUMBER (owner, 16 Nov – online bookings and Add a session): a number we've seen before reuses its
+   contact, renamed to the name typed now (SimplyBook shows a contact's current name on all its bookings; the name each booking
+   was made under stays in its comment). A real email replaces a placeholder or an older one. No email → a placeholder
+   noemail.<last 8 digits>.<4 random>@example.com (example.com never delivers – nobody is emailed), so SimplyBook takes the
+   contact. The shared "Round2 online guest" and the twin-block contacts are never reused. Before 16 Nov every booking made
+   its own contact, so an old number can have several – the newest is used. */
+const PH_EMAIL_RE = /@example\.com$/i;
+const phEmail = (p8) => 'noemail.' + (p8 || 'guest') + '.' + crypto.randomUUID().slice(0, 4) + '@example.com';
 async function sbContact(a, name, email, phone, errs) {
   const why = (e) => { if (errs) errs.push(String(e.message || e).slice(0, 140)); return null; };
-  let cid = await a('addClient', [{ name, phone }]).catch(why);
-  if (cid) return { cid, late: true };
-  cid = await a('addClient', [{ name, email, phone }]).catch(why);
-  return cid ? { cid, late: false } : null;
+  const p8 = String(phone || '').replace(/\D/g, '').slice(-8), real = email && !PH_EMAIL_RE.test(email) ? String(email).trim() : '';
+  if (p8.length === 8) {
+    const L = Object.values((await a('getClientList', [p8, 25]).catch(why)) || {})
+      .filter((c) => c && String(c.phone || '').replace(/\D/g, '').slice(-8) === p8 && !SYS_CLIENTS.includes(String(c.id)) && c.name !== 'Round2 online guest')
+      .sort((x, y) => +y.id - +x.id);
+    const c = L[0];
+    if (c) {
+      const keep = String(c.email || '') || phEmail(p8);
+      if (await a('editClient', [c.id, { name, phone, email: real || keep }]).then(() => true).catch(why)) return { cid: String(c.id), late: false, reused: true };
+      /* the new email is already on another contact (SimplyBook keeps emails unique): reuse with the email it has */
+      if (real && await a('editClient', [c.id, { name, phone, email: keep }]).then(() => true).catch(why)) return { cid: String(c.id), late: false, reused: true, emailKept: true };
+    }
+  }
+  const cid = await a('addClient', [{ name, email: real || phEmail(p8), phone }]).catch(why);
+  return cid ? { cid, late: false, standIn: !real } : null;
 }
 /* last-but-one resort: one shared "Round2 online guest" contact (the booking note carries the guest's real details) */
 async function sbGeneric(env, a) {
@@ -1197,8 +1216,8 @@ async function finalize(env, ref, source) {
       const a0 = await admin(env), F = d.pay === 'test' && Array.isArray(env.__fail) ? env.__fail : [];
       /* test bench only (gm testbook, sandbox holds): SimplyBook "refuses" on purpose, to walk every fallback */
       const a = !F.length ? a0 : (m, p) => (F.includes(m) && !(m === 'addClient' && p && p[0] && p[0].name === 'Round2 online guest') ? Promise.reject(new Error(m + ': TEST – refused on purpose')) : a0(m, p));
-      /* every booking gets its OWN contact with exactly the name typed on the page – guests use fun names or a
-         different name each time, and staff greet them by it at the door. Never reuse an old contact. */
+      /* the contact: one per mobile number, renamed to the name typed on the page (owner, 16 Nov – replaces "every booking its
+         own contact"); staff greet guests by the name on the booking. See sbContact. */
       /* ONE email per guest: SimplyBook emails once when the booking is made and again when it's confirmed. So the contact is
          made without the email, booked (that email goes nowhere), given the email, then confirmed → only the confirmation
          email reaches the guest. If SimplyBook won't take a contact without email, fall back to the normal way (2 emails). */
@@ -1656,7 +1675,7 @@ async function late(env, hb, f) {
      (example.com never delivers – SimplyBook's confirmation email goes nowhere, nobody at Round2 is notified). The guest gets
      the booking page link on WhatsApp instead, with self-rescheduling like online guests. */
   const emailOk = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email), standIn = !emailOk;
-  const sbEmail = emailOk ? email : 'noemail.' + crypto.randomUUID().replace(/-/g, '').slice(0, 10) + '@example.com';
+  const sbEmail = emailOk ? email : '';   /* sbContact keeps the number's contact, or gives a new one a placeholder (16 Nov) */
   /* owner, 15 Nov (kikay: no email → the shared "Round2 online guest" contact): a booking with the guest's own contact first;
      no email, or SimplyBook refuses the contact → a NOTE (2nd option); the shared Round2 contact only if the note is refused too */
   const bookable = !noteWhy;
@@ -1798,10 +1817,10 @@ async function lateBooking(env, hb, x) {
   const eB = mins(q.time) + q.hours * 60 + BUF, endDate = eB >= 1440 ? addDays(q.date, 1) : q.date;
   let bErr = ''; const bk = await a('book', [q.eventId, q.unit, cid, q.date, q.time + ':00', endDate, hhmm(eB % 1440) + ':00', 0, { [PAX_FIELD]: String(x.pax) }]).catch((e) => { bErr = String(e.message || e).slice(0, 100); return null; });
   const b0 = bk && bk.bookings && bk.bookings[0]; if (!b0 || !b0.id) throw new Error(bErr || 'no booking id');
-  if (late && x.email && !x.standIn) await a('editClient', [cid, { name: x.name, email: x.email, phone: x.phone }]).catch(() => null);
+  if (late && x.email && !x.standIn) await a('editClient', [cid, { name: x.name, email: x.email, phone: x.phone }]).catch(() => null);   /* (never true since 16 Nov: sbContact always gives an email) */
   const gEmail = x.standIn ? '' : (x.email || '');   /* the stand-in (example.com) is never the guest's email anywhere else */
   const ref = 'R2B' + crypto.randomUUID().replace(/-/g, '').slice(0, 9).toUpperCase();
-  await a('setBookingComment', [b0.id, `Booked by staff (control centre › Add a session${x.by ? ', ' + x.by : ''}) · ref ${ref}\nBooked as: ${x.name} · ${x.phone}${x.standIn ? ' · no email (SimplyBook has a stand-in: ' + x.email + ')' : x.email ? ' · ' + x.email : ''} · ${x.pax} pax\nBooking page: ${PUBLIC_BOOK}/b/${b0.code}` + (how.length ? '\nContact: ' + how.join(', ') : '')]).catch(() => null);
+  await a('setBookingComment', [b0.id, `Booked by staff (control centre › Add a session${x.by ? ', ' + x.by : ''}) · ref ${ref}\nBooked as: ${x.name} · ${x.phone}${x.standIn ? ' · no email given (SimplyBook keeps the number’s contact or a placeholder email)' : x.email ? ' · ' + x.email : ''} · ${x.pax} pax\nBooking page: ${PUBLIC_BOOK}/b/${b0.code}` + (how.length ? '\nContact: ' + how.join(', ') : '')]).catch(() => null);
   const s = mins(q.time), e = s + q.hours * 60;
   await hb.addPaid({ ref, date: q.date, unit: q.unit, s, e, phone: x.phone.replace(/\D/g, '').slice(-8), email: gEmail.toLowerCase(), data: { q, name: x.name, email: gEmail, standIn: !!x.standIn, phone: x.phone, pax: x.pax, pay: 'staff', by: x.by || '', done: { bookingId: String(b0.id), code: String(b0.code || ''), at: Date.now(), source: 'Add a session' } } });
   await hb.kvSet('gapc', {}).catch(() => null); await hb.kvSet('gcal', null).catch(() => null);
