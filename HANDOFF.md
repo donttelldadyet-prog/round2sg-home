@@ -1092,3 +1092,12 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   (Atlas 52–62% ch 36, Bella 56–74% ch 6) – but Kai answers at 64–74%, so not proven. Next: which mesh unit / band each
   is on (router app), or a cable test on one of them. Vale/Max/Scarlett are reachable but NOT registered (owner's
   control group) so they can't be woken yet. All five asleep at 10:52pm – PS buttons.
+- **11:05pm VALE WOKEN REMOTELY – second room proven.** Owner opened Remote Play Connection Settings › Add Device (NOT
+  Mobile App Connection Settings – that one is Sony's phone-app pairing and needs PSN; owner opened it first by mistake).
+  Vale registered with itself through its main profile Valentine's EXISTING ID acee61706f6c6c6f (unchanged): wake key
+  `b879a329`, PS4-845, MAC bc60a7929148; engine stored it. Rested 11:01:17; Kai's status question at 11:03 → "620 Server
+  Standby"; staff `ps4wake id=vale` 11:04:21 → engine picked Kai as sender → 3× to .255 → Vale's report 11:05:46:
+  woke (slept 239 s), nobody signed in (the "press the PS button" screen, as expected). Registered now: Kai, Atlas,
+  Bella, Vale; unregistered control group: Max, Scarlett. **Rule learnt: a PS4 is wakeable only if Power Save › rest-mode
+  settings match Kai's (Stay Connected + Turn On from Network + USB power Always) AND it answers on the network in rest
+  (Atlas and Bella don't yet).**
