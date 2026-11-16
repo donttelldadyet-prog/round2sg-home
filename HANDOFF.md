@@ -1143,3 +1143,13 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   network/Remote Play wake waits for someone at the controller. 1.1.23's sceUserServiceLogin from the helper jammed that
   screen. Options to look at: a virtual PS-button press from the helper (the system's own virtual-pad route that Remote
   Play uses), or the sender finishing a short Remote Play session and pressing PS (chiaki can) – heavier.
+- **12:16am owner: Atlas and Bella both ON (white light)** → their helpers are STUCK, not asleep: Atlas silent since
+  23:59:29 (right after taking 1.1.28 and reporting), Bella since 22:46:46 (reported its wake at 23:57:11, then nothing).
+  Same two rooms that never answer from rest. Owner put them to rest; **everything ON HOLD until 17 Nov.**
+  Network-woken PS4s with nobody signed in went back to rest by themselves: Vale + Max after ~5 min, Kai after ~30 min
+  (twice each) – reason for the difference unknown (Kai is a Pro – compare models when 1.1.29 reports them).
+  **Tomorrow, in order:** (1) read Atlas/Bella records when they're on (1.1.28/1.1.29 slow.log, net-fail, where.txt) and
+  make the helper save EVERY step + a 3-min watchdog note, so a stuck helper names its step; (2) models of all six (hw in
+  the 1.1.29 report) – are Atlas/Bella a different model?; (3) "Welcome back" screen after a network wake: research a
+  virtual PS-button press from the helper (should also stop the 5-min fall-back to rest); (4) morning trigger test;
+  (5) owner opens GT Sport on Max once (main profile now has an ID).
