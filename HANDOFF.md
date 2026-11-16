@@ -1119,3 +1119,8 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   rest within ~5 min. Light check after: same as before (13 / 2 / 2, known items). systems.json item added (e9e754f).
   Left at 11:44pm: Kai, Vale, Max, Scarlett awake on "press the PS button" (expected to rest by themselves ~30 min);
   Atlas, Bella asleep since 10:47pm.
+- **11:55pm HELPER 1.1.28** (ps4-helper 8bd77b0, ps4-release d2e5bf1): report `wifi.ap` = BSSID (which mesh unit/radio),
+  `wifi.dbm` (raw byte – subtract 256: 186 = −70 dBm), `wifi.dev` (0 cable, 1 Wi-Fi). Owner asked for it to compare
+  Atlas/Bella (silent in rest) with the four that work, without the router app. First readings: Kai cc:ba:bd:28:65:62
+  (5 GHz ch 36, −70 dBm, 60%); Scarlett cc:ba:bd:28:65:60 (2.4 GHz ch 6, −46 dBm, 100%) – same unit, two radios.
+  Atlas/Bella get 1.1.28 when the owner switches them on (quiet-time update). Light check after: same 13/2/2.
