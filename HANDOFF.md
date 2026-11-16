@@ -1101,3 +1101,21 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   Bella, Vale; unregistered control group: Max, Scarlett. **Rule learnt: a PS4 is wakeable only if Power Save › rest-mode
   settings match Kai's (Stay Connected + Turn On from Network + USB power Always) AND it answers on the network in rest
   (Atlas and Bella don't yet).**
+- **11:09pm Scarlett registered** (main's existing ID 526a61706f6c6c6f, key `a2878fc6`, PS4-599). **11:15pm owner chose B:
+  Max's MAIN profile got the shared ID 52326d61696e3031** (ps4prof acct, "acct set: 0"; before: no ID, flag 2). Two
+  numbers refused ("HTTP 403 reason 80108b0") until the owner RESTARTED Max – then registered (key `f8b9cd46`, PS4-350).
+  **Rule: after giving a profile an ID, restart before registering if the PS4 refuses with 403.** GT Sport files in Max
+  main (CUSA02168: sdimg_local-data, sdimg_sce_sdmemory, backup copy) still there, untouched – owner to open GT Sport on
+  Max once to confirm it still loads with the new ID (cloud backup exists).
+- **11:21–11:44pm FULL SLEEP/WAKE CHECK (owner: "make it bulletproof", away):**
+  Round 1 – sender Kai: rested Vale, Max (Scarlett already resting) → standby answers from Vale, Max, Scarlett →
+  `ps4wake id=all` → Max and Scarlett back within ~2 min. Vale DID wake (starter's line 23:28:01) but its Wi-Fi didn't
+  come back – net-fail.log: "connect failed" from 23:28:12 every 8 s (#10 at 23:30:48), Wi-Fi moved from 5 GHz ch 36 to
+  2.4 GHz ch 6 – and it went back to rest ~23:33 before reaching the engine.
+  Round 2 – sender Scarlett: rested Kai, Max → standby from Kai, Max → `ps4wake id=all` → Kai, Max AND Vale back.
+  So all four registered+reachable rooms (Kai, Vale, Max, Scarlett) wake with "Wake all", from two different senders.
+  Atlas and Bella: never answered, never woke (Wi-Fi in rest – open). New lesson from net-fail.log: after a wake the
+  Wi-Fi can take seconds (Scarlett 9 s) to minutes (Vale) to come back, and a woken PS4 with no network can fall back to
+  rest within ~5 min. Light check after: same as before (13 / 2 / 2, known items). systems.json item added (e9e754f).
+  Left at 11:44pm: Kai, Vale, Max, Scarlett awake on "press the PS button" (expected to rest by themselves ~30 min);
+  Atlas, Bella asleep since 10:47pm.
