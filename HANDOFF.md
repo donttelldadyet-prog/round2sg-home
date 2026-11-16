@@ -993,3 +993,15 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   and Vale (fine, 1.1.24) lacks: **Remote Play enabled + registered tonight** (Kai main key ~7:30 → silent 8:02; Atlas
   ~7:50 → 8:06; Bella 8:05 → 8:06, and after the restart within a minute). Unproven. Next test asked of the owner:
   Bella – untick Enable Remote Play, restart + jailbreak, see whether the helper keeps checking in for 5+ minutes.
+  **9:30pm – picture changed, Remote Play suspicion weakened.** Owner walked into Kai's room; Kai and Bella both check in
+  again (Bella NOT restarted in between – same start 8:20:08).
+  · **Kai:** report says `woke {via:"sleep", sleptS:5121}` at 9:28:53 – the whole payload process stood still from ~8:03:30
+  to 9:28:53 (the starter's hourly line is missing for 8:19 and came at 9:28:56 too). That is what REST MODE looks like.
+  Kai had been woken over the network at 7:33pm (Bella → Kai test) – 8:03 is 30 minutes later. Reading: **a PS4 woken
+  over the network that nobody uses goes back to rest by itself after ~30 min** (to confirm with the owner: was Kai's
+  light orange / did he wake it with the controller at 9:28?). So Kai was probably never "silent while on".
+  · **Bella:** different – its starter wrote "21:20:11 hourly: helper running" exactly on the hour, so the process was
+  running, but the helper made no check-in from 8:20:24 until ~9:27. Helper thread alone stuck for an hour, then carried
+  on by itself. Bella's Wi-Fi is back down to 58% (2.4 GHz, was 94% right after the change). Fits the old reading: weak
+  link + a network step without a time limit (`getaddrinfo`). Fix to build: time limit / remembered address first.
+  · **Atlas:** silent since 8:06:14, not looked at yet (rest? stuck?).
