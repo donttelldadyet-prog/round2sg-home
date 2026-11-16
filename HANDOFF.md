@@ -827,3 +827,18 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
     itself (PS4 library call sceRemoteplayGeneratePinCode – to try) so no typing; a wake-key profile per PS4 (mains without an
     ID stay untouched); and decide the always-on sender for mornings (all PS4s asleep = nobody to send): candidates = a room
     TV app that stays alive in standby, one PS4 left on, or a small always-on device.
+- **6pm owner on Kai (User5): Remote Play Connection Settings › Add Device SHOWS the 8-digit number** (no PSN demand) → gate
+  passed. "Connect Directly with PS Vita/PS TV" stays off (not needed).
+- **Helper 1.1.21** (ps4-helper, ps4-release 2ed6105; Kai on it 6:05pm): `ps4/rp/` = chiaki-ng `rpcrypt.c` unchanged
+  (43728af, AGPL-3.0-only + OpenSSL exception, built with CHIAKI_LIB_ENABLE_MBEDTLS on our mbedTLS) + `r2rp.c` (regist.c's
+  steps: UDP 9295 "SRC2" → "RES2"; POST /sie/ps4/rp/sess/rgst, RP-Version 10.0 = chiaki target PS4_10 for firmware 7+;
+  0x1e0 filler with the aeropause at 0xc7/0x191, inner header "Client-Type: dabfa2ec…\r\nNp-AccountId: <base64 of the 8
+  registry bytes>" encrypted with the PIN-derived key; reply decrypted → PS4-RegistKey (hex of the text key), RP-Key,
+  PS4-Nickname, PS4-Mac). Look jobs: `/_rpreg.<ip>.<16-hex account id as in the registry>.<8-digit number>` → rpreg/key …
+  (full line in /data/round2/rp.log); `/_wakerp.<ip>.<key>` → SRCH, WAKEUP ×3 (client-type vr, auth-type R, model w,
+  app-type r, user-credential = key as a decimal number), SRCH after 25 s. Untested. Kai User5 account bytes
+  523261706f6c6c6f. Not built yet: PIN made by the helper (sceRemoteplayGeneratePinCode), storing keys in the engine,
+  control-centre buttons. Wake test needs a 2nd awake PS4 on 1.1.21 as sender: Scarlett refused the update (guests till 8pm),
+  Vale/Bella off, Max/Atlas guests.
+- 1.1.20's wake pop-up/detection: Kai's report shows woke n=1, slept 134 s, via "sleep" at 5:46pm (owner rested/woke it by
+  controller).
