@@ -1022,3 +1022,17 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   127.0.0.1 (the blocker), Sony still "blocked", check-ins every minute since. **Whether it cures Bella is not proven
   yet** – the lookup being the stuck step was a deduction; if Bella goes quiet again, `log.slow` will name the step.
   Vale 1.1.24, Scarlett 1.1.15, Max 1.1.14, Atlas 1.1.25 take it at their next quiet time.
+- **9:42–9:50pm FIRST WAKE TEST THROUGH THE ENGINE – Bella did NOT wake.** Bella rested remotely 9:42:45 (job done).
+  9:46 staff `ps4wake id=bella` → engine picked Vale as sender (guests there; `nobusy`, only a network message) → Vale
+  sent the wake 3× to 192.168.88.255 (job done) → nothing. 9:48 Kai sent it 3× straight to 192.168.88.6 → nothing; Kai's
+  status question to .6 before and after: "no answer in 4 s". 9:50 `/_ddpall` from Kai (who is on the network?): Kai .18
+  "200 Ok", Vale .11 "200 Ok", **Atlas .15 "200 Ok"**, nothing from Bella, Max (.23), Scarlett (.24).
+  → **Bella is not on the network at all while in rest mode** – same as 14 Nov (then on 5 GHz, rest-mode boxes ticked per
+  the owner's photo). The engine/button chain itself works (sender chosen, job run). So far only Kai (FW 9.00) has ever
+  answered from rest; Bella, Scarlett, Vale (all 11.00) never have → to settle: is it firmware 11.00 / the PS4 model, or
+  a setting (Power Save › Set Features Available in Rest Mode: Stay Connected to the Internet + Enable Turning On PS4
+  from Network)? Next test: Atlas (9.00, registered) – boxes checked first – rest, then wake.
+  Side note: the status question before/after a wake to the .255 address says "send failed -3" (that helper call has no
+  broadcast permission) – cosmetic, the wake itself is sent with it.
+  → **Atlas is ON (answers "200 Ok") but its helper (1.1.25) has made no check-in since 8:06:14pm** – this one really is
+  "silent while on", 1 h 45 min and counting. Bella is left asleep; someone has to press its PS button.
