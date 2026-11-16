@@ -635,3 +635,14 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   see whether a new stuck download appears.
 - Control centre › PS4s tiles redone (owner: "too convoluted"): one long tile per room, state + one line of numbers + problems
   on the left, buttons on the right, everything else under "More".
+- **Max 2:12pm: update 1.1.10 → 1.1.14 stuck on "switching"** (owner). Max's log (1.1.14's `log` field): the old helper downloaded
+  1.1.14 and wrote the switch, but never let go – starter 14:14:20 "switch waiting: the old helper still holds the lock after 2
+  minutes". Owner restarted Max → 14:15:43 starter 2 started, finished the half-done switch, 1.1.14 said hello. One starter
+  (restart, not a hand-sent payload). Same family as Bella (alive but stuck); also seen on Max 13 Nov.
+- **Helper 1.1.15** (ps4-helper 2d724b6, released ps4-release e5c4297, built with ps4/build.sh, sha 4ede8fac…): (1) when switching it
+  writes the switch and LETS GO of the lock first, then reports + pop-up (before: report + pop-up while still holding on);
+  (2) every network connect has a 10 s limit per address and sends 20 s (tls/r2tls.c `r2_connect`; reads already 15 s).
+  No signal changes (1.1.13's wake fix kept). Owner: "push an update, the auto-updater picks them up in quiet time" – no
+  room updated by hand. Note: rooms still on 1.1.10–1.1.14 may stick once more on THIS hand-over (old code); a restart clears
+  it. System check before and after: 39 passed, 2 to look at (watchdog 7am-rule places, Kaeden TV offline), 0 failed – the
+  earlier "side timer 57 requests" bad no longer shows.
