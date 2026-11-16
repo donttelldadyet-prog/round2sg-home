@@ -945,3 +945,7 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
 - Kai's key stored (e55667bb, main profile). **Only Kai is registered** – the others need the one-time registration
   (Add Device number, or the helper making it: not built). Light check after: 13 passed · 2 to look at · 2 failed (the same
   two: side timer at 50, SimplyBook count today). Not tested end to end: the group buttons and the morning trigger.
+- **7:53pm ATLAS registered.** Main "Atlas" 17d81365 had no ID (5 profiles: Atlas, User1–4, none activated) → `ps4prof acct`
+  52326d61696e3031 (the shared main ID, result 0), then `/_rpreg` with the owner's number 81519385 straight away – accepted
+  WITHOUT a restart: **key 357299b3**, nickname PS4-401, MAC 2ccc441e241f; stored by the engine automatically (ps4list wake:
+  atlas, kai). Atlas's existing main saves not checked after the ID change (Kai's were fine). Not woken yet.
