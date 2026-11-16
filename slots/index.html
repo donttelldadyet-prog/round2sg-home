@@ -176,6 +176,10 @@ h3.nm, .nm { color: var(--rc); }
 .chips button.eb { border-color: rgba(102,199,255,.6); }
 #pTimes { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); }   /* start times fill the row evenly, no gap on the right */
 #pTimes button { min-width: 0; padding-left: 4px; padding-right: 4px; }
+#pLens { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 8px; }   /* lengths: equal boxes, 2 per row on a phone; row gap leaves room for the SAVE tags */
+#pLens .hint { grid-column: 1 / -1; }
+#pLens button { min-width: 0; padding: 9px 6px; }
+#pLens button .save { right: 6px; }
 .chips button[aria-pressed="true"] { background: var(--acc); color: var(--acc-ink); border-color: var(--acc); }
 .chips button[aria-pressed="true"] small { color: var(--acc-ink); opacity: .8; }
 .chips button:disabled { opacity: .3; cursor: not-allowed; }
