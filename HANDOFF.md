@@ -774,3 +774,21 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   helper thread sleeps in 45; blocker + starter still in 45. Still to test with the owner at Kai: a game opened/closed, remote
   rest (`/_rest` from own mode) → wake. Then: starter 3 (spawns blocker + helper as own programs; falls back to BinLoader),
   11.00 (Vale). System check after 1.1.19 + the test: 38 passed · 3 to look at · 1 failed (unchanged).
+- **5:33–5:37pm own-program helper (pid 209) on Kai: game + rest/wake PASSED.** Owner opened/closed God of War → still pid
+  209, polling. `/_rest` from own mode worked (Kai silent 5:33:44pm); owner woke it 5:37pm → pid 209 polling again, no
+  payload. BUT the wake wasn't flagged (no `woke` in the report): after our own remote rest the freeze isn't inside the
+  measured 2 s sleep. → **Helper 1.1.20** (ps4-release fcbeaf9): wake also detected by wall clock vs CLOCK_MONOTONIC drift
+  (> 60 s; `woke.via` = "sleep" | "clock" – unproven that the monotonic clock stands still in rest mode), and a **pop-up after
+  every wake** (owner asked): "Round2 helper <v>: awake after rest mode - running and connected" / "... can't reach Round2
+  yet". Kai took 1.1.20 at 5:39pm: the own-program helper exited cleanly on the update, starter relaunched it the shared way
+  (pid 45, own 0). Pop-up not seen yet – owner to rest/wake Kai by controller.
+- ⚠️ **5:45pm – SimplyBook requests today: 10,161 (yesterday 5,100; guideline ~5,000, "hard stop" ~10,000).** System check
+  now fails on it. Breakdown (gm auto › sbBy): /day getAvailableTimeIntervals 2,002 · **gm late 984 + 925 · gm latecancel
+  434 + 386 · gm extend 305 + 275 · gm insess 234** (= the System check's test-night steps) · cron ~800. Count went
+  6,805 (4:27pm) → 9,584 (5:43pm) across 4 System check runs ≈ **~650 SimplyBook requests per run**. This chat ran the check
+  8 times today (before/after each helper/engine change: 2:25, 2:28, 3:42, 4:27, 5:08, 5:14, 5:29, 5:41pm) ≈ half of today's
+  total. No refusal from SimplyBook seen yet (5:43pm run's add/cancel steps passed; engine `auto.last.problems` empty).
+  **Decision here: NO more System check runs today from this chat; PS4 jobs kept to a minimum.** To fix (owner to agree):
+  the "before and after every change" rule + ~650 requests a run doesn't fit SimplyBook's allowance → (a) a light System check
+  for changes that can't touch bookings (PS4 helper, control-centre-only): skip the test-night steps; (b) the test-night steps
+  reuse one bookings/notes fetch; (c) the check shows "today's runs: n" and warns before a run that would pass ~5,000.
