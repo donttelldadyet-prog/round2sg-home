@@ -167,6 +167,24 @@ h3.nm, .nm { color: var(--rc); }
 .room .free.no { color: var(--mute); }
 .room .pickb { font: 600 13px 'Chakra Petch', sans-serif; letter-spacing: .02em; padding: 6px 12px; margin-top: 10px; background: transparent; color: var(--ink); border: 1px solid var(--line); }
 .room:hover .pickb, .room .pickb:hover { border-color: var(--rc); color: var(--rc); }
+.room .btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.room .btns .pickb { margin-top: 0; }
+.room .photob { font: 600 13px 'Chakra Petch', sans-serif; letter-spacing: .02em; padding: 6px 12px; background: transparent; color: var(--mute); border: 1px solid var(--line); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+.room .photob:hover { border-color: var(--rc); color: var(--rc); }
+.room .photob svg { width: 13px; height: 13px; }
+/* room photos, opened from a room card (same 3 photos as the homepage) */
+#ph { position: fixed; inset: 0; z-index: 60; background: rgba(6,5,10,.94); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px; }
+#ph[hidden] { display: none; }
+#ph .top { width: 100%; max-width: 720px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+#ph h3 { margin: 0; font: 600 18px 'Chakra Petch', sans-serif; color: var(--rc); }
+#ph .x { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 9px 12px; background: transparent; color: var(--ink); border: 1px solid var(--line); cursor: pointer; }
+#ph .pic { position: relative; width: 100%; max-width: 720px; }
+#ph img { display: block; width: 100%; aspect-ratio: 3 / 2; max-height: 70vh; object-fit: contain; background: #000; border: 1px solid var(--line); border-left: 4px solid var(--rc); }
+#ph .nav { position: absolute; top: 50%; transform: translateY(-50%); width: 40px; height: 40px; border: 0; background: rgba(6,5,10,.7); color: var(--ink); font-size: 22px; cursor: pointer; }
+#ph .prev { left: 6px; } #ph .next { right: 6px; }
+#ph .dots { display: flex; gap: 6px; margin-top: 12px; }
+#ph .dots i { width: 8px; height: 8px; background: var(--line); }
+#ph .dots i.on { background: var(--rc); }
 .pickb { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 9px 12px; background: var(--acc); color: var(--acc-ink); border: 0; cursor: pointer; margin-top: 8px; }
 .step { padding: 14px 16px; border-bottom: 1px solid var(--line); }
 .step h4 { margin: 0 0 10px; font: 9px 'Press Start 2P', monospace; letter-spacing: .12em; color: var(--acc); }
@@ -307,6 +325,8 @@ h3.nm, .nm { color: var(--rc); }
   </div>
 </div>
 
+<div id="ph" hidden role="dialog" aria-modal="true" aria-labelledby="phName"><div class="top"><h3 id="phName"></h3><button type="button" class="x" id="phX">✕ CLOSE</button></div>
+<div class="pic"><img id="phImg" alt=""><button type="button" class="nav prev" id="phPrev" aria-label="Previous photo">‹</button><button type="button" class="nav next" id="phNext" aria-label="Next photo">›</button></div><div class="dots" id="phDots"></div></div>
 <script>
 /* Round2 booking board (round2sg-home/slots/). Everything comes from the Round2 booking engine
    (worker/round2-book.js on Cloudflare): /day gives every room's free starts in 15-min steps, how long each can run
@@ -390,6 +410,15 @@ h3.nm, .nm { color: var(--rc); }
     return '<svg class="ic' + (cls ? ' ' + cls : '') + '" viewBox="0 0 ' + p[0].length + ' ' + p.length + '" aria-hidden="true" shape-rendering="crispEdges"><path d="' + r + '" fill="currentColor"/></svg>'; }
   /* each character's own icon (their personality / room theme); tiers get a neutral one (no "movies only" / "games only" hint) */
   var CHARIC = { 5: 'cat', 7: 'leaf', 8: 'saturn', 9: 'mount', 10: 'book', 12: 'boat', 11: 'car' };
+  /* each room's 3 photos (same ones as the homepage room gallery) – opened from the Photos button on a room card */
+  var PHOTOS = {"5": ["https://static.wixstatic.com/media/a46627_8915206851034ccb949dfae7f7840715~mv2.webp", "https://static.wixstatic.com/media/a46627_bb4db4e81e9e4837800381c577783aae~mv2.webp", "https://static.wixstatic.com/media/a46627_1377d574756a4ff8aed1d44d8d69cb9b~mv2.webp"], "7": ["https://static.wixstatic.com/media/a46627_d8534727eaec41b4a40b6875f1a8773f~mv2.webp", "https://static.wixstatic.com/media/a46627_3858ff524cee4e0c92a43f430684ed46~mv2.webp", "https://static.wixstatic.com/media/a46627_9dcb3d7422d74a5db06ea317da44a72e~mv2.webp"], "8": ["https://static.wixstatic.com/media/a46627_f6a639578bb649ae9ab7171d8b53d42a~mv2.webp", "https://static.wixstatic.com/media/a46627_74c8f643ea4146c3b466affe1b458ecb~mv2.webp", "https://static.wixstatic.com/media/a46627_71879df9e36141b4bc4682820411c4fa~mv2.webp"], "9": ["https://static.wixstatic.com/media/a46627_cba34d42d720404f9d8eba243e6bff17~mv2.webp", "https://static.wixstatic.com/media/a46627_ba20734453e242b0820f39f703e51f82~mv2.webp", "https://static.wixstatic.com/media/a46627_007c615739c94b33967e8cdb9fafc3ea~mv2.webp"], "10": ["https://static.wixstatic.com/media/a46627_8be531aba0154917960845485a1a05b5~mv2.webp", "https://static.wixstatic.com/media/a46627_024f6349f943406785419c6b7164e19c~mv2.webp", "https://static.wixstatic.com/media/a46627_2e16bd912f2d48d3997d093bbd6f2d04~mv2.webp"], "12": ["https://static.wixstatic.com/media/a46627_e3bfb91790b044aba0e51090d693e699~mv2.webp", "https://static.wixstatic.com/media/a46627_4fc612195b5a444aaddf388daec9eb37~mv2.webp", "https://static.wixstatic.com/media/a46627_f892843cca7d488ba25e5448fe329799~mv2.webp"], "11": ["https://static.wixstatic.com/media/a46627_51d582707fae40c6b3213abb8df0ac97~mv2.webp", "https://static.wixstatic.com/media/a46627_f41acfb8a4134f5eb4b8b0f76a9a2481~mv2.webp", "https://static.wixstatic.com/media/a46627_ed115c81e4324adb975d2d0bb26118c1~mv2.webp"]}
+;
+  function photoBtn(uid) { return PHOTOS[uid] ? '<button class="photob" type="button" data-ph="' + uid + '"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M1 3h14v10H1zm1 1v6l3-3 3 3 2-2 4 4V4zm9 1h2v2h-2z"/></svg>Photos</button>' : ''; }
+  var phU = null, phI = 0;
+  function phShow() { var L = PHOTOS[phU]; $('phImg').src = L[phI]; $('phImg').alt = ROOMS[phU][0] + ' room, photo ' + (phI + 1) + ' of ' + L.length;
+    $('phDots').innerHTML = L.map(function (x, i) { return '<i' + (i === phI ? ' class="on"' : '') + '></i>'; }).join(''); }
+  function phOpen(uid) { phU = uid; phI = 0; var p = $('ph'); p.style.setProperty('--rc', ROOMS[uid][1]); $('phName').textContent = ROOMS[uid][0] + '’s room'; phShow(); p.hidden = false; $('phX').focus(); }
+  function phClose() { $('ph').hidden = true; phU = null; }
   var TIERIC = { 'NETFLIX ROOMS': 'sofa', 'DELUXE ROOMS': 'gem', 'VIP ROOM': 'crown' };
   [].forEach.call(document.querySelectorAll('i[data-ic]'), function (el) { el.outerHTML = ic(el.getAttribute('data-ic')); });
   var TIER = {}; GROUPS.forEach(function (g) { g[1].forEach(function (u) { TIER[u] = g[2]; }); });
@@ -517,8 +546,8 @@ h3.nm, .nm { color: var(--rc); }
         }
         inner += '<div class="room" style="--rc:' + R[1] + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': ' + (txt ? lead + txt : 'early bird')) + '"' : '') + '><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty">' + R[2] + '</div>' + ebChip(uid) + '</div><div>' +
           '<div class="track">' + lines + segs + '</div><div class="ticks">' + ticks + '</div>' +
-          (day3.length ? '<div class="free">' + lead + esc(txt) + ' · from ' + money(from) + '</div><button class="pickb" type="button" data-u="' + uid + '">Choose a time ›</button>'
-            : info.list.length ? '<div class="free">Only the early bird is free</div>' : '<div class="free no">Fully booked</div>') + '</div></div>';
+          (day3.length ? '<div class="free">' + lead + esc(txt) + ' · from ' + money(from) + '</div><div class="btns"><button class="pickb" type="button" data-u="' + uid + '">Choose a time ›</button>' + photoBtn(uid) + '</div>'
+            : info.list.length ? '<div class="free">Only the early bird is free</div><div class="btns">' + photoBtn(uid) + '</div>' : '<div class="free no">Fully booked</div>') + '</div></div>';
       });
       html += tierBox(g, inner);
     });
@@ -761,6 +790,7 @@ h3.nm, .nm { color: var(--rc); }
   /* public holidays for the peak dots */
   fetch(ENGINE + '/ph').then(function (r) { return r.json(); }).then(function (l) { (l || []).forEach(function (d) { PH[d] = 1; }); drawDays(); }).catch(function () {});
   $('board').addEventListener('click', function (e) {
+    var ph = e.target.closest('button[data-ph]'); if (ph) { e.stopPropagation(); phOpen(ph.getAttribute('data-ph')); return; }
     var h = e.target.closest('button[data-h]'); if (h) { hourSel = +h.getAttribute('data-h'); render(); return; }
     var b = e.target.closest('[data-u]'); if (b) openRoom(b.getAttribute('data-u'), b.hasAttribute('data-m') ? +b.getAttribute('data-m') : null);
   });
@@ -775,6 +805,13 @@ h3.nm, .nm { color: var(--rc); }
   });
   $('mClose').onclick = function () { if (!$('hold').hidden) release(''); else if (!$('det').hidden) step('pick'); else closeBook(); };
   addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('modal').hidden && $('hold').hidden) closeBook(); });
+  $('phX').addEventListener('click', phClose);
+  $('ph').addEventListener('click', function (e) { if (e.target.id === 'ph') phClose(); });
+  $('phPrev').addEventListener('click', function () { var n = PHOTOS[phU].length; phI = (phI + n - 1) % n; phShow(); });
+  $('phNext').addEventListener('click', function () { phI = (phI + 1) % PHOTOS[phU].length; phShow(); });
+  addEventListener('keydown', function (e) { if ($('ph').hidden) return; if (e.key === 'Escape') { e.stopImmediatePropagation(); phClose(); } else if (e.key === 'ArrowRight') $('phNext').click(); else if (e.key === 'ArrowLeft') $('phPrev').click(); }, true);
+  (function () { var x0 = null; $('phImg').addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+    $('phImg').addEventListener('touchend', function (e) { if (x0 == null) return; var dx = e.changedTouches[0].clientX - x0; x0 = null; if (Math.abs(dx) > 40) $(dx < 0 ? 'phNext' : 'phPrev').click(); }); })();
 
   count('board');
   if (/[?&]released=1/.test(location.search)) { ss.set('r2.ref', null); banner('Payment not completed – the slot was released. Pick a time again.'); }
