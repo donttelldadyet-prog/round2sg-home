@@ -1,5 +1,15 @@
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
 
+> ## 16 Nov 2026, 3:49pm – engine 67e1073 DEPLOYED (27 bindings, 3 timers): NOTES GET A BOOKING LINK (owner: "why limit it to real SimplyBook bookings")
+> - Add a session → saved as a note (no email, late, clash, Change…) now returns `link` = `book.round2.sg/c/<code>` (code `N` + 7).
+>   DO kv `nconf:<code>` = {nid, day, unit, name, pax, phone, t, tv}, `nlink:<note id>` = code. `/c/<code>` (`notePage`) = the same
+>   `bookedPage` ticket as online bookings (no "Paid" line, "WhatsApp us to change"), read LIVE from the note via `lateFind` (so +1h
+>   and EXT follow; deleted note → "changed or cancelled – WhatsApp us"). `/c/<code>/tv` makes the guest's cue.round2.sg link on first
+>   use and ties it to the note (`lPair {nid}`). Change keeps the code (`noteLinkMove`). `latelist` rows carry `link`; gm `latelink`
+>   (id, day) makes one for older notes ("Get booking link" button). round2-book wrapper allows `/c/` (3fa4b3c).
+> - Control centre (round2-tv-launcher d2a25eb): result card + list rows Copy link / WhatsApp it; System check step "Add a session (late,
+>   3–5am)" now must get a `/c/` link and see it in the list. NOT yet run live (no staff code here) – run the System check.
+
 > ## 15–16 Nov 2026 – website booking page (desktop), stats, reschedule page, PC toolkit finds the TVs (no engine change; live engine still 86ed06b)
 > - **Booking page on desktop** (`slots/index.html`, `index.html`; mobile untouched – owner: "mobile view is fine"). One scroll bar
 >   (the website's desktop stage is a fixed 1440×900 box scaled to the screen, so the booking frame must FILL its section –
