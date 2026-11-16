@@ -711,3 +711,12 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
 - System check before: 37 passed · 3 to look at · 1 failed; after: 38 · 3 · 1 (the new step passes). The failed one = "side"
   timer at 50 outside requests (pre-existing, not from this); new warning today: SimplyBook 6,805 requests (biggest
   /day › getAvailableTimeIntervals) – from the booking-page work in the other chat? needs a look.
+- **4:45pm first real 1.1.16 reads (Kai, took 1.1.16 at 3:50pm):** `/_ps` lists ~60 system processes but **no nanoDNS, no
+  helper, no starter** – payloads sent to BinLoader don't get their own named process (GoldHEN's loader shows as threads
+  "GoldHENLoader" in ScePartyDaemon pid 45 and "GoldHEN_BinLoade" in SceCloudClientDaemo pid 49; our payloads probably live
+  inside such a host process – unproven). So the `dns` job will safely refuse ("its program not found by name", nothing
+  changed). Kai payloads.ini: `/user/data/payloads/nanodns-ps4.elf = 1`, `/user/data/payloads/round2-boot.elf = 1`.
+  nanodns.log 289 KB; last 200 lines = only Sony names, all blocked (event.api.np.km, ps4-system.sec.np.dl, ps4updptl.uk.np.
+  community, rnps-crl.dl – all *.playstation.net → 0.0.0.0) + the engine allowed. The 3:29pm game-test lines are too far back for
+  a 24 KB tail → idea: a search/filter option on "Read a file". Remote blocker change needs another way (proposed: apply at the
+  next restart + helper tests at start and reverts by itself) – owner to choose.
