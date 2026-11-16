@@ -1054,3 +1054,12 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   Vale's didn't. 1.1.26 now asks 127.0.0.1 with a 2.5 s limit, then 1.1.1.1 directly, then the remembered address, so a
   stuck nanoDNS/upstream can't hold it. Gap: if checks now FAIL quickly instead of hanging, slow.log won't show it →
   next helper should log failed check-ins (time, step, error, count) and report them on return.
+- **10:03pm HELPER 1.1.27 released** (ps4-helper d279ede, ps4-release 7b72b92) and on Kai + Atlas (Bella asleep, takes it
+  when woken; others at quiet time): /data/round2/net-fail.log – every failed engine request (time, request, step it
+  failed in, error; first 5 then every 10th) + "back after N failures, M s"; in every report as `log.netfail`. Tested on
+  the computer; lookup tests still pass. Light check after: same 13 passed / 2 to look at / 2 failed (known items).
+  **Owner's point (10:03pm), taken as a rule:** don't make him diagnose. Every report already carries the PS4's own
+  records (log.boot, stopped, slow, netfail). When a PS4 comes back after a silence, READ ITS REPORT FIRST, before
+  asking the owner anything. What should have been done: step/failure records in 1.1.15 (when the time limits went in),
+  and Bella's/Atlas' reports read the minute they came back (9:27 / 9:54pm). Limit: the file reader is a job the helper
+  runs, so a STUCK helper can't answer it – the evidence arrives with its next report.
