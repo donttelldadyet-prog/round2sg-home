@@ -1608,7 +1608,9 @@ async function autoApi(env, hb, f) {
   const now = Date.now(), N = sgDay(now - SHADOW_TILL * 60e3), days = [N], m2 = await hb.getMode();   /* the shop night (7am to 7am) */
   const recs = await hb.autoAll(), off = new Set(m2.autoOff || []), list = [];
   const tm = addDays(N, 1), m0 = sgMs0(tm + ' 00:00'); days.push(tm);   /* tonight's after-midnight sessions too */
-  for (const d of days) for (const S of (await sessDay(env, d)).sessions) {
+  /* lite=1 (System check › Light check, 16 Nov): heartbeat + SimplyBook counters only – the session list costs 2 SimplyBook
+     requests a day looked at, and the light check must cost none */
+  for (const d of (f.lite === '1' ? [] : days)) for (const S of (await sessDay(env, d)).sessions) {
     if (S.sys || S.orphanExt || !ROOMS[S.unit] || list.some((x) => x.key === S.key)) continue;
     if (d === tm && !(S.s >= m0 && S.s < m0 + SHADOW_TILL * 60e3)) continue;
     const mine = recs.filter((x) => x.key === S.key), w = mine.find((x) => x.kind === 'wrapup'), t = mine.find((x) => x.kind === 'timeup');
