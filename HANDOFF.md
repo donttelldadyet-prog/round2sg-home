@@ -1005,3 +1005,20 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   on by itself. Bella's Wi-Fi is back down to 58% (2.4 GHz, was 94% right after the change). Fits the old reading: weak
   link + a network step without a time limit (`getaddrinfo`). Fix to build: time limit / remembered address first.
   · **Atlas:** silent since 8:06:14, not looked at yet (rest? stuck?).
+- **9:32pm owner confirmed Kai:** light was orange, it came up straight into the Kai profile without a PS-button press,
+  and the "awake after rest mode" pop-up showed → **Kai WAS in rest mode** from ~8:03pm. Rule learnt: a PS4 woken over
+  the network that nobody uses goes back to rest after ~30 min (so a morning wake must not be sent too early).
+- **9:37pm HELPER 1.1.26 released** (ps4-helper 3067903, ps4-release 36a48d6) – for Bella's hour-long standstill:
+  · `ps4/tls/r2dns.c`: our own DNS question over UDP, 2.5 s per server (the PS4's own servers from its network settings,
+  then 127.0.0.1, then 1.1.1.1), instead of `getaddrinfo`, which had no time limit. Remembered address still the fallback.
+  "Sony blocked?" in the report uses it too, against the PS4's own servers only. Computer test: `cd ps4 && cc -Wall -O2
+  -Itls -o /tmp/r2dns_test tls/r2dns_test.c tls/r2dns.c && python3 tls/r2dns_test.py` (10 cases, all pass).
+  · Evidence for next time: `r2_where()` notes the step the helper is in; any step over a minute gets a line in
+  /data/round2/slow.log (report `log.slow`, last 6), and /data/round2/where.txt keeps the current network step so a
+  fresh start logs "the run before was last in: …". Report also carries `wifi.dns`.
+  · Light check before and after: 13 passed · 2 to look at · 2 failed both times – the same known items (SimplyBook
+  count 11,3xx today; side timer at 50 requests; watchdog "24 hours" maths; Kaeden TV).
+  · On Kai (updated by hand) and Bella (took it by itself at once): "said hello – kept" within 7 s, DNS servers read as
+  127.0.0.1 (the blocker), Sony still "blocked", check-ins every minute since. **Whether it cures Bella is not proven
+  yet** – the lookup being the stuck step was a deduction; if Bella goes quiet again, `log.slow` will name the step.
+  Vale 1.1.24, Scarlett 1.1.15, Max 1.1.14, Atlas 1.1.25 take it at their next quiet time.
