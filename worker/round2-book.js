@@ -1714,7 +1714,59 @@ async function late(env, hb, f) {
   await autoRun(env, 'late session').catch(() => null);
   const nights = new Set(); for (const t of [s, old && old.S.s].filter(Boolean)) nights.add(sgDay(t - SHADOW_TILL * 60e3));   /* AFTER 12AM and TILL labels */
   await shadowSync(env, [...nights]).catch(() => null);
-  return { ok: true, plan, notes: done, msgs, replaced: !!old, tied };
+  /* the guest's confirmation link (owner, 16 Nov) – a Change keeps the same link, now pointing at the new note */
+  let link = null;
+  if (done[0]) {
+    const info = { day: sgDay(s), unit, name, pax, phone: p8.length === 8 ? phone : '' };
+    if (old) await noteLinkMove(hb, old.S.key.slice(1), done[0].id, info).catch(() => null);
+    link = await noteLink(hb, done[0].id, info).catch(() => null);
+  }
+  return { ok: true, plan, notes: done, msgs, replaced: !!old, tied, link: link && link.link };
+}
+/* ===== Confirmation link for a session saved as a NOTE (owner, 16 Nov: "why doesn't Add a session give a booking
+   confirmation link to WhatsApp them – why limit it to real SimplyBook bookings"). A note has no SimplyBook booking code,
+   so the engine gives it its own: DO kv nconf:<code> = {nid, day, unit, name, pax, phone, t, tv}, nlink:<note id> = code.
+   book.round2.sg/c/<code> = the same "You're booked" ticket as an online booking, read LIVE from the note (+1h / EXT and
+   Change follow; a deleted note says "changed or cancelled – WhatsApp us"). /c/<code>/tv = the guest's TV message page
+   (cue.round2.sg, made on first use and tied to the note). Notes keyed in before this get a link from Add a session's list
+   (gm latelink). */
+const NC_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', NC_RE = /^N[A-Z0-9]{7}$/;
+async function noteLink(hb, nid, info) {
+  nid = String(nid); const had = await hb.kvGet('nlink:' + nid);
+  if (had) return { code: had, link: PUBLIC_BOOK + '/c/' + had };
+  let code; do { const b = crypto.getRandomValues(new Uint8Array(7)); code = 'N' + [...b].map((x) => NC_ABC[x % NC_ABC.length]).join(''); } while (await hb.kvGet('nconf:' + code));
+  await hb.kvSet('nconf:' + code, Object.assign({ nid, t: Date.now() }, info)); await hb.kvSet('nlink:' + nid, code);
+  return { code, link: PUBLIC_BOOK + '/c/' + code, made: true };
+}
+async function noteLinkMove(hb, oldNid, newNid, info) {
+  const code = await hb.kvGet('nlink:' + oldNid); if (!code) return null;
+  const r = (await hb.kvGet('nconf:' + code)) || {}; Object.assign(r, info, { nid: String(newNid), moved: Date.now() });
+  await hb.kvSet('nconf:' + code, r); await hb.kvSet('nlink:' + newNid, code); return code;
+}
+/* Add a session › list: a confirmation link for a note keyed in before 16 Nov (or made in SimplyBook with "· till") */
+async function latelink(env, hb, f) {
+  const F = await lateFind(env, String(f.id || ''), String(f.day || '')); if (!F) return { error: 'That session isn’t in SimplyBook any more. Refresh the list.' };
+  const txt = String(F.S.name || ''), pm = txt.match(/(\d+)\s*(?:pax|ppl|pp)\b/i);
+  const r = await noteLink(hb, F.S.key.slice(1), { day: sgDay(F.S.s), unit: F.S.unit, name: txt.split(' · ')[0].replace(/\s*\d+\s*(?:pax|ppl|pp)\b.*$/i, '').trim().slice(0, 40), pax: pm ? +pm[1] : 0, phone: '' });
+  return { ok: true, link: r.link };
+}
+async function notePage(env, u) {
+  const parts = u.pathname.slice(3).split('/'), code = String(parts[0] || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12), hb = book(env);
+  const gone = () => H(PAGE(`<h1>Your booking</h1><p>We can’t show this session here – it may have been changed or cancelled. Message us on WhatsApp and we’ll sort it out.</p><a class="btn" target="_top" href="https://wa.me/6591625767?text=${encodeURIComponent('Hi Round2, about my booking ' + code)}">WhatsApp us</a>`));
+  const r = NC_RE.test(code) ? await hb.kvGet('nconf:' + code) : null; if (!r) return gone();
+  const F = await lateFind(env, r.nid, r.day).catch(() => null); if (!F) return gone();
+  const S = F.S, hhmm = (ms) => new Date(ms + 8 * 3600e3).toISOString().slice(11, 16);
+  if (parts[1] === 'tv') {
+    if (!r.tv) {
+      const j = await gmFwd(env, { action: 'create', staff: env.GM_STAFF, room: GM_ROOM[S.unit], start: S.s, label: 'Note · ' + String(r.name || 'guest').slice(0, 30) }).then((x) => JSON.parse(x)).catch(() => ({}));
+      if (!j.code) return H(PAGE('<h1>Couldn’t open the message page</h1><p>Please try again in a minute, or WhatsApp us on +65 9162 5767.</p>'));
+      r.tv = { code: j.code }; await hb.kvSet('nconf:' + code, r);
+      await hb.lPair(j.code, GM_ROOM[S.unit], S.s, S.s + 3 * 3600e3, { nid: String(r.nid) }).catch(() => null); await hb.gmDrop('__LIST__');
+    }
+    return Response.redirect('https://cue.round2.sg/' + r.tv.code, 302);
+  }
+  const q = { unit: S.unit, room: ROOMS[S.unit][0], date: sgDay(S.s), time: hhmm(S.s), end: hhmm(S.guestEnd), endDate: sgDay(S.guestEnd), hours: Math.round((S.guestEnd - S.s) / 36e3) / 100, total: null };
+  return H(bookedPage(env, code, { q, name: r.name || 'guest', pax: r.pax || '', phone: r.phone || '', email: '', done: { note: true, tv: r.tv || null }, notePage: true }, u.origin));
 }
 /* Add a session as a real SimplyBook booking (see late): its own contact (the name typed – never an old contact's name), booked
    like an online booking (end + 15 min cleaning, pax), then a booking record so /b/<code> and /done work and the guest can
@@ -1796,7 +1848,8 @@ async function latelist(env, hb) {
     if (guestEnd <= now) continue;
     if (!(LATE_RE.test(it.txt) || sgH * 60 < SHADOW_TILL || sgDay(guestEnd - 1) !== sgDay(it.s))) continue;
     const pm = it.txt.match(/(\d+)\s*(?:pax|ppl|pp)\b/i);
-    out.push({ id: it.id, unit: it.unit, room: ROOMS[it.unit][0], text: it.txt.slice(0, 80), name: it.txt.split(' · ')[0].replace(/\s*\d+\s*(?:pax|ppl|pp)\b.*$/i, '').trim().slice(0, 40), pax: pm ? +pm[1] : 0,
+    const nc = await hb.kvGet('nlink:' + it.id);   /* its confirmation link, if it has one (16 Nov) */
+    out.push({ link: nc ? PUBLIC_BOOK + '/c/' + nc : '', id: it.id, unit: it.unit, room: ROOMS[it.unit][0], text: it.txt.slice(0, 80), name: it.txt.split(' · ')[0].replace(/\s*\d+\s*(?:pax|ppl|pp)\b.*$/i, '').trim().slice(0, 40), pax: pm ? +pm[1] : 0,
       s: it.s, guestEnd, day: sgDay(it.s), night: sgDay(it.s - SHADOW_TILL * 60e3), ext: nExt, live: it.s <= now });
   }
   /* real bookings made here (owner, 12 Nov): listed with their booking link to copy / WhatsApp again; changed with Move a booking */
@@ -2634,10 +2687,10 @@ async function gm(env, req) {
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await autoApi(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
-  if (act === 'insess' || act === 'extend' || act === 'extundo' || act === 'late' || act === 'latelist' || act === 'latecancel') {   /* staff: "In session" tab */
+  if (act === 'insess' || act === 'extend' || act === 'extundo' || act === 'late' || act === 'latelist' || act === 'latecancel' || act === 'latelink') {   /* staff: "In session" tab */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try {
-      const r = await (act === 'insess' ? insess : act === 'extend' ? extend : act === 'late' ? late : act === 'latelist' ? latelist : act === 'latecancel' ? latecancel : extUndo)(env, hb, f);
+      const r = await (act === 'insess' ? insess : act === 'extend' ? extend : act === 'late' ? late : act === 'latelist' ? latelist : act === 'latecancel' ? latecancel : act === 'latelink' ? latelink : extUndo)(env, hb, f);
       if (act !== 'insess' && act !== 'latelist' && r && !r.error) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); await noiseSync(env, [t, addDays(t, 1), f.day, f.date].filter(Boolean), act).catch(() => null); }   /* noise rule follows extensions and keyed-in sessions */
       return gmJ(r);
     } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
@@ -3099,10 +3152,10 @@ function bookedPage(env, ref, d, origin) {
   /* add-to-calendar file (session time only – the 15 min cleaning isn't the guest's) */
   const z = (t) => q.date.replace(/-/g, '') + 'T' + t.replace(':', '') + '00', endDay = q.endDate.replace(/-/g, '');
   const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Round2//Booking//EN', 'BEGIN:VEVENT', 'UID:' + ref + '@round2.sg', 'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z',
-    'DTSTART;TZID=Asia/Singapore:' + z(q.time), 'DTEND;TZID=Asia/Singapore:' + endDay + 'T' + q.end.replace(':', '') + '00', 'SUMMARY:Round2 · ' + room, 'LOCATION:Round2\\, 20 Haji Lane #02-00\\, Singapore 189213', 'DESCRIPTION:Booking ref ' + ref + '. Your booking and TV message: ' + PUBLIC_BOOK + '/done?ref=' + ref + ' · Questions? WhatsApp +65 9162 5767.', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+    'DTSTART;TZID=Asia/Singapore:' + z(q.time), 'DTEND;TZID=Asia/Singapore:' + endDay + 'T' + q.end.replace(':', '') + '00', 'SUMMARY:Round2 · ' + room, 'LOCATION:Round2\\, 20 Haji Lane #02-00\\, Singapore 189213', 'DESCRIPTION:Booking ref ' + ref + '. Your booking and TV message: ' + (d.notePage ? PUBLIC_BOOK + '/c/' + ref : PUBLIC_BOOK + '/done?ref=' + ref) + ' · Questions? WhatsApp +65 9162 5767.', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
   const msgBox = tv
     ? `<div class="card msg"><div class="k">TV MESSAGE</div><p>${msg ? `<b>${esc(msg.title)}</b> pops up on the TV ${msg.after ? msg.after + ' minutes after you start' : 'when you start'}.` : 'Your message link is ready.'}</p><a class="btn ghost" href="https://cue.round2.sg/${esc(tv.code)}">${msg ? 'Change the message' : 'Write the message'}</a><p class="fine">You can change it until it pops up: cue.round2.sg/${esc(tv.code)}</p></div>`
-    : `<div class="card msg"><div class="k">CELEBRATING?</div><p>We’ll put your birthday, anniversary or any message on the big screen in your Round2 room. It pops up during your session.</p><a class="btn ghost" href="${origin}/done/message?ref=${esc(ref)}">Add a message for the TV</a></div>`;
+    : `<div class="card msg"><div class="k">CELEBRATING?</div><p>We’ll put your birthday, anniversary or any message on the big screen in your Round2 room. It pops up during your session.</p><a class="btn ghost" href="${d.notePage ? origin + '/c/' + esc(ref) + '/tv' : origin + '/done/message?ref=' + esc(ref)}">Add a message for the TV</a></div>`;
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>You're booked · Round2</title>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>:root{--rc:${look[0]};--ri:${look[1]}}*{box-sizing:border-box}body{margin:0;background:#06050a;color:#f4f1fb;font:16px/1.5 'Chakra Petch',system-ui,sans-serif}
@@ -3121,15 +3174,15 @@ ${test ? '<div class="test">TEST BOOKING · nothing was really charged</div>' : 
 <div class="px kick">SAVE FILE CREATED</div><h1>YOU’RE BOOKED!</h1>
 <div class="ticket"><p class="room">${esc(room)}</p><div class="type">${esc(look[2])}${q.earlyBird ? ' · Early bird' : ''}</div>
 <dl><dt>Date</dt><dd>${esc(dayTxt)}</dd><dt>Time</dt><dd class="big">${esc(clock(q.time))} – ${esc(clock(q.end))}</dd><dt>Length</dt><dd>${q.hours} hours</dd>
-<dt>Name</dt><dd>${esc(d.name)}</dd><dt>Guests</dt><dd>${esc(d.pax)}</dd><dt>Paid</dt><dd>$${q.total.toFixed(2)}</dd><dt>Ref</dt><dd class="ref">${esc(ref)}</dd></dl></div>
+<dt>Name</dt><dd>${esc(d.name)}</dd><dt>Guests</dt><dd>${esc(d.pax)}</dd>${q.total != null ? `<dt>Paid</dt><dd>$${q.total.toFixed(2)}</dd>` : ''}<dt>Ref</dt><dd class="ref">${esc(ref)}</dd></dl></div>
 ${msgBox}
-<div class="card"><div class="k">WHEN YOU ARRIVE</div><ul><li>Come in and take a seat in our lobby. We’ll know you’ve arrived and come to show you to ${esc(room)}.</li><li>Your booking is under <b>${esc(d.name)}</b>.</li><li>Please be on time: your session ends at ${esc(clock(q.end))}.</li><li>${done.note || !done.bookingId || (done.fallback || []).some((x) => /shared/.test(x)) || (done.email && done.email !== 'ok') ? `We’ll WhatsApp you on ${esc(d.phone)} to confirm the details.` : `A confirmation email is on its way to ${esc(d.email)}.`}</li></ul></div>
+<div class="card"><div class="k">WHEN YOU ARRIVE</div><ul><li>Come in and take a seat in our lobby. We’ll know you’ve arrived and come to show you to ${esc(room)}.</li><li>Your booking is under <b>${esc(d.name)}</b>.</li><li>Please be on time: your session ends at ${esc(clock(q.end))}.</li><li>${d.notePage ? 'Need to change something? WhatsApp us – we’re happy to help.' : done.note || !done.bookingId || (done.fallback || []).some((x) => /shared/.test(x)) || (done.email && done.email !== 'ok') ? `We’ll WhatsApp you on ${esc(d.phone)} to confirm the details.` : `A confirmation email is on its way to ${esc(d.email)}.`}</li></ul></div>
 <div class="card"><div class="k">ADDRESS</div><a class="loc" href="${MAPS_URL}" target="_blank" rel="noopener"><span class="pin"><svg width="20" height="24" viewBox="0 0 10 12" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M3 0h4v1h1v1h1v4H8v2H7v2H6v2H4v-2H3V8H2V6H1V2h1V1h1zm1 3v2h2V3z"/></svg></span><span><span class="ad">20 Haji Lane, #02-00</span><br><span class="sg">Singapore 189213</span></span><span class="go">MAP ›</span></a><span class="mrt"><b>EW12</b>Bugis MRT · Exit B · 6 min walk</span></div>
 <div class="row"><a class="btn ghost" download="Round2-${esc(ref)}.ics" href="data:text/calendar;charset=utf-8,${encodeURIComponent(ics)}">Add to calendar</a><a class="btn ghost" href="https://wa.me/6591625767?text=${encodeURIComponent('Hi Round2, about my booking ' + ref + (d.name ? ' under ' + d.name : '') + ' (' + room + ', ' + dt.toLocaleDateString('en-SG', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' }) + ', ' + clock(q.time) + ')')}">WhatsApp us</a></div>
 ${done.bookingId && !test ? `<a class="btn ghost" target="_top" href="${PUBLIC_BOOK}/receipt?ref=${esc(ref)}">Payment receipt</a>` : ''}
 ${d.ret ? `<a class="btn" href="${esc(d.ret)}">Back to Round2</a>` : '<a class="btn" href="https://www.round2.sg">Back to Round2</a>'}
-<p class="fine">Closed this page? The link in your confirmation email brings you back here, and so does your calendar entry.</p>
-<script>try{sessionStorage.clear()}catch(e){}</script><script>/* inside book.round2.sg: keep its address bar in step; links that leave these pages open outside the frame */(function(){if(window.top===window)return;try{parent.postMessage({r2:'page',path:location.pathname+location.search,title:document.title},'${PUBLIC_BOOK}')}catch(e){}document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href]');if(!a||a.hasAttribute('download'))return;var u=new URL(a.href,location.href);if(u.origin===location.origin&&!/^\\/done\\/message/.test(u.pathname))return;a.target=/(^|\\.)round2\\.sg$/.test(u.hostname)||u.origin===location.origin?'_top':'_blank';a.rel='noopener'},true)})()</script></main></body></html>`;
+<p class="fine">${d.notePage ? 'Closed this page? The link we sent you on WhatsApp brings you back here, and so does your calendar entry.' : 'Closed this page? The link in your confirmation email brings you back here, and so does your calendar entry.'}</p>
+<script>try{sessionStorage.clear()}catch(e){}</script><script>/* inside book.round2.sg: keep its address bar in step; links that leave these pages open outside the frame */(function(){if(window.top===window)return;try{parent.postMessage({r2:'page',path:location.pathname+location.search,title:document.title},'${PUBLIC_BOOK}')}catch(e){}document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href]');if(!a||a.hasAttribute('download'))return;var u=new URL(a.href,location.href);if(u.origin===location.origin&&!/^\\/(done\\/message|c\\/[A-Z0-9]+\\/tv)/.test(u.pathname))return;a.target=/(^|\\.)round2\\.sg$/.test(u.hostname)||u.origin===location.origin?'_top':'_blank';a.rel='noopener'},true)})()</script></main></body></html>`;
 }
 
 /* ---------- payment receipt (/receipt?ref=…) ---------- */
@@ -4504,6 +4557,7 @@ const HANDLER = {
         return H(PAGE(`<h1>Receipt</h1><p>This booking was paid with us directly, so its receipt is with our team. Message us on WhatsApp and we’ll send it.</p><a class="btn" href="https://wa.me/6591625767?text=${encodeURIComponent('Hi Round2, could I have the receipt for my booking ' + code + '?')}" target="_top">WhatsApp us</a>`));
       }
       /* SimplyBook's confirmation email links here with its booking code → that booking's page (see it, add/change the TV message) */
+      if (u.pathname.startsWith('/c/')) return await notePage(env, u);   /* a note's confirmation page (16 Nov) */
       if (u.pathname.startsWith('/b/')) {
         const code = u.pathname.slice(3).replace(/[^a-z0-9]/gi, '').slice(0, 20), r = code ? await book(env).byCode(code) : null;
         if (r) return Response.redirect(u.origin + '/move?ref=' + r.ref, 302);   /* the 4-button booking page (owner, 12 Nov) */
