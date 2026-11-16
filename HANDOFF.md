@@ -912,3 +912,9 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   helper update leaves the old helper asleep inside ScePartyDaemon (step_aside never exits there) and Kai has had ~14 updates
   since its last restart. A PS4 restart clears it. Lesson: many updates in one sitting exhaust the host; the own-program
   starter (helper really exits) is the cure; until then restart a PS4 after ~10 helper updates. `/_reboot` untested.
+- **7:19pm owner restarted Kai + jailbreak; 7:21pm: "Overcooked 2 doesn't throw me a corrupted game save error".** Checked:
+  starter + helper fresh since 7:19pm, main profile still has account ID 52326d61696e3031 (login flag 6, np), Overcooked 2
+  (CUSA10870) was played. → **Giving a main profile an ID does NOT break its existing saves (no ID → ID), even after a
+  restart.** (13 Nov's "corrupted" was the other way: a save made/stamped under an ID, then the ID removed.) So Kai/Atlas/Max
+  mains can get the shared ID without wiping – still test GT Sport on Max with its cloud backup at hand before relying on it.
+  Next: wake key through the main profile (Add Device signed in as Kai), wake test, then decide what to do with User5's key.
