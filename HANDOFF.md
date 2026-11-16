@@ -857,3 +857,16 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   user-credential:2210040079\ndevice-discovery-protocol-version:00020020\n"). Result: see next entry.
 - chiaki-ng's "console must be on the latest firmware" (owner's link, setup/remoteconnection) is only for connecting from
   outside through PSN – not for local registration.
+- **6:22pm – REMOTE WAKE WORKS.** Kai in rest since 6:14pm (461 s); owner pasted the PowerShell line on the laptop → Kai
+  switched itself on. Helper resumed by itself (woke via "sleep", report 6:22:53pm). After a network wake NOBODY is signed in
+  (report users []): the PS4 waits at "press the PS button", then offers the profiles (User5 first = last used). Main
+  profiles do NOT need activating for this.
+- **Helper 1.1.23** (ps4-release ff651c4, on Kai 6:26pm): after a wake, if nobody is signed in, `sceUserServiceLogin(auto_login
+  profile)`; report `woke.login` = result (1 = someone already in). Kai rested again 6:27pm for wake test 2 (owner pastes the
+  line again). Result: next entry.
+- Owner asked (6:27pm): (a) activate the main profiles so they can register? → no need (any one profile with an ID per PS4
+  is enough – the key wakes the console, not a profile) and it would harm: a profile's saves are stamped with its account
+  ID, changing it makes the game call them corrupted (13 Nov test on Max) – never on Max/Kai/Atlas mains (GT Sport!).
+  (b) sync saves in rest mode? → not while resting (helper frozen), but wake → helper prepares → the guest presses PS and
+  sees "Kai, Aliff, Karen": remote wake makes the member-profile prep triggerable from the booking (needs the always-on
+  sender).
