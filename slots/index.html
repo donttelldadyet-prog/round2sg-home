@@ -159,7 +159,8 @@ h3.nm, .nm { color: var(--rc); }
 .row .ty { font-size: 11px; color: var(--mute); text-transform: uppercase; letter-spacing: .08em; }
 .row .when { font-size: 15px; }
 .row .when small { display: block; font-size: 12px; color: var(--mute); }
-.row .pickb { margin-top: 0; }
+.row .pickb { margin-top: 0; font: 600 13px 'Chakra Petch', sans-serif; letter-spacing: .02em; padding: 7px 13px; color: var(--rc); background: rgba(244,241,251,.06); border: 1px solid rgba(244,241,251,.2); background: color-mix(in srgb, var(--rc) 18%, transparent); border-color: color-mix(in srgb, var(--rc) 45%, transparent); transition: background .2s; }   /* soft room-colour tint (owner 16 Nov) */
+.row .pickb:hover { background: color-mix(in srgb, var(--rc) 28%, transparent); }
 @media (max-width: 640px) { .row { grid-template-columns: 1fr auto; } .row .pickb { grid-column: 1 / -1; justify-self: start; } }
 .room { cursor: pointer; }
 .room:hover { border-color: rgba(244,241,251,.3); }
@@ -607,7 +608,7 @@ h3.nm, .nm { color: var(--rc); }
         var o = list[0], R = ROOMS[uid];
         inner += '<div class="row" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty">' + R[2] + '</div></div>' +
           '<div class="when">' + list.map(function (x) { return clock(x.m); }).join(' · ') + '<small>' + (o.eb ? 'Early bird · ' : '') + 'from ' + money(o.prices[3]) + ' · up to ' + o.maxH + ' h</small></div>' +
-          '<button class="pickb" type="button" data-u="' + uid + '" data-m="' + o.m + '">START ' + clock(o.m).toUpperCase() + '</button></div>';
+          '<button class="pickb" type="button" data-u="' + uid + '" data-m="' + o.m + '">Start at ' + clock(o.m) + ' ›</button></div>';
       });
       if (inner) html += tierBox(g, inner);
     });
@@ -625,7 +626,7 @@ h3.nm, .nm { color: var(--rc); }
       var uid = r[0], o = r[1], R = ROOMS[uid];
       return '<div class="row' + (o.eb ? ' ebrow' : '') + '" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty" style="color:' + R[1] + '">' + R[2] + '</div></div>' +
         '<div class="when">' + (o.eb ? '<span class="ebtag">EARLY BIRD AVAILABLE</span>' : '') + clock(o.m) + '<small>' + money(o.prices[3]) + ' for 3 h · up to ' + o.maxH + ' h</small></div>' +
-        '<button class="pickb" type="button" data-u="' + uid + '" data-m="' + o.m + '">START ' + clock(o.m).toUpperCase() + '</button></div>';
+        '<button class="pickb" type="button" data-u="' + uid + '" data-m="' + o.m + '">Start at ' + clock(o.m) + ' ›</button></div>';
     }).join('');
   }
 
