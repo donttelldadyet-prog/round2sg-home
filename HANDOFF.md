@@ -1067,3 +1067,13 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   Scarlett 1.1.15 → 1.1.27 by themselves in quiet time; Max's switch did NOT stick this time). Bella still asleep on 1.1.26.
   **Owner's control group (10:05pm):** some rooms stay NOT registered for Remote Play to isolate the silences → registered:
   Kai, Atlas, Bella; not registered: Vale, Scarlett, Max. Compare `log.netfail` / `log.slow` between the two groups.
+- **10:12–10:19pm ATLAS WAKE TEST (owner asked; 9.00, registered key 357299b3) – did NOT wake.** Rested remotely 10:12:24
+  (job done). 10:15 Kai asked Atlas (.15) its status: "no answer in 4 s". 10:16 staff `ps4wake id=atlas` → engine chose
+  Vale as sender, sent 3× to .255 → nothing. 10:18 Kai sent 3× straight to .15 → nothing, no answer before or after.
+  → Atlas, like Bella, is OFF the network in rest mode. So it is NOT firmware 9.00 vs 11.00 – only Kai has ever answered
+  from rest. Atlas' rest-mode boxes have never been checked (14 Nov note: "Max + Atlas boxes off?") → owner to check
+  Settings › Power Save Settings › Set Features Available in Rest Mode on Atlas (Stay Connected + Turn On from Network)
+  and compare with Kai's (Kai also has Supply Power to USB = Always). If Atlas' boxes are on too, the difference is
+  something about Kai itself (model, how it joins the Wi-Fi) – ask for the model number (CUH-xxxx) of Kai, Atlas, Bella.
+  Bella woken by the owner ~10:13pm and took 1.1.27 by itself. All six on 1.1.27; no `log.netfail` lines anywhere at
+  10:19pm. Atlas left asleep (needs its PS button).
