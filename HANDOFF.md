@@ -1045,3 +1045,12 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   (8:54, 9:54) and there is no wake record → like Bella: the PS4 ran, the helper alone stood still 8:06–9:54pm (1 h 48 min),
   then carried on. Two rooms, same pattern, both on 1.1.25, both resumed after 1–2 h. Both now on 1.1.26 → next time
   `log.slow` names the step. (Atlas' PS4 clock runs ~8 min fast – display only.)
+  **Idle timeout? (owner asked 9:58pm) – probably not:** (1) Bella froze within a minute of a fresh start at 8:20pm with
+  the owner at it (not idle); (2) Atlas answered Kai's LAN status question with "200 Ok" at 9:50pm while its helper was
+  silent – the PS4's network was up; (3) the starter in the same process kept running (no suspend, no wake record).
+  **Stronger clue: Atlas (8:06:14) and Bella (8:06:26) went silent 12 seconds apart** – two PS4s on different Wi-Fi bands
+  (ch 36 / ch 6) with their own timers don't line up like that by chance → a shared event on the way OUT (internet,
+  upstream DNS 1.1.1.1/8.8.8.8 through nanoDNS, or the engine) at 8:06, after which those two helpers stayed stuck while
+  Vale's didn't. 1.1.26 now asks 127.0.0.1 with a 2.5 s limit, then 1.1.1.1 directly, then the remembered address, so a
+  stuck nanoDNS/upstream can't hold it. Gap: if checks now FAIL quickly instead of hanging, slow.log won't show it →
+  next helper should log failed check-ins (time, step, error, count) and report them on return.
