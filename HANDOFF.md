@@ -955,3 +955,9 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   Play search" → Bella doesn't answer on 192.168.88.6 at all. Same picture as 14 Nov evening and this morning: **Bella drops
   off the network** (Wi-Fi 56%, the weakest room) rather than a helper fault – or its address changed. To check at the PS4:
   Settings › Network › View Connection Status (address, signal) / Test Internet Connection.
+- **8:05pm Bella, owner at the PS4:** address still 192.168.88.6, signal 54% on 5 GHz, Test Internet Connection passes.
+  The helper checked in ONCE at ~7:58pm (while he ran the test), then silent again; a look job sent at 7:59 was never
+  collected, and Atlas again got no answer from 88.6. So the helper is alive – Bella's Wi-Fi link stalls and only wakes
+  briefly when the PS4 itself re-tests it. Suggested to the owner: put Bella on 2.4 GHz (Scarlett is, at 100%) via Set Up
+  Internet Connection › Custom, keeping the DNS exactly as now (not "Easy" – that would reset the blocker's DNS), or cable.
+  Number 84363859 not used (expired when he left the Add Device screen).
