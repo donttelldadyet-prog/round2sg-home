@@ -1124,3 +1124,13 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   Atlas/Bella (silent in rest) with the four that work, without the router app. First readings: Kai cc:ba:bd:28:65:62
   (5 GHz ch 36, −70 dBm, 60%); Scarlett cc:ba:bd:28:65:60 (2.4 GHz ch 6, −46 dBm, 100%) – same unit, two radios.
   Atlas/Bella get 1.1.28 when the owner switches them on (quiet-time update). Light check after: same 13/2/2.
+- **17 Nov 12:03am readings (owner switched Atlas + Bella on ~11:57pm):**
+  · **Atlas (1.1.28): SAME mesh radio as Kai** – ap cc:ba:bd:28:65:62, 5 GHz ch 36, −68 dBm / 64% (Kai −70 dBm / 60%).
+  So for Atlas the Wi-Fi link is NOT the difference – the "weak Wi-Fi" idea is wrong for Atlas. Left: PS4 model
+  (Atlas hardware 2C:CC:44…, Bella 78:C8:81…, the four that work: BC:60:A7 ×2, F8:46:1C, 70:9E:29), or a setting.
+  · **Bella:** woke (report 23:57:11: slept 4198 s) and answers the broadcast "200 Ok" from .6 – but **no check-in
+  since 22:46:46**, so it never took 1.1.28: the helper is stuck AGAIN right after a wake report, on 1.1.27 with time
+  limits on every network step → the stuck step is probably NOT network. Gap: r2_where() only saves network steps to
+  where.txt (others save=0), so a restart can't name a non-network step → next helper: save every step (cheap), and a
+  watchdog that notes when the loop hasn't moved for 3 min.
+  · Vale, Max, Scarlett back in standby by themselves (~30 min after their network wakes, as expected).
