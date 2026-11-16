@@ -926,3 +926,22 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   Kai now holds two keys (User5's 83ba890f, main's e55667bb); whether the old one still works was not checked.
   Kai on 1.1.25 (updates work again after the restart). Rooms on 1.1.25: Kai, Atlas, Bella; Vale 1.1.24; Scarlett 1.1.15,
   Max 1.1.14 (guests).
+### 16 Nov 2026, 7:40–8pm – remote wake becomes a feature (trial): keys in the engine, buttons, early-bird morning wake
+- Owner: wake ONLY works from rest mode (a PS4 switched off / power cut needs a manual start + jailbreak). Trial rule (7:40pm):
+  "in the morning we turn on the first room that has bookings" → that PS4 wakes the rooms with an EARLY-BIRD booking.
+  Also asked: phone as the wake sender when on the shop Wi-Fi → NOT possible (a browser page can't send the UDP wake);
+  wakes go through an awake PS4. Buttons wanted: wake all, wake early-bird, sleep all.
+- **Engine 5e7a1bc DEPLOYED** (27 bindings incl. R2, 3 timers; only my two commits since 6a0cf81): kv `ps4wake`
+  {console: {key, mac, acct, at}} – filled automatically when a `/_rpreg` look job returns `rpreg/key` (matched by the address
+  in the job) or by staff `ps4wakekey`; staff `ps4wake` id=<console> | `all` | `early` → picks an awake, linked PS4 with helper
+  ≥ 1.1.21 as sender, look job `/_wakerp.<sender subnet>.255.<key>;…` (broadcast, so DHCP changes don't matter; job skips the
+  guests check – `nobusy`); `early` = sessions today starting 11:00 (one sessDay look = 2 SimplyBook requests per press).
+  **Morning trial** `ps4MorningWake` in the helper poll: 7:00–11:15am, once a day (kv `ps4wakeRun` {day, by, rooms, booked,
+  note}), only from a PS4 whose helper started or woke within 15 min (so one left on overnight doesn't fire at 7am), wakes
+  early-bird rooms that have a key and are asleep. ps4list carries `wake` per PS4 and `wakeRun`.
+- **Control centre 6368df4:** PS4s › buttons "⏰ Wake early-bird rooms", "⏰ Wake all", "😴 Sleep all" (rest mode to every PS4
+  that is on; rooms with guests / a game open stay on), "⏰ Wake" on an offline registered tile, wake status under More, last
+  morning wake line. System check step "PS4 remote wake: refuses without a key, nothing sent" (also in the Light check).
+- Kai's key stored (e55667bb, main profile). **Only Kai is registered** – the others need the one-time registration
+  (Add Device number, or the helper making it: not built). Light check after: 13 passed · 2 to look at · 2 failed (the same
+  two: side timer at 50, SimplyBook count today). Not tested end to end: the group buttons and the morning trigger.
