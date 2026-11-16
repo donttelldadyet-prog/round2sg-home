@@ -744,3 +744,19 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   sha-checked, swaps the AutoRun file `/user/data/payloads/nanodns-ps4.elf` keeping the old one; active after the next
   restart + jailbreak) and making the `dns` job use "write file → wait for reload → test" when the blocker is the Round2 one.
 - Nothing live changed in this block except helper 1.1.17 (read-only additions).
+- **5:12pm – OWN PROGRAM WORKS on Kai (9.00, GoldHEN 2.4b18.12), owner chose "1".** Helper **1.1.18** (ps4-helper, released
+  ps4-release 6f66139, sha e556a000…, 1,242,120 B): `ps4/spawn/` = elfldr.c + pt.c from ps4-payload-dev/elfldr a481740
+  (GPLv3+; pt_attach retry and every waitpid bounded, log → /data/round2/own-spawn.log) + `r2spawn.c` (bootstrap-elf.c's
+  preparation: find the ptrace check pattern "48b836…0f84190200004c8b" (+22) and NOP it, QA flags[1] |= 3, raise this
+  program's caps/prison/rootdir/jaildir for the spawn, then put them back). Look `/_own` spawns the built-in test payload
+  (`ps4/own/main.c`, writes /data/round2/own-test.txt every 5 s for 3 min); `/_kill.<pid>` only for that pid.
+  **Result:** log: ptrace check found + switched off, QA flags 0x00 → 0x03, "spawn returned 208", rights put back. `/_ps`:
+  208 = "Payload|SceSpZeroConfMai" (helper still 45, parent 38). own-test.txt counted 5 s … 120 s. `/_kill.208` → gone; helper
+  kept polling, port 53 still held in 45, Sony blocked. In-memory changes on Kai until its next restart: ptrace check off,
+  QA flags[1]=3 (GoldHEN had them at 0). Not tested: 11.00 · a payload that uses PS4 system libraries (our helper: UserService,
+  RegMgr, SystemService, NetCtl, FsInternalForVsh – a spawned program is a "daemon" and may not load app libraries) · nanoDNS
+  as own program · rest mode → wake with an own program running · a game starting while one runs.
+  **Next (proposed):** `/_own` variants on Kai: (a) stock nanoDNS can't run twice (port 53) → build "starter 3" that spawns
+  the blocker and the helper as own programs, tried first by hand-loading on Kai (AutoRun untouched), then rest/wake + game
+  tests, then 11.00 (Vale), only then AutoRun. All rooms take 1.1.18 in quiet time – its spawn code only runs on `/_own`.
+  System check before and after: 38 passed · 3 to look at · 1 failed (same; the failed one = side timer at 50 requests, not from this).
