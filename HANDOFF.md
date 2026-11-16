@@ -620,3 +620,18 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
 - Still can't be told apart from far away: rest mode by controller/auto-timer vs. power off vs. helper stopped (the helper is
   frozen before it can say anything). Idea not built: when a helper goes silent, have a live one ask it with `/_ddp.<ip>`
   (on / standby) automatically.
+- **16 Nov midday, results.** Bella (restart + jailbreak 11:36) and Scarlett took 1.1.14 and stay online. Bella's log (first use
+  of the new `log` field): 10:33:02 "helper 1.1.9 stopped by signal 19" (the wake), and the starter's hourly line at 11:33 said
+  "helper running" while nothing had polled for an hour → 1.1.13 was **alive but stuck**, not dead (cause unproven; guess: a
+  network call that never returned, right after the wake, weak Wi-Fi). Idea not built: a time limit on every network call (1.1.15).
+- **Kai wake test (owner woke it ~12:00 from the rest mode sent at 1:15am):** helper 1.1.13 kept running through the wake – no
+  restart, no jailbreak (starter 12:00:26 "hourly: helper running") → **the 1.1.13 wake fix works on a real PS4.** It polled
+  from 12:00 but sent its first full report only at 12:14 (reports every 15 loop-minutes; a wake didn't trigger one before
+  1.1.14), then took 1.1.14 by itself at once ("said hello – kept"). Auto-update needs a report < 20 min old – that is the delay.
+- **Clean-up sizes (owner: "why do they grow back, nanoDNS blocks updates"):** Kai idle for 30+ min after waking: downloads
+  (1 stuck patch CUSA52342, 1,074 MB), captures (104 files, 136 MB) and free space (140.4 GB) identical to 1:15am → an idle PS4
+  doesn't grow. Stuck downloads are mostly exactly 1,074 or 268 MB → looks like reserved space for queued patches that never
+  arrive (unconfirmed). Owner says automatic downloads and trophy clips are OFF on all PS4s. Next test: open games on Kai and
+  see whether a new stuck download appears.
+- Control centre › PS4s tiles redone (owner: "too convoluted"): one long tile per room, state + one line of numbers + problems
+  on the left, buttons on the right, everything else under "More".
