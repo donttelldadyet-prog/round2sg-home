@@ -1134,3 +1134,12 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   where.txt (others save=0), so a restart can't name a non-network step → next helper: save every step (cheap), and a
   watchdog that notes when the loop hasn't moved for 3 min.
   · Vale, Max, Scarlett back in standby by themselves (~30 min after their network wakes, as expected).
+- **12:15am HELPER 1.1.29** (ps4-helper 39ea609, ps4-release 1c6fabd): report `hw` = model name (sceKernelGetHwModelName,
+  looked up at run time from libkernel_sys handle 0x2001), `pro` (sceKernelIsNeoMode), `idps8` (first 8 bytes of the
+  console ID). Owner asked "a helper can't read the hardware?". Kai: **CUH-7016B (PS4 Pro), B01Y**, idps8 0000000101870211.
+  The others report it when they next wake and take 1.1.29 (Atlas went to rest before updating).
+  **Owner (12:07am): after a NETWORK wake the PS4 stops on "Welcome back to PlayStation" (press the PS button) even
+  though auto-login is on for every main profile; a manual power-on logs straight in.** That's the PS4's own rule – a
+  network/Remote Play wake waits for someone at the controller. 1.1.23's sceUserServiceLogin from the helper jammed that
+  screen. Options to look at: a virtual PS-button press from the helper (the system's own virtual-pad route that Remote
+  Play uses), or the sender finishing a short Remote Play session and pressing PS (chiaki can) – heavier.
