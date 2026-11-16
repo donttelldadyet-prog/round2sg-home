@@ -2691,7 +2691,7 @@ async function gm(env, req) {
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await mvApi(env, hb, f, new URL(req.url).origin)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
-  if (/^ps4(list|map|discs|names|clean|update|look|lookres|rel|prof|saves|dns|dnsget)$/.test(act)) {   /* staff: control centre › PS4s (13 Nov) */
+  if (/^ps4(list|map|discs|names|clean|update|look|lookres|rel|prof|saves|dns|dnsget|wake|wakekey)$/.test(act)) {   /* staff: control centre › PS4s (13 Nov) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await ps4Gm(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
@@ -4125,6 +4125,44 @@ async function ps4AutoUpdate(env, hb, id, room) {   /* quiet time? hand out an u
   return c;
 }
 const ps4Out = (c) => c.do === 'update' ? { cid: c.cid, do: 'update', v: c.v, sha: c.sha, size: c.size } : c.do === 'look' && c.p ? { cid: c.cid, do: 'look', p: c.p } : c.do === 'prof' ? { cid: c.cid, do: 'prof', op: c.op, u: c.u, v: c.pv || '' } : c.do === 'dns' ? { cid: c.cid, do: 'dns', sha: c.sha } : { cid: c.cid, do: c.do };
+/* ===== Remote wake (owner, 16 Nov 2026) =====
+   A PS4 in REST MODE (not switched off) wakes when a registered Remote Play device sends "WAKEUP" with its regist key (helper
+   1.1.21+: '/_wakerp.<ip>.<key>'; registration '/_rpreg…', keys in kv ps4wake). Any awake PS4's helper can be the sender; the
+   message goes to the whole shop network (x.x.x.255), each PS4 only obeys its own key – so DHCP address changes don't matter.
+   - staff `ps4wake` (id): picks an awake PS4 as sender.
+   - TRIAL (owner 16 Nov 7:40pm): the first PS4 that comes on in the morning (7am–11:15am) wakes the rooms that have an EARLY
+     BIRD booking today (start 11:00) and are still asleep. Once a day (kv ps4wakeRun). One look at the day's sessions. */
+const PS4_WAKE_MIN = '1.1.21';
+function ps4WakePaths(senderRep, keys) {
+  const ip = String((senderRep.wifi && senderRep.wifi.ip) || ''), m = ip.match(/^(\d+\.\d+\.\d+)\.\d+$/);
+  if (!m) return '';
+  return keys.slice(0, 5).map((k) => '/_wakerp.' + m[1] + '.255.' + k).join(';');
+}
+async function ps4MorningWake(env, hb, id, room, now) {
+  const hm = new Date(now + 8 * 3600e3).toISOString().slice(11, 16), day = sgDay(now);
+  if (hm < '07:00' || hm > '11:15') return null;
+  const run = await hb.kvGet('ps4wakeRun'); if (run && run.day === day) return null;
+  const rep = await hb.kvGet('ps4:' + id); if (!rep || ps4Newer(PS4_WAKE_MIN, rep.v)) return null;
+  /* only a PS4 that has JUST been switched on or woken (helper start or wake within 15 min, from its last report) – one left
+     on overnight must not wake the others at 7am */
+  const ago = (x) => x && rep.psClock ? now - (rep.t - (rep.psClock - x) * 1000) : 1e12;
+  if (now - rep.t > 16 * 60e3 || Math.min(ago(rep.up), ago(rep.woke && rep.woke.at)) > 15 * 60e3) return null;
+  const W = (await hb.kvGet('ps4wake')) || {}; if (!Object.keys(W).length) return null;
+  await hb.kvSet('ps4wakeRun', { day, at: now, by: room, rooms: [], note: 'looking' });   /* claim the day first: one look only */
+  const eb = sgMs0(day + ' 11:00'), S = (await sessDay(env, day)).sessions.filter((x) => !x.sys && !x.orphanExt && x.s === eb);
+  const map = (await hb.kvGet('ps4map')) || {}, rooms = [], keys = [];
+  for (const x of S) {
+    const r2 = GM_ROOM[x.unit], cid = Object.keys(map).find((k) => map[k] === r2);
+    if (!cid || cid === id || !W[cid] || rooms.includes(r2)) continue;
+    if (now - ((await hb.kvGet('ps4poll:' + cid)) || 0) < 3 * 60e3) continue;   /* already awake */
+    rooms.push(r2); keys.push(W[cid].key);
+  }
+  const booked = [...new Set(S.map((x) => GM_ROOM[x.unit]))];
+  await hb.kvSet('ps4wakeRun', { day, at: now, by: room, rooms, booked, note: rooms.length ? 'sent' : 'nothing to wake' });
+  const paths = rooms.length ? ps4WakePaths(rep, keys) : ''; if (!paths) return null;
+  const c = { cid: 'w' + now.toString(36), do: 'look', p: paths, at: now, takenAt: now, by: 'auto: early-bird wake (' + rooms.join(', ') + ')', state: 'taken' };
+  await hb.kvSet('ps4cmd:' + id, c); return c;
+}
 async function ps4Cmd(env, req) {   /* the helper, every minute: anything for me? */
   if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
   let r = {}; try { r = JSON.parse(await req.text()); } catch (e) {}
@@ -4134,11 +4172,14 @@ async function ps4Cmd(env, req) {   /* the helper, every minute: anything for me
   const c = await hb.kvGet('ps4cmd:' + id);
   if (!c || c.state !== 'sent') {
     const room0 = ((await hb.kvGet('ps4map')) || {})[id];
-    const a = room0 && !(c && c.state === 'taken' && now - c.takenAt < 15 * 60e3) ? await ps4AutoUpdate(env, hb, id, room0).catch(() => null) : null;
+    const idle = room0 && !(c && c.state === 'taken' && now - c.takenAt < 15 * 60e3);
+    const w = idle ? await ps4MorningWake(env, hb, id, room0, now).catch(() => null) : null;
+    if (w) return J({ ok: true, now, cmd: ps4Out(w) });
+    const a = idle ? await ps4AutoUpdate(env, hb, id, room0).catch(() => null) : null;
     return J(a ? { ok: true, now, cmd: ps4Out(a) } : { ok: true, now });
   }
   if (now - c.at > 10 * 60e3) { c.state = 'expired'; await hb.kvSet('ps4cmd:' + id, c); return J({ ok: true, now }); }
-  const room = ((await hb.kvGet('ps4map')) || {})[id] || null, busy = room ? await ps4Busy(env, room) : 'not linked to a room';
+  const room = ((await hb.kvGet('ps4map')) || {})[id] || null, busy = !room ? 'not linked to a room' : c.nobusy ? null : await ps4Busy(env, room);
   if (busy) { c.state = 'refused'; c.res = { why: busy }; await hb.kvSet('ps4cmd:' + id, c); return J({ ok: true, now }); }
   c.state = 'taken'; c.takenAt = now; await hb.kvSet('ps4cmd:' + id, c);
   return J({ ok: true, now, cmd: ps4Out(c) });
@@ -4153,6 +4194,12 @@ async function ps4Done(env, req) {   /* the helper: how the command went */
   await hb.kvSet('ps4cmd:' + id, c);
   /* tail/… = lines of a text file and dns/… = blocker-settings steps (helper 1.1.16) keep up to 300 characters; the rest 40 */
   if ((c.do === 'look' || c.do === 'prof' || c.do === 'dns') && r.list && typeof r.list === 'object') await hb.kvSet('ps4look:' + id, { at: Date.now(), list: Object.fromEntries(Object.entries(r.list).slice(0, 400).map(([k, v]) => [String(k).slice(0, 200), String(v).slice(0, /^(tail|dns)\//.test(String(k)) ? 300 : 40)])) });
+  /* remote wake (16 Nov): a registration job ('/_rpreg.<ip>.<account>.<number>') returned a regist key -> keep it for the PS4
+     that has that address (kv ps4wake: { <console id>: { key, mac, acct, at } }) */
+  if (c.do === 'look' && r.list && r.list['rpreg/key'] && /^[0-9a-f]{4,16}$/i.test(String(r.list['rpreg/key']))) {
+    const m = String(c.p || '').match(/\/_rpreg\.(\d+\.\d+\.\d+\.\d+)\.([0-9a-f]{16})\./), ids = (await hb.kvGet('ps4ids')) || [];
+    if (m) for (const x of ids) { const rp = await hb.kvGet('ps4:' + x); if (rp && rp.wifi && rp.wifi.ip === m[1]) { const W = (await hb.kvGet('ps4wake')) || {}; W[x] = { key: String(r.list['rpreg/key']).toLowerCase(), mac: String(r.list['rpreg/mac'] || '').slice(0, 12), acct: m[2], at: Date.now() }; await hb.kvSet('ps4wake', W); break; } }
+  }
   if (c.do === 'dns') {   /* change log: who, when, which room, what happened */
     const L = (await hb.kvGet('ps4dnslog')) || [], e = L.find((x) => x.cid === c.cid);
     if (e) { e.state = c.state; e.why = c.res.why; e.doneAt = c.doneAt; e.steps = r.list && typeof r.list === 'object' ? Object.fromEntries(Object.entries(r.list).slice(0, 12).map(([k, v]) => [String(k).slice(0, 40), String(v).slice(0, 120)])) : undefined; await hb.kvSet('ps4dnslog', L); }
@@ -4267,6 +4314,28 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
     await hb.kvSet('ps4cmd:' + id, c); return { ok: true, cmd: c };
   }
   if (act === 'ps4lookres') return { ok: true, look: await hb.kvGet('ps4look:' + ps4Id(f.id)) };
+  if (act === 'ps4wakekey') {   /* staff: set / clear a PS4's wake key by hand (normally stored by the registration job) */
+    const id = ps4Id(f.id), key = String(f.key || '').toLowerCase(), W = (await hb.kvGet('ps4wake')) || {};
+    if (id.length < 16) return { error: 'Which PS4?' };
+    if (key && !/^[0-9a-f]{4,16}$/.test(key)) return { error: 'Bad key.' };
+    if (key) W[id] = { key, mac: String(f.mac || '').slice(0, 12), acct: String(f.acct || '').slice(0, 16), at: Date.now() }; else delete W[id];
+    await hb.kvSet('ps4wake', W); return { ok: true, has: Object.keys(W) };
+  }
+  if (act === 'ps4wake') {   /* staff: wake a PS4 from rest mode – another awake PS4 sends its key */
+    const id = ps4Id(f.id), W = (await hb.kvGet('ps4wake')) || {}, map = (await hb.kvGet('ps4map')) || {}, now = Date.now();
+    if (!W[id]) return { error: 'No wake key for this PS4 yet (it has to be registered once).' };
+    if (now - ((await hb.kvGet('ps4poll:' + id)) || 0) < 3 * 60e3) return { error: 'It’s already on.' };
+    for (const sid of ((await hb.kvGet('ps4ids')) || [])) {
+      if (sid === id || !map[sid] || now - ((await hb.kvGet('ps4poll:' + sid)) || 0) > 3 * 60e3) continue;
+      const rep = await hb.kvGet('ps4:' + sid), pc = await hb.kvGet('ps4cmd:' + sid);
+      if (!rep || ps4Newer(PS4_WAKE_MIN, rep.v) || (pc && (pc.state === 'sent' || (pc.state === 'taken' && now - pc.takenAt < 3 * 60e3)))) continue;
+      const paths = ps4WakePaths(rep, [W[id].key]); if (!paths) continue;
+      const c = { cid: 'w' + now.toString(36), do: 'look', p: paths, at: now, takenAt: now, by: String(f.by || 'control centre').slice(0, 24) + ': wake ' + (map[id] || ''), state: 'wake' };
+      c.state = 'sent'; c.nobusy = true;
+      await hb.kvSet('ps4cmd:' + sid, c); return { ok: true, sender: map[sid], cmd: c };
+    }
+    return { error: 'No other PS4 is on to send the wake (needs one awake PS4 with helper ' + PS4_WAKE_MIN + '+).' };
+  }
   if (act === 'ps4dnsget') return { ok: true, cur: await hb.kvGet('ps4dns:cur'), log: ((await hb.kvGet('ps4dnslog')) || []).slice(0, 40) };   /* staff: last settings sent + change log */
   if (act === 'ps4dns') {   /* staff: check (dry=1) or send new blocker settings to PS4s (ids = comma list) – helper 1.1.16+ */
     const ini = String(f.ini || '').replace(/\r\n/g, '\n'), bad = ps4DnsCheck(ini);
@@ -4318,11 +4387,11 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
   }
   /* ps4list (16 Nov: g=1 also returns each PS4's games with version v / patch pv – the save system needs the same version in every room) */
   const ids = (await hb.kvGet('ps4ids')) || [], now = Date.now(), list = [];
-  const map = (await hb.kvGet('ps4map')) || {};
-  for (const id of ids) { const r = await hb.kvGet('ps4:' + id); if (r) list.push(Object.assign({}, r, { room: map[id] || null, poll: (await hb.kvGet('ps4poll:' + id)) || 0, cmd: (await hb.kvGet('ps4cmd:' + id)) || null, runName: r.running ? (((r.games || []).find((g) => g && g.id === r.running) || {}).t || '') : '', games: f.g === '1' ? (r.games || []) : undefined, nGames: (r.games || []).length, ago: Math.round((now - r.t) / 60e3) })); }
+  const map = (await hb.kvGet('ps4map')) || {}, wakeK = (await hb.kvGet('ps4wake')) || {};
+  for (const id of ids) { const r = await hb.kvGet('ps4:' + id); if (r) list.push(Object.assign({}, r, { room: map[id] || null, poll: (await hb.kvGet('ps4poll:' + id)) || 0, cmd: (await hb.kvGet('ps4cmd:' + id)) || null, runName: r.running ? (((r.games || []).find((g) => g && g.id === r.running) || {}).t || '') : '', wake: !!wakeK[id], games: f.g === '1' ? (r.games || []) : undefined, nGames: (r.games || []).length, ago: Math.round((now - r.t) / 60e3) })); }
   const night = sgDay(now - SHADOW_TILL * 60e3);
   const rel = await ps4Latest(env).catch(() => null);
-  return { ok: true, now, list, latest: rel ? rel.v : null, selfUp: PS4_SELFUP, auto: (await hb.kvGet('ps4auto')) !== false, map: (await hb.kvGet('ps4map')) || {}, played: (await hb.kvGet('ps4play:' + night)) || {}, discs: (await hb.kvGet('ps4discs')) || [], names: (await hb.kvGet('ps4names')) || {} };
+  return { ok: true, now, list, latest: rel ? rel.v : null, selfUp: PS4_SELFUP, wakeRun: (await hb.kvGet('ps4wakeRun')) || null, auto: (await hb.kvGet('ps4auto')) !== false, map: (await hb.kvGet('ps4map')) || {}, played: (await hb.kvGet('ps4play:' + night)) || {}, discs: (await hb.kvGet('ps4discs')) || [], names: (await hb.kvGet('ps4names')) || {} };
 }
 
 /* ===== Remote TV updates (owner, 2 Nov) =====
