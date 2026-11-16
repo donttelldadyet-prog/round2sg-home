@@ -870,3 +870,15 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   (b) sync saves in rest mode? → not while resting (helper frozen), but wake → helper prepares → the guest presses PS and
   sees "Kai, Aliff, Karen": remote wake makes the member-profile prep triggerable from the booking (needs the always-on
   sender).
+- **6:32pm wake test 2 (laptop sends): Kai woke, helper 1.1.23 signed the main profile in by itself** – report woke.login 0,
+  users ["Kai"]. **6:38pm wake test 3 – FULLY REMOTE, PS4 → PS4:** Kai rested by `/_rest` (6:35pm); Vale (updated 1.1.13 →
+  1.1.23 by Update now, clean) ran `/_wakerp.192.168.88.18.83ba890f`: before "620 Server Standby", WAKEUP ×3, after 25 s
+  "200 Ok"; Kai's helper: woke 6:38:29pm (slept 151 s), login 0, users ["Kai"]. No laptop, no controller.
+  State: Kai awake on 1.1.23, registered (key 83ba890f via User5). Vale awake on 1.1.23. Atlas (1.0.7) + Bella (1.1.14) are
+  switched on per the owner but their helpers have been silent since ~6:21 / 6:23pm (Atlas 1.0.7 = old wake bug; Bella 1.1.14
+  = the "alive but stuck" one, fixed from 1.1.15) → need a restart + jailbreak to pick up the new helper.
+- Owner 6:31pm asks for a save test between an activated profile (User5) and a new "game save test" profile on Kai, because
+  Bella's main is activated. Facts: activated → not activated is already proven with OUR method (16 Nov: Vale's Valentine,
+  activated, → Kai User3, not activated – the restore keeps the receiving save's own sce_sys/param.sfo, so the stamp always
+  matches the receiver). User5 has no saves; the helper can't create profiles (owner makes "User6" on the PS4, helper renames
+  it); restore still needs an existing save of the game in the receiving profile (step 3 not built).
