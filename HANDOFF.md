@@ -965,3 +965,14 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   number 95610423. Bella's helper answered at once and registered with itself: wake key `c203a687`, nickname PS4-878,
   MAC 78c8810636c1, main profile's existing ID 284561706f6c6c6f left unchanged. Engine `ps4wake` now holds kai, atlas,
   bella. Still to watch: that Bella stays connected on 2.4 GHz (the silences were the weak 5 GHz link). Not woken yet.
+- **8:10pm HELPERS GO SILENT WHILE THE PS4 IS ON (open, not solved).** Owner asked to rest Kai/Atlas/Bella for a wake
+  test; the rest jobs (8:08:09) were never collected. Last check-ins: Kai 8:02:41, Atlas 8:06:14, Bella 8:06:26 – owner
+  is looking at all three, on their home screens, nobody put them to rest. Vale (1.1.24) keeps checking in every 60 s.
+  Earlier the same evening: Max 7:35:12, Bella 7:36:32, Scarlett 7:38:36 (Bella came back for one check-in at 7:58 when
+  the owner ran Test Internet Connection, and again 8:04–8:06 after its Wi-Fi was set up anew). So **Bella's silences are
+  not (only) its weak Wi-Fi** – Kai (74%) and Atlas (60%) do it too, in clusters a few minutes apart. Best guess: the
+  helper is alive but stuck in a network call with no time limit – in r2tls only `getaddrinfo` (the name lookup, which
+  goes through nanoDNS) has none; connect/send/read all have limits since 1.1.15. Not proven. Next: owner runs Test
+  Internet Connection on Kai only; if Kai's helper comes back, read `/_ps`, `/_thr`, the nanoDNS log and rest.log, then
+  fix (use the remembered engine address first / put the lookup under a time limit / a watchdog that restarts the loop).
+  Remote wake is NOT reliable until this is fixed – a silent helper can't be the sender or take a rest command.
