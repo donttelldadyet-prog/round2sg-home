@@ -760,3 +760,17 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   the blocker and the helper as own programs, tried first by hand-loading on Kai (AutoRun untouched), then rest/wake + game
   tests, then 11.00 (Vale), only then AutoRun. All rooms take 1.1.18 in quiet time – its spawn code only runs on `/_own`.
   System check before and after: 38 passed · 3 to look at · 1 failed (same; the failed one = side timer at 50 requests, not from this).
+- **5:26pm – THE REAL HELPER RUNS AS ITS OWN PROGRAM on Kai (helper 1.1.19, ps4-release 4139036).** Owner said ok to
+  "starter 3"; first a cheaper test with no owner work: look `/_selfown` → the helper (pid 45) reads app/current.elf, spawns
+  it as an own program, writes /data/round2/own-helper.pid, lets go of the lock and watches 3 min for /data/round2/own-ok
+  (written by the copy after its first 200 report; else it kills the copy and the starter relaunches a normal helper).
+  Helper knows it is "own" when own-helper.pid = its pid (`g_own`; then step_aside really exits). Report has `pid`, `own`.
+  **Result:** own-spawn.log: spawn returned 209 → "the copy reported to the engine - hand-over done" (15 s). ps4list: pid 209,
+  own 1, full report (temp, Wi-Fi, 40 games, Sony blocked). In own mode also OK: `/_profiles` (registry + user service, all
+  6 profiles), `/_save.12ae5b2a.CUSA34284.SaveData` (key service + save mount read-only: opened, listed, closed 0), `/_tail`.
+  → the "spawned programs can't load app libraries" worry did NOT bite for our helper on 9.00.
+  To check: report said captures 21 MB / 104 files (earlier 136 MB / 104) – real change or a counting difference in own mode?
+  Kai now: helper = pid 209 (own) until the next helper update or PS4 restart (then back to the shared way); an idle old
+  helper thread sleeps in 45; blocker + starter still in 45. Still to test with the owner at Kai: a game opened/closed, remote
+  rest (`/_rest` from own mode) → wake. Then: starter 3 (spawns blocker + helper as own programs; falls back to BinLoader),
+  11.00 (Vale). System check after 1.1.19 + the test: 38 passed · 3 to look at · 1 failed (unchanged).
