@@ -1063,3 +1063,7 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   asking the owner anything. What should have been done: step/failure records in 1.1.15 (when the time limits went in),
   and Bella's/Atlas' reports read the minute they came back (9:27 / 9:54pm). Limit: the file reader is a job the helper
   runs, so a STUCK helper can't answer it – the evidence arrives with its next report.
+- **10:08pm all awake rooms on 1.1.27:** Kai, Atlas (by hand), Vale (by hand after its guests), Max (1.1.14 → 1.1.27 and
+  Scarlett 1.1.15 → 1.1.27 by themselves in quiet time; Max's switch did NOT stick this time). Bella still asleep on 1.1.26.
+  **Owner's control group (10:05pm):** some rooms stay NOT registered for Remote Play to isolate the silences → registered:
+  Kai, Atlas, Bella; not registered: Vale, Scarlett, Max. Compare `log.netfail` / `log.slow` between the two groups.
