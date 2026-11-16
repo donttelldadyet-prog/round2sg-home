@@ -604,7 +604,7 @@ h3.nm, .nm { color: var(--rc); }
   function when() { var o = startObj(); return dayLabel(day) + ' · ' + clock(o.m) + '–' + clock(o.m + cur.len * 60) + (o.eb ? ' · Early bird' : ''); }
   function summary() {
     var o = cur.start != null ? startObj() : null;
-    if (o) $('pWhen').innerHTML = '<span class="sumrm" style="color:' + ROOMS[cur.uid][1] + '">' + ic(CHARIC[cur.uid]) + ROOMS[cur.uid][0] + '</span><br>' + when();   /* room in its own colour + icon, like the room cards */ else $('pWhen').textContent = 'Pick a start time';
+    if (o) $('pWhen').innerHTML = '<span class="sumrm" style="color:' + ROOMS[cur.uid][1] + '">' + ic(CHARIC[cur.uid]) + ROOMS[cur.uid][0] + '’s room</span><br>' + when();   /* room in its own colour + icon, like the room cards */ else $('pWhen').textContent = 'Pick a start time';
     var sv = o ? saving(o, cur.len) : null;
     $('pPrice').innerHTML = o ? money(o.prices[cur.len]) + (sv ? '<span class="saved">you save ' + money(Math.round(sv.amt * 100) / 100) + ' (' + sv.pct + '%)</span>' : '') : '';
     $('pGo').disabled = !o;
