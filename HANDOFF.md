@@ -983,3 +983,13 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   /data/round2/helper-stopped.txt), (2) a step in the main loop that blocks (running_title, update_guard, check_cmd).
   Evidence is on the PS4s' disks and survives a restart: after a restart + jailbreak read
   `/_tail.helper-stopped.txt|12;/_tail.rest.log|5;/_tail.own-spawn.log|8` and the starter's log BEFORE anything else.
+  **8:20–8:25pm Bella restarted + jailbroken by the owner:** helper 1.1.25 started 8:20:08, reported and checked in at
+  8:20:24 ("connected" pop-up seen) – and then NOTHING: no check-in at 8:21:25 or after, a look job sent 8:21 never
+  collected. So it now freezes within the first minute, reproducibly. Its report carried the records: starter log has
+  no relaunch and no stop since 7:10pm ("19:45:04 hourly: helper running"), helper-stopped.txt has nothing after 10:33am
+  → **the helper is not stopped by a signal; it holds its lock and hangs** (or its thread died quietly). Not the
+  own-program route (`own:0`, pid 46 = normal shared process; only Kai ever ran `/_selfown`, as a test). 1.1.24→1.1.25
+  differs only by `/_reboot` (checked the diff) – so not a 1.1.25 code fault as such. What the three silent PS4s share
+  and Vale (fine, 1.1.24) lacks: **Remote Play enabled + registered tonight** (Kai main key ~7:30 → silent 8:02; Atlas
+  ~7:50 → 8:06; Bella 8:05 → 8:06, and after the restart within a minute). Unproven. Next test asked of the owner:
+  Bella – untick Enable Remote Play, restart + jailbreak, see whether the helper keeps checking in for 5+ minutes.
