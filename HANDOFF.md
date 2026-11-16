@@ -1153,5 +1153,13 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   the 1.1.29 report) – are Atlas/Bella a different model?; (3) "Welcome back" screen after a network wake: research a
   virtual PS-button press from the helper (should also stop the 5-min fall-back to rest); owner 12:17am: ALSO research other wake
   methods that behave like a real power-on (auto-login): HDMI-CEC from the room TV (TV-on already wakes Atlas' PS4), a
-  small Bluetooth device acting as a paired controller pressing PS, a button-pusher; (4) morning trigger test;
+  small Bluetooth device acting as a paired controller pressing PS, a button-pusher; **RESEARCH DONE 17 Nov ~2am** (owner
+  asked for a full GitHub review): Claude Doc "Waking the room PS4s: GitHub and web research"
+  https://claude.ai/artifact/HKvaArAM3KKsYC2pFzqpBd (114 search phrases, ~2,270 repos, 50 read). Top picks:
+  B) Second Screen pairing (Mobile App Connection Settings › Add Device PIN; ps4-waker/BenjaminFaal: wake + LOGIN + PS
+  button + start title + standby over TCP 997; credential = SHA-256 of account ID decimal – our 15 Nov test skipped the
+  PIN login step) → test on Kai first; D) seregonwar/Ghostpad virtual controller payload (scePadVirtualDeviceAddDevice +
+  sceMbusBindDeviceWithUserId; firmware-specific patch); C) ESP32 Bluetooth wake spoofing the room's paired controller
+  (FreeTHX/wakepsx-on-bt) – no Wi-Fi needed in rest → candidate fix for Atlas/Bella. Keep-awake after wake:
+  sceSystemServicePowerTick / sceShellCoreUtilResetAutoPowerDownTimer (both in our toolkit). (4) morning trigger test;
   (5) owner opens GT Sport on Max once (main profile now has an ID).
