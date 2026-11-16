@@ -949,3 +949,9 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   52326d61696e3031 (the shared main ID, result 0), then `/_rpreg` with the owner's number 81519385 straight away – accepted
   WITHOUT a restart: **key 357299b3**, nickname PS4-401, MAC 2ccc441e241f; stored by the engine automatically (ps4list wake:
   atlas, kai). Atlas's existing main saves not checked after the ID change (Kai's were fine). Not woken yet.
+- **7:55pm BELLA not registered:** owner sent number 84363859, but Bella's helper (1.1.25, started 7:10pm) has been silent
+  since 7:36:32pm while the PS4 is on (last job: the wake of Kai at 7:33pm, done). Tried registering it from ATLAS instead
+  (`/_rpreg.192.168.88.6.284561706f6c6c6f.…` – a PS4 can register another one over the network): "no answer to the Remote
+  Play search" → Bella doesn't answer on 192.168.88.6 at all. Same picture as 14 Nov evening and this morning: **Bella drops
+  off the network** (Wi-Fi 56%, the weakest room) rather than a helper fault – or its address changed. To check at the PS4:
+  Settings › Network › View Connection Status (address, signal) / Test Internet Connection.
