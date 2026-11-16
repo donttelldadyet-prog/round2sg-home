@@ -961,3 +961,7 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   briefly when the PS4 itself re-tests it. Suggested to the owner: put Bella on 2.4 GHz (Scarlett is, at 100%) via Set Up
   Internet Connection › Custom, keeping the DNS exactly as now (not "Easy" – that would reset the blocker's DNS), or cable.
   Number 84363859 not used (expired when he left the Add Device screen).
+- **8:06pm BELLA REGISTERED.** Owner moved Bella to 2.4 GHz (now channel 6, signal 94–96%, was 54–56% on 5 GHz) and sent
+  number 95610423. Bella's helper answered at once and registered with itself: wake key `c203a687`, nickname PS4-878,
+  MAC 78c8810636c1, main profile's existing ID 284561706f6c6c6f left unchanged. Engine `ps4wake` now holds kai, atlas,
+  bella. Still to watch: that Bella stays connected on 2.4 GHz (the silences were the weak 5 GHz link). Not woken yet.
