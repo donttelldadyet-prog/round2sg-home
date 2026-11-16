@@ -173,7 +173,7 @@ h3.nm, .nm { color: var(--rc); }
 .room .photob:hover { border-color: var(--rc); color: var(--rc); }
 .room .photob svg { width: 13px; height: 13px; }
 /* Room preview – same look as the homepage ROOM PREVIEW (full-bleed photos, crossfade + slight zoom, thumbnails) */
-#ph { position: fixed; inset: 0; z-index: 60; background: #0b0914; display: flex; flex-direction: column; overflow-y: auto; --sh: min(83vw, 56vh, 520px); }
+#ph { position: fixed; inset: 0; z-index: 60; background: #0b0914; display: flex; flex-direction: column; overflow-y: auto; --sh: min(75vw, 50vh, 480px); }
 #ph[hidden] { display: none; }
 #ph .stage { position: relative; flex: none; height: var(--sh); overflow: hidden; }   /* photo keeps a landscape-ish shape like the homepage, never stretched tall */
 #ph .shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.04); transition: opacity .45s ease, transform .6s ease; }
