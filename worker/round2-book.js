@@ -4322,17 +4322,26 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
     await hb.kvSet('ps4wake', W); return { ok: true, has: Object.keys(W) };
   }
   if (act === 'ps4wake') {   /* staff: wake a PS4 from rest mode – another awake PS4 sends its key */
-    const id = ps4Id(f.id), W = (await hb.kvGet('ps4wake')) || {}, map = (await hb.kvGet('ps4map')) || {}, now = Date.now();
-    if (!W[id]) return { error: 'No wake key for this PS4 yet (it has to be registered once).' };
-    if (now - ((await hb.kvGet('ps4poll:' + id)) || 0) < 3 * 60e3) return { error: 'It’s already on.' };
+    const which = String(f.id || ''), group = which === 'all' || which === 'early';   /* 'all' = every registered PS4 that is asleep · 'early' = those with an early-bird (11:00) booking today */
+    const id = group ? '' : ps4Id(f.id), W = (await hb.kvGet('ps4wake')) || {}, map = (await hb.kvGet('ps4map')) || {}, now = Date.now();
+    let targets = [];
+    if (group) {
+      let rooms = null;
+      if (which === 'early') { const day = sgDay(now), eb = sgMs0(day + ' 11:00'); rooms = (await sessDay(env, day)).sessions.filter((x) => !x.sys && !x.orphanExt && x.s === eb).map((x) => GM_ROOM[x.unit]); }
+      for (const x of Object.keys(W)) { if (!map[x] || (rooms && !rooms.includes(map[x]))) continue; if (now - ((await hb.kvGet('ps4poll:' + x)) || 0) < 3 * 60e3) continue; targets.push(x); }
+      if (!targets.length) return { error: which === 'early' ? 'No early-bird room to wake (none booked, not registered, or already on).' : 'Nothing to wake (no registered PS4 is asleep).' };
+    } else {
+      if (!W[id]) return { error: 'No wake key for this PS4 yet (it has to be registered once).' };
+      if (now - ((await hb.kvGet('ps4poll:' + id)) || 0) < 3 * 60e3) return { error: 'It’s already on.' };
+      targets = [id];
+    }
     for (const sid of ((await hb.kvGet('ps4ids')) || [])) {
-      if (sid === id || !map[sid] || now - ((await hb.kvGet('ps4poll:' + sid)) || 0) > 3 * 60e3) continue;
+      if (targets.includes(sid) || !map[sid] || now - ((await hb.kvGet('ps4poll:' + sid)) || 0) > 3 * 60e3) continue;
       const rep = await hb.kvGet('ps4:' + sid), pc = await hb.kvGet('ps4cmd:' + sid);
       if (!rep || ps4Newer(PS4_WAKE_MIN, rep.v) || (pc && (pc.state === 'sent' || (pc.state === 'taken' && now - pc.takenAt < 3 * 60e3)))) continue;
-      const paths = ps4WakePaths(rep, [W[id].key]); if (!paths) continue;
-      const c = { cid: 'w' + now.toString(36), do: 'look', p: paths, at: now, takenAt: now, by: String(f.by || 'control centre').slice(0, 24) + ': wake ' + (map[id] || ''), state: 'wake' };
-      c.state = 'sent'; c.nobusy = true;
-      await hb.kvSet('ps4cmd:' + sid, c); return { ok: true, sender: map[sid], cmd: c };
+      const paths = ps4WakePaths(rep, targets.map((x) => W[x].key)); if (!paths) continue;
+      const c = { cid: 'w' + now.toString(36), do: 'look', p: paths, at: now, by: String(f.by || 'control centre').slice(0, 24) + ': wake ' + targets.map((x) => map[x]).join(', '), state: 'sent', nobusy: true };
+      await hb.kvSet('ps4cmd:' + sid, c); return { ok: true, sender: map[sid], rooms: targets.map((x) => map[x]), cmd: c };
     }
     return { error: 'No other PS4 is on to send the wake (needs one awake PS4 with helper ' + PS4_WAKE_MIN + '+).' };
   }
