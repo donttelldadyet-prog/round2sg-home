@@ -1,5 +1,18 @@
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
 
+> ## 16 Nov 2026, ~5pm – engine a5bfcc5 DEPLOYED (27 bindings, 3 timers): NO EMAIL = STILL A REAL BOOKING; NOTES USE THE 4-BOX PAGE
+> - Owner: "why is it still showing the old page type? then how can they reschedule themselves" + "just give a random placeholder
+>   email that lets the function through… I don't want to be notified". Add a session: no email / bad email → `sbEmail` =
+>   `noemail.<10 hex>@example.com` (never delivers; SimplyBook's own email goes nowhere). Stored nowhere else (`gEmail` ''; record
+>   `standIn: true`; SimplyBook comment says "no email (stand-in …)"). `plan.standIn` / `plan.badEmail`, result `standIn`. So daytime
+>   sessions with a mobile are real bookings → `/b/<code>` → the 4-box page with self-rescheduling. Notes now only: late, odd
+>   length, clash, no mobile, Change, refused.
+> - Notes: `/c/<code>` now REDIRECTS to `/move?ref=<code>`; `gApi` → `noteApi` (empty calendar, `info.note`); move/index.html
+>   `noteMode()`: no Paid row, no moves chips, Reschedule box disabled "Booked with our team – WhatsApp us", Receipt box → WhatsApp us,
+>   TV message → `/c/<code>/tv`. The 3:49pm bookedPage version for notes is gone.
+> - System check step 1 now expects no email → booking with placeholder. Owner's earlier rule (15 Nov: no email → note → shared
+>   contact) is REPLACED by this.
+
 > ## 16 Nov 2026, 3:49pm – engine 67e1073 DEPLOYED (27 bindings, 3 timers): NOTES GET A BOOKING LINK (owner: "why limit it to real SimplyBook bookings")
 > - Add a session → saved as a note (no email, late, clash, Change…) now returns `link` = `book.round2.sg/c/<code>` (code `N` + 7).
 >   DO kv `nconf:<code>` = {nid, day, unit, name, pax, phone, t, tv}, `nlink:<note id>` = code. `/c/<code>` (`notePage`) = the same
