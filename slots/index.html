@@ -186,7 +186,7 @@ h3.nm, .nm { color: var(--rc); }
 #ph .arw.next { right: 10px; clip-path: polygon(0 0, 70% 0, 100% 50%, 70% 100%, 0 100%); padding-right: 10px; }
 #ph .panel { position: relative; flex: 1; display: flex; flex-direction: column; padding: 0 16px 16px; margin-top: -34px; }
 #ph .stage::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11,9,20,.6) 0%, rgba(11,9,20,0) 26%, rgba(11,9,20,0) 70%, #0b0914 100%); pointer-events: none; }
-#ph .thumbs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding-top: 4px; }
+#ph .thumbs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding-top: 4px; }
 #ph .thumbs button { position: relative; padding: 0; border: 0; background: none; opacity: .5; outline: 2px solid transparent; outline-offset: 2px; cursor: pointer; transition: opacity .25s; }
 #ph .thumbs button[aria-current="true"] { opacity: 1; outline-color: var(--rc); }
 #ph .thumbs img { display: block; width: 100%; height: 62px; object-fit: cover; }
@@ -344,7 +344,7 @@ h3.nm, .nm { color: var(--rc); }
 
 <div id="ph" hidden role="dialog" aria-modal="true" aria-label="Room preview">
   <div class="stage" id="phStage"></div>
-  <div class="tag"><span>ROOM PREVIEW</span><span id="phCount">01 / 04</span></div>
+  <div class="tag"><span>ROOM PREVIEW</span><span id="phCount">01 / 03</span></div>
   <button type="button" class="cls" id="phX" aria-label="Close room preview"><svg width="14" height="14" viewBox="0 0 12 12" aria-hidden="true"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="2"/></svg></button>
   <button type="button" class="arw prev" id="phPrev" aria-label="Previous"><svg width="14" height="14" viewBox="0 0 14 16" aria-hidden="true"><path d="M13 1L1 8l12 7z" fill="currentColor"/></svg></button>
   <button type="button" class="arw next" id="phNext" aria-label="Next"><svg width="14" height="14" viewBox="0 0 14 16" aria-hidden="true"><path d="M1 1l12 7-12 7z" fill="currentColor"/></svg></button>
@@ -443,21 +443,18 @@ h3.nm, .nm { color: var(--rc); }
 ;   /* the room details + description shown on the homepage */
   var phU = null, phI = 0;
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
-  function phGo(i) { if (phU == null) return; phI = (i + 4) % 4;
+  function phGo(i) { if (phU == null) return; var n = MEDIA[phU].ph.length; phI = (i + n) % n;
     Array.prototype.forEach.call($('phStage').querySelectorAll('.shot'), function (el, k) { el.classList.toggle('on', k === phI); });
     Array.prototype.forEach.call($('phThumbs').querySelectorAll('button'), function (el, k) { el.setAttribute('aria-current', String(k === phI)); });
-    var v = $('phStage').querySelector('video'); if (v) { if (phI === 0) { try { v.play(); } catch (e) {} } else v.pause(); }
-    $('phCount').textContent = pad2(phI + 1) + ' / 04'; }
+    $('phCount').textContent = pad2(phI + 1) + ' / ' + pad2(n); }
   function phOpen(uid) { var m = MEDIA[uid], R = ROOMS[uid], p = $('ph'); if (!m) return; phU = uid;
     p.style.setProperty('--rc', R[1]); p.style.setProperty('--rci', uid == 10 || uid == 11 ? '#ffffff' : '#0b0914');
-    $('phStage').innerHTML = '<video class="shot" src="' + m.v + '" poster="' + m.p + '" autoplay muted loop playsinline aria-label="' + R[0] + ' room, video tour"></video>' +
-      m.ph.map(function (x, k) { return '<img class="shot" src="' + x + '" alt="' + R[0] + ' room, photo ' + (k + 2) + ' of 4">'; }).join('');
-    $('phThumbs').innerHTML = '<button type="button" data-g="0" aria-label="Play video"><img src="' + m.p + '" alt=""><svg viewBox="0 0 22 22" aria-hidden="true"><circle cx="11" cy="11" r="11" fill="rgba(11,9,20,.7)"/><path d="M8.5 6.5l7 4.5-7 4.5z" fill="#fff"/></svg></button>' +
-      m.ph.map(function (x, k) { return '<button type="button" data-g="' + (k + 1) + '" aria-label="Show photo ' + (k + 2) + '"><img src="' + x + '" alt=""></button>'; }).join('');
+    $('phStage').innerHTML = m.ph.map(function (x, k) { return '<img class="shot" src="' + x + '" alt="' + R[0] + ' room, photo ' + (k + 1) + ' of ' + m.ph.length + '">'; }).join('');   /* photos only – the video tour stays on the homepage */
+    $('phThumbs').innerHTML = m.ph.map(function (x, k) { return '<button type="button" data-g="' + k + '" aria-label="Show photo ' + (k + 1) + '"><img src="' + x + '" alt=""></button>'; }).join('');
     $('phName').src = m.nm; $('phName').alt = R[0]; $('phType').textContent = R[2].toUpperCase(); var I = INFO[uid] || {};
     $('phSpec').innerHTML = esc([I.pax, I.tv].filter(Boolean).join(' · ')) + '<br><b>' + esc([I.ex, I.st].filter(Boolean).join(' · ')) + '</b>'; $('phDesc').textContent = I.d || ''; $('ph').scrollTop = 0;
     $('phBook').textContent = 'Choose a time ›'; p.hidden = false; document.documentElement.style.overflow = 'hidden'; phGo(0); $('phX').focus(); }
-  function phClose() { var v = $('phStage').querySelector('video'); if (v) v.pause(); $('ph').hidden = true; $('phStage').innerHTML = ''; document.documentElement.style.overflow = ''; phU = null; }
+  function phClose() { $('ph').hidden = true; $('phStage').innerHTML = ''; document.documentElement.style.overflow = ''; phU = null; }
   var TIERIC = { 'NETFLIX ROOMS': 'sofa', 'DELUXE ROOMS': 'gem', 'VIP ROOM': 'crown' };
   [].forEach.call(document.querySelectorAll('i[data-ic]'), function (el) { el.outerHTML = ic(el.getAttribute('data-ic')); });
   var TIER = {}; GROUPS.forEach(function (g) { g[1].forEach(function (u) { TIER[u] = g[2]; }); });
