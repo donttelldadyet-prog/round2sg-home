@@ -842,3 +842,18 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   Vale/Bella off, Max/Atlas guests.
 - 1.1.20's wake pop-up/detection: Kai's report shows woke n=1, slept 134 s, via "sleep" at 5:46pm (owner rested/woke it by
   controller).
+- **6:07pm first try (number 43988587): helper 1.1.21 DIED with signal 10 (SIGBUS) the second it took `/_rpreg`** –
+  starter relaunched it 5 s later (owner saw GoldHEN "payload received" = that relaunch) and Kai's Add Device screen showed
+  error CE-35398-8 (Sony: "could not connect to your Remote Play device" = our half-made attempt). Cause: stack alignment –
+  the new files were built without `-mstackrealign` (the spawn files had it). **1.1.22** (ps4-release c3fc1ee): every Round2
+  helper file built with -mstackrealign, registration logs each step to /data/round2/own-spawn.log.
+- **6:13pm – REGISTERED. Kai (9.00, GoldHEN, offline-activated User5, no PSN) accepted the Remote Play registration from our
+  own helper** (to itself, 192.168.88.18, number 63771066): search answered → sent 157 + 587 bytes → "HTTP/1.1 200 OK", 305
+  bytes → decrypted 239 → **PS4-RegistKey 83ba890f** (wake credential as a number = 2210040079), RP-Key
+  0865941891647e3801071a134368530b, nickname PS4-545, MAC bc60a7e246e8. So chiaki's method + our mbedTLS port are right, the
+  account ID is the 8 registry bytes as stored (523261706f6c6c6f → base64), and a PS4 can register with ITSELF.
+  Kai rested by `/_rest` at 6:14pm for the wake test. No second PS4 free as sender → owner sends the WAKEUP from his laptop
+  (PowerShell UdpClient, 3× to 192.168.88.18:987: "WAKEUP * HTTP/1.1\nclient-type:vr\nauth-type:R\nmodel:w\napp-type:r\n
+  user-credential:2210040079\ndevice-discovery-protocol-version:00020020\n"). Result: see next entry.
+- chiaki-ng's "console must be on the latest firmware" (owner's link, setup/remoteconnection) is only for connecting from
+  outside through PSN – not for local registration.
