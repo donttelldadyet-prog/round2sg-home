@@ -1085,3 +1085,10 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   Max F8461C4755FE, Bella 78C8810636C1, Atlas 2CCC441E241F, Scarlett 709E294E9D39 (Scarlett is now at .88.4).
   Next ideas: Vale rest test (same hardware batch as Kai, no registration needed for the status question) · Atlas'
   "Supply Power to USB Ports" (Kai = Always) · model numbers (CUH-) of all six. Atlas asleep again (PS button).
+- **10:45pm owner matched ALL rooms' Power Save settings to Kai's. 10:46 rested Vale, Max, Scarlett, Atlas, Bella (Kai
+  awake as the listener). At 3.5 and 5 min in rest, Kai's broadcast got "620 Standby" from VALE (.11), MAX (.23) and
+  SCARLETT (.4)** – first time any PS4 besides Kai answered from rest. Firmware no factor (Vale/Scarlett 11.00, Max 9.00).
+  **ATLAS and BELLA still silent** (status to .15 / .6: no answer). They are the two with the weakest Wi-Fi
+  (Atlas 52–62% ch 36, Bella 56–74% ch 6) – but Kai answers at 64–74%, so not proven. Next: which mesh unit / band each
+  is on (router app), or a cable test on one of them. Vale/Max/Scarlett are reachable but NOT registered (owner's
+  control group) so they can't be woken yet. All five asleep at 10:52pm – PS buttons.
