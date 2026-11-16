@@ -600,3 +600,23 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
 - System check step "Guest rescheduling: page, rules and fees" tests the three new rules.
 - **Engine 0c96804 DEPLOYED 11:50pm** by patching the live script through the Cloudflare API (live hash checked before = 6282673's file, after = this commit's file; module `worker.js`, compatibility 2026-06-01, 27 bindings, 3 timers).
 - Booking page "See all rules" now lists the early-bird rule and add-hours; an early bird 3+ days away sees the rule in yellow under their stage.
+
+### 16 Nov 2026, 11:30am – PS4 helpers silent while the PS4s are ON (Bella, Atlas) → helper 1.1.14 released
+- Facts (engine `ps4list` through the diag channel, 11:16am): Bella took the quiet-time update 1.1.10 → 1.1.13 at ~10:34am, reported once
+  as 1.1.13, last poll ~2 min later, then silent – owner confirmed the PS4 is ON. Atlas (still 1.0.7, last full report 21 h
+  earlier) stopped polling at the same time, also ON. Max updated 1.1.8 → 1.1.10 at ~10:36am and stays online (guest playing).
+  Vale 1.1.13 silent since ~1:50am, Kai 1.1.13 put to rest by command 1:15am, Scarlett 1.1.10 off since 15 Nov evening.
+- NOT known: why. Atlas fits the old wake bug (1.0.7 steps aside on SIGCONT, starter relaunch fails). Bella's 1.1.13 going quiet
+  inside the starter's 3-minute trial window is suspicious (roll-back whose relaunch failed?) – only `/data/round2/app/boot.log`
+  on the PS4 can say. Nobody has read it.
+- **Helper 1.1.14** (branch ps4-helper a199ec7, released on ps4-release; built in this chat with ps4/build.sh – my build of
+  1.1.13 had the same size as the released one but not the same hash): each report now carries `up` (helper start, PS4 clock),
+  `woke` {n, at, sleptS} (a 2 s sleep that returns >90 s late = the PS4 was in rest mode; reports ~12 s after the wake) and
+  `log` {boot: last 8 lines of boot.log, stopped: last 3 of helper-stopped.txt}. No signal handler added. The engine stores
+  the whole report, so no engine change. **Untested on a real PS4** – first one to take it: watch its tile.
+- Control centre › TVs › PS4s: a helper that went silent right after our own `/_rest` job shows "😴 Rest mode · sent by us";
+  other silent ones say what it can be and what to do; 1.1.14 tiles show "Last woke from rest … slept …", "Helper running
+  since …" and a fold-out "Helper log".
+- Still can't be told apart from far away: rest mode by controller/auto-timer vs. power off vs. helper stopped (the helper is
+  frozen before it can say anything). Idea not built: when a helper goes silent, have a live one ask it with `/_ddp.<ip>`
+  (on / standby) automatically.
