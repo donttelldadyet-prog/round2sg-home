@@ -659,7 +659,7 @@ h3.nm, .nm { color: var(--rc); }
     for (var hrs = 3; hrs <= 6; hrs++) {
       var fits = hrs <= o.maxH;
       var sv = fits ? saving(o, hrs) : null;
-      h += '<button type="button" data-i="' + hrs + '"' + (fits ? '' : ' disabled') + ' aria-pressed="' + (cur.len === hrs) + '">' + (sv ? '<span class="save">SAVE ' + sv.pct + '%</span>' : '') + hrs + ' h<small>' + (fits ? 'till ' + clock(o.m + hrs * 60) + ' · ' + money(o.prices[hrs]) : 'not free') + '</small></button>';
+      h += '<button type="button" data-i="' + hrs + '"' + (fits ? '' : ' disabled') + ' aria-pressed="' + (cur.len === hrs) + '">' + (sv ? '<span class="save">SAVE ' + sv.pct + '%</span>' : '') + hrs + ' h<small>' + (fits ? 'till ' + clock(o.m + hrs * 60) + ' · ' + money(o.prices[hrs]) : 'not available') + '</small></button>';
     }
     if (cur.len == null || cur.len > o.maxH) cur.len = 3;
     var best = [5, 6].map(function (x) { return saving(o, x); });
