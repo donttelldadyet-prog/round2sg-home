@@ -1,5 +1,15 @@
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
 
+> ## 16 Nov 2026, ~4:40pm – engine a912159 DEPLOYED (27 bindings, 3 timers): ONE SIMPLYBOOK CONTACT PER MOBILE NUMBER
+> - Owner: "register contact using phone number and name… if they rebook and provide their email we replace the placeholder…
+>   our contact list stays unique with that person and contact number". Chose: rename to the newest name; online + Add a session.
+> - `sbContact` (both checkout-before-payment and Add a session): `getClientList(<last 8 digits>, 25)` → newest contact whose phone
+>   ends in those 8 digits (never SYS_CLIENTS / "Round2 online guest") → `editClient` name + phone + email (real one typed, else
+>   keep its email, else `phEmail`); if the real email is refused (already on another contact) → reuse keeping its email. None →
+>   `addClient` with the real email or `noemail.<8 digits>.<4>@example.com`. The no-email-first "late" attempt is gone (this
+>   account always refused it). REPLACES the 3 Nov rule "every booking its own contact, never reuse". Old numbers may have several
+>   contacts from before – the newest is used, the rest are left alone.
+
 > ## 16 Nov 2026, ~5pm – engine a5bfcc5 DEPLOYED (27 bindings, 3 timers): NO EMAIL = STILL A REAL BOOKING; NOTES USE THE 4-BOX PAGE
 > - Owner: "why is it still showing the old page type? then how can they reschedule themselves" + "just give a random placeholder
 >   email that lets the function through… I don't want to be notified". Add a session: no email / bad email → `sbEmail` =
