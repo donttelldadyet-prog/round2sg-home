@@ -1620,3 +1620,22 @@ membership system yet) → the cloud batch is built but OFF.
   own spawn (update, /_selfown, auto-promote) counts; at **5 per PS4 start** updates answer "waits for the next PS4 restart"
   (retry flag) without downloading, and selfown/auto-promote are skipped. Root cause still unknown (kernel-side per spawn).
 - Reading a PS4's spawn history: look `/_tail./data/round2/own-spawn.log|200`.
+
+### 18 Nov 3:36–3:50am – "PS4 on but helper silent" ROOT FOUND: the ROUTER stops delivering DIRECT traffic to that PS4 (not the helper)
+- Atlas + Bella both went silent at 3:25:45 (same 3 s), PS4s on, signed in, not frozen (owner checked). Own-program 1.1.60.
+  The own-program watchdog (restart after 20 min stuck) did NOT fire → the helper isn't stuck, its requests just fail.
+- **Test from Max (look job, Sony's own discovery service on port 987, nothing of ours):**
+  `/_ddpall` (broadcast) → Atlas .15 and Bella .6 ANSWER. `/_ddp.192.168.88.15` / `.6` (unicast) → **no answer in 4 s**;
+  controls `/_ddp.192.168.88.18` (Kai) and `.4` (Scarlett) answer. So: PS4→network works, broadcast→PS4 works,
+  **unicast→PS4 is dropped by the Wi-Fi (main unit / EasyMesh)**. Internet replies are unicast → every connect times out
+  ("-0x0044 … in 'connect'"), the PS4 still shows "connected". Same signature as Atlas 2:24am (router log: DISCOVER arrives,
+  its OFFER never accepted). Earlier spells (Bella 12:10/1:06/2:03/2:46am, Atlas+Bella 17 Nov 2:37pm) fit; they end by
+  themselves after 10–45 min or at once when the PS4's Wi-Fi is reconnected (Settings › Network).
+- Hits the weak-signal PS4s on the main unit's 5 GHz (Atlas, Bella; Kai is the third weak one). Mechanism not yet pinned:
+  stale mesh/steering entry (router thinks the PS4 sits on the other unit/band) or a power-save buffering bug
+  (OFDMA/TWT on, firmware 0.9.0 Build 260212). NEXT: with the router page open during a spell, see which unit/band it lists
+  the PS4 under (Wireless › Statistics, Network Map), then try: OFDMA+TWT off; a PS4-only network name on the main unit;
+  second unit off as a test.
+- **How to test this again:** from any healthy PS4: look `/_ddp.<ip>;/_ddpall` – broadcast yes + direct no = this fault.
+- Corrections: "Atlas asleep" / "Bella too busy to report" (3:30am) were wrong; Bella's "frozen helper" at 2:53am was most
+  likely this too (its log: "back after 40 failures" at 2:57:58, before the owner's restart).
