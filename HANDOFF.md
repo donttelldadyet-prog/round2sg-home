@@ -1700,3 +1700,19 @@ membership system yet) → the cloud batch is built but OFF.
   android 1.0.286 old; Vale's 1:57am reset "PROBLEMS" line (fewer than 4 spares then); watchdog: 5 "24 hours" maths
   lines in the control centre, e.g. 3638 / 3962 – not from tonight's PS4 work, check + mark day-ok next session).
 - Helper self-heal (option 1) NOT built – see above; with WPA2-only it may not be needed. Decide after a few days of logs.
+
+### 18 Nov 4:47am – NOT FIXED: Atlas + Bella stuck again at ~4:38:30–4:39:45 with NO router restart (WPA2-only in force)
+- Owner asked for the full test. From Max AND from Vale: shout (`/_ddpall`) → all six answer; direct (`/_ddp.<ip>`) → Vale,
+  Max, Scarlett, Kai answer, **Atlas + Bella: no answer**. Router ping: Vale/Max/Scarlett 4/4, Atlas 0/4. Last polls Atlas
+  4:38:42, Bella 4:38:29 – both again inside the same minute. So "3 restarts, 0 stuck" was luck or only half the story.
+- No setting was changed after 4:32. Around then: the owner's laptop was re-joining the Wi-Fi (asked for the password several
+  times, bridge dropped ~4:36–4:37 and ~4:45); Light System check 4:37:55–4:38:30 (reads only). 3:25:45 = Kai hard power-off.
+- **Working theory (fits everything, not proven): the router renews the shared "group" key whenever a device leaves/joins that
+  band, and the CUH-72xx Wi-Fi chip breaks its private-key state when that renewal arrives** → both 72xx stop accepting direct
+  traffic at the same instant; broadcast (new group key) and sending still work; a fresh join (Test Internet Connection) or
+  time (8–35 min) cures it. Router UI has only "Group Key Update Period" (0 = off); no switch for renew-on-leave.
+- Test for the theory: when both are healthy, make one device leave/join 5 GHz (laptop Wi-Fi off/on) and watch
+  `/_ddp.192.168.88.15;/_ddp.192.168.88.6` from Max within the minute.
+- If true, fixes: (a) Atlas and Bella each on their OWN network name (router Multi-SSID has MSSID1 + MSSID2 per band – each
+  name has its own group key, nobody else joins/leaves it) – needs the Wi-Fi picked once on each PS4; (b) cable; (c) helper
+  rejoin (API undocumented). WPA2-only / Wi-Fi 7 off / OFDMA+TWT off were left in place (harmless).
