@@ -4102,6 +4102,50 @@ async function roomBusy(env, unit, gap) {
     if (realGuests(S, unit) && S.s - gap * 60e3 <= now && now < S.guestEnd) return S;
   return null;
 }
+/* ===== PS4 SESSION RESET (owner 17 Nov 10:15pm: "tomorrow's clean slate after each session" + a log in the PS4 tab) =====
+   On the 10-minute "now" ticks (it shares the one read of tonight's calendar with Auto wrap-up – no extra SimplyBook requests):
+   for each room whose REAL guest session ended 2–45 min ago (twin/noise/online-hold SYSTEM BLOCKs and long "room blocked"
+   notes don't count) and has no real guest in it now, the room's PS4 (helper 1.1.53+, checked in within 10 min) gets
+   "/_reset.<room>-<hhmm>" once: close the game, sign out spares, internal-first clean of every profile, profiles back to
+   main + Player 1-4 (see the helper). Sent with nobusy (a back-to-back guest arrives 15 min after the last one leaves – the
+   reset runs in the cleaning gap). Not sent over a staff command that's still waiting. Each session is tried once; a PS4
+   that's asleep/off/too old is tried again on the next ticks until 45 min after, then logged as missed.
+   Switch: kv ps4resetAuto = { on, from } (control centre). Log: kv ps4resetLog (last 40), shown in the PS4 tab. */
+const PS4_RESET_MIN = '1.1.53';
+async function ps4ResetRun(env) {
+  const hb = book(env), now = Date.now(), sw = await hb.kvGet('ps4resetAuto');
+  if (!sw || !sw.on || (sw.from && now < sw.from)) return { off: true };
+  const night = sgDay(now - SHADOW_TILL * 60e3), sess = [];
+  for (const d of [night, addDays(night, 1)]) for (const S of (await sessDay(env, d)).sessions) sess.push(S);
+  const ended = sess.filter((S) => realGuests(S, S.unit) && !S.orphanExt && S.guestEnd + 2 * 60e3 <= now && now < S.guestEnd + 45 * 60e3);
+  if (!ended.length) return { n: 0 };
+  const map0 = (await hb.kvGet('ps4map')) || {}, byRoom = {}; for (const id in map0) byRoom[map0[id]] = id;
+  const rooms = [...new Set(ended.map((S) => GM_ROOM[S.unit]).filter((r) => byRoom[r]))];
+  if (!rooms.length) return { n: 0 };
+  const keys = ['ps4resetLog']; for (const r of rooms) keys.push('ps4:' + byRoom[r], 'ps4cmd:' + byRoom[r], 'ps4poll:' + byRoom[r]);
+  const K = await hb.kvMany([...new Set(keys)], []), log = K.ps4resetLog || [], out = [];
+  const note = async (S, state, why, cid) => { const e = { t: now, room: GM_ROOM[S.unit], end: S.guestEnd, state, why: String(why || '').slice(0, 120), cid: cid || '' };
+    const i = log.findIndex((x) => x.room === e.room && x.end === e.end); if (i >= 0) log[i] = e; else log.unshift(e); out.push(e); };
+  for (const S of ended) {
+    const room = GM_ROOM[S.unit], id = byRoom[room]; if (!id) continue;
+    const f = log.find((x) => x.room === room && x.end === S.guestEnd); if (f && f.state !== 'waiting') continue;   /* the log is the record (last 40) */   /* sent / missed / done: once */
+    const late = now >= S.guestEnd + 40 * 60e3;
+    const cur = sess.find((T) => T !== S && realGuests(T, S.unit) && T.s <= now && now < T.guestEnd);
+    if (cur) { await note(S, 'missed', 'next guest already in the room'); continue; }
+    const rep = K['ps4:' + id], poll = K['ps4poll:' + id] || 0, c = K['ps4cmd:' + id];
+    let why = '';
+    if (!rep || now - poll > 10 * 60e3) why = 'PS4 not answering (off / rest mode / not jailbroken)';
+    else if (ps4Newer(PS4_RESET_MIN, rep.v)) why = 'helper ' + rep.v + ' too old (needs ' + PS4_RESET_MIN + ')';
+    else if (c && c.state === 'sent' && now - c.at < 10 * 60e3) why = 'a staff command is still waiting';
+    if (why) { await note(S, late ? 'missed' : 'waiting', why); continue; }
+    const hm = new Date(S.guestEnd + 8 * 3600e3).toISOString().slice(11, 16).replace(':', '');
+    const cmd = { cid: 'r' + now.toString(36), do: 'look', p: '/_reset.' + room + '-' + hm, at: now, by: 'auto: session ended ' + clock12(S.guestEnd), state: 'sent', nobusy: true };
+    K['ps4cmd:' + id] = cmd; await hb.kvSet('ps4cmd:' + id, cmd);
+    await note(S, 'sent', 'reset sent ' + (Math.round((now - S.guestEnd) / 60e3)) + ' min after the session ended', cmd.cid);
+  }
+  if (out.length) await hb.kvSet('ps4resetLog', log.slice(0, 40));
+  return { n: out.length, out };
+}
 async function ps4Busy(env, room, gap = PS4_GAP) {
   const unit = +(Object.keys(GM_ROOM).find((u) => GM_ROOM[u] === room) || 0), now = Date.now();
   if (!unit) return null;
@@ -4334,6 +4378,19 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
     const c = { cid: 'c' + now.toString(36), do: 'clean', at: now, by: String(f.by || 'control centre').slice(0, 40), state: 'sent' };
     await hb.kvSet('ps4cmd:' + id, c); return { ok: true, cmd: c };
   }
+  if (act === 'ps4reset') {   /* staff "Clean slate now" (17 Nov): the session reset on this PS4 – not during a guest session */
+    const id = ps4Id(f.id), room = ((await hb.kvGet('ps4map')) || {})[id], now = Date.now(), rep = await hb.kvGet('ps4:' + id);
+    if (!room || !rep) return { error: 'Link this PS4 to a room first.' };
+    if (now - ((await hb.kvGet('ps4poll:' + id)) || 0) > 3 * 60e3) return { error: 'The PS4 isn’t answering (off, in rest mode, or not jailbroken yet).', off: true };
+    if (ps4Newer(PS4_RESET_MIN, rep.v)) return { error: 'Needs helper ' + PS4_RESET_MIN + ' or newer – update it first.' };
+    const busy = await ps4Busy(env, room, 0); if (busy) return { error: busy + ' – try after that.', busy: true };
+    const c = { cid: 'r' + now.toString(36), do: 'look', p: '/_reset.staff', at: now, by: String(f.by || 'control centre').slice(0, 40), state: 'sent', nobusy: true };
+    await hb.kvSet('ps4cmd:' + id, c); return { ok: true, cmd: c };
+  }
+  if (act === 'ps4resetauto') {   /* staff: automatic reset after each session on/off; from = optional start (ms) */
+    const v = { on: f.on === '1' || f.on === true, from: +f.from || 0, at: Date.now(), by: String(f.by || 'control centre').slice(0, 40) };
+    await hb.kvSet('ps4resetAuto', v); return { ok: true, auto: v };
+  }
   if (act === 'ps4look') {   /* read-only folder listing from the PS4 (helper 1.0.5+): what the Capture Gallery keeps, etc. */
     const id = ps4Id(f.id), now = Date.now();
     if (now - ((await hb.kvGet('ps4poll:' + id)) || 0) > 3 * 60e3) return { error: 'The PS4 isn’t answering.', off: true };
@@ -4442,12 +4499,13 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
     await hb.kvSet('ps4names', n); return { ok: true, names: n };
   }
   /* ps4list (16 Nov: g=1 also returns each PS4's games with version v / patch pv – the save system needs the same version in every room) */
-  const ids = (await hb.kvGet('ps4ids')) || [], now = Date.now(), list = [];
-  const map = (await hb.kvGet('ps4map')) || {}, wakeK = (await hb.kvGet('ps4wake')) || {};
-  for (const id of ids) { const r = await hb.kvGet('ps4:' + id); if (r) list.push(Object.assign({}, r, { room: map[id] || null, poll: (await hb.kvGet('ps4poll:' + id)) || 0, cmd: (await hb.kvGet('ps4cmd:' + id)) || null, runName: r.running ? (((r.games || []).find((g) => g && g.id === r.running) || {}).t || '') : '', wake: !!wakeK[id], games: f.g === '1' ? (r.games || []) : undefined, nGames: (r.games || []).length, ago: Math.round((now - r.t) / 60e3) })); }
-  const night = sgDay(now - SHADOW_TILL * 60e3);
+  /* 17 Nov: ONE Durable Object call for all of it (was ~4 per PS4 + 9) – see hbSnap */
+  const ids = (await hb.kvGet('ps4ids')) || [], now = Date.now(), list = [], night = sgDay(now - SHADOW_TILL * 60e3);
+  const K = await hb.kvMany(['ps4map', 'ps4wake', 'ps4wakeRun', 'ps4auto', 'ps4play:' + night, 'ps4discs', 'ps4names', 'ps4resetAuto', 'ps4resetLog', ...ids.flatMap((id) => ['ps4:' + id, 'ps4poll:' + id, 'ps4cmd:' + id])], []);
+  const map = K.ps4map || {}, wakeK = K.ps4wake || {};
+  for (const id of ids) { const r = K['ps4:' + id]; if (r) list.push(Object.assign({}, r, { room: map[id] || null, poll: K['ps4poll:' + id] || 0, cmd: K['ps4cmd:' + id] || null, runName: r.running ? (((r.games || []).find((g) => g && g.id === r.running) || {}).t || '') : '', wake: !!wakeK[id], games: f.g === '1' ? (r.games || []) : undefined, nGames: (r.games || []).length, ago: Math.round((now - r.t) / 60e3) })); }
   const rel = await ps4Latest(env).catch(() => null);
-  return { ok: true, now, list, latest: rel ? rel.v : null, selfUp: PS4_SELFUP, wakeRun: (await hb.kvGet('ps4wakeRun')) || null, auto: (await hb.kvGet('ps4auto')) !== false, map: (await hb.kvGet('ps4map')) || {}, played: (await hb.kvGet('ps4play:' + night)) || {}, discs: (await hb.kvGet('ps4discs')) || [], names: (await hb.kvGet('ps4names')) || {} };
+  return { ok: true, now, list, latest: rel ? rel.v : null, selfUp: PS4_SELFUP, wakeRun: K.ps4wakeRun || null, auto: K.ps4auto !== false, map, played: K['ps4play:' + night] || {}, discs: K.ps4discs || [], names: K.ps4names || {}, resetAuto: K.ps4resetAuto || null, resetLog: K.ps4resetLog || [] };
 }
 
 /* ===== Remote TV updates (owner, 2 Nov) =====
@@ -4597,6 +4655,7 @@ const HANDLER = {
       go((async () => { const ag = await hb.kvGet('autoAgain'); if (ag && Date.now() >= ag) { await hb.kvSet('autoAgain', 0); if (!ten) await autoRun(env, 'recheck'); } })());
       if (ten) {
         go(autoRun(env, 'cron')); go(msgOrphans(env, 'cron')); go(waitWarn(env)); go(holdSweep(env));
+        go(ps4ResetRun(env).catch(() => null));   /* 17 Nov: PS4 reset after each guest session (same calendar read; kv ps4resetAuto) */
         { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(noiseSync(env, [t, addDays(t, 1)], 'cron')); }   /* noise rule: tonight + tomorrow */
       }
       /* the other two timers missing? do their jobs here, as before the split */
