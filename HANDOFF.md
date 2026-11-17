@@ -1442,3 +1442,13 @@ Owner approved: when a member's game moves into a profile, leftover parts from e
   stays) → name back to "Player N" → signed out. Extra profiles (beyond main + Player 1–4) backed up/parked then deleted
   (`/_udel`). Picture folders whose profile is gone removed. Main profile: saves wiped except house saves (GT Sport on Max),
   picture kept (room character). Tested 7:17pm: Player 3 (12ae5b2d) picture reset – 10 files removed, only version.json left.
+
+### ⚠️ RULE – INTERNAL FIRST (owner 17 Nov 7:43pm, critical; agreed earlier and then missed – don't repeat)
+**Every save step copies to the PS4's internal storage FIRST; the cloud gets them later from a background batch. Never
+straight to the cloud.** Less effort, fewer failures. Internal copy = /data/round2/prep/<user>/<game>/<part>/ + manifest.txt
+("path<TAB>size<TAB>sha256" – a fingerprint per file), checked before anything is removed, queued in
+/data/round2/prep/pending.txt. The cloud batch (TO BUILD) uploads pending items in the background and skips files whose
+fingerprint is already in the cloud – unchanged saves are never re-sent. Session end only touches the games played that
+session. Owner also: skip cloud uploads in tonight's Kai clean slate (the day0 backup covers it).
+- Kai clean slate 7:38pm (1.1.50, cloud-first – the mistake): 16 of 115 games uploaded + wiped, 0 failed; stopped by a
+  "/_clean.stop" at 7:43:30pm (not sent by this chat). Restarted 7:5xpm on **1.1.51 = internal first** for the 99 left.
