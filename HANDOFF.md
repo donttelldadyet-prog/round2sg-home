@@ -1489,3 +1489,10 @@ membership system yet) → the cloud batch is built but OFF.
   expected 2439664")** – the reply buffer doubles 2 MB → 4 MB and the old shared-host helper has no memory left. 11.00 = no
   own-program; needs a PS4 restart + jailbreak (fresh memory), then update. Then per room: /_profiles, /_snap.day0 where
   missing, /_purge.day0, rename spares Player 1-4, /_avreset spares, /_uorder.
+- **8:41pm owner turned on Kai, Atlas, Max.** Max took 1.1.52 (owner tapped), `/_profiles` = Max + User1-4 (no add/delete
+  needed), `/_purge.day0` → **159 games, 0 failed, 378 parts removed** (4 kept: GT Sport main, PS Vue, homebrew), renamed
+  User1-4 → Player 1-4 (rc 0 each), /_avreset spares, /_uorder Max first → "5 profiles re-ordered, 0 failed". **Max ready.**
+  Atlas: no network 18:39–20:37 (26 connect fails), back 20:37, auto-took 1.1.52 at 20:38, last poll 20:44, silent since.
+  Scarlett: owner restarted it twice (helper fresh 20:47) – still 1.1.37; `/_selfown` (own program = own memory, proven
+  on 11.00 at 12:41pm on Vale) sent 8:55pm but **refused: session until 11:45pm**. After: /_selfown → update → /_snap.day0
+  → /_purge.day0 → profiles. Vale after 11:30pm. Bella asleep since 8:13pm, no day0 yet.
