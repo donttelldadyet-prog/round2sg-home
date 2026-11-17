@@ -1264,3 +1264,52 @@ copies, no RAM creep.** This is the real fix for the ~14-update ceiling.
 - **Keep-awake behaves as designed:** owner confirmed Max was kept awake and did NOT rest, sitting on the "press PS"
   screen the whole hold (keep-awake prevents rest, doesn't sign in; the human PS press clears the welcome screen). This is
   the intended morning bridge: wake booked rooms → prep saves behind the screen → hold awake → staff press PS on arrival.
+
+### 17 Nov 2026, 1–2pm – 3-copy saves, clean move, the save study (helpers 1.1.34 → 1.1.37, Vale + Max)
+Owner: "save vale's plate up to cloud, move max's plate up to vale", "check there are 3 copies (slot, prep folder, cloud)",
+"build logs too so we can analyse problems", then mid-way: "a downgrade room might not have the game" and "do all game saves
+produce sce memory? study it… use max and vale".
+- **1.1.34 prep copy + save.log.** Every backup also writes the files to `/data/round2/prep/<user>/<title>/<save>/` (plus
+  manifest.txt + cloud.txt = the cloud path). Restore downloads into that same folder first and KEEPS it. Every step goes to
+  `/data/round2/save.log` (start/done lines with paths, files, bytes, fails, prep-fails; rolled at 64 KB), also in the report
+  as `log.save`. Read it with `/_tail./data/round2/save.log|20` – save.log is the truth when a look result looks stale.
+- **BUG FOUND + FIXED (1.1.35): restore MERGED instead of replacing.** Max's PlateUp into Vale gave Vale 34 save files =
+  Max's 15 + Vale's old 15 + 4 sce_sys. PlateUp (and many games) name each file by a timestamp, so nothing overwrites by name.
+  1.1.35 clears the receiving save part's game files (keeps sce_sys = that profile's identity) before writing; result and
+  save.log say "N cleared". Re-run: Vale Saves 30 cleared → 19 files / 297,625 bytes, sce_sdmemory 1 cleared → 5 files /
+  12,460,908 bytes = **byte-identical to Max's**. Then a fresh Vale backup → all 3 copies match (slot, prep, cloud
+  …/11341153/CUSA44827/Saves/1794893668 + sce_sdmemory/1794893738). Vale's ORIGINAL PlateUp stays in the cloud under
+  …/11341153/CUSA44827/Saves/1794892068 (pre-move backup). Owner to open PlateUp on Vale and confirm Max's progress.
+- "4 kept" in a restore = the receiving save's 4 sce_sys files (param.sfo, keystone, icons). Expected, not a loss.
+- **1.1.36/1.1.37: missing game / missing part says which.** `no such save` is now one of: "game not installed in this room
+  (CUSA…) – install it here first" / "profile never played this game – play it once on this profile first" / "no save part
+  '<name>' here yet". Nothing is written in any of these cases; the member's save stays safe in the cloud. Restore open
+  failures now go to save.log. Tested live on Vale (WWE 2K25 not installed, PlateUp on profile 11341157, a made-up part).
+- **1.1.36: save names with dots work in restore** (Cat Quest II `save-file1.dat`, PS Vue `localstorage.aes` – the old
+  `%47[^.]` cut the name at the dot). The name now ends at the last ".<32-hex console id>/". Tested.
+- **Engine keeps only 40 characters of a look result** (300 for tail/ and dns/ keys): round2-book.js line ~4213. That's why
+  results read "4 kep", "manife". Messages now lead with the meaning. Proper fix (300 for save/ backup/ restore/ keys) is an
+  engine deploy – not done mid-afternoon.
+- **One command slot per PS4:** a new look REPLACES one that hasn't been taken yet (that's what swallowed a restore when a
+  log read was sent right after it). Wait for a result before sending the next; several paths in ONE look go with `;`
+  (not a newline). The engine-driven save sync must queue, not overwrite.
+
+**THE SAVE STUDY (all profiles on Max (5) + Vale (2), 62 games):**
+- **sce_sdmemory is NOT the norm – 12 of 62 games have it** (PlateUp, GT Sport, Darkest Dungeon II, Vampire Survivors,
+  Outer Wilds, PvZ Replanted, Cuphead, Untitled Goose Game, God of War, + 3). It's just one possible part name.
+- **A game's save = 1 to 17 parts, names chosen by the game:** 26 games have 1 part (SaveData, Main, savedata0, Slot00, 99,
+  ProfileData…); 36 have several (Spider-Man MM 17, Mortal Kombat 11 12, Minecraft Dungeons 11, Trine 4 9, NBA 2K26 8…).
+  So backup/restore must work per GAME = every part, never one fixed name.
+- **Many games keep MAKING new parts as people play:** Spider-Man snapshots with random numbers, Minecraft Dungeons one per
+  character, EA FC 24/26 a timestamped Settings part, Minecraft one per world, MK11 recordings, Trine slots. A receiving room
+  usually WON'T have those parts → restore can only fill parts that already exist there. **Next build needed for member save
+  sync: create a missing save part** (the way Apollo Save Tool imports saves), then the clean-move logic per part.
+- **Leftover parts on the receiving profile** (e.g. another guest's Minecraft Dungeons characters) – for a whole-game move
+  they should probably be removed after backup so only the member's progress shows. OWNER DECISION, not built.
+- **Sizes (save image, not real data):** WWE 2K25 1 GB, CUSA02671 922 MB, LittleBigPlanet 512 MB, GT Sport 200 MB, Minecraft
+  96 MB; most 3–50 MB. Real data is often far smaller (PlateUp image 48 MB, data 12 MB). Big ones need time + prep space.
+- **The PS4 keeps its own hidden backup of each part (`sce_bu_<name>`).** Our restore leaves it alone; it's only used if the
+  main copy is damaged – in that case the PS4 would fall back to the PRE-move data. Consider refreshing it later.
+- Light check 17 Nov ~1:55pm after 1.1.37: same as before the change (13 ok; watchdog 24h-maths warning; Kaeden TV quiet;
+  ❌ "side" timer hit 50 outside requests in one run – PRE-EXISTING, needs its own look; 2 SimplyBook calls from the guest
+  booking page during the run). PS4 helpers + game-save storage step ✅.
