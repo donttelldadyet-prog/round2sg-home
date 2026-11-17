@@ -1184,5 +1184,20 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
 - **AGREED DIRECTION after B failed:** keep Remote Play wake (works: Kai/Vale/Max/Scarlett); the morning wake preps saves
   in the background; the welcome screen is cleared by ONE human PS-button press when staff open the room; the helper
   keeps woken PS4s awake so they don't fall back to rest before staff arrive (sceSystemServicePowerTick /
-  sceShellCoreUtilResetAutoPowerDownTimer, both in toolkit) – build + test on Max next. Atlas/Bella: cable or closer mesh. (4) morning trigger test;
+  sceShellCoreUtilResetAutoPowerDownTimer, both in toolkit) – build + test on Max next. Atlas/Bella: cable or closer mesh.
+- **17 Nov 11:30am HELPER 1.1.31** (ps4-helper 07b7bd1, ps4-release 9079a0e): (1) method B (ss/r2ss.c, /_ss, /_sswake)
+  REMOVED – dead end. (2) KEEP-AWAKE: job `/_keepawake.<minutes>` (0 = cancel, max 600) sets g_awake_until; the loop
+  calls sceSystemServicePowerTick + sceShellCoreUtilResetAutoPowerDownTimer once a minute while the hold lasts; report
+  carries `awakeHold` (seconds left). Tested on Max: "holding 45 min", awakeHold 2700 shows in report. Light check after:
+  14 passed / 2 / 1 (known items only). (3) step_aside now munmaps the 1 MB save buffer so each sleeping (updated-out)
+  copy shrinks to ~its stack.
+  **RAM/purge – the honest limit (owner asked to kill sleeping helpers):** old helpers can't LEAVE the process because
+  they are threads inside GoldHEN's BinLoader host; a full exit there crashed the whole host before (1.0.6). Worse, the
+  ~1.27 MB code image of each update is mapped by BinLoader, which never unloads it, so even killing a thread wouldn't
+  free the image – only a PS4 restart does. 1.1.31 reclaims the biggest heap (sv_buf) per sleeper, which stretches how
+  many updates fit, but does NOT remove the per-update image leak. **The real fix is the own-program route (/_selfown /
+  elfldr, proven on Kai 16 Nov): there each helper is its OWN process, so on update it `_exit(0)`s and the OS frees
+  EVERYTHING incl. the image – no sleeping copies at all. = "starter 3": launch helper as its own program at boot.**
+  **Keep-awake still to prove:** does it stop the post-NETWORK-wake fall-back to rest (Vale/Max rested ~5 min, Kai ~30
+  min with nobody signed in)? Test: rest Max → Remote Play wake (no sign-in) → `/_keepawake.45` at once → watch 35 min. (4) morning trigger test;
   (5) owner opens GT Sport on Max once (main profile now has an ID).
