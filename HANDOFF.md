@@ -1639,3 +1639,17 @@ membership system yet) → the cloud batch is built but OFF.
 - **How to test this again:** from any healthy PS4: look `/_ddp.<ip>;/_ddpall` – broadcast yes + direct no = this fault.
 - Corrections: "Atlas asleep" / "Bella too busy to report" (3:30am) were wrong; Bella's "frozen helper" at 2:53am was most
   likely this too (its log: "back after 40 failures" at 2:57:58, before the owner's restart).
+- **3:53–3:58am, router page open DURING the spell (Atlas + Bella still silent since 3:25:45):**
+  Wireless › Statistics lists BOTH on the main unit's 5 GHz (Atlas −76 dBm, Bella −75), packet counters still counting both
+  ways; no log lines for either (the log only holds ~4 min – ~60 "Trigger Roaming" lines a minute). **System Tools ›
+  Diagnostics › Ping from the router itself: Kai .18 = 4/4 back (~100 ms); Atlas .15 = 0/4; Bella .6 = 0/4.** So the router
+  believes they are connected yet cannot deliver a single direct packet to them; Kai at −78 dBm (weaker) is fine → not
+  signal strength, not the mesh moving them. A per-device state inside the router's 5 GHz radio is stuck (suspects: pairwise
+  key slot / power-save buffering; firmware 0.9.0 Build 260212, WPA2+WPA3 mixed, OFDMA+TWT on).
+- Both stuck in the same 3 s, at the time the owner hard-restarted Kai (3:25–3:27). Idea to test: a device dropping off /
+  rejoining the 5 GHz radio breaks delivery to OTHER devices (also fits 2:03 + 2:46 radio restarts, 2:24 iPhone hopping units).
+  Test: watch `/_ddp.<ip>` to the others while one PS4 is restarted.
+- Ways out, cheapest first: (1) helper self-heal – when the engine AND the router (192.168.88.1) don't answer for ~2 min while
+  NetCtl says connected, make the PS4 rejoin Wi-Fi itself + write a line (needs a safe rejoin call, test on Bella);
+  (2) router: WPA2-only instead of WPA2+WPA3, OFDMA/TWT off – one at a time, each save restarts the radios;
+  (3) report to Singtel/TP-Link; (4) cable for Atlas/Bella/Kai.
