@@ -1607,3 +1607,16 @@ membership system yet) → the cloud batch is built but OFF.
   time; pushing it to all PS4s at once from here was blocked (needs owner say-so).
 - Bella day0 re-snapshot running again (previous run: 134/134 with 7 failed during tonight's Wi-Fi restarts) → when 0 failed:
   `/_purge.day0`, then `ps4reset`; owner adds 1 profile.
+
+### 18 Nov 3:20–3:40am – FREEZES = TOO MANY OWN-PROGRAM SPAWNS SINCE THE PS4 STARTED → helper 1.1.61 limit
+- 1.1.60 pushed (owner "push it now"): Max, Atlas, Bella, Scarlett → own 1.1.60 (Scarlett auto-promoted on 11.00 ✓).
+  Vale: "download failed (-1 no memory)" = shared host exhausted → needs a PS4 restart (then 1.1.60 auto-promotes).
+- **Kai froze at 3:04:46am** taking 1.1.59: its `/data/round2/own-spawn.log` stops at "spawning" (inside elfldr_spawn) on
+  its **15th own-program spawn since its last PS4 start** (17 Nov 14:56 → 14 OK). The same 2440160-byte file spawned fine
+  after the restart → not the file. **Max's 11:42pm freeze** stops at the same "spawning" step on its 6th spawn since start,
+  but that was 1.1.56 (libScePad build, 2457232 B) – may be the pad library instead. Starter (boot/main.c) is not involved
+  (it only relaunches when nobody holds helper.lock; the own hand-over keeps it held; boot.log quiet then).
+- **1.1.61** (ps4-helper, sha 52735fe6…, 2440264 B): `/data/round2/own-spawns.txt` = "<kern.boottime> <count>"; every
+  own spawn (update, /_selfown, auto-promote) counts; at **5 per PS4 start** updates answer "waits for the next PS4 restart"
+  (retry flag) without downloading, and selfown/auto-promote are skipped. Root cause still unknown (kernel-side per spawn).
+- Reading a PS4's spawn history: look `/_tail./data/round2/own-spawn.log|200`.
