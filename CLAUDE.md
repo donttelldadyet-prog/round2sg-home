@@ -19,3 +19,6 @@
 - **Background jobs run in three timers** (14 Nov 2026; Cloudflare free plan = 50 outside requests per run): `now` */5
   (reminders, tonight's calendar), `side` minutes 1,6,… (TV OKs, payments, keys), `sweep` minutes 3,13,… (look-aheads). A new
   background job goes in side or sweep or gets its own timer (5 allowed, 3 used) – never bulk up `now`. HANDOFF "THREE TIMERS".
+- **Durable Object calls are capped: 100,000 a day on the free plan** (resets 8am SGT; over it the engine's bookings/payments
+  error). Every `hb.*` call from the worker is one. Read several keys with ONE `hb.kvMany` / `hbSnap` (17 Nov), never a kvGet
+  per key in a loop or per poll. HANDOFF "DURABLE OBJECT CALLS".
