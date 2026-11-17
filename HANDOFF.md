@@ -1313,3 +1313,37 @@ produce sce memory? study it… use max and vale".
 - Light check 17 Nov ~1:55pm after 1.1.37: same as before the change (13 ok; watchdog 24h-maths warning; Kaeden TV quiet;
   ❌ "side" timer hit 50 outside requests in one run – PRE-EXISTING, needs its own look; 2 SimplyBook calls from the guest
   booking page during the run). PS4 helpers + game-save storage step ✅.
+
+### 17 Nov 2026, 2–2:30pm – leftovers removed on a move (owner: "yes"); whole-game backup + move (helpers 1.1.38 → 1.1.40)
+Owner approved: when a member's game moves into a profile, leftover parts from earlier players are backed up, then removed.
+- **The PS4's save service won't work from the helper** (`sceSaveDataInitialize3` → 0x809F000B INTERNAL, then every call
+  0x809F0001 NOT_INITIALIZED – it only serves real apps with a title ID; Apollo is installed as one). Removed from the code.
+- **1.1.39 delete = Apollo's way:** the part's row comes out of the PS4's save-list database
+  `/system_data/savedata/<user>/db/user/savedata.db` (worked on as a copy in /data/round2/db/work.db, PRAGMA integrity_check
+  must say ok, written back whole; the untouched original kept as /data/round2/db/<user>-<time>.db), then the files go:
+  sdimg_<part>, <part>.bin, sdimg_sce_bu_<part> + sce_bu_<part>.bin if any, savedata_meta/user/<game>/<part>_icon0.png.
+  `/_sdel.<user>.<game>.<part>` always backs the part up (prep + cloud) first; refuses PS Vue (CUSA00960 – its storage keeps
+  the Vue jailbreak), the protected main-profile game, sce_bu_ names, an open game. `/_sparts.<user>.<game>` = the save
+  list's parts. **The helper now links SQLite: 2.4 MB (was 1.3).** Fine for own-program rooms (old copy freed on update);
+  the 4 shared-host rooms (Scarlett, Bella, Kai, Atlas) keep a bigger sleeping copy per update until they go own-program.
+- Tested: Vale profile 11341157 (spare guest), MK11 guest replay RecentRecording9: backed up, row 1→0, 3 files removed, list
+  11, nothing left. 15 min later the database file was still ours (mtime = edit time). **WATCH:** re-check after the PS4
+  next writes that list itself (someone saves a game on that profile) that the row doesn't come back.
+- **1.1.40 whole games:** `/_gback.<user>.<game>` = every part under ONE stamp `<console>/<user>/<game>/_game/<stamp>/<part>/…`
+  + `game.txt` (part names). `/_gmove.<user>.<game>.<game backup>` = (1) plan: every member part must already exist on the
+  receiving profile, else REFUSED with nothing written ("member parts missing here") – making parts is the next build;
+  (2) whole-game backup of the receiving profile; (3) clean-replace each member part; (4) only if all worked, remove the
+  receiving profile's parts the member doesn't have (+ their prep copies). All steps in save.log ("move plan / move done").
+- Tested: refusal – Max User1's 12-part MK11 into Vale 11341157 (11 parts) → refused, missing RecentRecording9, nothing
+  written. Full – Vale 11341157's MK11 (11 parts, game backup …/11341157/CUSA11379/_game/1794896311) into **Max User1
+  14a1e944** (11.00 → 9.00): Max User1's old MK11 backed up (12 parts, …/14a1e944/CUSA11379/_game/1794896446), 11 parts
+  clean-replaced (each "1 cleared, 4 kept"), leftover RecentRecording9 removed; save list 11, disk 11, prep 11.
+  So Max User1 now holds the MK11 data that was on Vale's 2nd profile (spare guest profiles both; reversible from the backup
+  except the removed recording until parts can be made).
+- In practice the receiving profile is usually MISSING parts rather than carrying extras (Overcooked 2 5 vs 3, Minecraft
+  Dungeons 6 characters vs 0, FC 24 differently-stamped settings) → **"make a missing save part" is now the blocker for real
+  member moves** (Apollo: createSave = make the image + key, then INSERT into the same savedata.db; PS4 Save Mounter too).
+- Light check after 1.1.40: same as before (14 ok; watchdog 24h-maths ⚠️; Kaeden TV ⚠️; ❌ "side" timer at 50 outside
+  requests – pre-existing). systems.json (main 680523e) updated: proven list + "next = make missing parts".
+- No System check step added: the move only runs on a PS4 by command; when the engine starts driving save sync (prep from
+  bookings), add a step then (refusal paths: no backup / missing parts / game open – all safe to test with nothing written).
