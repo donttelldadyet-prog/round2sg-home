@@ -2764,6 +2764,7 @@ async function gm(env, req) {
     try {
       const r = await (act === 'insess' ? insess : act === 'extend' ? extend : act === 'late' ? late : act === 'latelist' ? latelist : act === 'latecancel' ? latecancel : act === 'latelink' ? latelink : extUndo)(env, hb, f);
       if (act !== 'insess' && act !== 'latelist' && r && !r.error) { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); await noiseSync(env, [t, addDays(t, 1), f.day, f.date].filter(Boolean), act).catch(() => null); }   /* noise rule follows extensions and keyed-in sessions */
+      if ((act === 'extend' || act === 'late') && r && !r.error && !f.test) await ps4ResetPoke(env, hb, act === 'extend' ? 'extended in the control centre' : 'late session added').catch(() => null);   /* 17 Nov: stop a PS4 reset countdown at once */
       return gmJ(r);
     } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
@@ -4060,6 +4061,13 @@ async function ps4In(env, req) {
     else if (r.rolled && String(r.rolled).includes(' ' + uc.v + ':')) { uc.state = 'rolledback'; uc.doneAt = now; uc.res = { why: String(r.rolled).slice(0, 120) }; await hb.kvSet('ps4cmd:' + id, uc); }
   }
   const ids = (await hb.kvGet('ps4ids')) || []; if (!ids.includes(id)) { ids.push(id); await hb.kvSet('ps4ids', ids.slice(-40)); }
+  /* 17 Nov (helper 1.1.56): a reset countdown kept waiting because buttons are still being pressed 10+ min past the reset time
+     → one staff alert per countdown (phones, never Telegram) */
+  if (room && r.countdown && +r.countdown.play >= 600) {
+    const ak = 'ps4playAlert:' + id;
+    if ((await hb.kvGet(ak)) !== String(r.countdown.lab)) { await hb.kvSet(ak, String(r.countdown.lab));
+      await humanAlert(env, 'ps4play-' + room + '-' + r.countdown.lab, 'Guests still playing after their session', `${room}: the PS4 reset is waiting – buttons still being pressed ${Math.round(+r.countdown.play / 60)} min after the reset time. Extension? Add it in the control centre (the reset then stops by itself), or ask them to wrap up. PS4s › Stop reset also works.`).catch(() => null); }
+  }
   /* play time: the helper counts minutes per title since its last check-in (it looks every minute) */
   if (room && r.played && typeof r.played === 'object') {
     const night = sgDay(now - SHADOW_TILL * 60e3), k = 'ps4play:' + night, P = (await hb.kvGet(k)) || {};
@@ -4121,7 +4129,8 @@ async function ps4ResetRun(env) {
   if (!ps4ResetOn(A, now)) return { off: true };
   const after = Math.min(30, Math.max(2, +A.after || 10)), night = sgDay(now - SHADOW_TILL * 60e3), plan = [];
   for (const d of [night, addDays(night, 1)]) for (const S of (await sessDay(env, d)).sessions)
-    if (realGuests(S, S.unit) && !S.orphanExt && S.guestEnd > now - 60 * 60e3 && S.guestEnd < now + 18 * 3600e3) plan.push({ room: GM_ROOM[S.unit], unit: S.unit, end: S.guestEnd, at: S.guestEnd + after * 60e3 });
+    if (realGuests(S, S.unit) && !S.orphanExt && S.guestEnd > now - 60 * 60e3 && S.guestEnd < now + 18 * 3600e3
+      && (A.only !== 'eb' || ((S.s + 8 * 3600e3) % 86400e3) / 60e3 === EB_START)) plan.push(   /* owner 11:38pm: test run on the early-bird (11:00) sessions only */{ room: GM_ROOM[S.unit], unit: S.unit, end: S.guestEnd, at: S.guestEnd + after * 60e3 });
   plan.sort((a, b) => a.at - b.at);
   const K = await hb.kvMany(['ps4resetPlan', 'ps4resetLog', 'ps4map'], []), map0 = K.ps4map || {}, byRoom = {};
   for (const id in map0) byRoom[map0[id]] = id;
@@ -4150,12 +4159,16 @@ async function ps4ResetDue(env, hb, id, room, now) {   /* the PS4's own minute: 
   const A = await hb.kvGet('ps4resetAuto'); if (!ps4ResetOn(A, now)) return null;
   const plan = (await hb.kvGet('ps4resetPlan')) || [], log = (await hb.kvGet('ps4resetLog')) || [];
   /* 11:16pm: a countdown is running on the PS4 (sent up to 5 min before the reset time) – an extension added since stops it */
-  const cd = plan.find((x) => x.room === room && now < x.at + 2 * 60e3 && log.some((l) => l.room === room && l.end === x.end && l.state === 'sent' && l.t > x.at - 6 * 60e3));
+  const cd = plan.find((x) => x.room === room && now < x.at + 65 * 60e3 && log.some((l) => l.room === room && l.end === x.end && l.state === 'sent' && l.t > x.at - 6 * 60e3));   /* 1.1.56: guests still pressing buttons keep it waiting up to 60 min */
   const due = plan.filter((x) => x.room === room && now >= Math.max(x.end, x.at - 5 * 60e3) && now < x.at + 35 * 60e3 && !log.some((l) => l.room === room && l.end === x.end && l.state !== 'waiting'));
   if (!cd && !due.length) return null;
   const rep = await hb.kvGet('ps4:' + id);
   if (!rep || ps4Newer(PS4_RESET_MIN, rep.v)) return null;   /* the 10-minute tick logs why */
-  if (now - ((await hb.kvGet('ps4resetChk:' + id)) || 0) < 2 * 60e3) return null;
+  /* dynamic (owner 11:31pm "don't make it a rudimentary check system"): every 2 min in the first 6 min of a countdown (the
+     usual 5-min run), every 10 min after that – by then guests pressing buttons are what holds the reset, and an extension
+     made in the control centre stops it at once (ps4ResetPoke) */
+  const sentL = cd && log.find((l) => l.room === room && l.end === cd.end && l.state === 'sent');
+  if (now - ((await hb.kvGet('ps4resetChk:' + id)) || 0) < (sentL && now - sentL.t > 6 * 60e3 ? 10 : 2) * 60e3) return null;
   await hb.kvSet('ps4resetChk:' + id, now);
   const x = cd || due[due.length - 1];
   /* double check, live from SimplyBook: a real guest in the room right now (extended, or the next guest already in)? */
@@ -4174,6 +4187,23 @@ async function ps4ResetDue(env, hb, id, room, now) {   /* the PS4's own minute: 
   ps4ResetNote(log, x, 'sent', (w >= 15 ? 'countdown started (' + Math.round(w / 60) + ' min, pop-ups on the PS4)' : 'reset sent') + ' ' + Math.round((now - x.end) / 60e3) + ' min after the guest end – room confirmed clear (live SimplyBook check)', c.cid, now);
   await hb.kvSet('ps4resetLog', log.slice(0, 40));
   return c;
+}
+/* an extension / late session made in the control centre: a reset countdown running in that room stops at once
+   (one live look per room with a countdown – usually none) */
+async function ps4ResetPoke(env, hb, why) {
+  const now = Date.now(), K = await hb.kvMany(['ps4resetLog', 'ps4resetPlan', 'ps4map'], []), log = K.ps4resetLog || [], plan = K.ps4resetPlan || [];
+  const live = plan.filter((x) => log.some((l) => l.room === x.room && l.end === x.end && l.state === 'sent' && now - l.t < 70 * 60e3));
+  if (!live.length) return 0;
+  const byRoom = {}; for (const id in (K.ps4map || {})) byRoom[K.ps4map[id]] = id;
+  let ch = 0;
+  for (const x of live) {
+    const id = byRoom[x.room]; if (!id) continue;
+    const busy = await roomBusy(env, x.unit, 0).catch(() => null); if (!busy) continue;
+    const c = { cid: 'r' + now.toString(36) + ch, do: 'look', p: '/_reset.cancel', at: now, by: 'auto: ' + why, state: 'sent', nobusy: true };
+    await hb.kvSet('ps4cmd:' + id, c); ch += ps4ResetNote(log, x, 'held', 'countdown stopped – ' + why + ' (room in use until ' + clock12(busy.guestEnd) + ')', c.cid, now);
+  }
+  if (ch) await hb.kvSet('ps4resetLog', log.slice(0, 40));
+  return ch;
 }
 /* 11:16pm: the PS4 asks 20 s before its countdown ends – LIVE SimplyBook: still in use / switched off / can't tell = hold */
 async function ps4ResetOk(env, req) {
@@ -4435,7 +4465,7 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
   }
   if (act === 'ps4resetauto') {   /* staff: automatic reset after each session on/off; from = optional start (ms) */
     const old = (await hb.kvGet('ps4resetAuto')) || {};
-    const v = { on: f.on === undefined ? !!old.on : f.on === '1' || f.on === true, from: f.from === undefined ? +old.from || 0 : +f.from || 0, after: Math.min(30, Math.max(2, +f.after || +old.after || 10)), at: Date.now(), by: String(f.by || 'control centre').slice(0, 40) };
+    const v = { on: f.on === undefined ? !!old.on : f.on === '1' || f.on === true, from: f.from === undefined ? +old.from || 0 : +f.from || 0, after: Math.min(30, Math.max(2, +f.after || +old.after || 10)), only: f.only === undefined ? old.only || '' : f.only === 'eb' ? 'eb' : '', at: Date.now(), by: String(f.by || 'control centre').slice(0, 40) };
     await hb.kvSet('ps4resetAuto', v); return { ok: true, auto: v };
   }
   if (act === 'ps4look') {   /* read-only folder listing from the PS4 (helper 1.0.5+): what the Capture Gallery keeps, etc. */
