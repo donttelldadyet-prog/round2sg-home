@@ -85,6 +85,34 @@ let sb2tok = null;
    in again – ~30% of all requests). If the store doesn't answer within 2 s, it just logs in as before. */
 async function tokGet(env, k) { try { const v = await Promise.race([book(env).kvGet(k), new Promise((r) => setTimeout(() => r(null), 2000))]); return v && v.t > Date.now() + 30e3 ? v : null; } catch (e) { return null; } }
 async function tokPut(env, k, v) { try { await book(env).kvSet(k, v); } catch (e) {} }
+/* MIDNIGHT NOTES (owner, 17 Nov – asy's Scarlett note 8:45pm–12:00am showed in SimplyBook's calendar as a block over ALL of
+   the next day, 11am onwards; daren's ending 12:15am showed fine). SimplyBook draws a note that ends at exactly 00:00:00 of the
+   next day as covering that day. So a note is never SENT with an end of "next day 00:00:00": it goes as "same day 23:59:59",
+   and every note READ back with "23:59:59" is turned into the next day's 00:00:00 again – so the engine still sees guest
+   end + 15 min cleaning = midnight, and nothing else changes. */
+const nextDayStr = (d) => addDays(d, 1);
+function noteMidOut(b) {
+  const st = String(b.start_date_time || ''), en = String(b.end_date_time || '');
+  if (!/ 00:00:00$/.test(en) || en.slice(0, 10) === st.slice(0, 10)) return b;
+  return Object.assign({}, b, { end_date_time: addDays(en.slice(0, 10), -1) + ' 23:59:59' });
+}
+function noteMidIn(n) { if (n && / 23:59:59$/.test(String(n.end_date_time || ''))) n.end_date_time = nextDayStr(String(n.end_date_time).slice(0, 10)) + ' 00:00:00'; return n; }
+/* one-off (17 Nov): notes already in SimplyBook that end at 00:00:00 of the next day → re-saved (noteMidOut makes them 23:59:59).
+   Runs once from the side timer (DO kv oneoffMid); remove with the next engine change. */
+async function oneoffMid(env) {
+  const hb = book(env); if (await hb.kvGet('oneoffMid')) return;
+  await hb.kvSet('oneoffMid', { at: Date.now(), state: 'running' });
+  const s2 = await sb2(env), from = sgDay(Date.now() - 86400e3), L = await notesRange(s2, from, addDays(from, 60)), fixed = [];
+  /* read through sb2, so one already saved as 23:59:59 also reads as 00:00:00 and is simply saved again (harmless) */
+  for (const n of L) {
+    const st = String(n.start_date_time || ''), en = String(n.end_date_time || '');
+    if (!/ 00:00:00$/.test(en) || en.slice(0, 10) === st.slice(0, 10)) continue;
+    await s2('PUT', '/admin/calendar-notes/' + n.id, { provider_id: +n.provider_id, service_id: n.service_id || null, start_date_time: st, end_date_time: en, note_type_id: n.note_type_id || 1, note: n.note, mode: n.mode || 'provider', time_blocked: !!n.time_blocked })
+      .then(() => fixed.push(n.id + ' ' + st.slice(5, 16) + '–' + en.slice(5, 16))).catch((e) => fixed.push(n.id + ' FAILED ' + String(e.message).slice(0, 80)));
+    if (fixed.length >= 20) break;
+  }
+  await hb.kvSet('oneoffMid', { at: Date.now(), state: 'done', fixed });
+}
 async function sb2(env) {
   if (!sb2tok || sb2tok.t < Date.now()) sb2tok = await tokGet(env, 'tokRest');
   if (!sb2tok || sb2tok.t < Date.now()) {
@@ -93,10 +121,12 @@ async function sb2(env) {
     sb2tok = { k: j.token, t: Date.now() + 50 * 60e3 }; await tokPut(env, 'tokRest', sb2tok);
   }
   const go = async (method, path, body, again) => {
+    if (body && /calendar-notes/.test(path)) body = noteMidOut(body);
     sbHit(method + ' ' + path.split('?')[0].replace(/\/\d+/g, '/#')); const r = await fetch(SB2 + path, { method, headers: { 'Content-Type': 'application/json', 'X-Company-Login': env.SB_COMPANY, 'X-Token': sb2tok.k }, body: body ? JSON.stringify(body) : undefined });
     if (r.status === 401 && !again) { sb2tok = { k: '', t: 0 }; await tokPut(env, 'tokRest', null); await sb2(env); return go(method, path, body, true); }   /* a shared login gone stale: log in once more */
     const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch (e) {}
     if (!r.ok) throw new Error('SimplyBook ' + method + ' ' + path.split('?')[0] + ' ' + r.status + ': ' + t.slice(0, 200));
+    if (j && /calendar-notes/.test(path)) { if (Array.isArray(j.data)) j.data.forEach(noteMidIn); else noteMidIn(j); }
     if (method !== 'GET' && /calendar-notes/.test(path)) { await book(env).kvSet('gcal', null).catch(() => null); await book(env).kvSet('gapc', {}).catch(() => null); }   /* BOTH inside the if: 12–14 Nov the board's memory was wiped on every notes READ too (7,110 requests on 13 Nov) */   /* a note changed (late session, block, extension): the booking board asks again */
     return j;
   };
@@ -4535,6 +4565,7 @@ const HANDLER = {
         }
       } })());
       go(diagReq(env).catch(() => null));   /* staff questions left in KV (diag:req → diag:res) */
+      go(oneoffMid(env).catch(() => null));   /* one-off 17 Nov – remove next time */
       go(keyDaily(env));
     };
     const sweep = () => {
