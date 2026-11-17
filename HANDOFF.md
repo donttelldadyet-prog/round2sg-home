@@ -1459,3 +1459,33 @@ fingerprint is already in the cloud – unchanged saves are never re-sent. Sessi
 session. Owner also: skip cloud uploads in tonight's Kai clean slate (the day0 backup covers it).
 - Kai clean slate 7:38pm (1.1.50, cloud-first – the mistake): 16 of 115 games uploaded + wiped, 0 failed; stopped by a
   "/_clean.stop" at 7:43:30pm (not sent by this chat). Restarted 7:5xpm on **1.1.51 = internal first** for the 99 left.
+
+
+### 17 Nov 8:05pm – helper 1.1.52: cloud batch (OFF), launch purge, INTERNAL-COPY BUG FIX
+Owner 8:05pm: Kai's order works (Kai, Player 1-4). Code the background cloud batch first; then every room: clear all saves
+IF its restore point succeeded, remake profiles (tell him which PS4s need profiles added/deleted), fresh internal batch
+folder, clean slate ready. **From 18 Nov only the clean slate is tested.** No cloud backups of saves needed yet (no
+membership system yet) → the cloud batch is built but OFF.
+- **BUG (found 8:10pm, fixed in 1.1.52):** `sv_del_part` still deleted the part's prep copy (1.1.40 leftover, from when
+  the cloud came first). So Kai's 1.1.51 clean slate copied each part internally and then threw the copy away – Kai's
+  prep game folders were empty. Kai is covered by its day0 cloud restore point (owner: nothing after it was critical).
+  1.1.52 never deletes an internal copy and logs "internal copy ... MISSING after removal" if one is ever gone.
+- **Cloud batch** (`/_cloud.on|off|state`, flag file prep/cloud_on, default OFF): reads prep/pending.txt, ~20 s a
+  minute, only with no game open and no snapshot/clean running. Part unchanged (manifest.txt == uploaded.txt) → skipped.
+  Else each file read from the internal copy, SHA-256 checked against the manifest (damaged copy never sent), 1 MB pieces
+  to `<console>/<user>/<game>/<part>/<time>/` + manifest (restorable with /_srest); writes uploaded.txt + cloud.txt.
+  5 tries then cloud_failed.txt. Report field `cloud` {on, waiting, up, same, fails, mb}. Worker requests only, no DO calls.
+- **Purge** `/_purge.<label>` (launch clear): refuses unless snapshot <label> on this PS4 is done with 0 failures, no game
+  open, no spare profile signed in. Sets the old prep aside (renamed `prep-before-<label>-<time>`, nothing deleted), makes a
+  fresh empty prep, then runs the clean-slate job over every registered profile (main included). A part that is in the
+  restore point (index, not failed) and unchanged since its stamp is removed with no new copy; anything newer is copied
+  internally first. Never PS Vue, the protected main-profile game (GT Sport on Max), homebrew settings (APOL*, LAPY* –
+  Apollo's settings on Kai Player 4 got wiped by the 1.1.50/51 clean slate). Profiles whose folders remain after the
+  profile was deleted are not touched.
+- Kai: 1.1.52 8:13pm, `/_purge.day0` → "0 games on 5 profiles" (already clean) – fresh internal folder. Ready for 9pm.
+- Rooms 8:22pm: Vale 1.1.42 (day0 OK, session till 11:30pm → update + /_purge.day0 after). Max (day0 OK) not answering
+  since ~7:30pm (rest/off). Atlas (day0 OK) silent since 4:28pm. Bella 1.1.46 (no day0) took no command since 8:12pm,
+  update queued. **Scarlett 1.1.37 (no day0) CAN'T UPDATE: download stops at ~2 MB twice ("download size 2096563,
+  expected 2439664")** – the reply buffer doubles 2 MB → 4 MB and the old shared-host helper has no memory left. 11.00 = no
+  own-program; needs a PS4 restart + jailbreak (fresh memory), then update. Then per room: /_profiles, /_snap.day0 where
+  missing, /_purge.day0, rename spares Player 1-4, /_avreset spares, /_uorder.
