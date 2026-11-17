@@ -1161,5 +1161,13 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   PIN login step) → test on Kai first; D) seregonwar/Ghostpad virtual controller payload (scePadVirtualDeviceAddDevice +
   sceMbusBindDeviceWithUserId; firmware-specific patch); C) ESP32 Bluetooth wake spoofing the room's paired controller
   (FreeTHX/wakepsx-on-bt) – no Wi-Fi needed in rest → candidate fix for Atlas/Bella. Keep-awake after wake:
-  sceSystemServicePowerTick / sceShellCoreUtilResetAutoPowerDownTimer (both in our toolkit). (4) morning trigger test;
+  sceSystemServicePowerTick / sceShellCoreUtilResetAutoPowerDownTimer (both in our toolkit).
+- **17 Nov 11:00am METHOD B BUILT – helper 1.1.30** (ps4-helper d678478, ps4-release 6822aeb): ps4/ss/r2ss.c = Second
+  Screen protocol (UDP 987 WAKEUP/LAUNCH with user-credential → TCP 997 hello → handshake RSA-OAEP-SHA1 of a 16-byte
+  AES key with the PS4 public key from ps4-waker → AES-128-CBC login (credential, PIN) → status → remote keys / boot →
+  bye). Look jobs: `/_ss.<ip>.<acct16>.<PIN or 0>.<ops>` (ops "ps", "enter", "boot-CUSA…", "wait-ms", "none"; prefix "w"
+  = type-C wake first), `/_sswake.<ip>.<acct16>`; full lines in /data/round2/rp.log. Computer test against a fake PS4:
+  `ps4/ss/r2ss_test.py` (8 checks pass; host build line in its header). Light check before: 14 passed / 2 / 1 (SimplyBook).
+  Owner chose Max for the test (Kai busy). Sender = Bella (on 1.1.30; Atlas refused, 11am session). Max asleep → owner to
+  switch it on and open Settings › Mobile App Connection Settings › Add Device. Max main account 52326d61696e3031. (4) morning trigger test;
   (5) owner opens GT Sport on Max once (main profile now has an ID).
