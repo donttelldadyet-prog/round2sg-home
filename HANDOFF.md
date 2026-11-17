@@ -1201,3 +1201,19 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   **Keep-awake still to prove:** does it stop the post-NETWORK-wake fall-back to rest (Vale/Max rested ~5 min, Kai ~30
   min with nobody signed in)? Test: rest Max → Remote Play wake (no sign-in) → `/_keepawake.45` at once → watch 35 min. (4) morning trigger test;
   (5) owner opens GT Sport on Max once (main profile now has an ID).
+- **17 Nov 11:38am NET-FAIL.LOG read (the 1.1.27 diagnostic paid off):** Atlas + Bella overnight = repeated
+  `connect: -0x0044 NET - connection failed` to the engine, then **recovered by themselves** ("back after 15 failures,
+  37670 s" / "17 failures, 38504 s" at ~10:37am when the owner switched them on). The hour-long DEAD SILENCE is gone –
+  1.1.26 + 1.1.27 turned it into retry-and-recover. Failures = TCP-connect to the engine during overnight rest (network/
+  Wi-Fi-in-rest), NOT a frozen helper and NOT the launch method. **Own-program is NOT the cause and NOT the fix for the
+  disconnects** (own=0 everywhere; Kai's own-program test ran clean through rest/wake). **NEW CLUE – mesh units (wifi.ap):**
+  Kai/Atlas/Max on AP …65:62, Scarlett …65:60 (same unit), **Bella on …95:10 = a DIFFERENT mesh node** → likely why Bella
+  is flakiest; owner to check the router. Atlas is on Kai's node, so Atlas = rest-mode reachability, not the node.
+- **NEXT: STARTER 3 / own-program as boot default (the real RAM fix).** Plan (mostly helper-side = auto-updatable, low
+  risk; starter 2 unchanged): (1) a helper started via BinLoader auto-promotes itself to own-program at startup (the
+  /_selfown path made automatic); the bootstrap steps aside ONCE per PS4 boot (cleared on restart). (2) when g_own, an
+  update elfldr-spawns the NEW version as its own program and the old one `_exit(0)`s cleanly – no BinLoader, no new
+  sleeper, no RAM creep. (3) safety nets: own-spawn fails / no hello in 3 min → fall back to today's BinLoader+app-switch;
+  own line dies → starter relaunches a bootstrap. (4) TEST one room, owner present (spawn can fail = restart+jailbreak):
+  boot → auto-promote → an update (own→own) → game → rest/wake; watch check-ins + RAM. elfldr proven on Kai 9.00 only →
+  also test an 11.00 room (Vale/Scarlett/Bella).
