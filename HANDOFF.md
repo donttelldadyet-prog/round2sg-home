@@ -1660,3 +1660,25 @@ membership system yet) → the cloud batch is built but OFF.
   134 removed) → `ps4reset` 4:08 OK (4 spares renamed Player 1–4, order ok, 0 problems). **All six rooms are now launch-clean.**
 - 4:09am: all six on helper **1.1.61, own program**, all answering. Still open: Scarlett needs 2 more profiles (owner),
   then `ps4reset`; restart-a-PS4 trigger test; helper self-heal (Wi-Fi rejoin) vs router settings – owner to choose.
+
+### 18 Nov 4:10–4:28am – THE PATTERN: only the two CUH-72xx Pros (Atlas CUH-7208B, Bella CUH-7218B) get stuck; router "option 2" applied
+- Helper report `hw.model`: Vale CUH-2006A (slim), Scarlett CUH-1006A (fat), Max CUH-7006B, Kai CUH-7016B, **Atlas CUH-7208B,
+  Bella CUH-7218B**. Every "connected but nothing arrives" spell tonight (and the old "Atlas + Bella drop off in rest mode")
+  is these two = the last Pro revision, different Wi-Fi chip. Different firmware (9.00 / 11.00) → hardware + this router.
+- They get stuck right after the router's Wi-Fi restarts (5 of 5 tonight: 2:03, ~2:15, 2:46, 4:14 OFDMA/TWT toggle; 3:25
+  unexplained) and are cured by the PS4's **Test Internet Connection** (owner 4:02) = a fresh join.
+- Router changes made 4:13–4:26am (owner approved): **OFDMA off** (applies at once, all bands), **TWT off on 2.4 GHz** (TWT is
+  per band – 5 GHz TWT still ON, to do), **2.4 GHz: mode b/g/n/ax (Wi-Fi 7 off) + security WPA2-PSK[AES]** (saved, verified),
+  **5 GHz: mode a/n/ac/ax + WPA2-PSK[AES]** (Save clicked 4:26; not verified – see below). WPA2-only is hidden in this
+  firmware while the band's mode includes "be". 6 GHz / MLO untouched.
+- **Access Control was switched ON (deny list, EMPTY) as a kick attempt – it does NOT kick a Wi-Fi client (no log line,
+  Atlas stayed stuck). Switch it back OFF (Security › Access Control).** No per-client kick exists in this web page.
+- After the 5 GHz save the owner's laptop (Chrome + desktop app) did not come back online – most likely its saved Wi-Fi
+  profile was WPA3 and Windows won't rejoin a now-WPA2 network without re-selecting / forgetting it. Phones that joined with
+  WPA3 may need the same once. Until the laptop is back: no router page, no control-centre view from this chat.
+- TO VERIFY when back: all six PS4s polling; Atlas + Bella after this restart (stuck or not = whether WPA2-only/ax helps);
+  5 GHz page shows a/n/ac/ax + WPA2; then 5 GHz TWT off; Access Control off.
+- Option 1 (helper self-heal): libSceNetCtl has `sceNetCtlDisconnectIpcInt` / `sceNetCtlConnect*IpcInt` (what Settings uses)
+  but the arguments are undocumented (emulators only stub them) – NOT to be called blind after tonight's freezes. Safe first
+  step still to build: on 2 failed check-ins, test the router (192.168.88.1) directly, write "connected but nothing arrives"
+  to net-fail.log, so the control centre can show WHICH fault it is; rejoin call only after a careful single-PS4 test.
