@@ -1437,3 +1437,8 @@ Owner approved: when a member's game moves into a profile, leftover parts from e
   **Aliff**, User2 12ae5b29 → **Karen**, User3 12ae5b2d → **Player 3**, User4 12ae5b2b → **Player 4** (owner's naming: default
   spares = "Player N"). Leftover picture folder 0x12AE5B2A (the User3 the owner deleted by hand) – clean-up should remove
   picture folders whose profile is gone.
+- **CLEAN SLATE CHECKLIST (owner 17 Nov 7:16pm: "a full clean slate removes profile pictures"):** per spare profile – saves
+  backed up/parked → save parts removed → picture back to default (`/_avreset`: avatar*/picture*/online.json out, version.json
+  stays) → name back to "Player N" → signed out. Extra profiles (beyond main + Player 1–4) backed up/parked then deleted
+  (`/_udel`). Picture folders whose profile is gone removed. Main profile: saves wiped except house saves (GT Sport on Max),
+  picture kept (room character). Tested 7:17pm: Player 3 (12ae5b2d) picture reset – 10 files removed, only version.json left.
