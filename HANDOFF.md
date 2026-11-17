@@ -1562,4 +1562,4 @@ membership system yet) → the cloud batch is built but OFF.
 - Money: unchanged grace maths – no change fee, no POPULAR add-on; the guest pays the price difference if the new slot costs
   more, nothing back if it costs less (early bird → normal slot pays up to full price).
 - Page: rule tile says "JUST BOOKED – wrong day or time? Move to any free slot in your first 15 minutes"; the picker's note says
-  the same. System check step "Guest rescheduling…" tests it.
+  the same. System check step "Guest rescheduling…" tests it. Engine 365e54a deployed 12:45am (live hash checked before and after; 27 bindings, 3 timers). System check NOT run afterwards (no browser link).
