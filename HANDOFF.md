@@ -1347,3 +1347,47 @@ Owner approved: when a member's game moves into a profile, leftover parts from e
   requests – pre-existing). systems.json (main 680523e) updated: proven list + "next = make missing parts".
 - No System check step added: the move only runs on a PS4 by command; when the engine starts driving save sync (prep from
   bookings), add a step then (refusal paths: no backup / missing parts / game open – all safe to test with nothing written).
+
+### 17 Nov 2026, 2:30–4:10pm – "day0" restore point, the 2:37pm network freeze, profile delete/re-make, close-the-game (helpers 1.1.41 → 1.1.43)
+- **day0 snapshot (owner: back up everything before the launch purge = "pre day 0 restore point" + proof every PS4 can do the
+  flow).** `/_snap.day0` (1.1.41): every part of every game of every profile folder → cloud as whole-game backups
+  `<console>/<user>/<game>/_game/<stamp>/…` + game.txt (so `/_gmove` can restore any of them), plus
+  `<console>/_snap/<stamp>/{index,users,todo,label}.txt`. Background job, ~45 s a minute, pauses while a game is open, keeps the
+  PS4 out of rest, resumes after restart/update (Kai updated 1.1.42 mid-job and carried on). Cloud only (no prep copies). PS Vue
+  skipped. **Done, all 0 failed: Max 383 parts 927 MB (stamp 1794897601), Kai 292 / 503 MB (1794899109), Atlas 197 / 363 MB
+  (1794900900), Vale 98 / 169 MB.** Bella (silent since 3:39pm) + Scarlett (guests till 8pm) still to do – check-in booked 8:05pm.
+  Uploads cost 1 Worker request per piece, NO Durable Object calls (engine ~4k of 100k requests at 2:40pm).
+- **⚠️ Durable Object calls: 16→17 Nov (8am–8am) ≈ 98,000 of the 100,000 cap.** Today 33k by 2:40pm; the 1pm hour (12k) was mostly
+  this chat polling ps4lookres/ps4list every 4 s. ps4list does 3 kvGets per PS4 (~20 calls each) – should use one hb.kvMany.
+  Poll gently (≥1 min) and fix ps4list.
+- **2:37–2:42pm: Vale, Atlas and Bella all went quiet; Max/Kai/Scarlett didn't** (Max's snapshot upload started 2:40). Vale:
+  helper froze for good in 'read' (slow.log "the run before was last in: 14:37:13 read") downloading 1.1.41 – the PS4 itself
+  was on (answered DDP 200); "payload received" from re-running round2-boot.elf but no popup = the stuck helper still held the
+  lock; then the PS4 hung on "Restarting… do not unplug" → owner forced it off. Cold start → PS4 clock 01/01 08:00 → false
+  "awake after rest mode" popup. Atlas: helper alive, every connect failed every minute 14:42→restart (Wi-Fi dropped and never
+  rejoined; 5 GHz ch36 64% – try 2.4 GHz like Bella). Bella: came back 15:22 by itself; its FULL report has failed since
+  11:24am while quick check-ins work (reason unknown – read its logs when it's back).
+- **1.1.42:** handshake + read loops gave up only on a 15 s silence and retried "try again" forever → now any network step gives
+  up after 30 s without new data; **watchdog thread** (libpthread): helper hasn't moved 5 min in a network step → shutdown() the
+  socket; 20 min anywhere → an own-program helper _exit(3)s (starter brings a fresh one; never while a save is mounted); shared
+  program can only log. All in slow.log ("watchdog: …"). Clock set after a cold start (wall clock < 2020 → today) is no longer
+  a wake. On all rooms but Bella/Scarlett.
+- **Profile delete / re-make test (Kai, owner at the PS4):** deleting User3 (12ae5b2a) removed the profile, /user/home/12ae5b2a
+  and /system_data/savedata/12ae5b2a completely – nothing left. Re-made "User3" got a NEW id 12ae5b2d (counter max_used_home_u
+  only goes up) with no savedata folder and no save-list database at all until its first save. `/_gmove` of old User3's games
+  into it → refused, nothing written (missing parts). After the owner opened Moving Out 2 once on the new User3 (new game state),
+  `/_gmove` worked (1 part, 0 failed) and **owner confirmed the old progress loads.** → Backups must be matched by profile NAME
+  as well as id (users.txt in each snapshot); "make a missing part" must also create the save-list db for a never-used profile.
+  Leftover: /system_data/savedata/29a71c4a on Kai = a Guest sign-in's save list (clean slate should cover Guest).
+- **User5 on Kai** is no longer needed for wake (the main profile holds the wake key since 16 Nov) → back to an ordinary spare;
+  clear its made-up account ID (ps4prof unacct) at some point.
+- **Close the game – owner 17 Nov 4:03pm "ok make it" (replaces the 12 Nov rule "the helper never closes a game").** 1.1.43
+  `/_close`: sceSystemServiceKillApp(app, -1, 0, 0) (looked up at run time; sceLncUtilKillApp as fallback) = Options › Close
+  Application. Never PS Vue; waits up to 3 min until no save image of that game changed for 60 s, else refuses; checks it closed.
+  The engine only passes look jobs when the room has no real session now/within 15 min. **Tested on Kai 4:09pm: Moving Out 2
+  closed first try, rc 0, no wait needed.** To build: session end (+grace) → close → back up / park → clean slate.
+- **Rooms: real guests only.** realGuests() skips every "SYSTEM BLOCK" (twin Vale↔Atlas, NOISE, ONLINE HOLD) and >12 h notes.
+  **Owner agreed: ONLINE HOLD (a guest paying for that room) should count as busy** – to do with the engine change below.
+- **Owner: minimise SimplyBook calls; critical operations stay live, low-priority checks read an engine schedule snapshot.**
+  Each "Update now" / PS4 look busy-check = ps4Busy → sessDay0 = 4 SimplyBook requests. Plan: the timer saves the day's sessions
+  (outside the Durable Object, e.g. cache/R2) and ps4Busy/roomBusy read that. Engine change → full check, after sessions.
