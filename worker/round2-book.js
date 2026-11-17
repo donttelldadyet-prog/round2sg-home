@@ -4114,7 +4114,7 @@ async function roomBusy(env, unit, gap) {
      = not yet; else it gets "/_reset.<room>-<hhmm>" (close the game, sign out spares, internal-first clean, profiles back to
      main + Player 1-4 – see the helper). Tried until 35 min after the reset time, then "missed".
    Switch: kv ps4resetAuto = { on, from, after } (control centre). Log: kv ps4resetLog (last 40), shown in the PS4 tab. */
-const PS4_RESET_MIN = '1.1.53';
+const PS4_RESET_MIN = '1.1.55', PS4_RESET_STAFF = '1.1.53';   /* automatic = countdown + final check (1.1.55); staff button = 1.1.53+ */
 const ps4ResetOn = (A, now) => !!(A && A.on && !(A.from && now < A.from));
 async function ps4ResetRun(env) {
   const hb = book(env), now = Date.now(), A = await hb.kvGet('ps4resetAuto');
@@ -4149,21 +4149,46 @@ function ps4ResetNote(log, x, state, why, cid, now) {
 async function ps4ResetDue(env, hb, id, room, now) {   /* the PS4's own minute: is its room's reset due? (ps4Cmd, hbSnap keys) */
   const A = await hb.kvGet('ps4resetAuto'); if (!ps4ResetOn(A, now)) return null;
   const plan = (await hb.kvGet('ps4resetPlan')) || [], log = (await hb.kvGet('ps4resetLog')) || [];
-  const due = plan.filter((x) => x.room === room && x.at <= now && now < x.at + 35 * 60e3 && !log.some((l) => l.room === room && l.end === x.end && l.state !== 'waiting'));
-  if (!due.length) return null;
-  const x = due[due.length - 1], rep = await hb.kvGet('ps4:' + id);
+  /* 11:16pm: a countdown is running on the PS4 (sent up to 5 min before the reset time) – an extension added since stops it */
+  const cd = plan.find((x) => x.room === room && now < x.at + 2 * 60e3 && log.some((l) => l.room === room && l.end === x.end && l.state === 'sent' && l.t > x.at - 6 * 60e3));
+  const due = plan.filter((x) => x.room === room && now >= Math.max(x.end, x.at - 5 * 60e3) && now < x.at + 35 * 60e3 && !log.some((l) => l.room === room && l.end === x.end && l.state !== 'waiting'));
+  if (!cd && !due.length) return null;
+  const rep = await hb.kvGet('ps4:' + id);
   if (!rep || ps4Newer(PS4_RESET_MIN, rep.v)) return null;   /* the 10-minute tick logs why */
   if (now - ((await hb.kvGet('ps4resetChk:' + id)) || 0) < 2 * 60e3) return null;
   await hb.kvSet('ps4resetChk:' + id, now);
+  const x = cd || due[due.length - 1];
   /* double check, live from SimplyBook: a real guest in the room right now (extended, or the next guest already in)? */
   const busy = await roomBusy(env, x.unit, 0);
-  if (busy) { if (ps4ResetNote(log, x, 'waiting', 'room still in use until ' + clock12(busy.guestEnd) + (busy.guestEnd > x.end ? ' (extended)' : ' (next guest)') + ' – live SimplyBook check', '', now)) await hb.kvSet('ps4resetLog', log.slice(0, 40)); return null; }
-  const hm = new Date(x.end + 8 * 3600e3).toISOString().slice(11, 16).replace(':', '');
-  const c = { cid: 'r' + now.toString(36), do: 'look', p: '/_reset.' + room + '-' + hm, at: now, takenAt: now, by: 'auto: session ended ' + clock12(x.end), state: 'taken' };
+  const inUse = busy ? 'room still in use until ' + clock12(busy.guestEnd) + (busy.guestEnd > x.end ? ' (extended)' : ' (next guest)') + ' – live SimplyBook check' : '';
+  if (cd) {
+    if (!busy) return null;   /* countdown carries on; the PS4 asks once more 20 s before the end (/ps4/resetok) */
+    const c = { cid: 'r' + now.toString(36), do: 'look', p: '/_reset.cancel', at: now, takenAt: now, by: 'auto: ' + inUse.slice(0, 30), state: 'taken' };
+    await hb.kvSet('ps4cmd:' + id, c); ps4ResetNote(log, x, 'held', 'countdown stopped – ' + inUse, c.cid, now); await hb.kvSet('ps4resetLog', log.slice(0, 40));
+    return c;
+  }
+  if (busy) { if (ps4ResetNote(log, x, 'waiting', inUse, '', now)) await hb.kvSet('ps4resetLog', log.slice(0, 40)); return null; }
+  const hm = new Date(x.end + 8 * 3600e3).toISOString().slice(11, 16).replace(':', ''), w = Math.max(0, Math.min(300, Math.round((x.at - now) / 1000)));
+  const c = { cid: 'r' + now.toString(36), do: 'look', p: '/_reset.' + room + '-' + hm + (w >= 15 ? '.w' + w : ''), at: now, takenAt: now, by: 'auto: session ended ' + clock12(x.end), state: 'taken' };
   await hb.kvSet('ps4cmd:' + id, c);
-  ps4ResetNote(log, x, 'sent', 'sent ' + Math.round((now - x.end) / 60e3) + ' min after the guest end – room confirmed clear (live SimplyBook check)', c.cid, now);
+  ps4ResetNote(log, x, 'sent', (w >= 15 ? 'countdown started (' + Math.round(w / 60) + ' min, pop-ups on the PS4)' : 'reset sent') + ' ' + Math.round((now - x.end) / 60e3) + ' min after the guest end – room confirmed clear (live SimplyBook check)', c.cid, now);
   await hb.kvSet('ps4resetLog', log.slice(0, 40));
   return c;
+}
+/* 11:16pm: the PS4 asks 20 s before its countdown ends – LIVE SimplyBook: still in use / switched off / can't tell = hold */
+async function ps4ResetOk(env, req) {
+  if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
+  let r = {}; try { r = JSON.parse(await req.text()); } catch (e) {}
+  const id = ps4Id(r.id), hb = book(env), now = Date.now();
+  const K = await hb.kvMany(['ps4map', 'ps4resetAuto', 'ps4resetLog', 'ps4resetPlan'], []), room = (K.ps4map || {})[id];
+  const unit = +(Object.keys(GM_ROOM).find((u) => GM_ROOM[u] === room) || 0);
+  if (!room || !unit) return J({ hold: 'this PS4 is not linked to a room' });
+  const log = K.ps4resetLog || [], x = (K.ps4resetPlan || []).filter((p) => p.room === room && p.at - 6 * 60e3 <= now && now < p.at + 5 * 60e3).pop();
+  const hold = async (why) => { if (x && ps4ResetNote(log, x, 'held', 'countdown stopped at the last check – ' + why, '', now)) await hb.kvSet('ps4resetLog', log.slice(0, 40)); return J({ hold: why }); };
+  if (!ps4ResetOn(K.ps4resetAuto, now)) return hold('automatic reset is switched off');
+  let busy; try { busy = await roomBusy(env, unit, 0); } catch (e) { return hold('could not check SimplyBook'); }
+  if (busy) return hold('room in use until ' + clock12(busy.guestEnd) + (x && busy.guestEnd > x.end ? ' (extended)' : ''));
+  return J({ ok: true });
 }
 async function ps4Busy(env, room, gap = PS4_GAP) {
   const unit = +(Object.keys(GM_ROOM).find((u) => GM_ROOM[u] === room) || 0), now = Date.now();
@@ -4403,7 +4428,7 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
     const id = ps4Id(f.id), room = ((await hb.kvGet('ps4map')) || {})[id], now = Date.now(), rep = await hb.kvGet('ps4:' + id);
     if (!room || !rep) return { error: 'Link this PS4 to a room first.' };
     if (now - ((await hb.kvGet('ps4poll:' + id)) || 0) > 3 * 60e3) return { error: 'The PS4 isn’t answering (off, in rest mode, or not jailbroken yet).', off: true };
-    if (ps4Newer(PS4_RESET_MIN, rep.v)) return { error: 'Needs helper ' + PS4_RESET_MIN + ' or newer – update it first.' };
+    if (ps4Newer(PS4_RESET_STAFF, rep.v)) return { error: 'Needs helper ' + PS4_RESET_STAFF + ' or newer – update it first.' };
     const busy = await ps4Busy(env, room, 0); if (busy) return { error: busy + ' – try after that.', busy: true };
     const c = { cid: 'r' + now.toString(36), do: 'look', p: '/_reset.staff', at: now, by: String(f.by || 'control centre').slice(0, 40), state: 'sent', nobusy: true };
     await hb.kvSet('ps4cmd:' + id, c); return { ok: true, cmd: c };
@@ -4856,7 +4881,8 @@ const HANDLER = {
         }
         return Response.redirect('https://cue.round2.sg/' + tv.code, 302);
       }
-      if (u.pathname === '/ps4/in' && req.method === 'POST') return await ps4In(env, req);   /* room PS4 check-ins (13 Nov) */
+      if (u.pathname === '/ps4/in' && req.method === 'POST') return await ps4In(env, req);
+      if (u.pathname === '/ps4/resetok' && req.method === 'POST') return await ps4ResetOk(env, req);   /* 17 Nov: last check before a reset */   /* room PS4 check-ins (13 Nov) */
       if (u.pathname === '/ps4/games') return await ps4Games(env);
       if (u.pathname === '/ps4/cmd' && req.method === 'POST') return await ps4Cmd(env, req);   /* helper: waiting command? (every minute) */
       if (u.pathname === '/ps4/done' && req.method === 'POST') return await ps4Done(env, req);
