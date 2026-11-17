@@ -1431,3 +1431,9 @@ Owner approved: when a member's game moves into a profile, leftover parts from e
 - **Backups:** Max/Vale/Kai/Atlas done; Bella has guests till 8:15pm (check-in booked 8:20pm), Scarlett till 8pm (8:05pm).
   Bella's 2:42–3:17pm outage = same network event as Vale/Atlas; it recovered by itself. Atlas: report stale since 4:28pm
   while polling till 6:24pm – look at it.
+- **7:00pm Kai – helper profile delete + renames (owner OK):** 1.1.47 `/_udel.<user>` (sceUserServiceDestroyUser; refuses main,
+  signed-in, game open, any save part left). User5 12ae5b2c (empty extra wake-test profile) signed out remotely → deleted rc 0:
+  profile, /user/home and save list gone, picture folder removed. Renames via ps4prof name (all rc 0, live): User1 12ae5b28 →
+  **Aliff**, User2 12ae5b29 → **Karen**, User3 12ae5b2d → **Player 3**, User4 12ae5b2b → **Player 4** (owner's naming: default
+  spares = "Player N"). Leftover picture folder 0x12AE5B2A (the User3 the owner deleted by hand) – clean-up should remove
+  picture folders whose profile is gone.
