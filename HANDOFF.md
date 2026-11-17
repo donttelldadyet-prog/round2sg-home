@@ -1391,3 +1391,43 @@ Owner approved: when a member's game moves into a profile, leftover parts from e
 - **Owner: minimise SimplyBook calls; critical operations stay live, low-priority checks read an engine schedule snapshot.**
   Each "Update now" / PS4 look busy-check = ps4Busy → sessDay0 = 4 SimplyBook requests. Plan: the timer saves the day's sessions
   (outside the Durable Object, e.g. cache/R2) and ps4Busy/roomBusy read that. Engine change → full check, after sessions.
+
+### 17 Nov 2026, 4:10–6:45pm – make missing save parts (PROVEN in game), member-profile design, profile pictures (helpers 1.1.44 → 1.1.46)
+- **1.1.44 `/_sdbinfo.<user>.<game>` (read-only)** logged how the PS4 builds saves (Kai, Moving Out 2, new User3 + main):
+  save-list db `CREATE TABLE savedata (id INTEGER PRIMARY KEY AUTOINCREMENT, title_id, dir_name, main_title, sub_title,
+  detail, tmp_dir_name, is_broken, user_param, blocks, free_blocks, size_kib, mtime, fake_broken, account_id, user_id,
+  faked_owner, cloud_icon_url, cloud_revision, game_title_id)` + index, user_version 7, page 4096. PS4-made row: blocks 160,
+  size_kib 5120, mtime "2026-11-17T08:01:13.00Z", user_id decimal, account_id 0. param.sfo: SAVEDATA_BLOCKS 160 (= image
+  5,242,880 = 160 x 32 KB), ACCOUNT_ID 0, PARAMS user id + console fingerprint = **HMAC-SHA256(Apollo PSID key, OpenPsId) –
+  our maths matched the PS4's own**. Kai main's saves carry ACCOUNT_ID 0 although the profile now has the shared ID (saves made
+  before the ID change). A never-saved profile has no /system_data/savedata/<user>/ at all.
+- **1.1.45 MAKE A MISSING SAVE PART** (Apollo createSave recipe): size from source SAVEDATA_BLOCKS; key from /dev/sbl_srv
+  0x40845303 + unlock 0xc0845302 → <part>.bin; sceFsUfsAllocateSaveData + sceFsInitCreatePfsSaveDataOpt +
+  sceFsCreatePfsSaveDataImage → sdimg_<part>; mounted, source sce_sys copied in with param.sfo stamped (ACCOUNT_ID = profile's
+  registry account ID, PARAMS user id, HMAC, title id 2); save-list row (checked copy, written back whole); icon. `/_gmove` now
+  makes missing parts (refuses only if the profile has no save list yet = never saved anything), undoes them if one fails.
+  **TESTED: old User3's Overcooked 2 (METASAVE + CAMPAIGNSAVE0, 96 blocks each) into new Kai User3 12ae5b2d which had no
+  Overcooked save → made + filled, 0 failed; OWNER: opens at 2-2 with the old progress, not a new save.**
+- **Profile delete/re-make test done (owner confirmed Moving Out 2 progress in the new User3).** **Close-game test: save
+  survived** (owner reloaded Moving Out 2 after the remote close – exact spot).
+- **Member profiles – design agreed in outline (owner 17 Nov):** saves belong to the MEMBER (cloud by member + partner slot),
+  never to a PS4 profile id. Each PS4 keeps a fixed set (main + User1–4), never deleted, only recycled: member logs in →
+  helper renames a free signed-OUT spare to their name (sceUserServiceSetUserName, live), makes/fills their games, writes
+  their picture → member picks their name on "who's using this controller?". Session end → back up to the member, wipe the
+  spare's saves, default picture, rename back "User1". The helper records which profiles played which games (each minute);
+  extra profiles guests create (User5…) are backed up/parked under the booking then DELETED by the helper
+  (sceUserServiceDestroyUser – used by ps5upload, which refuses signed-in users; not yet tried by us). Member booking: main
+  profile progress → member, next most-played profile → partner, changeable on "That's a wrap". Non-members: each profile
+  parked separately with its name. Creating profiles: no known API (none found in any tool) – not needed with recycling.
+- **Profile pictures:** live in /system_data/priv/cache/profile/0x<USER ID>/ = avatar.png + avatar64/128/260/440.dds +
+  picture.png + picture64/128/260/440.dds + online.json (+ version.json) – exactly the .xavatar set of Lapy's Avatar Changer
+  (LAPY20015, 21 avatars + packs in /data/AVATARS/) and notoriousnick04/ps4-tools XAVATAR Maker (MIT, Python/Pillow, DXT5 no
+  mipmaps). Spares have only version.json (default picture). Deleting a profile left its 0x… folder behind (clean-up).
+  1.1.46: `/_avinfo.<user>`, `/_avcopy.<from>.<to>` (signed-out target, never the main profile, old files kept in
+  /data/round2/avbak/…), `/_avreset.<user>`. **TESTED: Kai main's picture onto signed-out User3 (10 files, not online.json)
+  → owner: User3 shows Kai's picture on the profile-select screen, no restart.** Plan: Round2 avatar library (room
+  characters via XAVATAR Maker + Avatar Changer packs), member picks at sign-up. Our rename is better than Avatar Changer's
+  (theirs: activated accounts only). online.json content not read yet (file reader limited to Round2 folders).
+- **Backups:** Max/Vale/Kai/Atlas done; Bella has guests till 8:15pm (check-in booked 8:20pm), Scarlett till 8pm (8:05pm).
+  Bella's 2:42–3:17pm outage = same network event as Vale/Atlas; it recovered by itself. Atlas: report stale since 4:28pm
+  while polling till 6:24pm – look at it.
