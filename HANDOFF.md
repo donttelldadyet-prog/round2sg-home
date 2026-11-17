@@ -1217,3 +1217,18 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   own line dies → starter relaunches a bootstrap. (4) TEST one room, owner present (spawn can fail = restart+jailbreak):
   boot → auto-promote → an update (own→own) → game → rest/wake; watch check-ins + RAM. elfldr proven on Kai 9.00 only →
   also test an 11.00 room (Vale/Scarlett/Bella).
+
+**17 Nov 11:54am STARTER-3 / OWN-PROGRAM PROVEN END TO END ON MAX (9.00, CUH-7006B).** Helper 1.1.32 (own-update +
+auto-promote, 9.00-gated) then 1.1.33 (auto-promote wiring fix). Sequence watched live: /_selfown made Max own 1.1.31
+(pid 83) → updated to 1.1.32 (not-own, pid 45 shared host) → **auto-promoted to own 1.1.32 (pid 84)** → pushed 1.1.33 →
+**own→own update: "switched to 1.1.33 (own program)", pid 84→85, no BinLoader**. /_ps after: only pid 85 (parent 1);
+pids 83 and 84 GONE, not sleeping. **So each update now frees the whole old process (image included) - no sleeping
+copies, no RAM creep.** This is the real fix for the ~14-update ceiling.
+- Auto-promote is gated to firmware **9.00** (own-program proven on 9.00 only); 11.00 rooms (Vale/Scarlett/Bella) stay
+  on the normal shared route until tested there. Gated to one attempt/hour (marker APP/promote-try); a failed spawn just
+  leaves the helper running normally.
+- 1.1.33 fix: auto-promote is now acted on in the main loop (1.1.32 needed a look job to nudge it). To confirm on Max's
+  NEXT restart: it should auto-promote with no nudge.
+- Rollout note: ps4-release is on 1.1.33, so Kai + Atlas (9.00) will auto-promote on their next update/quiet-time; that's
+  fine (own-program proven on both 9.00 models). Watch they come back own=1 and keep checking in.
+- STILL TO TEST on Max: own-program through a rest/wake cycle (proven on Kai); keep-awake 35-min hold; GT Sport loads.
