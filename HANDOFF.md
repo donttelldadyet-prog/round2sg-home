@@ -1,5 +1,19 @@
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
 
+> ## 17 Nov 2026, 11:57am – engine cdf7edb DEPLOYED (27 bindings, 3 timers): DURABLE OBJECT CALLS – FREE PLAN LIMIT
+> - Cloudflare emailed 17 Nov 3:27am SGT: **90% of the free plan's 100,000 Durable Object requests a day** (resets 8am SGT). Every
+>   `hb.kvGet`/`kvSet`/other `hb.*` call from the worker = 1 request. Hourly (GraphQL `durableObjectsInvocationsAdaptiveGroups`):
+>   night ~500/h (timers); 15 Nov daytime 2–4.5k/h (~45k/day); **16 Nov 5–10k/h (~94k by 3am)** – heavy testing day (8 Full System
+>   checks, PS4 wake trial). Over the cap → engine Durable Object calls ERROR until 8am SGT (bookings, payments, holds all use it).
+> - Biggest steady user: the PS4 helpers' `/ps4/cmd` every minute (~7 calls each) + `/ps4/in` (~7) ≈ 500/h per awake PS4.
+>   Fix: DO method `kvMany(keys, sets)` + worker `hbSnap(hb, keys, sets)` → `{ h }` (Proxy: kvGet of snapshotted keys answered
+>   locally). `ps4Cmd` = 1 call when idle, `ps4In` = 1 read + its writes; `ps4Latest(env, fresh, hb)` takes the snapshot hb.
+>   Checked 12:01pm: Atlas + Kai polling fine on it.
+> - **Rule from now on:** new engine code reads several keys with ONE `hb.kvMany` (or `hbSnap`), never a kvGet per key in a loop;
+>   control-centre auto-refresh stays ≥ 15 s and pauses when hidden/idle; mind Full System check runs (each costs many DO calls).
+> - Owner's option (not decided): Workers Paid plan (USD 5/month) lifts this to 1M DO requests/month included and the 50 outside
+>   requests per run to 1,000.
+
 > ## 16 Nov 2026, ~4:40pm – engine a912159 DEPLOYED (27 bindings, 3 timers): ONE SIMPLYBOOK CONTACT PER MOBILE NUMBER
 > - Owner: "register contact using phone number and name… if they rebook and provide their email we replace the placeholder…
 >   our contact list stays unique with that person and contact number". Chose: rename to the newest name; online + Add a session.
