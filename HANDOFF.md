@@ -1518,3 +1518,9 @@ membership system yet) → the cloud batch is built but OFF.
 - Tomorrow: Kai (1.1.52) updates by itself in quiet time after its midnight session. Vale (1.1.42), Bella (1.1.46,
   asleep, no day0) need 1.1.53+ or the engine logs "too old". Scarlett (1.1.37) needs /_selfown → update (after 11:45pm
   session). A PS4 not purged yet is still fine: the first reset copies everything internally and clears it.
+- **10:48pm owner: timing + "double confirm with SimplyBook or the engine".** Engine e424a1e (deployed, ab12aee5…, 27
+  bindings, 3 timers): reset time = guest end + N min (kv ps4resetAuto.after, **10**; control centre 5/10/12). The 10-min
+  tick only writes kv ps4resetPlan (+ logs asleep/too old/missed); the PS4's own minute poll (ps4ResetDue in ps4Cmd) sends
+  it once due, after a LIVE SimplyBook roomBusy(unit, 0) (≈4 requests, max every 2 min per PS4) – still in use (extension
+  or next guest) = "waiting". Light check after: 14/4/0. Timing measured: Kai 99 games copied+removed ≈2.5 min; a normal
+  session (1–5 games) ≈10–40 s; profiles ≈20–30 s; pick-up ≤1 min; closing waits up to 3 min if a save is being written.
