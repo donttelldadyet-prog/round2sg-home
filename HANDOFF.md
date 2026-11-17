@@ -1524,3 +1524,18 @@ membership system yet) → the cloud batch is built but OFF.
   it once due, after a LIVE SimplyBook roomBusy(unit, 0) (≈4 requests, max every 2 min per PS4) – still in use (extension
   or next guest) = "waiting". Light check after: 14/4/0. Timing measured: Kai 99 games copied+removed ≈2.5 min; a normal
   session (1–5 games) ≈10–40 s; profiles ≈20–30 s; pick-up ≤1 min; closing waits up to 3 min if a save is being written.
+- **11:16pm–11:45pm countdown, failsafes, button detector, early-bird test (owner).**
+  Helper 1.1.55: `/_reset.<label>.w<sec>` countdown with PS4 pop-ups (start, 60, 30, 10 s; they show over a game), engine asked
+  20 s before the end (`/ps4/resetok`, live SimplyBook): in use / switch off / no answer = NOT reset (HELD / NOT DONE line);
+  `/_reset.cancel`; survives a restart. Tested: Max 45-s countdown → held "automatic reset is switched off" (correct, switch
+  starts 7am); Atlas 4-min countdown → Stop → "countdown stopped". Helper 1.1.56: **button detector** (scePadReadState on each
+  signed-in profile's pad + scePadGetIdleCount, every 2 s): a press moves the reset to 2 min after the last press, "still
+  playing?" pop-up; 10 min of play past the reset time → report → engine staff alert (phones); 60 min → not reset. NOT PROVEN
+  that a background program sees the pad while a game has it – unreadable = timer only (1.1.55 behaviour). Read-only test
+  `/_input.<sec>` (press buttons during it; result input/result + raw first/last). **TO DO 18 Nov morning: run /_input.20 on
+  Max with the owner pressing buttons, once with a game open.**
+  Engine 7832d01 + 2013706 (deployed, 5c5b7bc0…, 27 bindings, 3 timers): countdown sent up to 5 min before the reset time;
+  dynamic live checks (start; every 2 min for the first 6 min, then 10; final at 20 s); extension / late session made in the
+  control centre stops a countdown at once (ps4ResetPoke); `ps4resetAuto` = {on, from 7am 18 Nov, after 10, **only 'eb'**} –
+  owner 11:38pm: test run on the early-bird (11:00) sessions only. Helpers: Vale 1.1.55 (auto, after its session), Max
+  1.1.55→1.1.56 queued, Atlas 1.1.55 (asleep, 1.1.56 next), Kai 1.1.52 (busy till 12am), Bella 1.1.46 asleep, Scarlett 1.1.37.
