@@ -1576,3 +1576,20 @@ membership system yet) → the cloud batch is built but OFF.
 - All six PS4s on helper 1.1.58 (no controller code). Automatic reset OFF (ps4resetAuto.on=false) until a safe input signal
   exists (idea: GoldHEN plugin inside the game writing the last input time to a file – owner to decide).
 
+
+### 18 Nov 2:15–3:00am – shop router (TP-Link HB611-SGST, Singtel EasyMesh) tuned – owner approved each change
+- Main unit 192.168.88.1 (cc:ba:bd:28:65:60), second unit _9510 at .8 (2.4 GHz wireless link to the main unit). One Wi-Fi name `round2` on all bands.
+- **Changed:** 5 GHz width 80→40 MHz; 2.4 GHz power Middle→High; router self-update window 3–4am→**7–8am** (it was
+  dropping Wi-Fi mid-night-shift); **802.11r fast roaming OFF** on 2.4 + 5 GHz (old PS4s can't use it; suspected in Bella's
+  "connect failed"); **fixed addresses (Address Reservation) for 19 devices**, each kept its existing IP:
+  PS4s Bella .6, Kai .18, Vale .11, Max .23, Scarlett .4, Atlas .15; second unit .8; Kai's TV .3, VALE TV .7, LG TVs .21/.27,
+  C211 .10, MakingBroadway .28, C100 camera .24, unknown fixed devices .2 .12 .13 .17 .22.
+- Signal after: Bella −83→−76/−78 dBm, Kai −82→−76 (both on main unit 5 GHz). Atlas now on main 5 GHz (68%).
+- **Left as is (owner):** UPnP off (PS4 online play strict – owner doesn't need it; helper/streaming don't need it); no guest
+  Wi-Fi; Singtel's two port rules (1024→.5, 1025→.8, HDM_CR_*) – ISP-managed, don't touch; 6 GHz fast roaming left on.
+- **No switch exists** for the mesh "Trigger Roaming by Reason 8" nagging (Kai's TV, an LG TV, weak phones every ~10 s; it fills
+  the 265-line router log in ~15 min). Harmless (clients ignore it). Real fix = cable / move the TV or second unit.
+- Side effects tonight: each Wi-Fi save restarts the radios. Atlas got stuck asking for an address (DHCP DISCOVER loop) after
+  the 2.4 change until the owner reconnected it on 5 GHz; Bella's helper (shared mode) hung mid day0 snapshot (44/134) after the
+  5 GHz restart → owner to re-send the helper, then re-run `/_snap.day0` until 0 failed, then purge + reset.
+- Router admin sessions time out after a few idle minutes; the owner types the password himself (never Claude).
