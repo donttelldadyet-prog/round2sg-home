@@ -1539,3 +1539,16 @@ membership system yet) → the cloud batch is built but OFF.
   control centre stops a countdown at once (ps4ResetPoke); `ps4resetAuto` = {on, from 7am 18 Nov, after 10, **only 'eb'**} –
   owner 11:38pm: test run on the early-bird (11:00) sessions only. Helpers: Vale 1.1.55 (auto, after its session), Max
   1.1.55→1.1.56 queued, Atlas 1.1.55 (asleep, 1.1.56 next), Kai 1.1.52 (busy till 12am), Bella 1.1.46 asleep, Scarlett 1.1.37.
+- **11:53pm owner: no pop-ups (break the guest experience)** → 1.1.57 silent countdown. **11:42pm Max FROZE** during the
+  own-program hand-over to 1.1.56 (own-spawn.log stops at "spawning"; the run before was last in "read"); after the owner's
+  restart the same spawn took <1 s. **12:06am the /_input.20 button test FROZE Max again** right after it started reading the
+  controller (scePadInit/GetHandle/Open/ReadState from a background program) → **12:08am: automatic reset switched OFF**
+  (ps4resetAuto.on=false), **helper 1.1.58: all controller reading off, libScePad unlinked** (silent timer countdown as
+  1.1.55). 1.1.56/57 still have the pad code but only run it in a countdown (none can start: switch off) or /_input – never
+  send /_input to them. No kv switch for automatic helper updates exists from the control centre (kv ps4auto) – add one.
+  Rooms 12:10am: Vale/Kai/Scarlett 1.1.57 (auto-updated after their sessions), Max frozen (1.1.57), Atlas silent since 11:46pm
+  (1.1.55), Bella 1.1.46 (1.1.58 queued, drops off in rest mode). **Scarlett: finally updated** (fresh restart = enough
+  memory); profiles Scarlett + rubbaduckie + User1 (only 2 spares → 2 to add by hand; rubbaduckie = a guest's own profile?
+  owner to decide); /_snap.day0 started 12:09am: 132 parts, 59 games.
+  Idea for button detection without the pad library: watch the game's own activity instead (e.g. the PS4's auto-power-down
+  idle timer via a read-only system call), or just rely on time + SimplyBook – owner to decide.
