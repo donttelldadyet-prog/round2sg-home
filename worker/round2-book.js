@@ -478,6 +478,8 @@ export class HoldBook extends DurableObject {
   mvRecent(since) { this.qInit(); return this.rows(`SELECT k, v FROM kv WHERE k LIKE 'mv:MV%'`).map((r) => JSON.parse(r.v)).filter((m) => m && m.t >= since).sort((a, b) => b.t - a.t).slice(0, 60); }
   kvGet(k) { this.qInit(); const r = this.rows(`SELECT v FROM kv WHERE k = ?`, k)[0]; return r ? JSON.parse(r.v) : null; }
   kvSet(k, v) { this.qInit(); this.sql.exec(`INSERT OR REPLACE INTO kv VALUES (?, ?)`, k, JSON.stringify(v)); }
+  /* several reads (and writes first) in ONE call – each call from the worker counts against Cloudflare's free 100,000 a day (17 Nov) */
+  kvMany(keys, sets) { this.qInit(); for (const [k, v] of sets || []) this.kvSet(k, v); const o = {}; for (const k of keys || []) o[k] = this.kvGet(k); return o; }
   /* one worker at a time on a key (no await between the look and the write, so two SimplyBook callbacks can't both win) */
   /* a short lock in kv (was also called claim() – the holds claim(ref) further down silently replaced it, so every lock said
      "busy": moves and Vale/Atlas blocks never ran. Found 13 Nov 2am.) */
@@ -4016,7 +4018,8 @@ async function ps4In(env, req) {
   if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
   let r = {}; try { r = JSON.parse(await req.text()); } catch (e) { return J({ error: 'bad json' }, 400); }
   const id = ps4Id(r.id); if (id.length < 16) return J({ error: 'no console id' }, 400);
-  const hb = book(env), now = Date.now(), map = (await hb.kvGet('ps4map')) || {}, room = map[id] || null;
+  const now = Date.now(), { h: hb } = await hbSnap(book(env), ['ps4map', 'ps4:' + id, 'ps4cmd:' + id, 'ps4ids', 'ps4play:' + sgDay(now - SHADOW_TILL * 60e3)]);
+  const map = (await hb.kvGet('ps4map')) || {}, room = map[id] || null;
   const prev = await hb.kvGet('ps4:' + id);
   r.games = Array.isArray(r.games) ? r.games.slice(0, 400) : prev && prev.games || [];   /* the helper sends games only when they change */
   const rep = Object.assign({}, r, { id, room, t: now, ip: req.headers.get('cf-connecting-ip') || '' });
@@ -4084,8 +4087,8 @@ const PS4_REL = 'https://raw.githubusercontent.com/donttelldadyet-prog/round2-tv
 const ps4Ver = (v) => String(v || '0').split('.').map((x) => +x || 0);
 const PS4_SELFUP = '1.0.7';   /* helpers older than this exit to hand over, which got stuck on Max (13 Nov) – they get 1.0.7+ by FTP once */
 const ps4Newer = (a, b) => { const x = ps4Ver(a), y = ps4Ver(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
-async function ps4Latest(env, fresh) {
-  const hb = book(env), c = await hb.kvGet('ps4rel'), now = Date.now();
+async function ps4Latest(env, fresh, hbIn) {
+  const hb = hbIn || book(env), c = await hb.kvGet('ps4rel'), now = Date.now();
   if (c && !fresh && now - c.at < 10 * 60e3) return c.v ? c : null;
   try {
     const h = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'round2-book' };
@@ -4114,7 +4117,7 @@ async function ps4AutoUpdate(env, hb, id, room) {   /* quiet time? hand out an u
   if ((await hb.kvGet('ps4auto')) === false) return null;
   const rep = await hb.kvGet('ps4:' + id), now = Date.now();
   if (!rep || !rep.boot || rep.running || now - rep.t > 20 * 60e3 || ps4Newer(PS4_SELFUP, rep.v)) return null;
-  const rel = await ps4Latest(env); if (!rel || !ps4Newer(rel.v, rep.v)) return null;
+  const rel = await ps4Latest(env, false, hb); if (!rel || !ps4Newer(rel.v, rep.v)) return null;
   if (rep.rolled && rep.rolled.includes(' ' + rel.v + ':')) return null;   /* that version was rolled back here – needs a newer one or Update now */
   const tried = await hb.kvGet('ps4autoTry:' + id); if (tried && tried.v === rel.v && now - tried.t < 6 * 3600e3) return null;
   const chk = (await hb.kvGet('ps4autoChk:' + id)) || 0; if (now - chk < 10 * 60e3) return null;   /* bookings looked up at most every 10 min per PS4 */
@@ -4163,12 +4166,26 @@ async function ps4MorningWake(env, hb, id, room, now) {
   const c = { cid: 'w' + now.toString(36), do: 'look', p: paths, at: now, takenAt: now, by: 'auto: early-bird wake (' + rooms.join(', ') + ')', state: 'taken' };
   await hb.kvSet('ps4cmd:' + id, c); return c;
 }
+/* ONE Durable Object call for many reads (17 Nov: Cloudflare emailed "90% of the daily Durable Objects limit" – 100,000 calls a
+   day on the free plan, each hb.kvGet/kvSet is one; the 6 PS4 helpers asking every minute were ~7 calls each, ~3,000 an hour).
+   hbSnap reads the keys (after the writes in sets) in one go and returns { h }: a stand-in for hb whose kvGet answers those keys
+   from the snapshot; everything else (and other keys) goes to the real object as before. */
+async function hbSnap(hb, keys, sets) {
+  const snap = await hb.kvMany(keys, sets || []), has = (k) => Object.prototype.hasOwnProperty.call(snap, k);
+  const h = new Proxy(hb, { get(t, p) {
+    if (p === 'then') return undefined;
+    if (p === 'kvGet') return async (k) => (has(k) ? snap[k] : t.kvGet(k));
+    if (p === 'kvSet') return async (k, v) => { if (has(k)) snap[k] = v; return t.kvSet(k, v); };
+    return (...a) => t[p](...a);   /* a Durable Object stub: every other property is a method call on the real object */
+  } });
+  return { h };
+}
 async function ps4Cmd(env, req) {   /* the helper, every minute: anything for me? */
   if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
   let r = {}; try { r = JSON.parse(await req.text()); } catch (e) {}
   const id = ps4Id(r.id); if (id.length < 16) return J({ error: 'no console id' }, 400);
-  const hb = book(env), now = Date.now();
-  await hb.kvSet('ps4poll:' + id, now);
+  const now = Date.now();
+  const { h: hb } = await hbSnap(book(env), ['ps4cmd:' + id, 'ps4map', 'ps4auto', 'ps4:' + id, 'ps4rel', 'ps4wakeRun', 'ps4wake', 'ps4autoTry:' + id, 'ps4autoChk:' + id], [['ps4poll:' + id, now]]);
   const c = await hb.kvGet('ps4cmd:' + id);
   if (!c || c.state !== 'sent') {
     const room0 = ((await hb.kvGet('ps4map')) || {})[id];
