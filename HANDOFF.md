@@ -1,5 +1,12 @@
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
 
+> ## 17 Nov 2026, 7:52pm – engine 0a0d4b0 DEPLOYED (27 bindings, 3 timers): MIDNIGHT NOTES
+> - Owner's screenshots: asy's Scarlett note 8:45pm–12:00am (end = 18 Nov 00:00:00) was drawn by SimplyBook over the WHOLE of 18 Nov
+>   (from 11am); daren's ending 12:15am was fine. Fix in `sb2`: a calendar-note body with end "next day 00:00:00" is sent as
+>   "same day 23:59:59" (`noteMidOut`); every note read back with 23:59:59 becomes next day 00:00:00 (`noteMidIn`), so the engine's
+>   times don't change. One-off `oneoffMid` (side timer, once, DO kv `oneoffMid`) re-saves existing notes ending 00:00:00 in the
+>   next 60 days – **remove `oneoffMid` + its side-lane call with the next engine change**.
+
 > ## 17 Nov 2026, 11:57am – engine cdf7edb DEPLOYED (27 bindings, 3 timers): DURABLE OBJECT CALLS – FREE PLAN LIMIT
 > - Cloudflare emailed 17 Nov 3:27am SGT: **90% of the free plan's 100,000 Durable Object requests a day** (resets 8am SGT). Every
 >   `hb.kvGet`/`kvSet`/other `hb.*` call from the worker = 1 request. Hourly (GraphQL `durableObjectsInvocationsAdaptiveGroups`):
