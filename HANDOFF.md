@@ -1682,3 +1682,21 @@ membership system yet) → the cloud batch is built but OFF.
   but the arguments are undocumented (emulators only stub them) – NOT to be called blind after tonight's freezes. Safe first
   step still to build: on 2 failed check-ins, test the router (192.168.88.1) directly, write "connected but nothing arrives"
   to net-fail.log, so the control centre can show WHICH fault it is; rejoin call only after a careful single-PS4 test.
+
+### 18 Nov 4:30–4:40am – RESULT: with WPA2-only, Atlas + Bella rejoin by themselves (3 restarts, 0 stuck)
+- Laptop back 4:30 (owner re-joined it – its saved profile was WPA3). Router verified: 2.4 GHz b/g/n/ax + WPA2-PSK[AES];
+  5 GHz a/n/ac/ax + WPA2-PSK[AES]; OFDMA off; TWT off on 2.4 AND 5 GHz (5 GHz toggled 4:32); **Access Control OFF again**.
+- Their own net-fail.log (Atlas's clock is 493 s fast): stuck from the 4:14 OFDMA/TWT restart (still WPA2+WPA3) –
+  Bella 4:15:18 → "back after 7 failure(s), 505 s" at **4:23:43**, Atlas 4:15:33 → back **4:22:57** = the very restart that
+  switched security to WPA2-only (5 GHz still in "be" mode + TWT on then → the security mode is what mattered).
+  After the next two restarts (4:26 5 GHz mode save, 4:32 TWT off): **no failure line at all** on Atlas, Bella or Kai;
+  all six polling within 2½ min; router's own ping 4:36am: Atlas 4/4, Bella 4/4.
+- Score tonight: WPA2+WPA3 mixed = 5 restarts, the two CUH-72xx Pros stuck 5 times (8–35 min, or until re-tested by hand);
+  WPA2-only = 3 restarts, 0 stuck. Likely cause: the CUH-72xx Wi-Fi chip mishandles this router's WPA2/WPA3 transition mode.
+  NOT yet explained: 3:25:45 (no restart). Watch the next days: any `back after N failure(s)` ≥ 5 min in Atlas/Bella's
+  net-fail tail = it's back. If so: next try a PS4-only network name (Multi-SSID) or cable for those two.
+- Side effect to expect: devices that had joined with WPA3 (laptop did; some phones may) must re-select "round2" once.
+- Light System check 4:38am: 14 passed · 4 to look at · 0 failed (Kaeden TV 13 days silent – renovation; Atlas TV app
+  android 1.0.286 old; Vale's 1:57am reset "PROBLEMS" line (fewer than 4 spares then); watchdog: 5 "24 hours" maths
+  lines in the control centre, e.g. 3638 / 3962 – not from tonight's PS4 work, check + mark day-ok next session).
+- Helper self-heal (option 1) NOT built – see above; with WPA2-only it may not be needed. Decide after a few days of logs.
