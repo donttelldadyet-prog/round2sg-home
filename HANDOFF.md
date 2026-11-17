@@ -1653,3 +1653,10 @@ membership system yet) → the cloud batch is built but OFF.
   NetCtl says connected, make the PS4 rejoin Wi-Fi itself + write a line (needs a safe rejoin call, test on Bella);
   (2) router: WPA2-only instead of WPA2+WPA3, OFDMA/TWT off – one at a time, each save restarts the radios;
   (3) report to Singtel/TP-Link; (4) cable for Atlas/Bella/Kai.
+- **4:02–4:09am – spell over, Bella's launch clear DONE.** Owner re-ran the connection on both: Bella back 4:02:44, Atlas
+  4:03. Their own net-fail.log: Bella "back after 30 failure(s), 2087 s", Atlas "back after 31 failure(s), 2162 s" – one
+  `/ps4/cmd … in 'connect'` failure every ~74 s for 35 min, SAME pids before and after (170, 289) = the helper ran the whole
+  time; the Wi-Fi delivered nothing to it. Bella: day0 134/134 **0 failed** → `/_purge.day0` 4:05 OK (57 games, 0 failed,
+  134 removed) → `ps4reset` 4:08 OK (4 spares renamed Player 1–4, order ok, 0 problems). **All six rooms are now launch-clean.**
+- 4:09am: all six on helper **1.1.61, own program**, all answering. Still open: Scarlett needs 2 more profiles (owner),
+  then `ps4reset`; restart-a-PS4 trigger test; helper self-heal (Wi-Fi rejoin) vs router settings – owner to choose.
