@@ -1563,3 +1563,16 @@ membership system yet) → the cloud batch is built but OFF.
   more, nothing back if it costs less (early bird → normal slot pays up to full price).
 - Page: rule tile says "JUST BOOKED – wrong day or time? Move to any free slot in your first 15 minutes"; the picker's note says
   the same. System check step "Guest rescheduling…" tests it. Engine 365e54a deployed 12:45am (live hash checked before and after; 27 bindings, 3 timers). System check NOT run afterwards (no browser link).
+
+### 18 Nov 1:20am–2:00am – PS4 launch clear finished except Bella
+- Scarlett: day0 132/132 OK; purge day0 ran 1:20am **from another chat** (57 games, 0 failed, 130 parts – all in the restore
+  point); spares renamed Player 1–2 (rubbaduckie = spare, owner); **2 profiles to add by hand**.
+- Kai: "Clean slate now" 1:28am after the 9pm guests: 0 games, 2 spares renamed back, order ok, 0 problems.
+- Vale: was in rest mode 91 min (watchdog "stuck in read" lines = the rest period). purge day0 1:54am: 47 games, 0 failed,
+  96 parts; reset 1:57am: only 1 spare (User2 → Player 1) → **3 profiles to add by hand** (logged as a problem in the log).
+- Bella: profiles Bella + User1–3 (**1 to add**); day0 snapshot started 1:53am, 0/134 at 2:00am – **its network keeps
+  dropping** (2.4 GHz ch 6 via mesh unit 8c:86:dd:14:95:10, others 5 GHz ch 36; 35-min outage 12:08–12:43am; full report
+  stale while polls get through). Then: purge day0, reset. Suggest a cable or 5 GHz for Bella.
+- All six PS4s on helper 1.1.58 (no controller code). Automatic reset OFF (ps4resetAuto.on=false) until a safe input signal
+  exists (idea: GoldHEN plugin inside the game writing the last input time to a file – owner to decide).
+
