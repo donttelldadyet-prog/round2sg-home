@@ -1593,3 +1593,17 @@ membership system yet) → the cloud batch is built but OFF.
   the 2.4 change until the owner reconnected it on 5 GHz; Bella's helper (shared mode) hung mid day0 snapshot (44/134) after the
   5 GHz restart → owner to re-send the helper, then re-run `/_snap.day0` until 0 failed, then purge + reset.
 - Router admin sessions time out after a few idle minutes; the owner types the password himself (never Claude).
+
+### 18 Nov 3:03–3:20am – OWN-PROGRAM PROVEN ON 11.00 (Bella) → helper 1.1.60 auto-switches on 11.00 too
+- Owner in Bella's room. Bella (11.00, restarted 3:01am, shared pid 46): `/_selfown` → **own=1 pid 82**, day0 snapshot carried on.
+- Released **1.1.59** (version number only, ps4-release bcd845a) → `ps4update` Bella → "switched to 1.1.59 (own program)",
+  **pid 82→113**; `/_ps`: only 113 (parent 1), 82 gone = own→own update frees the old program on 11.00 too.
+- `/_rest` 3:08:52 → asleep; network wake from Vale (`/_wakerp`) did NOT reach Bella (known: Bella drops off Wi-Fi in rest);
+  owner pressed PS ~3:14 → **same pid 113 resumed, own=1, no restart**. All three checks passed.
+- Note: after a `/_selfown` from shared, the old shared copy sleeps inside GoldHEN's BinLoader host until the next PS4
+  restart (once per boot, by design) and its watchdog still writes "stuck … in 'read' (shared program)" lines – harmless noise.
+- **1.1.60** (ps4-helper 1aa29cb, ps4-release ba66e0d, sha 348e71f3…): auto-promote also on 11.00 (`fw_major()==0x11` –
+  kern.sdk_version 11.00 = 0x11, not 11!) and never while a game (other than PS Vue) is open. Reaches every PS4 in quiet
+  time; pushing it to all PS4s at once from here was blocked (needs owner say-so).
+- Bella day0 re-snapshot running again (previous run: 134/134 with 7 failed during tonight's Wi-Fi restarts) → when 0 failed:
+  `/_purge.day0`, then `ps4reset`; owner adds 1 profile.
