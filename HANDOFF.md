@@ -1552,3 +1552,14 @@ membership system yet) → the cloud batch is built but OFF.
   owner to decide); /_snap.day0 started 12:09am: 132 parts, 59 games.
   Idea for button detection without the pad library: watch the game's own activity instead (e.g. the PS4's auto-power-down
   idle timer via a read-only system call), or just rely on time + SimplyBook – owner to decide.
+
+### 18 Nov 2026, 12:40am – rescheduling: the first 15 minutes after booking unlock every day (owner)
+- Before: the 15 free minutes only removed the fee; the timing rules still applied, so someone who booked tonight for tomorrow (or an
+  early bird inside 3 days) and had picked the wrong day could not fix it online even a minute later.
+- Now: `C.fresh` (no move of any kind yet AND < 15 min since the booking was made) makes `gLogic.stage()` answer `early` – any free
+  day or time. Still closed under 3 h before the session; the new time still has to be 3 h+ from now. **Not** after a move (the
+  15 free minutes after a move keep the normal locks – otherwise one paid same-day change would open every other day).
+- Money: unchanged grace maths – no change fee, no POPULAR add-on; the guest pays the price difference if the new slot costs
+  more, nothing back if it costs less (early bird → normal slot pays up to full price).
+- Page: rule tile says "JUST BOOKED – wrong day or time? Move to any free slot in your first 15 minutes"; the picker's note says
+  the same. System check step "Guest rescheduling…" tests it.

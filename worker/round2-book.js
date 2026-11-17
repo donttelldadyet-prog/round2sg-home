@@ -2347,7 +2347,10 @@ function gLogic(C) {
   function price(room, i, t, h) { var T = ROOMS[room][1], r = rate(i, t), P = PR[T]; if (r === 'eb') { var pk = peak(i) ? 'peak' : 'off'; return 35 + (h > 3 ? P.eb[pk][h - 4] : 0); } return P[r][0] + (h > 3 ? P[r][h - 3] : 0); }
   function O() { var b = C.bk; return { room: b.room, day: b.day, t: b.t, h: b.h, paid: b.paid, eb: b.t === OPEN }; }
   function leadH() { var o = O(); return (o.day * 1440 + o.t - NOW) / 60; }
-  function stage() { var L = leadH(); return L < 3 ? 'closed' : L < 24 ? 'day' : L < 72 ? 'late' : 'early'; }
+  /* owner, 18 Nov: the first 15 minutes after BOOKING are for fixing a wrong pick – any free day or time, like a booking 3+ days
+     away, even when the session is tomorrow or an early bird (C.fresh; not after a move, or one paid same-day change would
+     open every other day). Still closed under 3 h, and the new time still has to be 3 h+ from now. */
+  function stage() { var L = leadH(); return L < 3 ? 'closed' : C.fresh ? 'early' : L < 24 ? 'day' : L < 72 ? 'late' : 'early'; }
   /* what's taken in a room on a day (bookings + cleaning, blocks, notes, people paying online); new times start 3h+ from now */
   function taken(i, room) {
     if (i < 0 || i >= ND || !C.cal[i]) return [[0, 2000]];
@@ -2522,7 +2525,7 @@ async function gCtx(env, ref, fresh) {
   const moves = (d.moves || []).filter((m) => m.guest && !m.addHours), last = Math.max((d.done && d.done.at) || h.created || 0, ...moves.map((m) => m.t || 0));
   const hours = Math.round((me.e - me.s - BUF * 60e3) / 3600e3), t = Math.round((me.s - (d0 + bDay * 86400e3)) / 60e3);
   const paid = d.paid != null ? +d.paid : +q.total;
-  const C = { now: Math.floor((now - d0) / 60e3), days, cal, bk: { room: G_NAME(me.unit), day: Math.round((sgMs0(sgDay(me.s) + ' 00:00') - d0) / 86400e3), t: sgMins(me.s), h: hours, paid }, moves: moves.length, grace: now - last < 15 * 60e3 };
+  const C = { now: Math.floor((now - d0) / 60e3), days, cal, bk: { room: G_NAME(me.unit), day: Math.round((sgMs0(sgDay(me.s) + ' 00:00') - d0) / 86400e3), t: sgMins(me.s), h: hours, paid }, moves: moves.length, grace: now - last < 15 * 60e3, fresh: !(d.moves || []).length && now - ((d.done && d.done.at) || h.created || 0) < 15 * 60e3 };
   return { h, d, bid, C, ext, today, graceEnd: last + 15 * 60e3, moves, dry };
 }
 function sgMins(ms) { const x = new Date(ms + 8 * 3600e3); return x.getUTCHours() * 60 + x.getUTCMinutes(); }
