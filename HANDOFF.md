@@ -1257,6 +1257,10 @@ copies, no RAM creep.** This is the real fix for the ~14-update ceiling.
   rebuilding – expected after the main profile's account-ID change, cosmetic (the game redraws thumbnails, doesn't touch
   the save). Asked owner to confirm My Garage (unlocked cars + credits) is intact; if anything's missing, restore the GT
   Sport save from the cloud backup (…/14a1e943/CUSA02168/…). So the shared-ID-on-main change is safe for Max's house save.
+- **17 Nov 12:41pm OWN-PROGRAM PROVEN ON 11.00 (Vale).** Vale auto-updated to 1.1.33 but correctly did NOT auto-promote
+  (9.00 gate working). Manual /_selfown on Vale → own=1, pid 150 (its own process), stable check-ins every minute. So the
+  elfldr own-program route works on 11.00 too, not just 9.00. To do before UNGATING auto-promote to 11.00: an own→own
+  update + a rest/wake on an 11.00 room (same spawn code, low risk). Vale left as own-program (pid 150) for the login test.
 - **Keep-awake behaves as designed:** owner confirmed Max was kept awake and did NOT rest, sitting on the "press PS"
   screen the whole hold (keep-awake prevents rest, doesn't sign in; the human PS press clears the welcome screen). This is
   the intended morning bridge: wake booked rooms → prep saves behind the screen → hold awake → staff press PS on arrival.
