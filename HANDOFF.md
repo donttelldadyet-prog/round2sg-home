@@ -1253,4 +1253,10 @@ copies, no RAM creep.** This is the real fix for the ~14-update ceiling.
   re-arming (awakeHold stuck near full). Harmless for the test, but PRODUCTION keep-awake should be engine-driven (a
   per-console "awake until" set after a morning wake, cleared when a controller connects or the booking nears), not a
   repeating look. ENGINE WORK still to do: auto keep-awake after ps4MorningWake; auto-promote already ships (helper side).
-- STILL on Max (owner): open GT Sport once to confirm the save loads (main profile now has the shared ID).
+- **17 Nov 12:28pm GT Sport on Max loads after the ID change** (owner: "it works"). Its car-image thumbnail cache is
+  rebuilding – expected after the main profile's account-ID change, cosmetic (the game redraws thumbnails, doesn't touch
+  the save). Asked owner to confirm My Garage (unlocked cars + credits) is intact; if anything's missing, restore the GT
+  Sport save from the cloud backup (…/14a1e943/CUSA02168/…). So the shared-ID-on-main change is safe for Max's house save.
+- **Keep-awake behaves as designed:** owner confirmed Max was kept awake and did NOT rest, sitting on the "press PS"
+  screen the whole hold (keep-awake prevents rest, doesn't sign in; the human PS press clears the welcome screen). This is
+  the intended morning bridge: wake booked rooms → prep saves behind the screen → hold awake → staff press PS on arrival.
