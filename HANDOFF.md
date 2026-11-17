@@ -1169,5 +1169,20 @@ Check each room's Wix links page uses its own `?room=` before printing QR codes.
   = type-C wake first), `/_sswake.<ip>.<acct16>`; full lines in /data/round2/rp.log. Computer test against a fake PS4:
   `ps4/ss/r2ss_test.py` (8 checks pass; host build line in its header). Light check before: 14 passed / 2 / 1 (SimplyBook).
   Owner chose Max for the test (Kai busy). Sender = Bella (on 1.1.30; Atlas refused, 11am session). Max asleep → owner to
-  switch it on and open Settings › Mobile App Connection Settings › Add Device. Max main account 52326d61696e3031. (4) morning trigger test;
+  switch it on and open Settings › Mobile App Connection Settings › Add Device. Max main account 52326d61696e3031.
+- **17 Nov 11:05am METHOD B FAILED at login – the account is the wall, not the credential. METHOD B ABANDONED.**
+  Paired Bella→Max with our computed credential + the PIN: **the device "Round2" (MAC 28-66-E3-C4-AC-D3) DID get added
+  to Max's Mobile App Connection Settings** (owner's photo) → our credential is accepted for registration. But the login
+  packet returns **error 21** = "PSN account not registered" / NO_LOCAL_ACCOUNT / INVALID_CREDENTIAL (pyps4-2ndscreen,
+  playactor, BenjaminFaal). Max main is OFFLINE-activated (our shared ID). The PlayStation App login step requires a
+  real PSN-registered account; Remote Play's does not (that's why Remote Play wake works and this doesn't). No honest way
+  past it (capturing a real credential from Sony's app = declined). **So method B cannot sign a profile in / fix the
+  welcome screen.** Owner should delete the dead "Round2" entry from Max's Mobile App Connection Settings. Helper code
+  (1.1.30 ss/r2ss.c, /_ss /_sswake) stays for the record but isn't a path forward.
+- **Models so far (1.1.29 hw):** Kai CUH-7016B (Pro), Max CUH-7006B (Pro) – both wake fine. Atlas/Bella still to read
+  (they're the two that drop off Wi-Fi in rest). 
+- **AGREED DIRECTION after B failed:** keep Remote Play wake (works: Kai/Vale/Max/Scarlett); the morning wake preps saves
+  in the background; the welcome screen is cleared by ONE human PS-button press when staff open the room; the helper
+  keeps woken PS4s awake so they don't fall back to rest before staff arrive (sceSystemServicePowerTick /
+  sceShellCoreUtilResetAutoPowerDownTimer, both in toolkit) – build + test on Max next. Atlas/Bella: cable or closer mesh. (4) morning trigger test;
   (5) owner opens GT Sport on Max once (main profile now has an ID).
