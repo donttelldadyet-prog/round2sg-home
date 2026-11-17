@@ -1245,4 +1245,12 @@ copies, no RAM creep.** This is the real fix for the ~14-update ceiling.
   NEXT restart: it should auto-promote with no nudge.
 - Rollout note: ps4-release is on 1.1.33, so Kai + Atlas (9.00) will auto-promote on their next update/quiet-time; that's
   fine (own-program proven on both 9.00 models). Watch they come back own=1 and keep checking in.
-- STILL TO TEST on Max: own-program through a rest/wake cycle (proven on Kai); keep-awake 35-min hold; GT Sport loads.
+- **17 Nov 12:20pm KEEP-AWAKE PROVEN + own-program through rest/wake on Max.** Rested Max (own 1.1.33, pid 85) → network
+  wake from Atlas → **own-program helper RESUMED, same pid 85, nobody signed in (woke slept 157s)** = own-program survives
+  rest/wake on Max too. Set `/_keepawake.40` at once → **Max stayed awake 17+ min with nobody signed in** (without the
+  hold Max rested at ~5 min on 16 Nov). Hold counts down and cancels (`/_keepawake.0` → "hold cleared"). Keep-awake works.
+  **Quirk to clean up:** a look command persists and the helper re-runs it each check-in, so a keepawake look keeps
+  re-arming (awakeHold stuck near full). Harmless for the test, but PRODUCTION keep-awake should be engine-driven (a
+  per-console "awake until" set after a morning wake, cleared when a controller connects or the booking nears), not a
+  repeating look. ENGINE WORK still to do: auto keep-awake after ps4MorningWake; auto-promote already ships (helper side).
+- STILL on Max (owner): open GT Sport once to confirm the save loads (main profile now has the shared ID).
