@@ -1496,3 +1496,25 @@ membership system yet) → the cloud batch is built but OFF.
   Scarlett: owner restarted it twice (helper fresh 20:47) – still 1.1.37; `/_selfown` (own program = own memory, proven
   on 11.00 at 12:41pm on Vale) sent 8:55pm but **refused: session until 11:45pm**. After: /_selfown → update → /_snap.day0
   → /_purge.day0 → profiles. Vale after 11:30pm. Bella asleep since 8:13pm, no day0 yet.
+
+### 17 Nov 10:15pm – CLEAN SLATE AFTER EACH SESSION (owner: params + "a log in the control centre under the PS4 tab")
+- **Helper 1.1.53/1.1.54** `/_reset[.<label>]`: 1) close the open game (close_game, waits while saving, else NOT DONE);
+  2) sign out signed-in spares; 3) every game on every registered profile (main incl.; never PS Vue, protected main-profile
+  game, APOL*/LAPY*) → internal copy with fingerprints, then remove (game left if the copy fails); 4) profiles: main + 4
+  oldest spares kept, extra (guest-made) deleted via /_udel, <4 = error "add by hand", spares → "Player 1-4", /_avreset,
+  /_uorder main first; 5) one line in /data/round2/clean/history.txt + problems in errors.txt. Report: log.clean +
+  log.cleanerr (last 6 each, 150 chars a line – 1.1.54 shortened the line), clean.kind (reset/purge/clean).
+- **Engine 912d004 + 8223531 (deployed, live hash = file, 27 bindings, 3 timers):** `ps4ResetRun` on the 10-min now ticks
+  (shares the calendar read – no extra SimplyBook requests): real guest session ended 2–45 min ago, no real guest in the room
+  now, PS4 on 1.1.53+ and answering → `/_reset.<room>-<hhmm>` with nobusy; else logged waiting / missed. kv `ps4resetAuto`
+  {on, from} (**ON from 7am 18 Nov**, set for the owner), kv `ps4resetLog` (last 40). Staff `ps4reset` ("Clean slate now",
+  refused during a guest session) + `ps4resetauto`. ps4list now ONE Durable Object call (kvMany).
+- **Control centre 2e1897b..2216f03:** PS4s › 🧽 Clean slate (switch, engine log, each PS4's runs + problems), tile line
+  (running x/y · last OK / problems + newest problem), "Clean slate now". System check step "PS4 clean slate after each
+  session" (in the Light check). Light check before 13/4/0 and after 14/4/0 (the 4 = known: watchdog old lines, SimplyBook
+  6,259 today – full check skipped because of that, do one in the morning, Kaeden TV, Atlas TV app).
+- Tested: Max + Atlas "Clean slate now" → "OK · 0 games … 4 spares, 0 renamed, 0 deleted, order ok · 0 problems".
+  Atlas launch clear done 9:47pm: 85 games, 0 failed; spares → Player 1-4, pictures, order. **Ready: Kai, Max, Atlas.**
+- Tomorrow: Kai (1.1.52) updates by itself in quiet time after its midnight session. Vale (1.1.42), Bella (1.1.46,
+  asleep, no day0) need 1.1.53+ or the engine logs "too old". Scarlett (1.1.37) needs /_selfown → update (after 11:45pm
+  session). A PS4 not purged yet is still fine: the first reset copies everything internally and clears it.
