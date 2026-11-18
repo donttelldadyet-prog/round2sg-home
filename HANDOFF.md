@@ -26,6 +26,10 @@
 >   `/ps4/resetok` lets a label `<room>-test` through with automatic reset off (SimplyBook room-free check still applies).
 > - **State now:** Max 1.1.67, detector ON for CUSA31498 only, **test pop-ups ON** (`/data/round2/input/popups`; turn off with
 >   `/_inplug.pop.off` when the owner says). Other 5 PS4s 1.1.61, no plugin. Own-program switches since Max's last restart: 3 of 5.
+> - **7:51pm (owner):** automatic reset ON for **Max only**, 7 min after guest end (staff tidying may add +2 min → ~9 min).
+>   New `ps4resetAuto.rooms` (engine dd034a6): `ps4resetauto` with `rooms='max'`; **to turn on for all rooms send `rooms=''`** – the
+>   control centre's on/off toggle does NOT send rooms, so it keeps "Max only" until cleared. Bella + Atlas direct test from Max
+>   7:52pm: both answered (2.4 GHz, 94/98%).
 > - **Still pending:** `oneoffMid` (17 Nov) is still in the engine – removing it touches notes code = Full check (~650 SimplyBook
 >   requests); today was already ~4,600, so it waits for a quieter day.
 
