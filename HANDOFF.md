@@ -1716,3 +1716,17 @@ membership system yet) → the cloud batch is built but OFF.
 - If true, fixes: (a) Atlas and Bella each on their OWN network name (router Multi-SSID has MSSID1 + MSSID2 per band – each
   name has its own group key, nobody else joins/leaves it) – needs the Wi-Fi picked once on each PS4; (b) cable; (c) helper
   rejoin (API undocumented). WPA2-only / Wi-Fi 7 off / OFDMA+TWT off were left in place (harmless).
+
+### 18 Nov 12:50pm–1:45pm – second mesh unit had stopped taking devices; reset + re-added; Tapo cameras back on it
+- Owner: the 2 Tapo cameras outside (C211 .10, C100 .24) must use the second unit. At 12:50 the second unit (_9510, .8) had
+  0 devices; both cameras hung off the main unit (C211 −78, C100 −81, 1/4 ping, DHCP loop). Cause not proven (stale config
+  after the 4:23am security change is the guess; its status page shows "be mixed" even after reset, so that line isn't proof).
+- 1:01 rebooted it from its own page (192.168.88.8, cert warning + login by owner) → it did NOT rejoin the mesh (backhaul
+  log: disconnected reason 8, nothing after). 1:27 owner factory-reset it (pinhole 5 s); 1:30 main › Wireless › Mesh ›
+  Add Mesh Device › Add By Scanning › found 8C:86:DD:14:95:10 › Add → "added successfully". No Wi-Fi drop on the main unit.
+  (WPS is OFF on the main unit – the WPS-button method would need it on.)
+- Owner moved it further into the lobby, then turned it to face the main unit: backhaul −75 → −73 dBm (2.4/5 GHz ~51 Mbps,
+  6 GHz 144 Mbps). After the owner rebooted the cameras in the Tapo app (~1:42): **both on the second unit – C211 −36 dBm
+  (ping 5 ms), C100 −57 dBm (ping 63 ms avg)**.
+- Main router admin sessions now kept alive by a 4-min menu click in the Claude tab group (until the tab reloads).
+- Still to do after closing: 2.4 GHz power High → Middle on the main unit (rooms in session at 1:45pm).
