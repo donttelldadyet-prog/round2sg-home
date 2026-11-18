@@ -4275,13 +4275,13 @@ async function ps4Plugin(env, req) {   /* helper 1.1.62 "/_inplug.get": the roun
   if (sha !== info.sha256 || b.byteLength !== +info.size) return J({ error: 'file check failed' }, 502);
   return new Response(b, { headers: { 'content-type': 'application/octet-stream', 'x-r2-sha': sha } });
 }
-const PS4_AUTO_HOLD = ['1.1.62', '1.1.63'];   /* versions NOT handed out in quiet time – staff "Update now" still works */
+const PS4_AUTO_HOLD_ABOVE = '1.1.61';   /* versions NEWER than this are NOT handed out in quiet time (detector test on Max, owner 18 Nov) – staff "Update now" still works */
 async function ps4AutoUpdate(env, hb, id, room) {   /* quiet time? hand out an update */
   if ((await hb.kvGet('ps4auto')) === false) return null;
   const rep = await hb.kvGet('ps4:' + id), now = Date.now();
   if (!rep || !rep.boot || rep.running || now - rep.t > 20 * 60e3 || ps4Newer(PS4_SELFUP, rep.v)) return null;
   const rel = await ps4Latest(env, false, hb); if (!rel || !ps4Newer(rel.v, rep.v)) return null;
-  if (PS4_AUTO_HOLD.includes(rel.v)) return null;   /* owner 18 Nov 6:05pm: 1.1.62/63 to Max only (staff Update now) until its test passes */
+  if (PS4_AUTO_HOLD_ABOVE && ps4Newer(rel.v, PS4_AUTO_HOLD_ABOVE)) return null;   /* owner 18 Nov 6:05pm: Max only (staff Update now) until the detector test passes */
   if (rep.rolled && rep.rolled.includes(' ' + rel.v + ':')) return null;   /* that version was rolled back here – needs a newer one or Update now */
   const tried = await hb.kvGet('ps4autoTry:' + id); if (tried && tried.v === rel.v && now - tried.t < 6 * 3600e3) return null;
   const chk = (await hb.kvGet('ps4autoChk:' + id)) || 0; if (now - chk < 10 * 60e3) return null;   /* bookings looked up at most every 10 min per PS4 */
