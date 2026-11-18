@@ -58,6 +58,12 @@
 >   broadcast + direct to .6, 12:08–12:13) – **Bella has never woken remotely (16 Nov 9:46pm also failed)**. Pattern to check:
 >   Atlas failed at 11:57/11:59pm after ~28 min asleep but woke 3 min after rest → may only hear wakes early in rest; a morning
 >   wake comes after hours asleep. Bella left asleep (staff press the button).
+>   **12:39–12:46am BELLA RE-REGISTERED → WAKES.** Owner's Add Device number 95234994; Bella registered with itself
+>   (`/_rpreg.192.168.88.6.284561706f6c6c6f.95234994`) → "0 registered", **same key c203… as 16 Nov** (the PS4 gives the same key
+>   to the same profile). Rested 12:41:07, `ps4wake` 12:44:11 (Vale) → **Bella woke ~12:44:30** (helper back, nobody signed in =
+>   network wake). So the key was right; Bella's own registered-device entry must have been gone (likely lost since 16 Nov) –
+>   re-registering put it back. If a registered PS4 stops waking: re-register first (same key comes back, nothing else changes).
+>   Still to test: Atlas/Bella wake after a LONG sleep (Atlas failed after ~28 min, woke after 3 min) – morning wakes need that.
 > - **Still pending:** `oneoffMid` (17 Nov) is still in the engine – removing it touches notes code = Full check (~650 SimplyBook
 >   requests); today was already ~4,600, so it waits for a quieter day.
 
