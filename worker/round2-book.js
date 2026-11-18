@@ -4264,6 +4264,17 @@ async function ps4App(env, req) {   /* the helper downloads the newest version t
   if (sha !== rel.sha || b.byteLength !== rel.size) return J({ error: 'file check failed' }, 502);
   return new Response(b, { headers: { 'content-type': 'application/octet-stream', 'x-r2-v': rel.v } });
 }
+async function ps4Plugin(env, req) {   /* helper 1.1.62 "/_inplug.get": the round2_input GoldHEN plugin (controller detector), same release commit as the helper */
+  if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
+  const rel = await ps4Latest(env); if (!rel || !rel.commit) return J({ error: 'no release' }, 404);
+  const info = await fetch(PS4_REL + rel.commit + '/round2_input.json', { headers: { 'User-Agent': 'round2-book' } }).then((r) => r.ok ? r.json() : null).catch(() => null);
+  if (!info || !/^[0-9a-f]{64}$/.test(info.sha256 || '') || !(+info.size >= 1024 && +info.size <= 512 * 1024)) return J({ error: 'no plugin in this release' }, 404);
+  const b = await fetch(PS4_REL + rel.commit + '/round2_input.prx', { headers: { 'User-Agent': 'round2-book' } }).then((r) => r.ok ? r.arrayBuffer() : null).catch(() => null);
+  if (!b) return J({ error: 'download failed' }, 502);
+  const sha = [...new Uint8Array(await crypto.subtle.digest('SHA-256', b))].map((x) => x.toString(16).padStart(2, '0')).join('');
+  if (sha !== info.sha256 || b.byteLength !== +info.size) return J({ error: 'file check failed' }, 502);
+  return new Response(b, { headers: { 'content-type': 'application/octet-stream', 'x-r2-sha': sha } });
+}
 async function ps4AutoUpdate(env, hb, id, room) {   /* quiet time? hand out an update */
   if ((await hb.kvGet('ps4auto')) === false) return null;
   const rep = await hb.kvGet('ps4:' + id), now = Date.now();
@@ -4920,6 +4931,7 @@ const HANDLER = {
       if (u.pathname === '/ps4/cmd' && req.method === 'POST') return await ps4Cmd(env, req);   /* helper: waiting command? (every minute) */
       if (u.pathname === '/ps4/done' && req.method === 'POST') return await ps4Done(env, req);
       if (u.pathname === '/ps4/app' && req.method === 'POST') return await ps4App(env, req);
+      if (u.pathname === '/ps4/plugin' && req.method === 'POST') return await ps4Plugin(env, req);
       if (u.pathname === '/ps4/dnsini' && req.method === 'POST') return await ps4DnsIni(env, req);   /* helper 1.1.16: blocker settings for its dns job */
       if (u.pathname === '/ps4/sput' && req.method === 'POST') return await ps4SPut(env, req, u);   /* helper: one piece of a save backup (1.1.4) */
       if (u.pathname === '/ps4/sget' && req.method === 'GET') return await ps4SGet(env, req, u);   /* helper: a piece back, to restore */   /* helper: download the newest version */   /* helper: command result */
