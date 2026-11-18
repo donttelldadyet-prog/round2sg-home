@@ -1752,3 +1752,7 @@ membership system yet) → the cloud batch is built but OFF.
   (5 GHz, same day): stuck at 10:44 (32 min), 13:30 (3½), 13:50 (12½), 14:31 (17) – i.e. every 20–60 min.
   → **Fix for the CUH-72xx Pros: force 2.4 GHz on the PS4** (Wi-Fi Frequency Bands). Do the same on Atlas. Keep an eye
   on Bella's net-fail tail over the next days; cable remains the gold standard.
+- **5:20pm Atlas switched to 2.4 GHz too** (owner). 5:31pm test from Bella: Atlas direct ✓ + shout ✓, Atlas polling every
+  ~20–50 s. (Atlas's helper report – which carries the band/signal – is only sent every ~10+ min, so it still showed the
+  old 5 GHz values right after the switch.) Vale + Kai refuse look jobs during sessions ("has a session until 6pm") – use a
+  free PS4 as the tester. Watch Atlas + Bella net-fail tails over the next days.
