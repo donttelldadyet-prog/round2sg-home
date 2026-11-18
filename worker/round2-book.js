@@ -4133,7 +4133,8 @@ async function ps4ResetRun(env) {
   const after = Math.min(30, Math.max(2, +A.after || 10)), night = sgDay(now - SHADOW_TILL * 60e3), plan = [];
   for (const d of [night, addDays(night, 1)]) for (const S of (await sessDay(env, d)).sessions)
     if (realGuests(S, S.unit) && !S.orphanExt && S.guestEnd > now - 60 * 60e3 && S.guestEnd < now + 18 * 3600e3
-      && (A.only !== 'eb' || ((S.s + 8 * 3600e3) % 86400e3) / 60e3 === EB_START)) plan.push(   /* owner 11:38pm: test run on the early-bird (11:00) sessions only */{ room: GM_ROOM[S.unit], unit: S.unit, end: S.guestEnd, at: S.guestEnd + after * 60e3 });
+      && (A.only !== 'eb' || ((S.s + 8 * 3600e3) % 86400e3) / 60e3 === EB_START)
+      && (!Array.isArray(A.rooms) || !A.rooms.length || A.rooms.includes(GM_ROOM[S.unit]))) plan.push(   /* owner 18 Nov 7:51pm: rooms = only these rooms (empty = all) */   /* owner 11:38pm: test run on the early-bird (11:00) sessions only */{ room: GM_ROOM[S.unit], unit: S.unit, end: S.guestEnd, at: S.guestEnd + after * 60e3 });
   plan.sort((a, b) => a.at - b.at);
   const K = await hb.kvMany(['ps4resetPlan', 'ps4resetLog', 'ps4map'], []), map0 = K.ps4map || {}, byRoom = {};
   for (const id in map0) byRoom[map0[id]] = id;
@@ -4220,6 +4221,8 @@ async function ps4ResetOk(env, req) {
   const hold = async (why) => { if (x && ps4ResetNote(log, x, 'held', 'countdown stopped at the last check – ' + why, '', now)) await hb.kvSet('ps4resetLog', log.slice(0, 40)); return J({ hold: why }); };
   const test = /^[a-z]+-test$/.test(String(r.lab || ''));   /* owner 18 Nov 7:24pm: a staff-sent TEST countdown (/_reset.<room>-test.w…) may reset with the switch off – still only if SimplyBook says the room is free */
   if (!test && !ps4ResetOn(K.ps4resetAuto, now)) return hold('automatic reset is switched off');
+  const RA = K.ps4resetAuto || {};
+  if (!test && Array.isArray(RA.rooms) && RA.rooms.length && !RA.rooms.includes(room)) return hold('automatic reset is on for ' + RA.rooms.join(', ') + ' only');
   let busy; try { busy = await roomBusy(env, unit, 0); } catch (e) { return hold('could not check SimplyBook'); }
   if (busy) return hold('room in use until ' + clock12(busy.guestEnd) + (x && busy.guestEnd > x.end ? ' (extended)' : ''));
   return J({ ok: true });
@@ -4482,7 +4485,8 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
   }
   if (act === 'ps4resetauto') {   /* staff: automatic reset after each session on/off; from = optional start (ms) */
     const old = (await hb.kvGet('ps4resetAuto')) || {};
-    const v = { on: f.on === undefined ? !!old.on : f.on === '1' || f.on === true, from: f.from === undefined ? +old.from || 0 : +f.from || 0, after: Math.min(30, Math.max(2, +f.after || +old.after || 10)), only: f.only === undefined ? old.only || '' : f.only === 'eb' ? 'eb' : '', at: Date.now(), by: String(f.by || 'control centre').slice(0, 40) };
+    const v = { on: f.on === undefined ? !!old.on : f.on === '1' || f.on === true, from: f.from === undefined ? +old.from || 0 : +f.from || 0, after: Math.min(30, Math.max(2, +f.after || +old.after || 10)), only: f.only === undefined ? old.only || '' : f.only === 'eb' ? 'eb' : '', at: Date.now(), by: String(f.by || 'control centre').slice(0, 40),
+      rooms: f.rooms === undefined ? (Array.isArray(old.rooms) ? old.rooms : []) : String(f.rooms).split(',').map((x) => x.trim().toLowerCase()).filter((x) => Object.values(GM_ROOM).includes(x)) };   /* 18 Nov: rooms "max,kai" = only those; "" = all */
     await hb.kvSet('ps4resetAuto', v); return { ok: true, auto: v };
   }
   if (act === 'ps4look') {   /* read-only folder listing from the PS4 (helper 1.0.5+): what the Capture Gallery keeps, etc. */
