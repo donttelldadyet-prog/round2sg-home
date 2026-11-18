@@ -17,6 +17,8 @@ html, body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4
 .wrap { max-width: 980px; margin: 0 auto; padding: 22px 16px 40px; }
 /* inside the website's Book screen (?embed=1): the website already has the heading, so start straight at the calendar */
 .embed .wrap { padding-top: 6px; }
+/* phones too (18 Nov): scrolling past the top/bottom of the booking never drags the website (or the browser's bars) along */
+html.embed { overscroll-behavior-y: contain; }
 .embed .kick.top, .embed h1.top, .embed .sub.intro { display: none; }
 /* wide screens (owner, 15 Nov – the website's desktop Book screen is ~1100px wide): calendar on the left, staying put while the
    rooms on the right scroll. Phones and narrow windows: one column, unchanged. */
