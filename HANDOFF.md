@@ -30,6 +30,13 @@
 >   New `ps4resetAuto.rooms` (engine dd034a6): `ps4resetauto` with `rooms='max'`; **to turn on for all rooms send `rooms=''`** – the
 >   control centre's on/off toggle does NOT send rooms, so it keeps "Max only" until cleared. Bella + Atlas direct test from Max
 >   7:52pm: both answered (2.4 GHz, 94/98%).
+> - **Owner decisions 8:15pm (member saves, for the morning routine):** (1) **staff get memberships labelled "staff"** – play in
+>   any room in their own time (also during opening hours); their play is NOT wiped but backed up like a member's = daily live test
+>   of backup/restore. (2) Members always start from a clean slate; a room's PS4 takes ~5–6 bookings a day → size the storage
+>   budget for that. (3) **Non-member saves: uploaded ONLY if the guest opts in to the one-time membership trial (taster); no opt-in
+>   = deleted at the clean slate, not parked.** Morning routine proposed: first boot after 7am → clean-slate check (dirty = run
+>   it if no session within 15 min) → room's day plan from the engine (ends with a free slot after = watch for extensions; back-
+>   to-back = reset firmly) → stage today's members' saves → drop yesterday's staged copies not needed today (cloud = master).
 > - **Still pending:** `oneoffMid` (17 Nov) is still in the engine – removing it touches notes code = Full check (~650 SimplyBook
 >   requests); today was already ~4,600, so it waits for a quieter day.
 
