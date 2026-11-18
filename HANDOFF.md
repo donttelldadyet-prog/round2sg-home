@@ -1747,3 +1747,8 @@ membership system yet) → the cloud batch is built but OFF.
 - **2:49pm Bella switched to 2.4 GHz** (PS4 Settings › Network › Set Up › Wi-Fi › Easy › OPTIONS › Wi-Fi Frequency Bands ›
   2.4 GHz › round2): Bella's own reading 56% → 86% (router sees −74). Watching for drops; check scheduled ~5:20pm.
   If clean → do the same on Atlas. Cable is still the sure fix.
+- **4:49pm result: Bella on 2.4 GHz = 2 h with ZERO failures** (net-fail.log: last line 14:48:56 "back after 14 failure(s)"
+  = the 5 GHz spell; nothing since). Direct + shout test from Max at 4:49: both answered; Bella 84% ch6. Before the switch
+  (5 GHz, same day): stuck at 10:44 (32 min), 13:30 (3½), 13:50 (12½), 14:31 (17) – i.e. every 20–60 min.
+  → **Fix for the CUH-72xx Pros: force 2.4 GHz on the PS4** (Wi-Fi Frequency Bands). Do the same on Atlas. Keep an eye
+  on Bella's net-fail tail over the next days; cable remains the gold standard.
