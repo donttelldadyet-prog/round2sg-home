@@ -1,5 +1,34 @@
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
 
+> ## 18 Nov 2026, 7:30pm – CONTROLLER DETECTOR (round2_input GoldHEN plugin) – WORKS ON MAX (SF6), engine f6e5401 DEPLOYED (27 bindings, 3 timers)
+> - **What:** the reset countdown asks "is anyone still playing?" without the helper touching the controller (1.1.58 froze Max
+>   doing that). A GoldHEN plugin `round2_input.prx` loads INTO the game (plugins.ini), watch-only hook on the game's own
+>   scePadRead/ReadState (gamepad_helper method). **Asleep by default (owner 6:01pm)** – only watches while
+>   `/data/round2/input/arm` holds a future time (helper writes it when a countdown starts, deletes it when it ends; max 2 h ahead,
+>   runs out by itself). Awake: writes `/data/round2/input/last` = `r2in 1 <last_press> <now> <title> <pid> <reads> <active>`.
+>   Helper 1.1.62+ only READS that file (fresh <20 s + same title as the open game, else "not readable" = timer only, as before).
+> - **Code:** round2-tv-launcher `ps4/plugin/` (source, `build.sh`, README; Makefile + pad.h from GoldHEN_Plugins_Repository, GPL-3.0)
+>   + helper `ps4/helper/main.c` (search 1.1.62–1.1.67). Release branch `ps4-release` now also carries `round2_input.prx` +
+>   `round2_input.json`; engine `/ps4/plugin` (POST, x-r2-ps4) serves it from the same commit, SHA-256 + size checked.
+> - **Helper jobs:** `/_inplug.status | .get.<sha256> | .on.<CUSA12345|default> | .off | .noaio | .pop.on | .pop.off`,
+>   `/_klog.<secs>` (system log via GoldHEN log server :3232 – keys `tail/klog NN` keep 300 chars), `/_input.<secs>` works again
+>   (wakes the plugin for the test). plugins.ini edits: whole file ≤32 KB or refused, backup `/data/round2/plugins.ini.orig` (first
+>   original, kept for good) + `.prev`, temp+rename, idempotent (tested on the build machine incl. CRLF/oversize/empty).
+> - **Bugs found on the way:** (1) GoldHEN **Plugins Loader was OFF on Max** – owner ticked it in GoldHEN › Plugin Settings (only
+>   that box; AIO Fix / Game Patch stay unticked). The old `aio_fix_505.prx` line in [default] was commented out (`/_inplug.noaio`,
+>   owner OK) – it is only for 5.05. (2) Read-back check off-by-one (1.1.63). (3) Folder 0755 → games (other user) can't write: made
+>   0777 (1.1.65). (4) **rtld `VOP_ACCESS() error`** in the system log: the .prx must be executable – helper chmods 0755 (1.1.67).
+> - **Tests on Max (owner present, SF6 = CUSA31498):** loaded ✅ game normal ✅; `/_input.20` playing = 20/20 s ✅, hands off = 0/20
+>   ✅ (10,600 pad reads); countdown 3 min: woke, saw play, moved the reset ✅ (held at the end by the engine's auto-reset switch);
+>   countdown 1 min `max-test` → engine OK → **SF6 closed + clean slate 7:26pm** ✅, detector back to sleep ✅.
+> - **Engine:** `/ps4/plugin`; `PS4_AUTO_HOLD_ABOVE = '1.1.61'` – quiet-time updates do NOT hand out newer helpers (owner: Max only
+>   until the test passed; staff Update now works) – **set it to the new version (or '') when the owner OKs the roll-out**;
+>   `/ps4/resetok` lets a label `<room>-test` through with automatic reset off (SimplyBook room-free check still applies).
+> - **State now:** Max 1.1.67, detector ON for CUSA31498 only, **test pop-ups ON** (`/data/round2/input/popups`; turn off with
+>   `/_inplug.pop.off` when the owner says). Other 5 PS4s 1.1.61, no plugin. Own-program switches since Max's last restart: 3 of 5.
+> - **Still pending:** `oneoffMid` (17 Nov) is still in the engine – removing it touches notes code = Full check (~650 SimplyBook
+>   requests); today was already ~4,600, so it waits for a quieter day.
+
 > ## 17 Nov 2026, 7:52pm – engine 0a0d4b0 DEPLOYED (27 bindings, 3 timers): MIDNIGHT NOTES
 > - Owner's screenshots: asy's Scarlett note 8:45pm–12:00am (end = 18 Nov 00:00:00) was drawn by SimplyBook over the WHOLE of 18 Nov
 >   (from 11am); daren's ending 12:15am was fine. Fix in `sb2`: a calendar-note body with end "next day 00:00:00" is sent as
