@@ -47,8 +47,12 @@
 >   answered "620 Standby" 2.5 min after rest; woken via Vale's broadcast at 11:47pm, back at 11:48:58** – method works.
 >   So: on 2.4 GHz in rest, Bella/Atlas stay associated but the router delivers nothing to them (power-save buffering). Atlas did
 >   answer once at 10:38pm (after 80 min asleep via TV-off) → not never, but unreliable. **Wake keys:** engine holds keys for
->   Kai, Vale, Scarlett, Max only – **Atlas and Bella have none** (16 Nov note said registered; keys not in kv `ps4wake`) → they
->   need re-registering (Remote Play › Add Device, owner at the PS4). Bella + Atlas left ASLEEP (no session; staff switch them on).
+>   Kai, Vale, Scarlett, Max only – Atlas and Bella had none because **Claude deleted them at ~11:28pm**: staff `ps4wakekey` with
+>   an id and NO key DELETES that PS4's key (it is "set / clear", not "look up"). ⚠️ Never call `ps4wakekey` without `key` – to
+>   list keys use `ps4list` (wake field). **Restored 11:57pm from the 16 Nov notes** (Atlas 357299b3 / mac 2ccc441e241f / acct
+>   52326d61696e3031; Bella c203a687 / 78c8810636c1 / 284561706f6c6c6f) – all 6 keys back, no re-registering needed.
+>   Wake via Vale's broadcast: **Atlas did NOT wake (11:57pm and 11:59pm, as on 16 Nov)**; Bella not tested – owner switched it on
+>   by hand at 11:57pm. Atlas left asleep (no session). Next: rest Bella → wake test; if neither 2.4 GHz PS4 wakes = LAN cable.
 > - **Still pending:** `oneoffMid` (17 Nov) is still in the engine – removing it touches notes code = Full check (~650 SimplyBook
 >   requests); today was already ~4,600, so it waits for a quieter day.
 
