@@ -64,6 +64,17 @@
 >   network wake). So the key was right; Bella's own registered-device entry must have been gone (likely lost since 16 Nov) –
 >   re-registering put it back. If a registered PS4 stops waking: re-register first (same key comes back, nothing else changes).
 >   Still to test: Atlas/Bella wake after a LONG sleep (Atlas failed after ~28 min, woke after 3 min) – morning wakes need that.
+>   **12:52am Atlas re-registered** (number 44989015) → same key 3572… back. Wake tests after: Atlas rested 12:54:42 → wake from
+>   MAX 12:58 ✗, from SCARLETT 1:00 (broadcast + direct .15) ✗. Tonight's only successes on the 2.4 GHz PS4s were sent by VALE
+>   ~3 min after rest (Atlas 12:08, Bella 12:44); every other sender/timing failed. Not enough tries to say sender vs timing –
+>   **owner: don't touch Vale tonight (sleeping there); ask before any overnight test.** 1:03am all rested except Vale.
+> - **1:00am BOOKING KEEP-AWAKE (owner 12:52am, option 2) – engine cd40d8d DEPLOYED (27 bindings, 3 timers), helper 1.1.68 BUILT
+>   (ps4-helper, NOT released).** Engine: the 10-min tick (ps4ResetRun, before the auto-reset switch check, same calendar read)
+>   writes kv `ps4awake` = { room: [[from, until]] } with from = session start − 30 min, until = guest end + 30 min (real guest
+>   sessions only); ps4Cmd reads it in its one kvMany and adds `aw` (seconds) to every reply. Helper 1.1.68 keeps `g_awake_engine`
+>   from `aw` (0–12 h) and ticks the power timer like /_keepawake; report field `awakeBook`; save.log "booking keep-awake ON/off".
+>   TV switched off by guests still rests the PS4 (owner: fine). To go live: release 1.1.68 + roll out (owner's OK – PS4_AUTO_HOLD_ABOVE
+>   still '1.1.61'), then check `awakeBook` on a room with a booking. Light check before: 14 passed / 0 failed.
 > - **Still pending:** `oneoffMid` (17 Nov) is still in the engine – removing it touches notes code = Full check (~650 SimplyBook
 >   requests); today was already ~4,600, so it waits for a quieter day.
 

@@ -4129,6 +4129,17 @@ const PS4_RESET_MIN = '1.1.55', PS4_RESET_STAFF = '1.1.53';   /* automatic = cou
 const ps4ResetOn = (A, now) => !!(A && A.on && !(A.from && now < A.from));
 async function ps4ResetRun(env) {
   const hb = book(env), now = Date.now(), A = await hb.kvGet('ps4resetAuto');
+  /* 19 Nov (owner 12:52am, "option 2"): keep each room's PS4 awake from 30 min before a real guest session until 30 min after
+     its guest end (late guests find it on; guests on Netflix don't let it sleep before the clean slate). Written here every
+     10 min from the same calendar read (no extra SimplyBook requests); each PS4's minute check-in reads it in its one kvMany. */
+  try {
+    const n0 = sgDay(now - SHADOW_TILL * 60e3), aw = {};
+    for (const d of [n0, addDays(n0, 1)]) for (const S of (await sessDay(env, d)).sessions) {
+      const room = GM_ROOM[S.unit];
+      if (room && realGuests(S, S.unit) && !S.orphanExt && S.guestEnd + 30 * 60e3 > now && S.s - 30 * 60e3 < now + 18 * 3600e3) (aw[room] = aw[room] || []).push([S.s - 30 * 60e3, S.guestEnd + 30 * 60e3]);
+    }
+    if (JSON.stringify((await hb.kvGet('ps4awake')) || {}) !== JSON.stringify(aw)) await hb.kvSet('ps4awake', aw);
+  } catch (e) {}
   if (!ps4ResetOn(A, now)) return { off: true };
   const after = Math.min(30, Math.max(2, +A.after || 10)), night = sgDay(now - SHADOW_TILL * 60e3), plan = [];
   for (const d of [night, addDays(night, 1)]) for (const S of (await sessDay(env, d)).sessions)
@@ -4353,23 +4364,29 @@ async function ps4Cmd(env, req) {   /* the helper, every minute: anything for me
   let r = {}; try { r = JSON.parse(await req.text()); } catch (e) {}
   const id = ps4Id(r.id); if (id.length < 16) return J({ error: 'no console id' }, 400);
   const now = Date.now();
-  const { h: hb } = await hbSnap(book(env), ['ps4cmd:' + id, 'ps4map', 'ps4auto', 'ps4:' + id, 'ps4rel', 'ps4wakeRun', 'ps4wake', 'ps4autoTry:' + id, 'ps4autoChk:' + id, 'ps4resetAuto', 'ps4resetPlan', 'ps4resetLog', 'ps4resetChk:' + id], [['ps4poll:' + id, now]]);
+  const { h: hb } = await hbSnap(book(env), ['ps4cmd:' + id, 'ps4map', 'ps4auto', 'ps4:' + id, 'ps4rel', 'ps4wakeRun', 'ps4wake', 'ps4autoTry:' + id, 'ps4autoChk:' + id, 'ps4resetAuto', 'ps4resetPlan', 'ps4resetLog', 'ps4resetChk:' + id, 'ps4awake'], [['ps4poll:' + id, now]]);
   const c = await hb.kvGet('ps4cmd:' + id);
+  { /* 19 Nov: "aw" = seconds this PS4 should stay awake (helper 1.1.68+; older helpers ignore it) */
+    const rm = ((await hb.kvGet('ps4map')) || {})[id], win = rm ? (((await hb.kvGet('ps4awake')) || {})[rm] || []) : [];
+    let until = 0; for (const [a, b] of win) if (a <= now && now < b && b > until) until = b;
+    var aw = until ? Math.round((until - now) / 1000) : 0;
+  }
+  const Jaw = (o) => J(Object.assign(o, { aw }));
   if (!c || c.state !== 'sent') {
     const room0 = ((await hb.kvGet('ps4map')) || {})[id];
     const idle = room0 && !(c && c.state === 'taken' && now - c.takenAt < 15 * 60e3);
     const rs = idle ? await ps4ResetDue(env, hb, id, room0, now).catch(() => null) : null;   /* 17 Nov: the reset after a session */
-    if (rs) return J({ ok: true, now, cmd: ps4Out(rs) });
+    if (rs) return Jaw({ ok: true, now, cmd: ps4Out(rs) });
     const w = idle ? await ps4MorningWake(env, hb, id, room0, now).catch(() => null) : null;
-    if (w) return J({ ok: true, now, cmd: ps4Out(w) });
+    if (w) return Jaw({ ok: true, now, cmd: ps4Out(w) });
     const a = idle ? await ps4AutoUpdate(env, hb, id, room0).catch(() => null) : null;
-    return J(a ? { ok: true, now, cmd: ps4Out(a) } : { ok: true, now });
+    return Jaw(a ? { ok: true, now, cmd: ps4Out(a) } : { ok: true, now });
   }
-  if (now - c.at > 10 * 60e3) { c.state = 'expired'; await hb.kvSet('ps4cmd:' + id, c); return J({ ok: true, now }); }
+  if (now - c.at > 10 * 60e3) { c.state = 'expired'; await hb.kvSet('ps4cmd:' + id, c); return Jaw({ ok: true, now }); }
   const room = ((await hb.kvGet('ps4map')) || {})[id] || null, busy = !room ? 'not linked to a room' : c.nobusy ? null : await ps4Busy(env, room);
-  if (busy) { c.state = 'refused'; c.res = { why: busy }; await hb.kvSet('ps4cmd:' + id, c); return J({ ok: true, now }); }
+  if (busy) { c.state = 'refused'; c.res = { why: busy }; await hb.kvSet('ps4cmd:' + id, c); return Jaw({ ok: true, now }); }
   c.state = 'taken'; c.takenAt = now; await hb.kvSet('ps4cmd:' + id, c);
-  return J({ ok: true, now, cmd: ps4Out(c) });
+  return Jaw({ ok: true, now, cmd: ps4Out(c) });
 }
 async function ps4Done(env, req) {   /* the helper: how the command went */
   if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
