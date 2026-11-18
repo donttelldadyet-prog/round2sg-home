@@ -1738,3 +1738,12 @@ membership system yet) → the cloud batch is built but OFF.
 - **Owner found a jailbreak dongle plugged into Bella's LAN port (~2:23pm) and removed it.** Test: if Bella has no
   "back after N failure(s)" lines from now on (read `/_tail./data/round2/net-fail.log|30`), the dongle was the cause.
   Same check for Atlas (owner unsure whether its dongle is still in). Vale/Scarlett: ask whether they have dongles left in.
+- 2:31pm Bella stuck AGAIN (dongle already out) → dongle not the cause. Test 2:34: Bella sends fine (its reply to Max's
+  shout arrived) and hears broadcasts; only unicast TO it is lost → points to the router holding Bella's frames
+  (power-save "dozing" state) rather than a key problem. Bella sits right above/next to the main router (upstairs, near
+  Atlas) yet reads −76…−80 on 5 GHz (Atlas −70) while Max downstairs −66 → the CUH-72xx Pros receive 5 GHz badly.
+  Owner shifted/turned the main router 10 cm / 45–60° (no room to move it): no change (−78).
+- Kai ran Test Internet → moved to the second unit (its own reading 70% → 82%).
+- **2:49pm Bella switched to 2.4 GHz** (PS4 Settings › Network › Set Up › Wi-Fi › Easy › OPTIONS › Wi-Fi Frequency Bands ›
+  2.4 GHz › round2): Bella's own reading 56% → 86% (router sees −74). Watching for drops; check scheduled ~5:20pm.
+  If clean → do the same on Atlas. Cable is still the sure fix.
