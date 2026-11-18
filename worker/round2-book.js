@@ -4218,7 +4218,8 @@ async function ps4ResetOk(env, req) {
   if (!room || !unit) return J({ hold: 'this PS4 is not linked to a room' });
   const log = K.ps4resetLog || [], x = (K.ps4resetPlan || []).filter((p) => p.room === room && p.at - 6 * 60e3 <= now && now < p.at + 5 * 60e3).pop();
   const hold = async (why) => { if (x && ps4ResetNote(log, x, 'held', 'countdown stopped at the last check – ' + why, '', now)) await hb.kvSet('ps4resetLog', log.slice(0, 40)); return J({ hold: why }); };
-  if (!ps4ResetOn(K.ps4resetAuto, now)) return hold('automatic reset is switched off');
+  const test = /^[a-z]+-test$/.test(String(r.lab || ''));   /* owner 18 Nov 7:24pm: a staff-sent TEST countdown (/_reset.<room>-test.w…) may reset with the switch off – still only if SimplyBook says the room is free */
+  if (!test && !ps4ResetOn(K.ps4resetAuto, now)) return hold('automatic reset is switched off');
   let busy; try { busy = await roomBusy(env, unit, 0); } catch (e) { return hold('could not check SimplyBook'); }
   if (busy) return hold('room in use until ' + clock12(busy.guestEnd) + (x && busy.guestEnd > x.end ? ' (extended)' : ''));
   return J({ ok: true });
