@@ -37,6 +37,18 @@
 >   = deleted at the clean slate, not parked.** Morning routine proposed: first boot after 7am → clean-slate check (dirty = run
 >   it if no session within 15 min) → room's day plan from the engine (ends with a free slot after = watch for extensions; back-
 >   to-back = reset firmly) → stage today's members' saves → drop yesterday's staged copies not needed today (cloud = master).
+> - **11:29–11:50pm REST-MODE Wi-Fi TEST (owner asked; Bella + Atlas rested remotely, Kai as control):**
+>   Wi-Fi modules (from MAC prefixes): Bella CUH-7218B **AzureWave** 28:66:E3:C4:AC:D3 · Atlas CUH-7208B **Hon Hai** DC:A2:66:E4:EB:E1 ·
+>   Vale CUH-2006A AzureWave 5C:96:56 · Max CUH-7006B Hon Hai A8:6B:AD · Kai CUH-7016B Hon Hai 90:CD:B6 · Scarlett CUH-1006A Liteon B0:05:94.
+>   Router (main): DTIM 1, beacon 100, airtime fairness off, 802.11r off – already the best case for sleepers.
+>   Result: both Bella and Atlas leave the router ~40 s after rest and **re-join it ~2 min later (2.4 GHz ch6, −71/−72 dBm)** – the
+>   Wi-Fi stays on in rest. But for 20 min neither answered a single direct or broadcast ping, and the router's "sent packets" to
+>   them stayed frozen (Bella 19→20, Atlas 11) while their own "received" kept rising (keep-alives). **Control: Kai (5 GHz, Hon Hai)
+>   answered "620 Standby" 2.5 min after rest; woken via Vale's broadcast at 11:47pm, back at 11:48:58** – method works.
+>   So: on 2.4 GHz in rest, Bella/Atlas stay associated but the router delivers nothing to them (power-save buffering). Atlas did
+>   answer once at 10:38pm (after 80 min asleep via TV-off) → not never, but unreliable. **Wake keys:** engine holds keys for
+>   Kai, Vale, Scarlett, Max only – **Atlas and Bella have none** (16 Nov note said registered; keys not in kv `ps4wake`) → they
+>   need re-registering (Remote Play › Add Device, owner at the PS4). Bella + Atlas left ASLEEP (no session; staff switch them on).
 > - **Still pending:** `oneoffMid` (17 Nov) is still in the engine – removing it touches notes code = Full check (~650 SimplyBook
 >   requests); today was already ~4,600, so it waits for a quieter day.
 
