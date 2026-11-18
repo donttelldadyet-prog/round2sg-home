@@ -1730,3 +1730,11 @@ membership system yet) → the cloud batch is built but OFF.
   (ping 5 ms), C100 −57 dBm (ping 63 ms avg)**.
 - Main router admin sessions now kept alive by a 4-min menu click in the Claude tab group (until the tab reloads).
 - Still to do after closing: 2.4 GHz power High → Middle on the main unit (rooms in session at 1:45pm).
+
+### 18 Nov 2:10–2:30pm – Bella stuck 3× today during a guest session; JAILBREAK DONGLE was in Bella's LAN port → pulled (test)
+- Bella's own net-fail.log: 10:44–11:17 (32 min, guest in room), 13:30–13:33 (3½ min, = second mesh unit re-added),
+  13:50–14:03 (12½ min, cause unknown). Each = "connect" failures every 74 s; it un-sticks by itself.
+- 2:11pm test from Max: Bella direct ✓ (healthy then), Kai ✓, Atlas no answer to direct AND shout = Atlas was off all day.
+- **Owner found a jailbreak dongle plugged into Bella's LAN port (~2:23pm) and removed it.** Test: if Bella has no
+  "back after N failure(s)" lines from now on (read `/_tail./data/round2/net-fail.log|30`), the dongle was the cause.
+  Same check for Atlas (owner unsure whether its dongle is still in). Vale/Scarlett: ask whether they have dongles left in.
