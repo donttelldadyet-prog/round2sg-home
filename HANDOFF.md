@@ -53,6 +53,11 @@
 >   52326d61696e3031; Bella c203a687 / 78c8810636c1 / 284561706f6c6c6f) – all 6 keys back, no re-registering needed.
 >   Wake via Vale's broadcast: **Atlas did NOT wake (11:57pm and 11:59pm, as on 16 Nov)**; Bella not tested – owner switched it on
 >   by hand at 11:57pm. Atlas left asleep (no session). Next: rest Bella → wake test; if neither 2.4 GHz PS4 wakes = LAN cable.
+>   **12:04–12:15am wake test (owner):** both rested remotely (Bella 12:04:35, Atlas 12:05:24); `ps4wake all` 12:08:39 (sender Vale)
+>   → **ATLAS WOKE (checked in 12:09:44) – first remote wake of Atlas ever.** Bella did not: 4 tries (Vale broadcast ×2, Kai
+>   broadcast + direct to .6, 12:08–12:13) – **Bella has never woken remotely (16 Nov 9:46pm also failed)**. Pattern to check:
+>   Atlas failed at 11:57/11:59pm after ~28 min asleep but woke 3 min after rest → may only hear wakes early in rest; a morning
+>   wake comes after hours asleep. Bella left asleep (staff press the button).
 > - **Still pending:** `oneoffMid` (17 Nov) is still in the engine – removing it touches notes code = Full check (~650 SimplyBook
 >   requests); today was already ~4,600, so it waits for a quieter day.
 
