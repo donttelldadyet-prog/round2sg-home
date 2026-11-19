@@ -144,6 +144,15 @@ canvas.r2-char{display:block}
 .r2-shelf h4{align-items:center!important}
 .r2-shelf h4:after{content:'';flex:1;height:1px;margin-left:4px;background:linear-gradient(90deg,color-mix(in srgb,var(--r2-accent) 55%,transparent),transparent);order:1}
 .r2-shelf h4 span{order:2;margin-left:8px!important}
+/* Room picker hint (owner 20 Nov): until the guest taps it, the pill glows softly and the other choices hop one by one, so it reads as tappable */
+html:not(.r2-picked) #r2-stage div[role="group"]{animation:r2pillglow 2.4s ease-in-out infinite}
+html:not(.r2-picked) #r2-stage div[role="group"]>button[aria-pressed="false"]{animation:r2hop 2.4s ease-in-out infinite}
+html:not(.r2-picked) #r2-stage div[role="group"]>button[aria-pressed="false"]:nth-of-type(2){animation-delay:.18s}
+html:not(.r2-picked) #r2-stage div[role="group"]>button[aria-pressed="false"]:nth-of-type(3){animation-delay:.36s}
+html:not(.r2-picked) #r2-stage div[role="group"]>button[aria-pressed="false"]:nth-of-type(4){animation-delay:.54s}
+@keyframes r2pillglow{0%,100%{box-shadow:0 0 0 0 transparent;border-color:rgba(244,241,251,.28)}50%{box-shadow:0 0 16px -2px color-mix(in srgb,var(--r2-accent) 55%,transparent);border-color:color-mix(in srgb,var(--r2-accent) 70%,transparent)}}
+@keyframes r2hop{0%,40%,100%{transform:none;color:rgba(244,241,251,.78)}20%{transform:translateY(-3px);color:#fff}}
+@media (prefers-reduced-motion:reduce){html:not(.r2-picked) #r2-stage div[role="group"],html:not(.r2-picked) #r2-stage div[role="group"]>button{animation:none}}
 /* Search (owner 20 Nov) */
 .r2-srch{display:flex;align-items:center;gap:8px;margin:0 0 16px;padding:0 6px 0 14px;height:44px;border:1px solid rgba(244,241,251,.22);border-radius:999px;background:rgba(26,21,40,.9);color:#a79fbd}
 .r2-srch:focus-within{border-color:var(--r2-accent)}
@@ -1121,6 +1130,9 @@ function mount(el){el.setAttribute('data-r2c','on');var i=-1,tm=null,tk=[],typin
  show(0)}
 function scan(){document.querySelectorAll('[data-r2c=""]').forEach(mount)}
 var q=0;new MutationObserver(function(){if(q)return;q=1;requestAnimationFrame(function(){q=0;scan()})}).observe(document.documentElement,{subtree:true,childList:true});scan();})();</script>
+<script>/* Room picker hint stops once they've tapped a room / filter (remembered for this visit) */
+(function(){try{if(sessionStorage.getItem('r2.picked'))document.documentElement.classList.add('r2-picked')}catch(e){}
+document.addEventListener('click',function(e){if(e.target.closest('#r2-stage div[role="group"]>button')){document.documentElement.classList.add('r2-picked');try{sessionStorage.setItem('r2.picked','1')}catch(e){}}},true)})();</script>
 <script>/* GAME LIBRARY shelves (owner 19 Nov). SH: shelf names + which genres go on them (first match wins). The original grid stays (hidden) and is copied into the shelves. */
 (function(){var SH={
  ps4:[['COUCH PARTY',/Party|Brawler|Mini-games/],['TEAM UP',/Co-op/],['RACE & FIGHT',/Racing|Fighting|Sports|Football|Basketball|Wrestling/],['SCARY NIGHT',/Horror/],['EPIC ADVENTURES',/Open world|Adventure|RPG|Story/],['CHILL & PUZZLE',/./]],
@@ -1151,8 +1163,8 @@ var inp=srch.querySelector('input'),clr=srch.querySelector('button');
 inp.addEventListener('input',find);clr.addEventListener('click',function(){inp.value='';find();inp.focus()});
 function find(){var box=srch.closest('.r2-shelves');if(!box)return;var qv=inp.value.trim().toLowerCase(),res=box.querySelector('.r2-res'),GI=window.R2GI||{},cur=window.R2CUR||{},RN={n:'Netflix',d:'Deluxe',v:'VIP'};
  clr.hidden=!qv;box.classList.toggle('srching',!!qv);if(!qv){res.innerHTML='';return}
- /* search the tab on screen (PS4 / board / card) across every room - PS4 games not in the picked room are tagged with where they are (owner 20 Nov) */
- var all=(window.R2ALL||[]).filter(function(x){var g=GI[x.name]||{};return x.k===cur.lo&&(x.name+' '+(g.g||'')+' '+(x.k==='ps4'?'ps4':x.k==='board'?'board game':'card game')).toLowerCase().indexOf(qv)>-1});
+ /* PS4 tab searches PS4 games across every room; board + card tabs search board and card games together (owner 20 Nov) - PS4 games not in the picked room are tagged with where they are (owner 20 Nov) */
+ var all=(window.R2ALL||[]).filter(function(x){var g=GI[x.name]||{};return (cur.lo==='ps4'?x.k==='ps4':x.k!=='ps4')&&(x.name+' '+(g.g||'')+' '+(x.k==='ps4'?'ps4':x.k==='board'?'board game':'card game')).toLowerCase().indexOf(qv)>-1});
  all.sort(function(a,b){var ha=(a.k===cur.lo&&(a.k!=='ps4'||a.r.indexOf(cur.lr)>-1))?0:1,hb=(b.k===cur.lo&&(b.k!=='ps4'||b.r.indexOf(cur.lr)>-1))?0:1;return ha-hb||a.name.localeCompare(b.name)});
  res.innerHTML=all.length?'<h4>'+all.length+(all.length===1?' match':' matches')+'</h4>':'<p>No games match “'+qv.replace(/[<>&]/g,'')+'”.</p>';
  var gr=document.createElement('div');gr.className='r2-resg';
