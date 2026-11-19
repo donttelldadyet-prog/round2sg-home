@@ -158,6 +158,8 @@ canvas.r2-char{display:block}
 .r2-resg{display:flex;flex-wrap:wrap;gap:16px 13px;padding-bottom:12px}
 .r2-resg>.r2-gw{flex:none;animation:none}
 .r2-resg>.r2-gw>div:last-child{display:none}
+.r2-where{position:absolute;left:6px;top:6px;z-index:2;padding:3px 7px;background:var(--r2-accent);color:#0b0914;font:700 10px/1.1 'Chakra Petch',sans-serif;letter-spacing:.03em;pointer-events:none;max-width:calc(100% - 12px)}
+.r2-else>.r2-gt{filter:saturate(.75) brightness(.85)}
 .r2-resg>.r2-gw>div:nth-child(2){min-height:0!important;margin-top:8px!important;font-size:13px!important}
 </style>
 <style id="r2-css"></style>
@@ -313,6 +315,11 @@ class Component extends DCLogic {
       n: g[2].includes('n') ? lit : dim, d: g[2].includes('d') ? lit : dim, v: g[2].includes('v') ? lit : dim, ok: g[2].includes(lr) })).filter((g) => g.ok).sort((a, b) => a.name.localeCompare(b.name));
     if (lo === 'board') loItems = BOARD.map((n, i) => ({ name: n, meta: 'Board game', w: bw, h: bh, bg: XIMG[n] ? tileX(n) : BX[n] || tileB(SP.board, i, 2), isPs4: false }));
     if (lo === 'cards') loItems = CARDS.map((g, i) => ({ name: g[0], meta: CAT[g[1]], cat: g[1], w: bw, h: bh, bg: XIMG[g[0]] ? tileX(g[0]) : CX[g[0]] || tileB(SP.cards, i, 5), isPs4: false })).filter((g) => lc === 'all' || g.cat === lc);
+    /* owner 20 Nov: every game of every type, for the library search (finds games in other rooms / tabs too) */
+    window.R2ALL = [].concat(PS4.map((g, i) => ({ name: g[0], k: 'ps4', meta: g[1] === '1P' ? '1 player' : g[1].replace('P', ' players'), w: pw, h: ph, bg: PX[g[0]] || tileP(i), r: g[2] })),
+      BOARD.map((n, i) => ({ name: n, k: 'board', meta: 'Board game', w: bw, h: bh, bg: XIMG[n] ? tileX(n) : BX[n] || tileB(SP.board, i, 2), r: 'ndv' })),
+      CARDS.map((g, i) => ({ name: g[0], k: 'cards', meta: CAT[g[1]], w: bw, h: bh, bg: XIMG[g[0]] ? tileX(g[0]) : CX[g[0]] || tileB(SP.cards, i, 5), r: 'ndv' })));
+    window.R2CUR = { lo, lr };
     const tabDefs = [['ps4', 'PS4 games', PS4.length], ['board', 'Board games', BOARD.length], ['cards', 'Card games', CARDS.length]];
     const loTabs = tabDefs.map(([k, label, n]) => ({ label, count: n, current: lo === k ? 'true' : 'false', bg: lo === k ? '#f4f1fb' : 'transparent', color: lo === k ? '#0b0914' : 'rgba(244,241,251,.75)', pick: () => this.setState({ lo: k, lr: chars[this.state.pick].t, lc: 'all' }) }));
     const chipDefs = lo === 'ps4' ? [['n', 'Netflix'], ['d', 'Deluxe'], ['v', 'VIP']] : lo === 'cards' ? [['all', 'All'], ['p', 'Party'], ['t', 'Date & talk'], ['x', 'Tarot']] : [];
@@ -320,7 +327,7 @@ class Component extends DCLogic {
     const swI = Math.max(0, chipDefs.findIndex((c) => c[0] === cur)), swN = chipDefs.length || 1;
     const swLeft = 'calc(4px + (100% - 8px) * ' + swI + ' / ' + swN + ')', swW = 'calc((100% - 8px) / ' + swN + ')', swHint = lo === 'ps4' ? 'Tap your room type' : 'Tap to filter';
     const loChips = chipDefs.map(([k, label, sub]) => ({ label, sub: sub || '', current: cur === k ? 'true' : 'false', color: cur === k ? '#0b0914' : 'rgba(244,241,251,.78)', pick: () => this.setState(lo === 'ps4' ? { lr: k } : { lc: k }) }));
-    const loInfo = lo === 'ps4' ? 'Pick your room type to see what you can play. Netflix rooms have a PS4; Deluxe rooms and the VIP room have a PS4 Pro.' : lo === 'board' ? 'From party games to strategy favourites. Gather your crew and play.' : 'Competitive classics, chaotic party decks and late-night conversation starters.';
+    const loInfo = lo === 'ps4' ? 'Pick your room type to see what you can play.' : lo === 'board' ? 'From party games to strategy favourites. Gather your crew and play.' : 'Competitive classics, chaotic party decks and late-night conversation starters.';
     const lov = { lo: !!lo, loItems, loGw: loItems.length ? loItems[0].w : 120, loTabs, loChips, swLeft, swW, swHint, hasChips: chipDefs.length > 0, loInfo, loCount: loItems.length + (lo === 'ps4' ? ' games' : lo === 'board' ? ' games' : ' decks'),
       loHref: lo === 'board' ? 'https://www.round2.sg/boardgames' : lo === 'cards' ? 'https://www.round2.sg/cardgames' : 'https://www.round2.sg/ps4gamelist',
       openPs4: () => this.setState({ lo: 'ps4', lr: chars[this.state.pick].t }), openBoard: () => this.setState({ lo: 'board' }), openCards: () => this.setState({ lo: 'cards', lc: 'all' }), closeLo: () => this.setState({ lo: null }) };
@@ -499,6 +506,11 @@ class Component extends DCLogic {
       n: g[2].includes('n') ? lit : dim, d: g[2].includes('d') ? lit : dim, v: g[2].includes('v') ? lit : dim, ok: g[2].includes(lr) })).filter((g) => g.ok).sort((a, b) => a.name.localeCompare(b.name));
     if (lo === 'board') loItems = BOARD.map((n, i) => ({ name: n, meta: 'Board game', w: bw, h: bh, bg: XIMG[n] ? tileX(n) : BX[n] || tileB(SP.board, i, 2), isPs4: false }));
     if (lo === 'cards') loItems = CARDS.map((g, i) => ({ name: g[0], meta: CAT[g[1]], cat: g[1], w: bw, h: bh, bg: XIMG[g[0]] ? tileX(g[0]) : CX[g[0]] || tileB(SP.cards, i, 5), isPs4: false })).filter((g) => lc === 'all' || g.cat === lc);
+    /* owner 20 Nov: every game of every type, for the library search (finds games in other rooms / tabs too) */
+    window.R2ALL = [].concat(PS4.map((g, i) => ({ name: g[0], k: 'ps4', meta: g[1] === '1P' ? '1 player' : g[1].replace('P', ' players'), w: pw, h: ph, bg: PX[g[0]] || tileP(i), r: g[2] })),
+      BOARD.map((n, i) => ({ name: n, k: 'board', meta: 'Board game', w: bw, h: bh, bg: XIMG[n] ? tileX(n) : BX[n] || tileB(SP.board, i, 2), r: 'ndv' })),
+      CARDS.map((g, i) => ({ name: g[0], k: 'cards', meta: CAT[g[1]], w: bw, h: bh, bg: XIMG[g[0]] ? tileX(g[0]) : CX[g[0]] || tileB(SP.cards, i, 5), r: 'ndv' })));
+    window.R2CUR = { lo, lr };
     const tabDefs = [['ps4', 'PS4 games', PS4.length], ['board', 'Board games', BOARD.length], ['cards', 'Card games', CARDS.length]];
     const loTabs = tabDefs.map(([k, label, n]) => ({ label, count: n, current: lo === k ? 'true' : 'false', bg: lo === k ? '#f4f1fb' : 'transparent', color: lo === k ? '#0b0914' : 'rgba(244,241,251,.75)', pick: () => this.setState({ lo: k, lr: chars[this.state.pick].t, lc: 'all' }) }));
     const chipDefs = lo === 'ps4' ? [['n', 'Netflix'], ['d', 'Deluxe'], ['v', 'VIP']] : lo === 'cards' ? [['all', 'All'], ['p', 'Party'], ['t', 'Date & talk'], ['x', 'Tarot']] : [];
@@ -506,7 +518,7 @@ class Component extends DCLogic {
     const swI = Math.max(0, chipDefs.findIndex((c) => c[0] === cur)), swN = chipDefs.length || 1;
     const swLeft = 'calc(4px + (100% - 8px) * ' + swI + ' / ' + swN + ')', swW = 'calc((100% - 8px) / ' + swN + ')', swHint = lo === 'ps4' ? 'Tap your room type' : 'Tap to filter';
     const loChips = chipDefs.map(([k, label, sub]) => ({ label, sub: sub || '', current: cur === k ? 'true' : 'false', color: cur === k ? '#0b0914' : 'rgba(244,241,251,.78)', pick: () => this.setState(lo === 'ps4' ? { lr: k } : { lc: k }) }));
-    const loInfo = lo === 'ps4' ? 'Pick your room type to see what you can play. Netflix rooms have a PS4; Deluxe rooms and the VIP room have a PS4 Pro.' : lo === 'board' ? 'From party games to strategy favourites. Gather your crew and play.' : 'Competitive classics, chaotic party decks and late-night conversation starters.';
+    const loInfo = lo === 'ps4' ? 'Pick your room type to see what you can play.' : lo === 'board' ? 'From party games to strategy favourites. Gather your crew and play.' : 'Competitive classics, chaotic party decks and late-night conversation starters.';
     const lov = { lo: !!lo, loItems, loGw: loItems.length ? loItems[0].w : 120, loTabs, loChips, swLeft, swW, swHint, hasChips: chipDefs.length > 0, loInfo, loCount: loItems.length + (lo === 'ps4' ? ' games' : lo === 'board' ? ' games' : ' decks'),
       loHref: lo === 'board' ? 'https://www.round2.sg/boardgames' : lo === 'cards' ? 'https://www.round2.sg/cardgames' : 'https://www.round2.sg/ps4gamelist',
       openPs4: () => this.setState({ lo: 'ps4', lr: chars[this.state.pick].t }), openBoard: () => this.setState({ lo: 'board' }), openCards: () => this.setState({ lo: 'cards', lc: 'all' }), closeLo: () => this.setState({ lo: null }) };
@@ -1137,11 +1149,21 @@ var srch=document.createElement('label');srch.className='r2-srch';
 srch.innerHTML='<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M6.5 1a5.5 5.5 0 0 1 4.4 8.8l3.7 3.7-1.1 1.1-3.7-3.7A5.5 5.5 0 1 1 6.5 1zm0 1.6a3.9 3.9 0 1 0 0 7.8 3.9 3.9 0 0 0 0-7.8z"/></svg><input type="search" placeholder="Search games" aria-label="Search games" autocomplete="off" enterkeyhint="search"><button type="button" aria-label="Clear search" hidden>✕</button>';
 var inp=srch.querySelector('input'),clr=srch.querySelector('button');
 inp.addEventListener('input',find);clr.addEventListener('click',function(){inp.value='';find();inp.focus()});
-function find(){var box=srch.closest('.r2-shelves');if(!box)return;var qv=inp.value.trim().toLowerCase(),res=box.querySelector('.r2-res'),GI=window.R2GI||{};
+function find(){var box=srch.closest('.r2-shelves');if(!box)return;var qv=inp.value.trim().toLowerCase(),res=box.querySelector('.r2-res'),GI=window.R2GI||{},cur=window.R2CUR||{},RN={n:'Netflix',d:'Deluxe',v:'VIP'};
  clr.hidden=!qv;box.classList.toggle('srching',!!qv);if(!qv){res.innerHTML='';return}
- var hit=(box._tiles||[]).filter(function(t){var n=t.querySelector('.r2-gt').getAttribute('aria-label'),g=GI[n]||{};return (n+' '+(g.g||'')).toLowerCase().indexOf(qv)>-1});
- res.innerHTML=hit.length?'<h4>'+hit.length+(hit.length===1?' match':' matches')+'</h4>':'<p>No games match “'+qv.replace(/[<>&]/g,'')+'” here.</p>';
- var gr=document.createElement('div');gr.className='r2-resg';hit.forEach(function(t){gr.appendChild(mk(t))});res.appendChild(gr)}
+ /* search every game (PS4, board, card) - games not in the room/tab on screen are tagged with where they are */
+ var all=(window.R2ALL||[]).filter(function(x){var g=GI[x.name]||{};return (x.name+' '+(g.g||'')+' '+(x.k==='ps4'?'ps4':x.k==='board'?'board game':'card game')).toLowerCase().indexOf(qv)>-1});
+ all.sort(function(a,b){var ha=(a.k===cur.lo&&(a.k!=='ps4'||a.r.indexOf(cur.lr)>-1))?0:1,hb=(b.k===cur.lo&&(b.k!=='ps4'||b.r.indexOf(cur.lr)>-1))?0:1;return ha-hb||a.name.localeCompare(b.name)});
+ res.innerHTML=all.length?'<h4>'+all.length+(all.length===1?' match':' matches')+'</h4>':'<p>No games match “'+qv.replace(/[<>&]/g,'')+'”.</p>';
+ var gr=document.createElement('div');gr.className='r2-resg';
+ all.forEach(function(x){var t=document.createElement('div');t.className='r2-gw';t.style.width=x.w+'px';
+  t.innerHTML='<div class="r2-tile r2-gt" role="img" style="width:'+x.w+'px;height:'+x.h+'px;background-color:#15121f;box-shadow:0 0 0 1px rgba(244,241,251,.12)"></div><div style="margin-top:8px;font-size:12px;font-weight:600;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden"></div><div><span></span></div>';
+  var gt=t.firstChild;gt.setAttribute('aria-label',x.name);gt.style.background=x.bg;gt.style.backgroundColor='#15121f';t.children[1].textContent=x.name;t.querySelector('span').textContent=x.meta;
+  var c=mk(t),where='';
+  if(x.k!==cur.lo)where=x.k==='ps4'?'PS4 game':x.k==='board'?'Board game':'Card game';
+  else if(x.k==='ps4'&&x.r.indexOf(cur.lr)<0)where=x.r.split('').map(function(k){return RN[k]}).join(' & ')+' only';
+  if(where){var w=document.createElement('span');w.className='r2-where';w.textContent=where;c.querySelector('.r2-gt').appendChild(w);c.classList.add('r2-else')}
+  gr.appendChild(c)});res.appendChild(gr)}
 var q=0;new MutationObserver(function(){if(q)return;q=1;requestAnimationFrame(function(){q=0;build()})}).observe(document.documentElement,{subtree:true,childList:true});build();})();</script>
 </body>
 </html>
