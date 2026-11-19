@@ -241,6 +241,8 @@ h3.nm, .nm { color: var(--rc); }
 .saved { color: #3DDC84; font-size: 13px; margin-left: 8px; font-weight: 600; }
 .sum { padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
 .sum b { font-size: 18px; }
+/* owner 20 Nov: YOUR BOOKING + CONTINUE stay pinned to the bottom while picking */
+#pick .sum { position: sticky; bottom: -18px; z-index: 3; padding-bottom: calc(14px + env(safe-area-inset-bottom)); margin-bottom: -18px; background: var(--panel); border-top: 1px solid var(--line); box-shadow: 0 -12px 24px rgba(6,5,10,.55); }
 .sum > div { flex: 1; min-width: 0; }
 .sum .sumrm { font-weight: 600; font-size: 16px; } .sum .sumrm .ic { width: 14px; height: 14px; margin-right: 7px; vertical-align: -1px; }
 .sum .sumh .ic { width: 11px; height: 11px; margin-right: 7px; vertical-align: -1px; color: var(--mute); }
@@ -682,7 +684,7 @@ h3.nm, .nm { color: var(--rc); }
     }
     if (cur.len == null || cur.len > o.maxH) cur.len = 3;
     var best = [5, 6].map(function (x) { return saving(o, x); });
-    $('pSave').textContent = o.eb ? 'Early bird: $35 for the first 3 hours. Extra hours at the usual rate.' : (best[0] || best[1]) ? 'Stay longer, pay less per hour.' : '';
+    $('pSave').textContent = o.eb ? 'Early bird: $35 for the first 3 hours. Extra hours at the normal rate.' : (best[0] || best[1]) ? 'Stay longer, pay less per hour.' : '';
     $('pLens').innerHTML = h; markLen(); summary();
   }
   function markLen() { Array.prototype.forEach.call($('pLens').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(+b.getAttribute('data-i') === cur.len)); }); }
