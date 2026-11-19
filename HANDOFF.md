@@ -68,6 +68,10 @@
 >   MAX 12:58 ✗, from SCARLETT 1:00 (broadcast + direct .15) ✗. Tonight's only successes on the 2.4 GHz PS4s were sent by VALE
 >   ~3 min after rest (Atlas 12:08, Bella 12:44); every other sender/timing failed. Not enough tries to say sender vs timing –
 >   **owner: don't touch Vale tonight (sleeping there); ask before any overnight test.** 1:03am all rested except Vale.
+> - **19 Nov 12:36pm LONG-SLEEP WAKE TEST: FAILED.** Owner switched Vale on; Claude sent wakes from Vale (broadcast, keys
+>   c203a687 Bella / 357299b3 Atlas) at 12:36:50 after ~11.5 h asleep → **neither woke** (checked to 12:40). So for Atlas/Bella
+>   remote wake only worked ~3 min after rest; after a long sleep it doesn't → **mornings: staff press Atlas + Bella by hand**
+>   (or LAN cable). Optimisation to-do + keep-awake added to systems.json (Planned / build).
 > - **1:00am BOOKING KEEP-AWAKE (owner 12:52am, option 2) – engine cd40d8d DEPLOYED (27 bindings, 3 timers), helper 1.1.68 BUILT
 >   (ps4-helper, NOT released).** Engine: the 10-min tick (ps4ResetRun, before the auto-reset switch check, same calendar read)
 >   writes kv `ps4awake` = { room: [[from, until]] } with from = session start − 30 min, until = guest end + 30 min (real guest
