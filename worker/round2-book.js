@@ -4726,8 +4726,8 @@ async function keyDaily(env) {
   }
   return { sent };
 }
-/* ---- 19 Nov 2026 (owner 9:59pm): MEMBER ACCOUNTS – part 1 of the PS4 login. book.round2.sg/m: join (name, phone, 4-digit
-   PIN) or log in (phone + PIN), then pick the name shown on the PS4 and a profile picture. Staff accounts (owner + girlfriend
+/* ---- 19 Nov 2026 (owner 9:59pm): MEMBER ACCOUNTS – part 1 of the PS4 login. book.round2.sg/m: join (name, phone, PIN of
+   4–8 numbers) or log in (phone + PIN), then pick the name shown on the PS4 and a profile picture. Staff accounts (owner + girlfriend
    first) are members marked "staff" (owner 18 Nov: staff play is backed up like a member's, never wiped). Storage: one key
    'mem:<phone>' per member + the phone list 'memlist'. The PIN is never kept plain (HMAC with the engine's secret + the
    member's own salt); 5 wrong PINs = locked 15 min. Logged in = a signed token on the phone (no storage call to check it;
@@ -4739,6 +4739,7 @@ async function memMac(env, s) {
   const k = await crypto.subtle.importKey('raw', new TextEncoder().encode('r2mem1|' + (env.PS4_KEY || env.GM_STAFF || '')), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   return memB64(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(s)));
 }
+const memWeak = (p) => /^(\d)\1+$/.test(p) || '0123456789'.includes(p) || '9876543210'.includes(p);   /* 19 Nov owner: PIN 4–8 numbers */
 const memShown = (s) => String(s || '').replace(/[^A-Za-z0-9 ]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16).trim();
 const memName = (s) => String(s || '').replace(/[<>"&]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40);
 const memPub = (m) => ({ id: m.id, name: m.name, phone: m.phone.replace(/^65(\d{8})$/, '$1').replace(/^(\d{4})(\d{4})$/, '$1 $2'), shown: m.shown, pic: m.pic, staff: !!m.staff, since: m.at });
@@ -4755,8 +4756,8 @@ async function memApi(env, req) {
     const phone = memPhone(f.phone), name = memName(f.name), pin = String(f.pin || '');
     if (name.length < 2) return J({ error: 'Please type your name.' });
     if (!phone) return J({ error: 'That phone number doesn’t look right.' });
-    if (!/^\d{4}$/.test(pin)) return J({ error: 'The PIN must be 4 digits.' });
-    if (/^(\d)\1{3}$|^1234$|^0000$/.test(pin)) return J({ error: 'Pick a less easy PIN (not 1234 or four of the same).' });
+    if (!/^\d{4,8}$/.test(pin)) return J({ error: 'The PIN must be 4 to 8 numbers.' });
+    if (memWeak(pin)) return J({ error: 'Pick a less easy PIN (not 1234… or all the same number).' });
     if (await hb.kvGet('mem:' + phone)) return J({ error: 'This number already has an account – log in instead.', login: true });
     const salt = memB64(crypto.getRandomValues(new Uint8Array(9))), id = 'm' + memB64(crypto.getRandomValues(new Uint8Array(6))).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8).padEnd(8, '0');
     const m = { id, name, phone, salt, pin: await memMac(env, 'pin|' + salt + '|' + pin), at: now, shown: memShown(name.split(' ')[0]) || 'Player', pic: 0, staff: false, tv: 0, bad: 0, lock: 0, by: 'self' };
@@ -4785,13 +4786,13 @@ async function memApi(env, req) {
   }
   if (act === 'pin') {
     if ((await memMac(env, 'pin|' + m.salt + '|' + String(f.old || ''))) !== m.pin) return J({ error: 'Your current PIN is wrong.' });
-    const pin = String(f.pin || ''); if (!/^\d{4}$/.test(pin) || /^(\d)\1{3}$|^1234$|^0000$/.test(pin)) return J({ error: 'The new PIN must be 4 digits, not 1234 or four of the same.' });
+    const pin = String(f.pin || ''); if (!/^\d{4,8}$/.test(pin) || memWeak(pin)) return J({ error: 'The new PIN must be 4 to 8 numbers, not 1234… or all the same number.' });
     m.pin = await memMac(env, 'pin|' + m.salt + '|' + pin); m.tv = (m.tv || 0) + 1; await hb.kvSet('mem:' + m.phone, m);
     return J({ ok: true, tok: await memTok(env, m), me: memPub(m) });
   }
   return J({ error: 'unknown' });
 }
-/* staff (control centre / System check): memlist · memstaff (phone, on=1|0) · memunlock (phone) · mempin (phone, pin: staff sets a new PIN) */
+/* staff (control centre / System check): memlist · memstaff (phone, on=1|0) · memunlock (phone) · mempin (phone, pin: staff sets a new PIN, 4–8 numbers) */
 async function memGm(env, hb, f) {
   const act = String(f.action || '');
   if (act === 'memlist') { const list = (await hb.kvGet('memlist')) || [], K = list.length ? await hb.kvMany(list.map((p) => 'mem:' + p), []) : {};
@@ -4799,7 +4800,7 @@ async function memGm(env, hb, f) {
   const phone = memPhone(f.phone), m = phone ? await hb.kvGet('mem:' + phone) : null; if (!m) return { error: 'No member with that phone number.' };
   if (act === 'memstaff') m.staff = String(f.on) === '1';
   else if (act === 'memunlock') { m.lock = 0; m.bad = 0; }
-  else if (act === 'mempin') { const pin = String(f.pin || ''); if (!/^\d{4}$/.test(pin)) return { error: 'PIN must be 4 digits.' }; m.pin = await memMac(env, 'pin|' + m.salt + '|' + pin); m.tv = (m.tv || 0) + 1; m.lock = 0; m.bad = 0; }
+  else if (act === 'mempin') { const pin = String(f.pin || ''); if (!/^\d{4,8}$/.test(pin)) return { error: 'PIN must be 4 to 8 numbers.' }; m.pin = await memMac(env, 'pin|' + m.salt + '|' + pin); m.tv = (m.tv || 0) + 1; m.lock = 0; m.bad = 0; }
   else return { error: 'unknown' };
   await hb.kvSet('mem:' + phone, m); return { ok: true, member: memPub(m) };
 }
@@ -4823,18 +4824,18 @@ button.ghost{background:transparent;color:#f4f1fb;border:1px solid rgba(244,241,
 <section id="out"><div class="tabs"><button id="tJ" class="on">Join</button><button id="tL" class="ghost">Log in</button></div>
 <div class="card"><div id="fJ"><label>Your name</label><input id="jn" autocomplete="name" maxlength="40">
 <label>Phone number</label><input id="jp" inputmode="tel" autocomplete="tel" placeholder="9123 4567">
-<label>Pick a 4-digit PIN</label><input id="jk" inputmode="numeric" maxlength="4" type="password" autocomplete="new-password">
-<label>PIN again</label><input id="jk2" inputmode="numeric" maxlength="4" type="password" autocomplete="new-password">
+<label>Pick a PIN (4 to 8 numbers)</label><input id="jk" inputmode="numeric" maxlength="8" type="password" autocomplete="new-password">
+<label>PIN again</label><input id="jk2" inputmode="numeric" maxlength="8" type="password" autocomplete="new-password">
 <button id="jb">Join Round2</button><p class="fine">Your saves follow you to any Round2 room. You log in with your phone number and PIN.</p></div>
 <div id="fL" hidden><label>Phone number</label><input id="lp" inputmode="tel" autocomplete="tel" placeholder="9123 4567">
-<label>PIN</label><input id="lk" inputmode="numeric" maxlength="4" type="password" autocomplete="current-password"><button id="lb">Log in</button>
+<label>PIN</label><input id="lk" inputmode="numeric" maxlength="8" type="password" autocomplete="current-password"><button id="lb">Log in</button>
 <p class="fine">Forgot your PIN? Ask staff to reset it.</p></div><p class="err" id="e1"></p></div></section>
 <section id="in" hidden><div class="card"><div class="me"><div class="av" id="av"></div><div><b id="nm"></b><span class="badge px" id="bd"></span><div class="fine" id="ph"></div></div></div></div>
 <div class="card"><b>On the PS4</b><label>Name shown on the PS4 (2–16 letters/numbers)</label><input id="sh" maxlength="16">
 <label>Profile picture</label><div class="pics" id="pics"></div><button id="sv">Save</button><p class="err" id="e2"></p>
 <p class="fine">Coming next: open the Round2 tile on the room's PS4 and your saves, name and picture load into your profile.</p></div>
-<div class="card"><b>Change PIN</b><label>Current PIN</label><input id="po" inputmode="numeric" maxlength="4" type="password">
-<label>New PIN</label><input id="pn" inputmode="numeric" maxlength="4" type="password"><button class="ghost" id="pb">Change PIN</button><p class="err" id="e3"></p></div>
+<div class="card"><b>Change PIN</b><label>Current PIN</label><input id="po" inputmode="numeric" maxlength="8" type="password">
+<label>New PIN (4 to 8 numbers)</label><input id="pn" inputmode="numeric" maxlength="8" type="password"><button class="ghost" id="pb">Change PIN</button><p class="err" id="e3"></p></div>
 <button class="ghost" id="lo">Log out</button></section>
 <script>
 var $=function(i){return document.getElementById(i)},T=null,P=[],sel=0;try{T=localStorage.getItem('r2.mem')}catch(e){}
