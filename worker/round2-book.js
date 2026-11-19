@@ -1815,7 +1815,7 @@ async function noteApi(env, hb, ref, f) {
   const F = await lateFind(env, r.nid, r.day).catch(() => null); if (!F) return { stop: 'gone' };
   if (f.act === 'pay') return { error: 'This session is changed with our team – WhatsApp us.' };
   const S = F.S, now = Date.now(), today = sgDay(now), d0 = sgMs0(today + ' 00:00'), bDay = Math.round((sgMs0(sgDay(S.s) + ' 00:00') - d0) / 86400e3);
-  const ND = Math.min(70, Math.max(G_DAYS, bDay + 8)), ph = await holidays(), days = [], cal = [];
+  const ND = Math.min(70, Math.max(G_DAYS, bDay + 31))   /* 19 Nov: was bDay + 8 – a guest booked for 12 Dec couldn't see past 19 Dec to move to 26 Dec */, ph = await holidays(), days = [], cal = [];
   for (let i = 0; i < ND; i++) { const date = addDays(today, i), w = new Date(date + 'T00:00:00Z').getUTCDay(); days.push({ date, peak: w === 0 || w === 5 || w === 6 || ph.has(date) }); const o = {}; for (const u of Object.keys(ROOMS)) o[G_NAME(u)] = []; cal.push(o); }
   const C = { now: Math.floor((now - d0) / 60e3), days, cal, bk: { room: G_NAME(S.unit), day: bDay, t: sgMins(S.s), h: Math.round((S.guestEnd - S.s) / 36e3) / 100, paid: 0 }, moves: 0, grace: false };
   return { ok: true, C, info: { name: r.name || 'guest', room: C.bk.room, code: ref, ext: S.ext.length ? 1 : 0, graceEnd: 0, made: r.t, paid0: 0, staff: true, test: false, dry: false, pax: r.pax || '',
@@ -2491,7 +2491,7 @@ async function gCtx(env, ref, fresh) {
   if (h.status !== 'paid' || (!bid && !dry)) return { stop: 'notbooked' };
   const now = Date.now(), today = sgDay(now), d0 = sgMs0(today + ' 00:00');
   const q = d.q, bS = sgMs0(q.date + ' ' + q.time), bDay = Math.round((sgMs0(q.date + ' 00:00') - d0) / 86400e3);
-  const ND = Math.min(70, Math.max(G_DAYS, bDay + 8)), to = addDays(today, ND);
+  const ND = Math.min(70, Math.max(G_DAYS, bDay + 31))   /* 19 Nov: was bDay + 8 – a guest booked for 12 Dec couldn't see past 19 Dec to move to 26 Dec */, to = addDays(today, ND);
   const items = await gCalItems(env, addDays(today, -1), to, fresh);
   /* the booking as SimplyBook has it now (staff may have changed it there) */
   const me = dry ? { k: 'b', id: 'dry', unit: q.unit, s: bS, e: bS + (q.hours * 60 + BUF) * 60e3 } : items.find((x) => x.k === 'b' && x.id === bid);

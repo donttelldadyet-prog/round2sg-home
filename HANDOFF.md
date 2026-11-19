@@ -2014,3 +2014,11 @@ membership system yet) → the cloud batch is built but OFF.
   ~20–50 s. (Atlas's helper report – which carries the band/signal – is only sent every ~10+ min, so it still showed the
   old 5 GHz values right after the switch.) Vale + Kai refuse look jobs during sessions ("has a session until 6pm") – use a
   free PS4 as the tester. Watch Atlas + Bella net-fail tails over the next days.
+
+### 19 Nov 2026, 9:40pm – reschedule page stopped at 19 Dec (Shannice, Vale 12 Dec → wanted 26 Dec)
+- Cause: the reschedule page loads `ND = min(70, max(31, booking day + 8))` days from today. Her booking was 23 days out, so the
+  window was 31 days = up to 19 Dec; 20 Dec onwards was greyed. A window limit, not a rule.
+- Fix (engine, both `gCtx` and the staff note-session variant): `booking day + 31` (cap 70 days from today stays). Engine
+  deployed 9:40pm by patching the live script (hash checked before/after, 27 bindings, 3 timers). Full System check NOT run
+  (no browser link in this chat) – run it.
+- Left as is: the 70-day cap, so a booking more than ~39 days out sees less than 31 days beyond itself.
