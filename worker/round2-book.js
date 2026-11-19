@@ -5094,6 +5094,13 @@ async function ps4TilePkg(env, req) {
    answer is worked out at ask time (who's in now, cleaning, next, turnover gaps, TVs quiet), so it's current to the minute. */
 const WIDGET_URL = 'https://round2-book.donttelldadyet.workers.dev/w';
 const W_ORDER = [5, 7, 8, 9, 10, 12, 11];
+/* the TV's front app in plain words (Android package, LG app id or Sony input) */
+function wApp(h) {
+  const f = String(h.f || ''), L = [[/tvhome/, 'Round2 menu'], [/netflix/i, 'Netflix'], [/youtube/i, 'YouTube'], [/disney/i, 'Disney+'], [/primevideo|amazon/i, 'Prime Video'], [/spotify/i, 'Spotify'],
+    [/hdmi|tvx|tvinput|livetv|dtv\.tvx/i, 'PS4 / HDMI'], [/webos\.app\.home|launcher|tvlauncher/i, 'TV home'], [/hbo|max\b/i, 'HBO'], [/viu/i, 'Viu'], [/iqiyi/i, 'iQIYI'], [/twitch/i, 'Twitch']];
+  for (const [re, n] of L) if (re.test(f)) return n;
+  return f ? f.split('.').pop().slice(0, 14) : '';
+}
 function wName(S) { const t = String(S.name || '').split(' · ')[0].replace(/\s*\d+\s*(?:pax|ppl|pp)\b.*$/i, '').trim(); return t.slice(0, 18) || (S.k === 'n' ? 'note' : 'guest'); }
 async function widgetSnap(env, hb) {
   const t = sgDay(Date.now() - SHADOW_TILL * 60e3), [D, D2] = await Promise.all([sessDay(env, t), sessDay(env, addDays(t, 1))]);
@@ -5103,12 +5110,20 @@ async function widgetSnap(env, hb) {
     ss.push({ u: S.unit, s: S.s, e: S.guestEnd, c: S.end, n: wName(S), x: S.ext && S.ext.length ? 1 : 0 });
   }
   ss.sort((a, b) => a.s - b.s);
-  await hb.kvSet('wsum', { t: Date.now(), night: t, d0, ss });
+  /* TV messages coming up (20 Nov, owner: "a glance of notifs upcoming for each room"): from the message list the timer's own
+     jobs keep fresh (__LIST__, 15 min) – read only, never a new request from here */
+  let ms = null;
+  try { const L = await hb.gmGet('__LIST__'), raw = L && L.link && L.link.raw;
+    if (raw) ms = (JSON.parse(raw).links || []).filter((x) => x.data && x.data.status === 'approved' && +x.data.at > Date.now() - 20 * 60e3 && +x.data.at < d0 + 30 * 3600e3)
+      .map((x) => ({ r: String(x.data.room || ''), at: +x.data.at, k: String(x.data.kind || (/^R2/.test(x.key) ? 'auto' : 'guest')), ti: String(x.data.title || '').slice(0, 40), tv: x.data.onTv === 'yes' ? 1 : 0 }))
+      .sort((a, b) => a.at - b.at).slice(0, 60); } catch (e) {}
+  const prev = ms ? null : await hb.kvGet('wsum');
+  await hb.kvSet('wsum', { t: Date.now(), night: t, d0, ss, ms: ms || (prev && prev.ms) || [] });
 }
 async function widgetApi(env, u) {
   const k = String(u.searchParams.get('k') || '');
   if (k.length < 16) return J({ error: 'no key' }, 403);
-  const o = await book(env).kvMany(['wkey', 'wsum', 'wtv'], []);
+  const o = await book(env).kvMany(['wkey', 'wsum', 'wtv', 'wps4'], []);
   if (!o.wkey || o.wkey !== k) return J({ error: 'wrong key' }, 403);
   const now = Date.now(), W = o.wsum || { ss: [] }; W.ss = (W.ss || []).sort((a, b) => a.s - b.s); const d0 = W.d0 || 0, d1 = d0 + 86400e3, tv = (o.wtv && o.wtv.r) || {};
   const rooms = [], warn = [];
@@ -5119,6 +5134,12 @@ async function widgetApi(env, u) {
     if (cl) r.till = cl.c;
     if (nx) Object.assign(r, { next: nx.s, nn: nx.n });
     if (u0 === 7 && !L.length) r.st = 'closed';   /* Kaeden: under renovation – shown closed until it has sessions again */
+    /* what's on the room's TV and PS4 right now, and its next TV messages (20 Nov) */
+    const h0 = tv[GM_ROOM[u0]], p0 = ((o.wps4 && o.wps4.r) || {})[GM_ROOM[u0]];
+    if (h0 && h0.t) r.tv = { app: wApp(h0), off: /suspend|standby|off/i.test(h0.pw || ''), at: h0.fa || 0, quiet: now - h0.t > 20 * 60e3 };
+    if (p0 && p0.t) r.ps4 = { on: now - p0.t < 12 * 60e3, g: p0.g || '' };
+    const M = ((W.ms) || []).filter((m) => m.r === GM_ROOM[u0] && m.at > now - 60e3).slice(0, 3);
+    if (M.length) r.msgs = M.map((m) => ({ at: m.at, k: m.k, ti: m.ti, tv: m.tv }));
     /* turnover: from this guest's end (+15 min cleaning) to the next start */
     const prev = cur || cl; if (prev && nx) r.gap = Math.round((nx.s - prev.e) / 60e3);
     rooms.push(r);
@@ -5130,7 +5151,11 @@ async function widgetApi(env, u) {
   const counts = { total: night.length, done: night.filter((x) => x.e <= now).length, in: rooms.filter((x) => x.st === 'in').length, left: night.filter((x) => x.s > now).length, open: rooms.filter((x) => x.st !== 'closed').length };
   const nextStart = W.ss.filter((x) => x.s > now)[0] || null, ends = W.ss.filter((x) => x.s <= now && x.e > now).sort((a, b) => a.e - b.e)[0] || null;
   const age = Math.round((now - (W.t || 0)) / 60e3); if (age > 25) warn.unshift('Widget data ' + age + ' min old');
-  return J({ ok: true, now, night: W.night, counts, rooms, warn,
+  /* tonight's starts and ends still to come, in time order (widget "times") */
+  const events = [];
+  for (const x of W.ss) { if (x.s > now && x.s < d1) events.push({ r: ROOMS[x.u][0], at: x.s, t: 'in', n: x.n }); if (x.e > now && x.s < d1) events.push({ r: ROOMS[x.u][0], at: x.e, t: 'out', n: x.n }); }
+  events.sort((a, b) => a.at - b.at);
+  return J({ ok: true, now, night: W.night, counts, rooms, warn, events: events.slice(0, 16),
     nextStart: nextStart && { r: ROOMS[nextStart.u][0], at: nextStart.s, n: nextStart.n }, nextEnd: ends && { r: ROOMS[ends.u][0], at: ends.e, n: ends.n }, age });
 }
 const HANDLER = {
@@ -5164,7 +5189,12 @@ const HANDLER = {
       go(paidSweep(env).catch(() => null));   /* paid at HitPay but not booked? book it (every 5 min) */
       if (env.TV_KEY && mm % 10 === 1) { const R7 = ['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max'];   /* phone widgets: each TV's last check-in (20 Nov) */
         go(Promise.all(R7.map((r) => fetch(FB_BASE + env.TV_KEY + '/' + r + '/helper.json').then((x) => x.json()).catch(() => null)))
-          .then((H) => hb.kvSet('wtv', { t: Date.now(), r: Object.fromEntries(R7.map((r, i) => [r, H[i] ? { t: +H[i].t || 0, pw: H[i].pw || '', tv: H[i].tv || '' } : null])) })).catch(() => null)); }
+          .then((H) => hb.kvSet('wtv', { t: Date.now(), r: Object.fromEntries(R7.map((r, i) => [r, H[i] ? { t: +H[i].t || 0, pw: H[i].pw || '', tv: H[i].tv || '', f: String(H[i].front || '').slice(0, 60), fa: +H[i].frontAt || 0 } : null])) })).catch(() => null)); }
+      /* phone widgets: each PS4's game right now (20 Nov) – two storage calls, no outside requests */
+      go((async () => { const m = (await hb.kvGet('ps4map')) || {}, ids = Object.keys(m); if (!ids.length) return;
+        const P = await hb.kvMany(ids.map((id) => 'ps4:' + id), []), r = {};
+        for (const id of ids) { const x = P['ps4:' + id]; if (x && m[id]) r[m[id]] = { t: +x.t || 0, g: String(x.runName || '').slice(0, 30) }; }
+        await hb.kvSet('wps4', { t: Date.now(), r }); })().catch(() => null));
       /* paid moves that never ran (HitPay's message missed and the guest closed the page): finish them, or alert staff */
       go((async () => { for (const m of await hb.mvRecent(Date.now() - 48 * 3600e3)) if (m.status === 'pending' && Date.now() - m.t > 60e3) {
         const r = await mvComplete(env, m.ref, 'sweep').catch((e) => ({ error: String(e.message || e) }));
