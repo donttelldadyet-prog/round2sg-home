@@ -80,6 +80,15 @@
 > values · look jobs refused while a room is in session (engine `ps4wake` is nobusy) · **`ps4wakekey` with an id and no key
 > DELETES that PS4's wake key** · Cloudflare classifier blocks destructive looks (clean slate) unless the owner's OK is explicit.
 >
+> **20:21 STAGE 2 PROVEN on Kaeden (helper 1.1.84, ps4-test ddec4952…, own program):** `/_memtag.16c45cc7.test-member.main` →
+> clean slate (19 games, 0 failed; tags cleared after) → cloud batch sent User1's parts to `members/test-member/main/<game>/<part>/<time>`
+> + `members/test-member/main/index.txt` → `/_memload.16c45cc9.test-member.main.Test_Member` → **3 games, 0 failed, 42 s** into User3
+> (renamed 'Test Member'). Many-part games are the slow ones (CUSA11379: 12 parts, 31.6 s, making parts 16.3 s) → next speed-up:
+> one manifest+labels bundle per GAME instead of per part. Kaeden profiles now: main/User1/User2 EMPTY (saves in cloud: day0 +
+> cloud copy), User3 = 'Test Member' with test-member's 3 games → put back later with /_prepmember per profile (+ rename User3).
+> Bella (1.1.77) silent since 18:55 but ON + on LAN (DDP 200 at 20:10) = can't reach internet again; Atlas (1.1.68) silent since 18:28,
+> ON per owner but NO DDP answer = off the Wi-Fi. Suspect IP clash at .6/.15 – asked owner: Bella Test Internet Connection + router list.
+>
 > **NEXT (in order):** (1) Kaeden on 1.1.83 → confirm own-program mode (report `own:1`) → member prep test (clean slate, then
 > `/_prepmember.16c45cc6.16c45cc6.x` into main + a spare) → put Kaeden's saves back. (2) Stage 2: member cloud folders (session
 > end → member's folder; skip GT Sport). (3) Stage 3: morning + after-clean-slate prep from SimplyBook (needs: how a booking is
