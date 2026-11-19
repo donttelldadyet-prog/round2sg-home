@@ -217,7 +217,7 @@ h3.nm, .nm { color: var(--rc); }
 #pLens { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 8px; }   /* lengths: equal boxes, 2 per row on a phone; row gap leaves room for the SAVE tags */
 #pLens .hint { grid-column: 1 / -1; }
 #pLens button { min-width: 0; padding: 9px 6px; }
-#pLens button { text-transform: uppercase; } #pLens button small { font-weight: 700; }   /* owner 20 Nov: 3 HOURS in caps, end time + price bold */
+#pLens button { text-transform: uppercase; } #pLens button s { opacity: .55; font-weight: 500; margin-right: 2px; } #pLens button small { font-weight: 700; }   /* owner 20 Nov: 3 HOURS in caps, end time + price bold */
 #pLens button .save { right: 6px; }
 .chips button[aria-pressed="true"] { background: var(--acc); color: var(--acc-ink); border-color: var(--acc); }
 .chips button[aria-pressed="true"] small { color: var(--acc-ink); opacity: .8; }
@@ -301,7 +301,7 @@ h3.nm, .nm { color: var(--rc); }
   <div class="sheet">
     <div class="hd"><div><b id="mTitle"></b><p id="mSub"></p></div><button class="x" id="mClose" type="button">× BACK</button></div>
     <div id="pick">
-      <div class="step"><h4><i data-ic="clock"></i>1 · START TIME</h4><div class="chips" id="pTimes"></div></div>
+      <div class="step"><h4><i data-ic="clock"></i>1 · START TIME</h4><p class="hint" id="pFrom" style="margin:-4px 0 12px"></p><div class="chips" id="pTimes"></div></div>
       <div class="step"><h4><i data-ic="glass"></i>2 · HOW LONG</h4><p class="hint" id="pSave" style="margin:-4px 0 12px"></p><div class="chips" id="pLens"></div><p class="hint" style="margin:12px 0 0"><i data-ic="moon"></i> Want to start after <b style="color:var(--ink)">8:15pm</b>, or extend past <b style="color:var(--ink)">11:15pm</b>? <a style="color:var(--acc)" class="lateWa" href="https://wa.me/6591625767?text=Hi%20Round2%2C%20I%27d%20like%20to%20start%20after%208%3A15pm%20or%20extend%20past%2011%3A15pm" target="_blank" rel="noopener">WhatsApp us</a>, subject to staff availability.</p></div>
       <div class="sum"><h4 class="sumh"><i data-ic="cal"></i>YOUR BOOKING</h4><div><div id="pWhen" class="hint"></div><b id="pPrice"></b></div><button class="go" id="pGo" type="button" disabled>CONTINUE</button></div>
       <p class="note" id="pNote"></p>
@@ -642,8 +642,12 @@ h3.nm, .nm { color: var(--rc); }
     /* like the TV launcher: once a room is picked, its character's colour leads (buttons, selections) */
     $('modal').style.setProperty('--acc', ROOMS[uid][1]); $('modal').style.setProperty('--acc-ink', uid == 10 || uid == 11 ? '#ffffff' : '#0b0914');
     $('mSub').textContent = dayLabel(day);
+    /* owner 20 Nov: the price is said once above the grid; a box only shows its own price when it differs */
+    var norm = info.list.filter(function (o) { return !o.eb; }), lo = Math.min.apply(null, norm.map(function (o) { return o.price; })), same = norm.every(function (o) { return o.price === lo; });
+    $('pFrom').textContent = norm.length ? (same ? 'Every start time: ' : 'From ') + money(lo) + ' for 3 hours' + (info.list.some(function (o) { return o.eb; }) ? ' · Early bird 11am: $35' : '') + '.' : '';
     $('pTimes').innerHTML = info.list.map(function (o) {
-      return '<button type="button" data-m="' + o.m + '" class="' + (o.eb ? 'eb' : '') + '" aria-pressed="' + (o.m === cur.start) + '">' + clock(o.m) + '<small>' + (o.eb ? 'Early bird' : 'from ' + money(o.price)) + '</small></button>';
+      var tag = o.eb ? 'Early bird' : same ? '' : money(o.price);
+      return '<button type="button" data-m="' + o.m + '" class="' + (o.eb ? 'eb' : '') + '" aria-pressed="' + (o.m === cur.start) + '">' + clock(o.m) + (tag ? '<small>' + tag + '</small>' : '') + '</button>';
     }).join('');
     step('pick'); drawLens(); $('modal').hidden = false; document.body.style.overflow = 'hidden';
     count('board_pick'); count('board_room_' + GM[uid]);
@@ -654,7 +658,7 @@ h3.nm, .nm { color: var(--rc); }
   function saving(o, hrs) {
     if (o.eb || hrs <= 3 || !o.prices[3] || !o.prices[hrs]) return null;
     var full = o.prices[3] / 3 * hrs, amt = full - o.prices[hrs], pct = Math.round(amt / full * 100);
-    return pct >= 1 ? { pct: pct, amt: amt } : null;
+    return pct >= 1 ? { pct: pct, amt: amt, full: full } : null;
   }
   function drawLens() {
     var o = cur.start != null ? startObj() : null, h = '';
@@ -662,11 +666,11 @@ h3.nm, .nm { color: var(--rc); }
     for (var hrs = 3; hrs <= 6; hrs++) {
       var fits = hrs <= o.maxH;
       var sv = fits ? saving(o, hrs) : null;
-      h += '<button type="button" data-i="' + hrs + '"' + (fits ? '' : ' disabled') + ' aria-pressed="' + (cur.len === hrs) + '">' + (sv ? '<span class="save">SAVE ' + sv.pct + '%</span>' : '') + hrs + ' hours<small>' + (fits ? 'ends ' + clock(o.m + hrs * 60) + ' · ' + money(o.prices[hrs]) : 'not available') + '</small></button>';
+      h += '<button type="button" data-i="' + hrs + '"' + (fits ? '' : ' disabled') + ' aria-pressed="' + (cur.len === hrs) + '">' + (sv ? '<span class="save">SAVE ' + sv.pct + '%</span>' : '') + hrs + ' hours<small>' + (fits ? 'ends ' + clock(o.m + hrs * 60) + (sv ? '<br><s>' + money(Math.round(sv.full * 100) / 100) + '</s> ' : ' · ') + money(o.prices[hrs]) : 'not available') + '</small></button>';
     }
     if (cur.len == null || cur.len > o.maxH) cur.len = 3;
     var best = [5, 6].map(function (x) { return saving(o, x); });
-    $('pSave').textContent = o.eb ? 'Early bird: the $35 start is the deal; extra hours are the normal hourly rate.' : (best[0] || best[1]) ? 'Stay longer, pay less per hour' + (best[0] ? ': 5 h saves ' + best[0].pct + '%' : '') + (best[1] ? (best[0] ? ', ' : ': ') + '6 h saves ' + best[1].pct + '%' : '') + '.' : '';
+    $('pSave').textContent = o.eb ? 'Early bird: the $35 start is the deal; extra hours are the normal hourly rate.' : (best[0] || best[1]) ? 'Stay longer, pay less per hour.' : '';
     $('pLens').innerHTML = h; markLen(); summary();
   }
   function markLen() { Array.prototype.forEach.call($('pLens').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(+b.getAttribute('data-i') === cur.len)); }); }
