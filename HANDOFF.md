@@ -309,6 +309,16 @@
   a separate normal SSID (NOT the guest network – isolation would break PS4-to-PS4 wake), 2.4 GHz only, WPA2, visible name.
   Saving blips all Wi-Fi ~10–60 s (mesh + Tapo cameras 1–2 min) → scheduled 10:35pm after Vale (reminder set). Never LAN.
 
+> ## 20 Nov 2026, 7:16am – engine 5c5cc04 DEPLOYED (27 bindings, 3 timers): iPHONE WIDGETS
+> - Owner: "useful iOS lock screen and home screen widgets" → Scriptable app. Engine: `GET /w?k=<key>` (`widgetApi`, ONE `kvMany`:
+>   wkey, wsum, wtv) works out each room's state at ask time (in till / cleaning till / next / free / Kaeden closed), turnover
+>   `gap`, counts, next start / next end, warnings (TV of a room with guests or due in 45 min not reporting 20 min; copy > 25 min
+>   old). `wsum` = `widgetSnap` on the now timer's 10-minute tick from the SAME `sessDay` reads (env.__tick) – no extra SimplyBook
+>   requests; `wtv` = side timer every 10 min (minute %10 = 1), 7 Firebase helper.json reads. Staff gm `widgetkey` (reset=1 → new key).
+> - Control centre: Tests & systems › Phone alerts & widgets › "Copy widget script" (fills `__KEY__`/`__URL__` into
+>   manager/widget/round2-widget.js). System check step "Phone widgets" (Light + Full). One-off `oneoffMid` removed.
+> - Not seen on a real iPhone yet (Claude can't run Scriptable) – owner to install and report.
+
 > ## ⭐ 19 Nov 2026, 7:50pm – STATE OF EVERYTHING (PS4 side) – READ THIS FIRST, then the dated entries below
 > **Owner rules today:** reply in categories (headings per topic: Bella / Kaeden backup / Kaeden speed …) and in very simple
 > words (ELI5, no word vomit). **Update this HANDOFF regularly** (owner: "you don't regularly update the handoff, that's why
