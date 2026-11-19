@@ -304,6 +304,10 @@ h3.nm, .nm { color: var(--rc); }
 .fl .req { color: #FF5C7A; margin-left: 3px; font-size: .9em; vertical-align: top; }
 .fl .tel #fPhone { flex: 1; min-width: 0; }
 .fl select { -webkit-appearance: none; appearance: none; border-radius: 0; padding-right: 36px; background: #06050a url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23a79fbd' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 14px center; }   /* owner 20 Nov: square like the other boxes */
+.fl.bad input:not(#fCc) { border-color: #ff5c7a; background-color: rgba(255,92,122,.08); }
+.fl.bad { animation: r2shake .35s; }
+.fl .badm { display: block; margin-top: 5px; font-size: 13px; color: #ff5c7a; text-transform: none; letter-spacing: 0; }
+@keyframes r2shake { 0%, 100% { transform: none; } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 .fl input:focus, .fl select:focus { outline: none; border-color: var(--acc); }
 .err { color: #ff8a8a; }
 .cd { font-size: 26px; color: var(--acc); margin: 6px 0 16px; }
@@ -791,7 +795,20 @@ h3.nm, .nm { color: var(--rc); }
     var ahead = Math.round((new Date(day + 'T00:00:00Z') - new Date(sgDate(0) + 'T00:00:00Z')) / 864e5);
     count('board_ahead_' + (ahead === 0 ? 'today' : ahead === 1 ? 'tomorrow' : ahead <= 7 ? 'week' : ahead <= 31 ? 'month' : ahead <= 92 ? '3months' : 'later'));
   });
+  /* owner 20 Nov: name, mobile and email must be filled before HOLD & PAY - the missing ones turn red and the page jumps to the first */
+  function badField(id, msg) { var el = $(id), fl = el.closest('.fl'); fl.classList.add('bad'); var m = fl.querySelector('.badm'); if (!m) { m = document.createElement('span'); m.className = 'badm'; fl.appendChild(m); } m.textContent = msg; return el; }
+  ['fName', 'fPhone', 'fEmail'].forEach(function (id) { $(id).addEventListener('input', function () { var fl = this.closest('.fl'); fl.classList.remove('bad'); var m = fl.querySelector('.badm'); if (m) m.remove(); }); });
+  function checkDetails() {
+    var bad = [], n = $('fPhone').value.replace(/\D/g, ''), em = $('fEmail').value.trim();
+    if (!$('fName').value.trim()) bad.push(badField('fName', 'Please fill in your name'));
+    if (n.length < 6) bad.push(badField('fPhone', n ? 'That number looks too short' : 'Please fill in your mobile number'));
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) bad.push(badField('fEmail', em ? 'That email doesn’t look right' : 'Please fill in your email'));
+    var first = bad[0] || null;
+    if (first) { first.closest('.fl').scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(function () { first.focus({ preventScroll: true }); }, 350); }
+    return !first;
+  }
   $('dGo').addEventListener('click', function () {
+    if (!checkDetails()) return;
     var o = startObj(), b = $('dGo');
     var body = { unit: cur.uid, date: day, time: hhmm(o.m).slice(0, 5), hours: cur.len, name: $('fName').value, phone: fullPhone(), email: $('fEmail').value, pax: $('fPax').value, msg: celMsg(), ret: EMBED ? 'https://www.round2.sg/' : location.href.split(/[?#]/)[0], test: TEST || undefined };
     try { localStorage.setItem('r2.me', JSON.stringify({ Name: body.name, Phone: $('fPhone').value, Cc: $('fCc').value, Email: body.email })); } catch (e) {}
