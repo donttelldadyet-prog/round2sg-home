@@ -134,6 +134,12 @@
     cap; Kaeden may hold more – raise nm[1200] if needed). Page checked: join step shows Lapy's 21 (440px PNGs ~250 KB each –
     heavy on phones; thumbnails = UI follow-up), "More" pages the big pack. Owner: if too big, cut the list down or use our
     own Round2 pictures (we can make .xavatar sets). Not yet tested end-to-end on a PS4 (pick → Load → picture on profile).
+- **2:50am names didn't change (owner):** his Load (Karen + Aliff, 2:40 and again 2:43) loaded fine (GTA → 16c45cc7 in 4–8 s,
+  Vampire Survivors → 16c45cc8, 0 failed) but Player 1/2 were SIGNED IN, so no rename and no picture (our own "never rename a
+  signed-in profile" rule). Helper **1.1.100** (ps4-test sha 9bd2f6cf…, on Kaeden): `/_rename.<user>.<Name>` (works on signed-in
+  spares too, reads back), `/_renamesi.on|off` = member loads rename signed-in spares (OFF until the signed-in test passes). After
+  he logged them out: /_rename → "Karen bozz", "Aliff Bozz" (rc 0). Verbose pop-ups were OFF on Kaeden → `/_bpop.on` again
+  (find out what switched them off). NEXT: sign in a spare, /_rename it, see if the PS4 shows the new name → then /_renamesi.on.
 - **2:45am Round2 TILE 0.06 (owner 2:33am: "tile also show a similar theme, also needs loading bars … feedback to guests"):**
   engine live 3abf38a5ab8f (27 bindings, 3 timers): /ps4/tile adds `color` (hex, no #), `rname`, and `done`/`total` while
   loading/reset; `/ps4/tileart?room=` = the room character as a 480x640 PNG (Wix /v1/fill → R2 saves/lib/tileart/<room>-480.png;
