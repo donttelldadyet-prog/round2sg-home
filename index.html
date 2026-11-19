@@ -144,15 +144,10 @@ canvas.r2-char{display:block}
 .r2-shelf h4{align-items:center!important}
 .r2-shelf h4:after{content:'';flex:1;height:1px;margin-left:4px;background:linear-gradient(90deg,color-mix(in srgb,var(--r2-accent) 55%,transparent),transparent);order:1}
 .r2-shelf h4 span{order:2;margin-left:8px!important}
-/* Room picker hint (owner 20 Nov): until the guest taps it, the pill glows softly and the other choices hop one by one, so it reads as tappable */
+/* Room picker hint (owner 20 Nov): until the guest taps it, the pill glows softly so it reads as tappable */
 html:not(.r2-picked) #r2-stage div[role="group"]{animation:r2pillglow 1.8s ease-in-out infinite}
-html:not(.r2-picked) #r2-stage div[role="group"]>button[aria-pressed="false"]{animation:r2hop 1.8s ease-in-out infinite}
-html:not(.r2-picked) #r2-stage div[role="group"]>button[aria-pressed="false"]:nth-of-type(2){animation-delay:.18s}
-html:not(.r2-picked) #r2-stage div[role="group"]>button[aria-pressed="false"]:nth-of-type(3){animation-delay:.36s}
-html:not(.r2-picked) #r2-stage div[role="group"]>button[aria-pressed="false"]:nth-of-type(4){animation-delay:.54s}
 @keyframes r2pillglow{0%,100%{box-shadow:0 0 0 0 transparent;border-color:rgba(244,241,251,.28)}50%{box-shadow:0 0 22px 0 color-mix(in srgb,var(--r2-accent) 70%,transparent);border-color:var(--r2-accent)}}
-@keyframes r2hop{0%,40%,100%{transform:none;color:rgba(244,241,251,.78)}20%{transform:translateY(-5px) scale(1.06);color:#fff}}
-@media (prefers-reduced-motion:reduce){html:not(.r2-picked) #r2-stage div[role="group"],html:not(.r2-picked) #r2-stage div[role="group"]>button{animation:none}}
+@media (prefers-reduced-motion:reduce){html:not(.r2-picked) #r2-stage div[role="group"]{animation:none}}
 /* Search (owner 20 Nov) */
 .r2-srch{display:flex;align-items:center;gap:8px;margin:0 0 16px;padding:0 6px 0 14px;height:44px;border:1px solid rgba(244,241,251,.22);border-radius:999px;background:rgba(26,21,40,.9);color:#a79fbd}
 .r2-srch:focus-within{border-color:var(--r2-accent)}
