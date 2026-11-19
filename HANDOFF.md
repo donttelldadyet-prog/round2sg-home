@@ -134,6 +134,19 @@
     cap; Kaeden may hold more – raise nm[1200] if needed). Page checked: join step shows Lapy's 21 (440px PNGs ~250 KB each –
     heavy on phones; thumbnails = UI follow-up), "More" pages the big pack. Owner: if too big, cut the list down or use our
     own Round2 pictures (we can make .xavatar sets). Not yet tested end-to-end on a PS4 (pick → Load → picture on profile).
+- **3:40am RESEARCH (owner OK, nothing changed on any PS4): code inside the PS4's system menu (SceShellUI)** – for a proper log-out
+  after a member load (the PS menu's Log Out re-links controllers; our sceUserServiceLogout froze them), a PS-button lock while
+  loading + unlock combo (owner idea L2+R2+L3+R3), maybe blocking new controllers.
+  - GoldHEN plugins (plugins.ini) load per game title id / [default] for games – no documented ShellUI section.
+  - Proven elsewhere: Orbis Toolbox (OSM-Made, open source) is a payload that injects into ShellUI and adds a Settings entry; GoldHEN
+    changelog has "fixed Orbis Toolbox support" – but its loader only has patch files for 5.05/6.72/7.02/7.55. Scene-Collective
+    ps4-hen (the open-source HEN) has ShellUI plugins (ps4-hen-plugins: plugin_mono = plugin_shellui.prx, calls ShellUI's C#/Mono
+    methods like Sce.Vsh.ShellUI.Settings.Core UIManager); its kernel part has offsets incl. 9.04/11.00/13.00/13.50.
+  - Neither has a log-out call; the PS menu's log-out lives in ShellUI's C# code (Sce.Vsh.* assemblies in NPXS20001) – not found yet.
+  - Possible route without changing the jailbreak: our helper injects a small Round2 module into SceShellUI (like Orbis Toolbox's
+    loader), which calls ShellUI's own log-out and filters the PS button. Risk: a mistake hangs the whole screen (restart fixes);
+    GoldHEN warns ShellUI mods can crash around rest mode. Per-firmware testing (Max 9.00, others 11.00, Kaeden 13.50). Kaeden first.
+  - Next research step (owner to OK): copy ShellUI's program files from Kaeden (read-only) and find the log-out + PS-button code.
 - **3:20am helper 1.1.102 (ps4-test; source ps4-helper) – owner 3:15am design:**
   - **SAVE WATCH:** while a game runs, every 15 min the helper compares each save file of that game (every profile:
     /user/home/<u>/savedata/<game>/sdimg_<part>, time + size) with what it was at the last internal copy (new file
