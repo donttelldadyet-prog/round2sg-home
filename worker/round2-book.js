@@ -4290,7 +4290,7 @@ async function ps4Plugin(env, req) {   /* helper 1.1.62 "/_inplug.get": the roun
   if (sha !== info.sha256 || b.byteLength !== +info.size) return J({ error: 'file check failed' }, 502);
   return new Response(b, { headers: { 'content-type': 'application/octet-stream', 'x-r2-sha': sha } });
 }
-const PS4_AUTO_HOLD_ABOVE = '1.1.61';   /* versions NEWER than this are NOT handed out in quiet time (detector test on Max, owner 18 Nov) – staff "Update now" still works */
+const PS4_AUTO_HOLD_ABOVE = '';   /* owner 19 Nov 12:42pm: roll out 1.1.68 (keep-awake) to all – hold off (was '1.1.61' for the detector test) */ //   /* versions NEWER than this are NOT handed out in quiet time (detector test on Max, owner 18 Nov) – staff "Update now" still works */
 async function ps4AutoUpdate(env, hb, id, room) {   /* quiet time? hand out an update */
   if ((await hb.kvGet('ps4auto')) === false) return null;
   const rep = await hb.kvGet('ps4:' + id), now = Date.now();
