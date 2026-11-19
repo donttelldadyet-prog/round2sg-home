@@ -1,5 +1,92 @@
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
 
+> ## ⭐ 19 Nov 2026, 7:50pm – STATE OF EVERYTHING (PS4 side) – READ THIS FIRST, then the dated entries below
+> **Owner rules today:** reply in categories (headings per topic: Bella / Kaeden backup / Kaeden speed …) and in very simple
+> words (ELI5, no word vomit). **Update this HANDOFF regularly** (owner: "you don't regularly update the handoff, that's why
+> you get confused"). **Kaeden = test bench: it gets every fix the rooms have – build on, never omit.** Check a PS4 is really
+> asleep before saying so (`/_ddp.<ip>` from another PS4: 200 Ok = on, 620 = standby). Don't call a silence a "network drop"
+> without reading the PS4's logs (report `log.netfail` / `log.slow` / `log.boot`).
+>
+> **Engine** live sha **a971f3c8057e** (repo round2sg-home main; 27 bindings, 3 timers). Today: booking keep-awake v2 (a PS4 that
+> is ON stays awake from **2 h before** a real guest session to **guest end + 15 min**; next booking > 2 h away or none → its own
+> power-save rules; back-to-back windows chain) · test channel (`ps4update ch:'test'` → branch ps4-test, one PS4) ·
+> **`/ps4/sgetm`** (POST {k:[≤40 keys]}, ≤8 MB → "R2M n\n" + per key "len\n"+bytes; R2 reads only, no DO calls).
+> Light check before/after each deploy: 14–15 passed / 3–4 to look at / 0 failed (known items: watchdog lines, Kaeden TV,
+> clean-slate problem line, + any guest /checkout SimplyBook request during the run).
+>
+> **PS4 helpers (19 Nov 7:50pm):**
+> | PS4 | FW | helper | mode | notes |
+> |---|---|---|---|---|
+> | Max | 9.00 | 1.1.68 | own | auto reset ON (Max only), detector (SF6) + test pop-ups ON |
+> | Kai | 9.00 | 1.1.68 | own | |
+> | Scarlett | 11.00 | 1.1.68 | own | |
+> | Atlas | 9.00 | 1.1.68 | own | 2.4 GHz; remote wake unreliable |
+> | Vale | 11.00 | 1.1.61 | own | |
+> | **Bella** | 11.00 | **1.1.77 (test)** since 17:41 | own | `/_keepawake.500` (to ~2am); 0 net failures since |
+> | **Kaeden** | **13.50** | 1.1.82 → **1.1.83 sent 19:47** | shared → own? | TEST BENCH, owner re-jailbroke 19:4x |
+> Release branch **ps4-release = 1.1.68** (9481fa1). Test branch **ps4-test = 1.1.83** (sha fbc0eb00…). ⚠️ `ps4update ch:'test'`
+> hands ANY PS4 the ps4-test head. **Roll-out of the test line to the rooms = owner's OK still pending** (asked 6:40pm).
+>
+> **Helper test line (branch ps4-helper), what each adds:**
+> 1.1.69 in-memory timings (`tm` in report, look `/_timing`) · **1.1.70 watchdog no longer counts rest-mode sleep as a freeze**
+> (the running clock DOES run in rest; an own-program helper restarted itself on every wake after 20+ min rest – Bella 13:21) ·
+> 1.1.71 slim 2.47→1.95 MB (gc-sections, no unwind tables, test payload removed), **TLS session resumption** (handshake 127→15
+> ms, ~7×), where.txt only for steps ≥10 s (−8,600 disk writes/day), check-in timing split · 1.1.72 **network path check** on
+> the 3rd and every 10th failure (router :80, 1.1.1.1:443, engine IP:443 → net-fail.log + pop-up) · 1.1.73 hello only after the
+> first report (crash in first connection → starter rolls back) · 1.1.74 `/_copy.all` (internal copy only), `/_copycheck`,
+> keep-awake survives restarts (keepawake.txt) · 1.1.75 **verbose test-bench pop-ups** `/_bpop.on|off` (queued, 1 per 3 s) ·
+> 1.1.76 progress pop-ups (restore point / copy / clean / cloud) · 1.1.77 `/_restoreall` (download test) · **1.1.78 SAFER
+> RESTORE** (download + check every file to prep first, only then clear + fill the save), uploaded.txt/cloud.txt kept on re-copy
+> (no re-upload of unchanged saves – PROVEN: 69 'unchanged'), restore writes cloud-manifest.txt (it used to overwrite prep
+> manifest.txt), **profiles signed out + main signed back in after clean/reset/purge** (proven 17:50) · 1.1.79 fast crypto
+> (AES-NI + asm) = **NO GAIN, not used** (time is network) · 1.1.80 make-part timings · **1.1.81 bundled downloads** via
+> /ps4/sgetm (labels + small files, 32 files/6 MB a request; manifest cached 2 min) · 1.1.82 `/_prepmember.<target>.<source>.<Name>`
+> (member prep stage 1) · **1.1.83 own-program mode allowed on 13.50** (SDK has offsets; I had wrongly kept it 9.00/11.00 only →
+> Kaeden piled up ~14 helpers in GoldHEN's shared program → files couldn't be opened → 19:25 clean slate "15 failed", nothing
+> removed) + member prep may target the main profile.
+>
+> **Kaeden results today:** day0 restore point 81 parts 137 MB 0 failed · copy 79 parts 129 MB · copycheck 79 same (2 homebrew
+> skipped by design) · cloud batch 79/79 · sleep 4:32 + wake: restore point carried on ✅.
+> **Member download test (clean slate → every game back from the cloud), 28 of 35 games (7 = game not installed on Kaeden):**
+> 297 s (8.5 s/game, 1.1.77) → 225 s (safer, 1.1.78) → 222 s (1.1.80) → **99 s (2.8 s/game, 1.1.81 bundles)**.
+> Making one save part (1.1.80 timings, 69 parts): labels from cloud 1.30 s (77%) · key 0.004 · image 0.20 · open+labels 0.17 ·
+> save list 0.02. After bundles: labels ~0.6 s. Download ~1.3 MB/s (32 MB save = 25 s) – parallel pieces = next idea.
+>
+> **Bella findings:** two different silences today. 13:34–15:48 = **114 failed connects** (helper running, LAN fine, DDP 200 Ok)
+> – the open mystery, 1.1.72+ path check will name the broken hop next time. 15:58–17:37 = **rest mode** (slow.log: 'guard' wall
+> 0 s / running clock 5952 s; no failures) – guests' TV off; owner's 17:37 button press woke it (not a restart).
+>
+> **Owner decisions today (19 Nov):**
+> - Morning wake: the FIRST PS4 staff switch on (any room, 9–11am) wakes the rooms with **early-bird bookings**; later rooms are
+>   woken **40 min before** their booking if the room was empty, by any awake PS4; no awake sender → staff phone alert. NOT BUILT.
+> - Members (supersedes "staff press load member"): saves belong to the MEMBER. Morning SimplyBook check + after EVERY clean slate
+>   → the day's members' saves downloaded to the room PS4's own storage early → loaded **right after the previous guest's clean
+>   slate** into the profiles where they played (**main profile progress → room main profile**, others → spares renamed to their
+>   names). Trial (taster) guests same flow. A +1 friend who is a member logs in via the **Round2 PS4 app** (QR or phone number).
+> - **GT Sport (Max main): never touched at all, NOT part of member saves** – a free-for-all house save (everything unlocked).
+> - Round2 PS4 app = **fPKG**, thin: opens a Round2 login page (QR + phone); page lives on the website (updates without reinstall).
+>   Put the .pkg where GoldHEN's package installer reads it on the internal drive; **owner installs it**. Own tile; after every clean
+>   slate the helper opens it once so it's the first tile (replacing PS Store / What's New = risky shell hacks, not doing).
+> - Fast crypto: not used. Keep-awake v2 as above. Remote wake on Bella/Atlas: LAN cable idea; Kaeden (2.4 GHz) wakes fine
+>   (8 min, 13.5 min, 1 h).
+> - Clean slate on Kaeden is allowed for every test run (owner 5:20pm/5:25pm).
+>
+> **Kaeden state right now:** saves back in all 4 profiles from the 19:11 restore (28 games; 7 games' saves only in the cloud –
+> not installed); cloud batch ON (idle); keep-awake + verbose pop-ups ON (files survive restart); User1 not renamed (19:25
+> /_prepmember failed before renaming). Restore point stamp 1795077112 (label day0).
+>
+> **Gotchas:** one special `/_` path per look job (`|` is a parameter, not a separator) · `/_tail` only .txt/.log in Round2 /
+> nanoDNS / GoldHEN folders, max ~80 lines · report every 15 min (5 min during jobs) – use `/_timing` / `/_cloud.state` for now
+> values · look jobs refused while a room is in session (engine `ps4wake` is nobusy) · **`ps4wakekey` with an id and no key
+> DELETES that PS4's wake key** · Cloudflare classifier blocks destructive looks (clean slate) unless the owner's OK is explicit.
+>
+> **NEXT (in order):** (1) Kaeden on 1.1.83 → confirm own-program mode (report `own:1`) → member prep test (clean slate, then
+> `/_prepmember.16c45cc6.16c45cc6.x` into main + a spare) → put Kaeden's saves back. (2) Stage 2: member cloud folders (session
+> end → member's folder; skip GT Sport). (3) Stage 3: morning + after-clean-slate prep from SimplyBook (needs: how a booking is
+> known to be a member – owner to decide). (4) Round2 PS4 app (fPKG). (5) Morning wake build. (6) Roll-out of the test line to
+> the rooms (owner OK). Smaller: parallel big-file downloads; clean slate should never leave the main profile empty of the
+> room's house saves; tidy cloud-format manifest handling.
+
 > ## 18 Nov 2026, 7:30pm – CONTROLLER DETECTOR (round2_input GoldHEN plugin) – WORKS ON MAX (SF6), engine f6e5401 DEPLOYED (27 bindings, 3 timers)
 > - **What:** the reset countdown asks "is anyone still playing?" without the helper touching the controller (1.1.58 froze Max
 >   doing that). A GoldHEN plugin `round2_input.prx` loads INTO the game (plugins.ini), watch-only hook on the game's own
