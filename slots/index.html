@@ -286,6 +286,14 @@ h3.nm, .nm { color: var(--rc); }
 .celtv p { margin: 0; font-size: 12px; line-height: 1.45; color: #e4def0; overflow-wrap: anywhere; }
 .celtv .fr { margin-top: 6px; font-size: 12px; color: var(--acc); font-weight: 600; letter-spacing: .06em; }
 .celtv .okb { display: inline-block; margin-top: 10px; padding: 3px 12px; background: var(--acc); color: var(--acc-ink); font-size: 9px; font-weight: 700; letter-spacing: .12em; }
+#cKind button { display: flex; align-items: center; justify-content: center; gap: 7px; }
+#cKind .kic { width: 16px; height: 16px; flex: none; color: var(--acc); }
+#cKind button[aria-pressed="true"] .kic { color: var(--acc-ink); }
+/* owner 20 Nov: arcade ON/OFF switch instead of the plain tick box */
+.cel input#cOn { -webkit-appearance: none; appearance: none; width: 46px; height: 26px; margin: 0; border: 2px solid var(--line); border-radius: 0; cursor: pointer; flex: none;
+  background: linear-gradient(var(--mute), var(--mute)) no-repeat 3px 50% / 16px 16px, #06050a; transition: background-position .2s cubic-bezier(.3,.8,.3,1.2), background-color .2s; }
+.cel input#cOn:checked { border-color: var(--acc); background: linear-gradient(var(--acc-ink), var(--acc-ink)) no-repeat calc(100% - 3px) 50% / 16px 16px, var(--acc); box-shadow: 0 0 12px color-mix(in srgb, var(--acc) 45%, transparent); }
+.cel input#cOn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .cel2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .fl textarea { display: block; width: 100%; margin-top: 4px; padding: 11px 12px; font: 16px 'Chakra Petch', sans-serif; color: var(--ink); background: #06050a; border: 1px solid var(--line); resize: vertical; }
 .fl input, .fl select { display: block; width: 100%; margin-top: 4px; padding: 11px 12px; font: 16px 'Chakra Petch', sans-serif; color: var(--ink); background: #06050a; border: 1px solid var(--line); text-transform: none; letter-spacing: 0; }
@@ -746,6 +754,7 @@ h3.nm, .nm { color: var(--rc); }
     $('cPrev').innerHTML = '<div class="box"><div class="tic"><svg viewBox="0 0 24 24" aria-hidden="true">' + k[1] + '</svg></div><div class="tg">' + esc(k[0] + (to ? ' · for ' + to : '')) + '</div>' +
       '<h5>' + esc($('cTitle').value.trim() || '…') + '</h5><p>' + esc($('cText').value.trim()) + '</p>' + (fr ? '<div class="fr">— ' + esc(fr) + '</div>' : '') + '<div class="okb">[OK] SEEN IT</div></div>';
   }
+  Array.prototype.forEach.call($('cKind').querySelectorAll('button[data-k]'), function (b) { var k = CTV[b.getAttribute('data-k')]; if (k) b.insertAdjacentHTML('afterbegin', '<svg class="kic" viewBox="0 0 24 24" aria-hidden="true">' + k[1] + '</svg>'); });   /* owner 20 Nov: icons on the message types */
   ['cTo', 'cTitle', 'cText', 'cFrom'].forEach(function (id) { $(id).addEventListener('input', function () { setTimeout(celPrev, 0); }); });
   $('cOn').addEventListener('change', function () { $('cBox').hidden = !this.checked; if (this.checked) { celFill(); celPrev(); } });
   $('cKind').addEventListener('click', function (e) {
