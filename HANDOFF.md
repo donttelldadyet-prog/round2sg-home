@@ -21,6 +21,11 @@
   from Lapy's Avatar Changer + its big avatar pack instead of the emoji set. **Open design (owner thinking):** couples / +1 –
   extra profiles under one membership (name + picture + own saves = a member slot) vs each person their own membership; owner
   feels a free linked 2nd member is wrong, and the main holder must be able to remove a +1 profile (break-ups).
+- **10:30pm CREWS (owner 10:23pm, engine live 7af233dfe0c5, Light 14/4/0 after):** an account = a **crew** (couple/group or one
+  person) with a crew name; inside = **players** (own PS4 name, picture, saves; slot p1, p2 … = members/<id>/<slot>; max 4).
+  One crew pays; more players cost more (prices: owner later). Break-up: holder removes a player (PIN asked); they join on their
+  own; removed players' slots are kept in `m.gone` (saves stay in the cloud). Old one-name accounts (Karen) became crew + p1.
+  Page actions: join (crew, name, phone, pin), crew, player (slot, shown, pic), addp, delp (slot, pin), pin.
 - **Kaeden back to normal 9:43–9:55pm:** spares renamed User1–3 (ps4prof name), test member's 3 games cleaned out of User3,
   `/_restoreall` from day0: 35 games, 28 in, 7 = games no longer installed on Kaeden (CUSA00419, 02671, 05070, 06400, 09973,
   13795, 29291 – kept in the cloud). 247 s (a 32 MB save took 37 s). Verbose pop-ups + test flags still ON.
