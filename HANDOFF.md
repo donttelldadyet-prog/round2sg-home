@@ -90,6 +90,13 @@
   (refresh_profiles is a no-op; the sign-out froze controllers), /_padoff removed. Owner added a 4th spare; full `/_reset`
   (label kaedentest): 1 game, 0 failed, profiles now KAEDEN + **Player 1–4** (16c45cc7–16c45cca), 0 signed out. Ready for
   the owner's real run: tile → QR → log in → Load Aliff Bozz (Vampire Survivors in members/m7xbafbe3/p2).
+- **12:50am first member test FAILED ("Corrupted Data" in Vampire Survivors), not trophies:** /_memplay → 16c45cc7 renamed
+  Aliff Bozz OK; VSSaveData restored OK; **sce_sdmemory (32 × 1 MB pieces) failed: "memory.dat pieces 0-5: bundle: cut short"**
+  (sgetm 6 MB answer arrived incomplete) → the made-but-empty sce_sdmemory stayed in the profile → the game called it corrupted;
+  owner pressed OK (PS4 copy recreated; cloud copy untouched). Tile wrongly said Ready. Fixes: helper **1.1.93** (ps4-test, sha
+  d7258135…): failed bundle → carry on piece by piece from where it got to; member load retries a failed part once, then takes
+  back the parts it made so a game is never half loaded. Engine 487cbd4bcc5e: tile says "Sorry – n of m games could not be
+  loaded" when the member load finished with failures. Kaeden update waits for VS to be closed.
 - **Kaeden back to normal 9:43–9:55pm:** spares renamed User1–3 (ps4prof name), test member's 3 games cleaned out of User3,
   `/_restoreall` from day0: 35 games, 28 in, 7 = games no longer installed on Kaeden (CUSA00419, 02671, 05070, 06400, 09973,
   13795, 29291 – kept in the cloud). 247 s (a 32 MB save took 37 s). Verbose pop-ups + test flags still ON.
