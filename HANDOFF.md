@@ -97,6 +97,11 @@
   d7258135…): failed bundle → carry on piece by piece from where it got to; member load retries a failed part once, then takes
   back the parts it made so a game is never half loaded. Engine 487cbd4bcc5e: tile says "Sorry – n of m games could not be
   loaded" when the member load finished with failures. Kaeden update waits for VS to be closed.
+- **1:04am ✅ MEMBER LOAD WORKS END-TO-END (owner):** helper 1.1.94 + engine 78be92ef14e4: tile QR → phone login → tick
+  players → Load → profile renamed + linked → Vampire Survivors save from the member's cloud folder loads and plays. Before it:
+  /_memtag.16c45cc7.off (so the blank VS save wasn't sent to the member), `/_reset.kaedentest2` (2 games, 0 failed; note the
+  room reset still signs out signed-in spares so it can rename them). Owner suspects trophies slow/interfere with game start –
+  asked what he sees.
 - **Kaeden back to normal 9:43–9:55pm:** spares renamed User1–3 (ps4prof name), test member's 3 games cleaned out of User3,
   `/_restoreall` from day0: 35 games, 28 in, 7 = games no longer installed on Kaeden (CUSA00419, 02671, 05070, 06400, 09973,
   13795, 29291 – kept in the cloud). 247 s (a 32 MB save took 37 s). Verbose pop-ups + test flags still ON.
