@@ -89,10 +89,24 @@ canvas.r2-char{display:block}
 .r2c-dots{display:flex;gap:5px;justify-content:center;margin-top:10px}
 .r2c-dots i{width:6px;height:6px;background:rgba(244,241,251,.2)}
 .r2c-dots i.on{background:var(--cc)}
+.r2c-top>span:last-child{display:flex;gap:6px}
+.r2c-box.on{animation:r2c-on .45s cubic-bezier(.2,.8,.25,1) 1}
+@keyframes r2c-on{0%{transform:scaleY(.02) scaleX(.6);filter:brightness(3)}55%{transform:scaleY(1.04) scaleX(1);filter:brightness(1.6)}100%{transform:none;filter:none}}
+.r2c-box.shake{animation:r2c-shake .45s cubic-bezier(.36,.07,.19,.97) 1}
+@keyframes r2c-shake{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-7px) rotate(-.4deg)}40%,60%{transform:translateX(7px) rotate(.4deg)}}
+.r2c-box.flash:before{content:'';position:absolute;inset:0;background:var(--cc);opacity:0;pointer-events:none;animation:r2c-fl .5s ease-out 1;z-index:4}
+@keyframes r2c-fl{0%{opacity:.55}100%{opacity:0}}
+.r2c-txt .hl{font-weight:700;color:var(--cc);text-shadow:0 0 12px color-mix(in srgb,var(--cc) 45%,transparent)}
+.r2c-txt.big{font-size:18px;font-weight:700}
+.r2c-txt.big .hl{display:block;font-size:22px;line-height:1.2;margin-bottom:6px;text-transform:uppercase;letter-spacing:.02em}
+.r2c-q{font:8px/1 'Press Start 2P',monospace;letter-spacing:.14em;color:#a79fbd;margin:2px 0 10px;text-align:left}
+.r2c-menu{list-style:none;margin:0;padding:0;text-align:left}
+.r2c-menu button{display:block;width:100%;text-align:left;border:0;background:transparent;color:#d6d0e3;font-weight:700;font-size:16px;letter-spacing:.06em;text-transform:uppercase;padding:9px 6px 9px 26px;cursor:pointer;position:relative}
+.r2c-menu button.on{color:#0b0914;background:var(--cc)}
+.r2c-menu button.on:before{content:'\25B6';position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11px;animation:r2c-b .7s steps(1,end) infinite}
+@media (prefers-reduced-motion:reduce){.r2c-box.on,.r2c-box.shake,.r2c-box.flash:before,.r2c-menu button.on:before{animation:none}}
 .r2c-end{flex:1;text-align:center;padding:6px 0 2px}
-.r2c-end p{margin:4px 0 14px;font-size:19px;line-height:1.3;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#f4f1fb}
-.r2c-end .bk{height:48px;padding:0 22px;border:0;background:var(--cc);color:#0b0914;font-weight:800;font-size:14px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;margin:0 6px 8px}
-.r2c-end .rp{height:48px;padding:0 16px;border:1px solid rgba(244,241,251,.3);background:transparent;color:#f4f1fb;font-weight:700;font-size:13px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.r2c-end p{margin:4px 0 16px;text-align:center;font-size:19px;line-height:1.3;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#f4f1fb}
 .r2c-full{margin:6px 0 10px;border-top:1px solid rgba(244,241,251,.12);padding-top:10px}
 .r2c-full summary{cursor:pointer;font:8px/1.6 'Press Start 2P',monospace;letter-spacing:.12em;color:#a79fbd;padding:6px 0}
 .r2c-full p{font-size:14px!important}
@@ -988,39 +1002,56 @@ document.addEventListener('click',function(e){if(!box.hidden){if(e.target===box|
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!box.hidden)close()});
 (function(){var y0=null;sh.addEventListener('touchstart',function(e){y0=sh.scrollTop<=0?e.touches[0].clientY:null},{passive:true});sh.addEventListener('touchend',function(e){if(y0!=null&&e.changedTouches[0].clientY-y0>70)close();y0=null})})();
 })();</script>
-<script>/* ABOUT US RPG cutscene (owner 19 Nov). LINES: who says what – edit freely. Tap to continue, Skip jumps to the end. */
+<script>/* ABOUT US RPG cutscene (owner 19 Nov). LINES: [who, text, big?]. Words in [brackets] light up in the speaker's colour. Tap to continue, Skip jumps to the end. */
 (function(){
-var C={vale:['Vale','#E8436A'],kaeden:['Kaeden','#4DB848'],scarlett:['Scarlett','#F2C21B'],bella:['Bella','#7A5BE0',1],kai:['Kai','#24B49A'],atlas:['Atlas','#E9E7EF'],max:['Maximillion','#E0402F',1]};
+var C={vale:['Vale','#E8436A',0,660],kaeden:['Kaeden','#4DB848',0,300],scarlett:['Scarlett','#F2C21B',0,780],bella:['Bella','#7A5BE0',1,540],kai:['Kai','#24B49A',0,380],atlas:['Atlas','#E9E7EF',0,720],max:['Maximillion','#E0402F',1,240]};
 var LINES=[
- ['vale','Welcome to Round2! ✨ A themed private entertainment room in Singapore, made for real hangs, good vibes and unforgettable moments.'],
- ['kaeden','Round2 was started by a couple who were tired of “private rooms” that were nothing more than four walls.'],
- ['scarlett','So they set out to do more: rooms that feel personal, comfortable and thoughtfully designed. 🛋️💫'],
- ['bella','Every room has its own theme and personality. Seven rooms, seven of us.'],
- ['kai','A casual catch-up, a date night or a small celebration with friends? There’s a room that fits your moment. 🎉❤️'],
- ['atlas','Soft lighting, cosy seating and carefully curated details. You’ll feel at ease the moment you step inside.'],
- ['max','No strangers. No interruptions. Just you and your people. 🙌'],
- ['vale','Privacy here isn’t just closing a door. It’s a place that feels like home, even when you’re out.']];
-var red=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ ['vale','Welcome to [Round2]! ✨ A themed private entertainment room in Singapore, made for real hangs, good vibes and unforgettable moments.'],
+ ['kaeden','Round2 was started by a couple who were tired of “private rooms” that were nothing more than [four walls].'],
+ ['scarlett','So they set out to do more: rooms that feel [personal], [comfortable] and [thoughtfully designed]. 🛋️💫'],
+ ['bella','Every room has its own theme and personality. [Seven rooms], seven of us.'],
+ ['kai','A casual catch-up, a date night or a small celebration with friends? There’s a room that [fits your moment]. 🎉❤️'],
+ ['atlas','Soft lighting, cosy seating and carefully curated details. You’ll feel [at ease] the moment you step inside.'],
+ ['max','[No strangers. No interruptions.] Just you and your people. 🙌',1],
+ ['vale','Privacy here isn’t just closing a door. It’s a place that feels like [home], even when you’re out.']];
+var red=matchMedia('(prefers-reduced-motion: reduce)').matches,ac=null;
+function snd(){try{return localStorage.getItem('r2.blip')!=='off'}catch(e){return true}}
+function setSnd(v){try{localStorage.setItem('r2.blip',v?'on':'off')}catch(e){}}
+function blip(f){if(!snd())return;try{ac=ac||new (window.AudioContext||window.webkitAudioContext)();var o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime;o.type='square';o.frequency.value=f*(0.95+Math.random()*0.1);g.gain.setValueAtTime(0.035,t);g.gain.exponentialRampToValueAtTime(0.0001,t+0.06);o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+0.07)}catch(e){}}
 function A(n){try{return window.R2A?window.R2A(n):''}catch(e){return ''}}
-function mount(el){el.setAttribute('data-r2c','on');var i=-1,tm=null,full='',typing=false;
- el.innerHTML='<div class="r2c-top"><span class="r2c-pg"></span><button type="button" class="r2c-skip">SKIP ›</button></div><div class="r2c-box" aria-live="polite"><div class="r2c-pic"><img class="r2c-char" alt=""></div><div class="r2c-say"><div class="r2c-plate"></div><p class="r2c-txt"></p></div><span class="r2c-more" aria-hidden="true">▼</span></div><div class="r2c-dots">'+LINES.map(function(){return '<i></i>'}).join('')+'</div>';
- var Q=function(c){return el.querySelector(c)},img=Q('.r2c-char'),pic=Q('.r2c-pic'),txt=Q('.r2c-txt'),more=Q('.r2c-more'),plate=Q('.r2c-plate');
+function toks(t){var out=[],hl=false;Array.from(t).forEach(function(ch){if(ch==='['){hl=true;return}if(ch===']'){hl=false;return}out.push([ch,hl])});return out}
+function html(tk,n){var h='',cur=null;for(var k=0;k<n;k++){var c=tk[k],e=c[0].replace(/&/g,'&amp;').replace(/</g,'&lt;');if(c[1]!==cur){if(cur)h+='</b>';if(c[1])h+='<b class="hl">';cur=c[1]}h+=e}if(cur)h+='</b>';return h}
+function mount(el){el.setAttribute('data-r2c','on');var i=-1,tm=null,tk=[],typing=false;
+ el.innerHTML='<div class="r2c-top"><span class="r2c-pg"></span><span><button type="button" class="r2c-snd"></button> <button type="button" class="r2c-skip">SKIP ›</button></span></div><div class="r2c-box on" aria-live="polite"><div class="r2c-pic"><img class="r2c-char" alt=""></div><div class="r2c-say"><div class="r2c-plate"></div><p class="r2c-txt"></p></div><span class="r2c-more" aria-hidden="true">▼</span></div><div class="r2c-dots">'+LINES.map(function(){return '<i></i>'}).join('')+'</div>';
+ var Q=function(c){return el.querySelector(c)},img=Q('.r2c-char'),pic=Q('.r2c-pic'),txt=Q('.r2c-txt'),more=Q('.r2c-more'),plate=Q('.r2c-plate'),box=Q('.r2c-box'),sb=Q('.r2c-snd');
+ function sl(){sb.textContent=snd()?'♪ ON':'♪ OFF'}sl();
  Object.keys(C).forEach(function(k){new Image().src=A('r2-tile-'+k+'.webp')});
+ function done(){typing=false;pic.classList.remove('talk');txt.innerHTML=html(tk,tk.length);more.hidden=false}
  function show(n){i=n;if(i>=LINES.length)return end();var L=LINES[i],c=C[L[0]];el.style.setProperty('--cc',c[1]);
   plate.textContent=c[0].toUpperCase();plate.classList.toggle('lt',!!c[2]);Q('.r2c-pg').textContent=(i+1)+' / '+LINES.length;
   [].forEach.call(el.querySelectorAll('.r2c-dots i'),function(d,k){d.classList.toggle('on',k<=i)});
   var src=A('r2-tile-'+L[0]+'.webp');if(img.getAttribute('src')!==src){pic.classList.add('out');setTimeout(function(){img.src=src;img.alt=c[0];pic.classList.remove('out')},red?0:160)}
-  full=L[1];more.hidden=true;clearTimeout(tm);
-  if(red){txt.textContent=full;more.hidden=false;typing=false;return}
-  typing=true;pic.classList.add('talk');var k=0,chars=Array.from(full);txt.textContent='';(function t(){txt.textContent=chars.slice(0,++k).join('');if(k<chars.length)tm=setTimeout(t,24);else{typing=false;pic.classList.remove('talk');more.hidden=false}})()}
- function next(){if(Q('.r2c-end'))return;if(typing){clearTimeout(tm);txt.textContent=full;typing=false;pic.classList.remove('talk');more.hidden=false;return}show(i+1)}
+  txt.classList.toggle('big',!!L[2]);box.classList.remove('shake','flash');
+  if(L[2]&&!red){void box.offsetWidth;box.classList.add('shake','flash')}
+  tk=toks(L[1]);more.hidden=true;clearTimeout(tm);
+  if(red){done();return}
+  typing=true;pic.classList.add('talk');var k=0;txt.innerHTML='';
+  (function t(){k++;txt.innerHTML=html(tk,k);var ch=tk[k-1][0];if(/\S/.test(ch)&&k%2)blip(c[3]);
+   if(k<tk.length){var d=/[,]/.test(ch)?140:/[.!?]/.test(ch)&&/\s/.test((tk[k]||[''])[0])?300:L[2]?40:24;tm=setTimeout(t,d)}else done()})()}
+ function next(){if(Q('.r2c-end'))return;if(typing){clearTimeout(tm);done();return}show(i+1)}
  function end(){clearTimeout(tm);typing=false;el.style.setProperty('--cc','#F2C21B');Q('.r2c-pg').textContent='THE END';[].forEach.call(el.querySelectorAll('.r2c-dots i'),function(d){d.classList.add('on')});
-  var box=Q('.r2c-box');box.innerHTML='<div class="r2c-plate">ROUND2</div><div class="r2c-end"><p>This is your second round. Make it unforgettable.</p><button type="button" class="bk">Book your round ›</button><button type="button" class="rp">↺ Replay</button></div>';
+  box.classList.remove('shake','flash');
+  box.innerHTML='<div class="r2c-plate">ROUND2</div><div class="r2c-end"><p>This is your second round. Make it unforgettable.</p><div class="r2c-q">WHAT WILL YOU DO?</div><ul class="r2c-menu"><li><button type="button" class="bk on">Book your round</button></li><li><button type="button" class="rm">See the rooms</button></li><li><button type="button" class="rp">Play again</button></li></ul></div>';
+  [].forEach.call(box.querySelectorAll('.r2c-menu button'),function(b){b.addEventListener('mouseenter',function(){[].forEach.call(box.querySelectorAll('.r2c-menu button'),function(x){x.classList.toggle('on',x===b)})});b.addEventListener('focus',function(){b.dispatchEvent(new Event('mouseenter'))})});
   Q('.r2c-skip').hidden=true}
- el.addEventListener('click',function(e){e.stopPropagation();if(e.target.closest('.r2c-skip')){show(LINES.length);return}
-  if(e.target.closest('.bk')){var b=[].slice.call(document.querySelectorAll('#r2-stage button')).find(function(x){return /^\s*book\s*$/i.test(x.textContent)&&x.offsetParent});if(b)b.click();return}
+ function stageBtn(re){var b=[].slice.call(document.querySelectorAll('#r2-stage button')).find(function(x){return re.test(x.textContent.replace(/\s+/g,' ').trim())&&x.offsetParent});if(b)b.click()}
+ el.addEventListener('click',function(e){e.stopPropagation();
+  if(e.target.closest('.r2c-snd')){setSnd(!snd());sl();if(snd())blip(C.vale[3]);return}
+  if(e.target.closest('.r2c-skip')){show(LINES.length);return}
+  if(e.target.closest('.bk')){blip(880);stageBtn(/^book$/i);return}
+  if(e.target.closest('.rm')){blip(880);stageBtn(/^A\s*Rooms$/i);return}
   if(e.target.closest('.rp')){var f=document.createElement('div');f.className='r2c';f.setAttribute('data-r2c','');el.replaceWith(f);mount(f);return}next()});
- el.setAttribute('tabindex','0');el.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();next()}});
+ el.setAttribute('tabindex','0');el.addEventListener('keydown',function(e){if((e.key==='Enter'||e.key===' ')&&!e.target.closest('button')){e.preventDefault();next()}});
  show(0)}
 function scan(){document.querySelectorAll('[data-r2c=""]').forEach(mount)}
 var q=0;new MutationObserver(function(){if(q)return;q=1;requestAnimationFrame(function(){q=0;scan()})}).observe(document.documentElement,{subtree:true,childList:true});scan();})();</script>
