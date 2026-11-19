@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Round2 Game Mode</title>
+<!--
+  "Leaked game map locations" trend post – Instagram carousel (1080 x 1350, 4:5).
+  Original game-style HUD over real Round2 room photos. No game characters, logos or game fonts are used.
+  Marketing only; nothing here is used by the live site. Edit SLIDES below, then  python3 render.py
+-->
+<style>
+@font-face{font-family:'Press Start 2P';src:url(fonts/PressStart2P-Regular.ttf)}
+@font-face{font-family:'Chakra Petch';font-weight:500;src:url(fonts/ChakraPetch-Medium.ttf)}
+@font-face{font-family:'Chakra Petch';font-weight:600;src:url(fonts/ChakraPetch-SemiBold.ttf)}
+@font-face{font-family:'Chakra Petch';font-weight:700;src:url(fonts/ChakraPetch-Bold.ttf)}
+:root{--ink:#fff;--accent:#F2C21B;--ok:#4BE37A}
+*{box-sizing:border-box}
+body{margin:0;background:#1a1726;font-family:'Chakra Petch',sans-serif;color:var(--ink)}
+.deck{display:flex;flex-wrap:wrap;gap:40px;padding:40px;justify-content:center}
+body.render .deck{padding:0;gap:0}
+.slide{position:relative;width:1080px;height:1350px;overflow:hidden;background:#000;flex:none;--c:var(--accent)}
+.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:saturate(1.15) contrast(1.05)}
+.shade{position:absolute;inset:0;background:
+  linear-gradient(180deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,0) 22%,rgba(0,0,0,0) 58%,rgba(0,0,0,.75) 100%)}
+.px{font-family:'Press Start 2P',monospace;letter-spacing:.08em;text-transform:uppercase}
+.out{text-shadow:-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000,3px 3px 0 #000,0 3px 0 #000,0 -3px 0 #000,3px 0 0 #000,-3px 0 0 #000}
+
+/* HUD: top right */
+.hud-tr{position:absolute;right:48px;top:48px;text-align:right;z-index:3}
+.clock{font-size:34px}
+.money{margin-top:16px;font-size:40px;color:var(--ok)}
+.bars{margin-top:18px;display:grid;gap:8px;justify-items:end}
+.bar{width:230px;height:16px;border:3px solid #000;background:rgba(0,0,0,.5)}
+.bar i{display:block;height:100%}
+/* HUD: top left – objective */
+.obj{position:absolute;left:48px;top:48px;max-width:600px;z-index:3;padding:22px 26px;border-radius:14px;background:rgba(0,0,0,.72);border-left:8px solid var(--c)}
+.obj .l{font-size:15px;color:var(--c)}
+.obj .t{margin-top:12px;font-size:32px;font-weight:700;line-height:1.2}
+/* minimap */
+.map{position:absolute;left:48px;bottom:48px;width:250px;height:250px;border-radius:50%;overflow:hidden;z-index:3;
+  border:6px solid #000;background:#1f2a24;box-shadow:0 0 0 3px rgba(255,255,255,.25)}
+.map svg{width:100%;height:100%;display:block}
+.map .n{position:absolute;left:50%;top:8px;transform:translateX(-50%);font-size:11px;white-space:nowrap}
+/* subtitle */
+.sub{position:absolute;left:330px;right:48px;bottom:70px;z-index:3;font-size:38px;font-weight:700;line-height:1.25}
+.sub b{color:var(--c);font-weight:700}
+/* big banners */
+.banner{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);z-index:3;text-align:center;padding:40px 0;
+  background:linear-gradient(90deg,transparent,rgba(0,0,0,.78) 15%,rgba(0,0,0,.78) 85%,transparent)}
+.banner .k{font-size:22px;color:var(--c)}
+.banner .h{margin-top:22px;font-size:92px;font-weight:700;line-height:.95;text-transform:uppercase;letter-spacing:-.01em}
+.banner .s{margin-top:22px;font-size:30px;color:#e9e6f2}
+.toast{position:absolute;left:50%;top:330px;transform:translateX(-50%);z-index:3;white-space:nowrap;padding:14px 22px;border-radius:999px;background:rgba(0,0,0,.75);font-size:16px;color:var(--ok)}
+.logo{position:absolute;right:48px;bottom:56px;z-index:3;height:46px;opacity:.95}
+</style>
+</head>
+<body>
+<div class="deck" id="deck"></div>
+<script>
+/* ============================ EDIT HERE ============================ */
+const SLIDES = [
+  { kind:'cover', photo:'maximillion', c:'#F2C21B', clock:'03:00', money:'$129',
+    k:'Leaked new map location', h:'Haji Lane,<br>Singapore', s:'They really put Round2 in the game?' },
+  { kind:'mission', photo:'kai', c:'#24B49A', clock:'21:40', money:'$79', street:'Kai',
+    label:'Main mission', obj:'Recover your social battery', sub:'“Say <b>can</b> to dinner. Then hide in here for 3 hours.”', hp:18 },
+  { kind:'mission', photo:'scarlett', c:'#F2C21B', clock:'02:07', money:'$49', street:'Scarlett',
+    label:'Side quest', obj:'Stay up till 2am overthinking one text', sub:'“She replied <b>ok</b>. Just ok. What does that mean.”', hp:42 },
+  { kind:'mission', photo:'bella', c:'#7A5BE0', clock:'23:15', money:'$79', street:'Bella',
+    label:'Stealth mission', obj:'Plan the whole night. Take zero blame.', sub:'“Wasn’t me. I was here reading tarot the whole time.”', hp:77 },
+  { kind:'mission', photo:'max-sim', c:'#E0402F', clock:'03:12', money:'$129', street:'Max',
+    label:'Race', obj:'Beat your friend’s lap time', sub:'“Fail and you’re buying supper. <b>Best of 3.</b>”', hp:95 },
+  { kind:'end', photo:'vale', c:'#F2C21B', clock:'07:00', money:'$49',
+    k:'Mission complete', h:'Best night<br>unlocked', s:'Squad up at round2.sg · Haji Lane' },
+];
+/* =================================================================== */
+const LOGO = '../../menu/img/round2-logo.png';
+const esc = s => String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+function minimap(c, label){
+  return `<div class="map"><svg viewBox="0 0 100 100">
+    <rect width="100" height="100" fill="#22302a"/>
+    <path d="M-5 38 L105 30 M-5 70 L105 64 M30 -5 L38 105 M66 -5 L72 105" stroke="#55665d" stroke-width="7"/>
+    <path d="M-5 38 L105 30 M-5 70 L105 64 M30 -5 L38 105 M66 -5 L72 105" stroke="#7d8f86" stroke-width="2.5"/>
+    <rect x="42" y="42" width="20" height="16" fill="#2c3c34"/>
+    <circle cx="52" cy="50" r="7" fill="${c}" stroke="#000" stroke-width="2"/>
+    <path d="M50 44 L56 56 L50 53 L44 56 Z" fill="#fff" transform="translate(-50 -50) scale(.55) translate(141 133)"/>
+  </svg><span class="n px out">${esc(label)}</span></div>`;
+}
+function hudTR(s){
+  return `<div class="hud-tr"><div class="clock px out">${s.clock}</div><div class="money px out">${s.money}</div>
+    <div class="bars"><div class="bar"><i style="width:${s.hp ?? 80}%;background:#3ad45f"></i></div>
+    <div class="bar"><i style="width:60%;background:#4aa3ff"></i></div></div></div>`;
+}
+function slide(s){
+  const bg = `<img class="bg" src="photos/${s.photo}.jpg" alt=""><div class="shade"></div>`;
+  let inner = '';
+  if (s.kind === 'mission'){
+    inner = `<div class="obj"><div class="l px">${esc(s.label)}</div><div class="t">${esc(s.obj)}</div></div>
+      ${hudTR(s)}${minimap(s.c, s.street)}<div class="sub out">${s.sub}</div>`;
+  } else {
+    inner = `${hudTR(s)}${s.kind==='cover' ? '<div class="toast px">● New location discovered</div>' : ''}
+      <div class="banner"><div class="k px">${esc(s.k)}</div><div class="h out">${s.h}</div><div class="s">${esc(s.s)}</div></div>
+      ${minimap(s.c, 'Haji Ln')}<img class="logo" src="${LOGO}" alt="Round2">`;
+  }
+  return `<section class="slide" style="--c:${s.c}">${bg}${inner}</section>`;
+}
+document.getElementById('deck').innerHTML = SLIDES.map(slide).join('');
+if (location.search.includes('render')) document.body.classList.add('render');
+</script>
+</body>
+</html>
