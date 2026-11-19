@@ -4477,6 +4477,24 @@ async function ps4SGet(env, req, u) {
   const o = await env.SAVES.get('saves/' + k); if (!o) return J({ error: 'not found' }, 404);
   return new Response(o.body, { headers: { 'content-type': 'application/octet-stream', 'content-length': String(o.size) } });
 }
+/* 19 Nov 7pm (owner: make member downloads faster): several save pieces in ONE request. Kaeden: 77% of making a save part was
+   fetching its small label files one request at a time (~0.3 s each). POST {k:[keys]} (max 40, 8 MB) → "R2M <n>\n" then per
+   key "<length>\n<bytes>" (length -1 = not found). R2 reads only (no Durable Object calls). */
+async function ps4SGetM(env, req) {
+  if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
+  if (!env.SAVES) return J({ error: 'no storage' }, 503);
+  let b; try { b = await req.json(); } catch (e) { return J({ error: 'bad body' }, 400); }
+  const ks = Array.isArray(b && b.k) ? b.k : [];
+  if (!ks.length || ks.length > 40) return J({ error: 'need 1-40 keys' }, 400);
+  const objs = await Promise.all(ks.map(async (k0) => { const k = ps4SaveKey(String(k0)); if (!k) return null; const o = await env.SAVES.get('saves/' + k); return o ? new Uint8Array(await o.arrayBuffer()) : null; }));
+  let total = 0; for (const o of objs) if (o) total += o.length;
+  if (total > 8 * 1048576) return J({ error: 'too big' }, 413);
+  const enc = new TextEncoder(), parts = [enc.encode('R2M ' + ks.length + '\n')];
+  for (const o of objs) { parts.push(enc.encode((o ? o.length : -1) + '\n')); if (o) parts.push(o); }
+  let n = 0; for (const p of parts) n += p.length;
+  const out = new Uint8Array(n); let off = 0; for (const p of parts) { out.set(p, off); off += p.length; }
+  return new Response(out, { headers: { 'content-type': 'application/octet-stream', 'content-length': String(n) } });
+}
 async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4map (id, room or '' to clear) · ps4discs (json list) · ps4names (id, name; '-' hides) */
   const act = f.action;
   if (act === 'ps4map') {
@@ -4966,6 +4984,7 @@ const HANDLER = {
       if (u.pathname === '/ps4/plugin' && req.method === 'POST') return await ps4Plugin(env, req);
       if (u.pathname === '/ps4/dnsini' && req.method === 'POST') return await ps4DnsIni(env, req);   /* helper 1.1.16: blocker settings for its dns job */
       if (u.pathname === '/ps4/sput' && req.method === 'POST') return await ps4SPut(env, req, u);   /* helper: one piece of a save backup (1.1.4) */
+      if (u.pathname === '/ps4/sgetm' && req.method === 'POST') return await ps4SGetM(env, req);   /* helper 1.1.81: many pieces at once */
       if (u.pathname === '/ps4/sget' && req.method === 'GET') return await ps4SGet(env, req, u);   /* helper: a piece back, to restore */   /* helper: download the newest version */   /* helper: command result */
       if (u.pathname === '/gm' && req.method === 'POST') return await gm(env, req);
       if (u.pathname === '/gh' && req.method === 'POST') return await ghProxy(env, req);
