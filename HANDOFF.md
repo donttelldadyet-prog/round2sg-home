@@ -142,6 +142,16 @@
   (clean kind prep or a queue) – anyone who signs in gets a PS4 message "Hang on <name> – saves are still loading (player k of n).
   Please don't start a game yet." (normal notification, not verbose-only).
   The broader ShellUI probe ("log everything") was NOT continued – stopped there; only the 4:26am list exists.
+- **5:40am DOCS (owner: "add everything you found to accessible logs … redo on 9.00 and 11.00, rebuild per firmware"):**
+  round2-tv-launcher **docs/ps4-shellui.md** (main + ps4-helper; project doc claude/ps4-shellui.md) = how code gets into the menu,
+  every function/enum found on Kaeden 13.50, the add-on, and the per-firmware redo checklist (9.00 = Max, Kai, Atlas; 11.00 =
+  Scarlett, Vale, Bella). Rule: nothing from Kaeden is assumed on another firmware – probe + test each.
+  **docs/ps4-network-and-wake.md** (project doc claude/ps4-network-and-wake.md) = Bella/Atlas: three separate problems from the
+  logs – A) Wi-Fi up but no internet (Bella 19 Nov 13:35–15:48; guess IP clash at .6 → new subnet tests it), B) link to the router
+  lost on BOTH at once (19 Nov 21:22–21:49) while Kaeden on the same radio and every other room stayed up (guess EasyMesh steering;
+  round2-ps4 2.4-only name tests it; 0 failures since the move), C) remote wake – after a long rest the router delivers nothing to
+  them, and since the move PS4s on round2 can't reach 192.168.120.x at all, so the engine's wake can't reach them now. Test plan:
+  sender inside round2-ps4 (Bella↔Atlas or Kaeden moved over), then router IP+MAC binding (owner OK), else keep-awake on booking days.
 - **5:25am MENU ADD-ON BUILT (owner 5:06am: "build the three ideas, before that do the read-only probe"):**
   - Delivery without helper updates: engine live 9450aaf35cac `/ps4/prx?name=round2_*` (key) serves add-ons from branch
     **ps4-shell** (<name>.prx + <name>.json {v, sha256, size}); helper **1.1.109/1.1.110** `/_shmod.<name>` saves it to
