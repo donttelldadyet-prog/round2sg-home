@@ -4814,14 +4814,14 @@ async function memApi(env, req) {
   }
   if (act === 'play') {   /* 20 Nov 12:05am: "Load <player> on this PS4" (page opened from the tile's QR) -> helper 1.1.90 /_memplay */
     const room = String(f.room || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12), want = (Array.isArray(f.slots) ? f.slots : [f.slot]).map(String);   /* 12:53am owner: tick several players, load at once (helper 1.1.94) */
-    const ps = m.players.filter((x) => want.includes(x.slot)).slice(0, 4), p = ps[0];
+    const ps = [{ slot: 'main', shown: 'Main' }].concat(m.players).filter((x) => want.includes(x.slot)).slice(0, 5), p = ps[0];   /* 1:14am owner: the room's main profile belongs to the crew too (helper 1.1.96 slot main) */
     if (!p) return J({ error: 'Tick at least one player.' });
     const map = (await hb.kvGet('ps4map')) || {}, id = Object.keys(map).find((i) => map[i] === room);
     if (!id) return J({ error: 'This room’s PS4 isn’t set up for members yet – please ask staff.' });
     const K = await hb.kvMany(['ps4poll:' + id, 'ps4cmd:' + id], []), c0 = K['ps4cmd:' + id];
     if (now - (K['ps4poll:' + id] || 0) > 3 * 60e3) return J({ error: 'The PS4 in this room isn’t answering – is it switched on?' });
     if (c0 && (c0.state === 'sent' || c0.state === 'taken') && now - c0.at < 2 * 60e3) return J({ error: 'The PS4 is busy for a moment – try again in a minute.', busy: true });
-    const names = ps.map((x) => x.shown).join(' + '), c = { cid: 'l' + now.toString(36), do: 'look', p: `/_memplay.${m.id}.` + ps.map((x) => x.slot + '.' + x.shown.replace(/ /g, '_')).join('.'), at: now, by: 'member ' + m.id, state: 'sent', nobusy: true };
+    const names = ps.filter((x) => x.slot !== 'main').map((x) => x.shown).join(' + ') || m.crew, c = { cid: 'l' + now.toString(36), do: 'look', p: `/_memplay.${m.id}.` + ps.map((x) => x.slot + '.' + x.shown.replace(/ /g, '_')).join('.'), at: now, by: 'member ' + m.id, state: 'sent', nobusy: true };
     await hb.kvMany([], [['ps4cmd:' + id, c], ['memplay:' + id, { name: names, cid: c.cid, at: now }]]);
     return J({ ok: true, sent: true, name: names, room });
   }
@@ -4877,7 +4877,7 @@ button.ghost{background:transparent;color:#f4f1fb;border:1px solid rgba(244,241,
 <section id="in" hidden><div class="card"><div class="fine">CREW<span class="badge px" id="bd"></span></div><label>Crew name</label><input id="cr" maxlength="24">
 <button class="ghost" id="crb">Save crew name</button><div class="fine" id="ph" style="margin-top:10px"></div><p class="err" id="e0"></p></div>
 <div id="pls"></div>
-<div class="card" id="playc" hidden><b id="playh"></b><p class="fine">Pick who is playing now. Their saves load into a profile with their name.</p><div id="playb"></div><p class="err" id="e5"></p></div>
+<div class="card" id="playc" hidden><b id="playh"></b><p class="fine">Tick the profiles to load. Each one comes back into the same profile you used last time.</p><div id="playb"></div><p class="err" id="e5"></p></div>
 <div class="card" id="addc"><b>Add a player</b><label>Their name on the PS4</label><input id="an" maxlength="16"><button class="ghost" id="ab">Add player</button>
 <p class="err" id="e4"></p></div>
 <div class="card"><b>Change PIN</b><label>Current PIN</label><input id="po" inputmode="numeric" maxlength="8" type="password">
@@ -4899,7 +4899,7 @@ $('pls').innerHTML=M.players.map(function(p){sel[p.slot]=p.pic;return '<div clas
 '<button data-sv="1">Save '+esc(p.shown)+'</button><p class="err"></p></div>'}).join('');play()}
 var ROOM=new URLSearchParams(location.search).get('room')||'';
 function play(){if(!ROOM||!M){$('playc').hidden=true;return}$('playc').hidden=false;$('playh').textContent='Play on '+ROOM.toUpperCase()+' now';
-$('playb').innerHTML=M.players.map(function(p){return '<label style="display:flex;gap:12px;align-items:center;font-size:18px;color:#f4f1fb;margin:10px 0"><input type="checkbox" data-tick="'+p.slot+'" checked style="width:26px;height:26px"> '+(P[p.pic]||'')+' '+esc(p.shown)+'</label>'}).join('')+'<button data-go="1">Load ticked players</button>'}
+$('playb').innerHTML=[{slot:'main',shown:ROOM.toUpperCase()+' (main profile)',pic:-1}].concat(M.players).map(function(p){return '<label style="display:flex;gap:12px;align-items:center;font-size:18px;color:#f4f1fb;margin:10px 0"><input type="checkbox" data-tick="'+p.slot+'" checked style="width:26px;height:26px"> '+(P[p.pic]||'🏠')+' '+esc(p.shown)+'</label>'}).join('')+'<button data-go="1">Load ticked profiles</button><p class="fine">Everything played in this room – the main profile and Player 1-4 – is saved to your crew after the session.</p>'}
 $('playb').onclick=function(e){var b=e.target.closest('[data-go]');if(!b)return;var e5=$('e5');e5.className='err';e5.textContent='';var sl=[].map.call(document.querySelectorAll('[data-tick]:checked'),function(x){return x.dataset.tick});if(!sl.length){e5.textContent='Tick at least one player.';return}b.disabled=true;
 api({act:'play',room:ROOM,slots:sl}).then(function(r){b.disabled=false;if(r.error){e5.textContent=r.error;if(r.out)out();return}e5.className='err ok';e5.textContent='Sent! Watch the TV – the profile for '+r.name+' will be ready in a moment.'})};
 $('pls').onclick=function(e){var c=e.target.closest('[data-s]');if(!c)return;var s=c.dataset.s,er=c.querySelector('.err');
@@ -4945,7 +4945,7 @@ async function ps4Tile(env, u) {
     if (!res || prep) { o.status = 'loading'; o.title = 'Hi ' + nm + '!'; o.line = prep ? `Loading ${nm}'s saves: ${cl.done || 0} of ${cl.total || 0} games. Please don't start a game yet.` : `Getting a profile ready for ${nm}...`; o.line2 = 'This screen updates by itself.'; }
     else if (res['memplay/loading'] && cl.kind === 'prep' && cl.state === 'done' && cl.fails > 0) { o.status = 'off'; o.title = 'Sorry, ' + nm; o.line = `${cl.fails} of ${cl.total} games could not be loaded. Your saves are safe on your Round2 account.`; o.line2 = 'Please ask staff - they can load them again.'; }   /* 20 Nov 12:50am: the tile said Ready although Vampire Survivors failed */
     else if (res['memplay/loading'] || res['memplay/ready']) { o.status = 'done'; o.title = 'Ready, ' + nm + '!'; const onMain = /^main /.test(String(res['memplay/loading'] || res['memplay/ready'])), first = nm.split(' + ')[0], R = room.toUpperCase();   /* helper 1.1.95: the first ticked player goes into the main profile */
-      o.line = !onMain ? `Sign in as "${nm}" (PS button > switch user) and play.` : nm.includes(' + ') ? `${first} is on the ${R} profile - just play. Everyone else: PS button > switch user to your name.` : `You're on the ${R} profile - just play.`; o.line2 = 'Your progress is kept on your Round2 account.'; }
+      o.line = `Your saves are back on the profiles you ticked - pick up where you left off.`; o.line2 = `The ${R} profile and Player 1-4 all save to your crew after the session. PS button > switch user to change profile.`; void onMain; void first; }
     else if (res['memplay/waits']) { o.status = 'reset'; o.title = 'Please wait'; o.line = `The room is being reset first. Press Load for ${nm} on your phone again in a minute.`; o.line2 = ''; }
     else if (res['memplay/refused'] || res['memplay/error']) { o.status = 'off'; o.title = 'Sorry, ' + nm; o.line = String(res['memplay/refused'] || res['memplay/error']).replace(/^- /, ''); o.line2 = 'Please ask staff.'; }
   }
