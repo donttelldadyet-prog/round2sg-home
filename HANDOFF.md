@@ -1,5 +1,24 @@
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
 
+## ⭐ 19 Nov 2026, 10:10pm – MEMBER LOGIN PART 1 LIVE + Kaeden back to normal + Bella/Atlas Wi-Fi plan
+- **Member accounts (engine c933972, live sha 9d18544eee64, 27 bindings, 3 timers; Light check 14/4/0 before and after):**
+  `book.round2.sg/m` (`?room=max` shows the room) – Join (name, phone, 4-digit PIN; 1234/0000/four-same refused) or Log in
+  (phone + PIN; 5 wrong = locked 15 min). Then: PS4 name (2–16 letters/numbers) + one of 12 pictures (emoji set MEM_PICS), change
+  PIN (logs other phones out). Store: `mem:<phone>` (65xxxxxxxx) + `memlist`. PIN = HMAC('r2mem1|'+PS4_KEY) over salt+PIN, never
+  plain. Token on the phone = phone.exp.tv.sig (180 days). Staff gm: `memlist`, `memstaff` (phone, on=1/0), `memunlock`, `mempin`.
+  round2-book wrapper (GitHub Pages) now allows `/m`. Owner + girlfriend sign up first → mark both staff (owner 9:59pm).
+- **Owner decisions 9:41–10:05pm:** login = phone + 4-digit PIN; members join by a QR on screen. The **Round2 PS4 tile** only opens
+  the page (QR) + shows progress, and must keep guests from interrupting save prep: **it waits for a running clean slate to finish
+  (or confirms one ran) before loading the member's saves.** Part 2 = put name/picture/saves on the PS4 (memload/memtag exist on
+  1.1.84+; Max is still on 1.1.68 → needs the test line before staff saves on Max are protected). fPKG tools (PkgTool needs .NET,
+  release downloads blocked here) → build on the owner's computer (asked, not yet answered).
+- **Kaeden back to normal 9:43–9:55pm:** spares renamed User1–3 (ps4prof name), test member's 3 games cleaned out of User3,
+  `/_restoreall` from day0: 35 games, 28 in, 7 = games no longer installed on Kaeden (CUSA00419, 02671, 05070, 06400, 09973,
+  13795, 29291 – kept in the cloud). 247 s (a 32 MB save took 37 s). Verbose pop-ups + test flags still ON.
+- **Bella/Atlas Wi-Fi:** research says old PS4 Wi-Fi goes "connected but dead" on busy mesh/combined networks; fix to try =
+  a separate normal SSID (NOT the guest network – isolation would break PS4-to-PS4 wake), 2.4 GHz only, WPA2, visible name.
+  Saving blips all Wi-Fi ~10–60 s (mesh + Tapo cameras 1–2 min) → scheduled 10:35pm after Vale (reminder set). Never LAN.
+
 > ## ⭐ 19 Nov 2026, 7:50pm – STATE OF EVERYTHING (PS4 side) – READ THIS FIRST, then the dated entries below
 > **Owner rules today:** reply in categories (headings per topic: Bella / Kaeden backup / Kaeden speed …) and in very simple
 > words (ELI5, no word vomit). **Update this HANDOFF regularly** (owner: "you don't regularly update the handoff, that's why
