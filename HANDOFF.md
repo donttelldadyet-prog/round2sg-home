@@ -68,6 +68,15 @@
 >   MAX 12:58 ✗, from SCARLETT 1:00 (broadcast + direct .15) ✗. Tonight's only successes on the 2.4 GHz PS4s were sent by VALE
 >   ~3 min after rest (Atlas 12:08, Bella 12:44); every other sender/timing failed. Not enough tries to say sender vs timing –
 >   **owner: don't touch Vale tonight (sleeping there); ask before any overnight test.** 1:03am all rested except Vale.
+> - **19 Nov 3:35pm ROOT CAUSE OF BELLA DROPPING OFF = watchdog bug (software, mine).** The 1.1.42 watchdog assumed the running
+  clock stops in rest mode – it doesn't (after wakes: Bella 44261 s, Atlas 23491 s, Kaeden 810 s logged as "stuck"). On the others
+  (shared program) it only writes a note; **Bella is the only PS4 running the helper as its own program (`own:1`)**, so after any
+  rest > 20 min its watchdog _exit()s on wake. The starter relaunches, but right after a wake BinLoader may not be up (13:21:37
+  "sent 0 of 2440264 bytes", OK 25 s later) → if every try fails, Bella is ON but silent (today from 13:34). **1.1.70 (ps4-test
+  01f2b69, sha 17ad877a…)**: the watchdog's own 15 s loop spots a long gap = rest → shifts the step start (`r2_where_shift`), logs
+  "woke from rest after about N s - not counted as stuck". Proven on Kaeden 15:31 (222 s rest). Next: Bella gets 1.1.70 (test)
+  after its guests leave + staff re-run its starter; then rest > 20 min + wake on Bella. Separate, still open: starter relaunch
+  right after a wake can fail; Bella/Atlas rest-mode wake (Wi-Fi).
 > - **19 Nov 3:16pm BELLA IS ON BUT ITS HELPER IS SILENT.** Last check-in 13:33:57. I wrongly read that as "Bella went to sleep" –
   owner saw it ON before the 2:30 guests; DDP from Kaeden 3:15pm: 192.168.88.6 answers "200 Ok" (= on). So the helper stopped at
   13:34 (crash / full restart without re-jailbreak / hang – can't tell remotely). The 1:44 and 2:12 "failed wakes" on Bella
