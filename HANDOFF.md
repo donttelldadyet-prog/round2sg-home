@@ -26,6 +26,10 @@
   One crew pays; more players cost more (prices: owner later). Break-up: holder removes a player (PIN asked); they join on their
   own; removed players' slots are kept in `m.gone` (saves stay in the cloud). Old one-name accounts (Karen) became crew + p1.
   Page actions: join (crew, name, phone, pin), crew, player (slot, shown, pic), addp, delp (slot, pin), pin.
+- **10:42pm owner decisions (saves + price):** NO shared/co-op guessing – whoever starts a game keeps that save in their own
+  player, exactly as the PS4 does; every player is backed up as a member. **The tile tells the crew where each save is** ("It
+  Takes Two: your save is on Karen – start it from her profile"). No charge per player; maybe a **$2 add-on per player for a
+  custom PS4 name** (not built, owner said "maybe"). Page price line removed (engine live 6ddb43da54be, Light 14/4/0 after).
 - **Kaeden back to normal 9:43–9:55pm:** spares renamed User1–3 (ps4prof name), test member's 3 games cleaned out of User3,
   `/_restoreall` from day0: 35 games, 28 in, 7 = games no longer installed on Kaeden (CUSA00419, 02671, 05070, 06400, 09973,
   13795, 29291 – kept in the cloud). 247 s (a 32 MB save took 37 s). Verbose pop-ups + test flags still ON.

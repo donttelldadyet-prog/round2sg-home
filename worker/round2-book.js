@@ -4729,7 +4729,8 @@ async function keyDaily(env) {
 /* ---- 19 Nov 2026 (owner 9:59pm): MEMBER ACCOUNTS – part 1 of the PS4 login. book.round2.sg/m: join or log in (phone + PIN of
    4–8 numbers). Owner 10:23pm: an account is a CREW (a couple or a group, or just one person) with a crew name; inside it are
    PLAYERS, each with their own PS4 name, picture and saves (player = save slot members/<id>/<slot>, slots p1, p2 …, max 4).
-   One crew pays for its slot; more players cost more (prices: owner, later). Break-up: the account holder removes a player
+   One crew pays for its slot (owner 10:42pm: no charge per player; maybe a $2 add-on per player for a custom PS4 name).
+   Saves: whoever starts a game keeps that save in their own player (as the PS4 does) – no shared/co-op guessing (owner). Break-up: the account holder removes a player
    (PIN needed); that person joins on their own. A removed player's saves stay in the cloud (listed in m.gone) – staff can
    still recover them. Staff accounts (owner + girlfriend first) are marked "staff" (owner 18 Nov: backed up, never wiped).
    Storage: one key 'mem:<phone>' per crew + the phone list 'memlist'. The PIN is never kept plain (HMAC with the engine's
@@ -4864,7 +4865,7 @@ button.ghost{background:transparent;color:#f4f1fb;border:1px solid rgba(244,241,
 <button class="ghost" id="crb">Save crew name</button><div class="fine" id="ph" style="margin-top:10px"></div><p class="err" id="e0"></p></div>
 <div id="pls"></div>
 <div class="card" id="addc"><b>Add a player</b><label>Their name on the PS4</label><input id="an" maxlength="16"><button class="ghost" id="ab">Add player</button>
-<p class="fine">Each extra player adds to the membership price.</p><p class="err" id="e4"></p></div>
+<p class="err" id="e4"></p></div>
 <div class="card"><b>Change PIN</b><label>Current PIN</label><input id="po" inputmode="numeric" maxlength="8" type="password">
 <label>New PIN (4 to 8 numbers)</label><input id="pn" inputmode="numeric" maxlength="8" type="password"><button class="ghost" id="pb">Change PIN</button><p class="err" id="e3"></p></div>
 <p class="fine">Coming next: open the Round2 tile on the room's PS4, pick who's playing, and each player's saves, name and picture load in.</p>
