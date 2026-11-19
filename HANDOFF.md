@@ -68,6 +68,11 @@
 >   MAX 12:58 ✗, from SCARLETT 1:00 (broadcast + direct .15) ✗. Tonight's only successes on the 2.4 GHz PS4s were sent by VALE
 >   ~3 min after rest (Atlas 12:08, Bella 12:44); every other sender/timing failed. Not enough tries to say sender vs timing –
 >   **owner: don't touch Vale tonight (sleeping there); ask before any overnight test.** 1:03am all rested except Vale.
+> - **19 Nov 1:33pm TEST CHANNEL + TIMINGS.** Engine 9921f17 (27 bindings, 3 timers): branch **ps4-test** = test releases; staff
+>   `ps4update` with `ch=test` sends it to ONE PS4; `/ps4/app` serves the channel of that PS4's update command; quiet-time updates
+>   only ever use ps4-release (still 1.1.68). **Kaeden on 1.1.69 (test)**: in-memory timings (no disk writes) – report field `tm`
+>   = {name: [count, avg ms, worst ms, last ms]}, look `/_timing`. First numbers: report games list 1489 ms, disk + folders 861 ms.
+>   Bella took 1.1.68 by itself in the morning; its keep-awake window opens 2:00pm (check `awakeBook`).
 > - **19 Nov 1:27pm KAEDEN = TEST BENCH, ONLINE.** Owner copied the files (helper 1.1.68, starter 2, Round2 nanoDNS build, same
 >   nanodns.ini 3eeb2b5a470c, detector 1.01 not switched on) + key, AutoRun via GoldHEN's "Enable PayLoader" (newer GoldHEN's name
 >   for the 9090 server the starter uses). Kaeden: console 73378b38f36f345372e93e1fd488bbea, CUH-1000A, **FW 13.50** (rooms are
