@@ -109,6 +109,14 @@
   (engine 3fb25cca59ec); (3) trophy pop-ups: an almost-complete game re-awards every trophy on a fresh profile – no PS4 switch
   for trophies; options = per-profile pop-up setting (owner to check), or copying trophy data per player (not built).
   Kaeden on 1.1.95. /_profiles baseline taken (72 keys) for a later registry diff.
+- **1:25am OWNER'S MODEL (replaces 1.1.95 main-first): the whole room belongs to the crew.** Crew save slots = `main` (the
+  room's main profile) + `p1`–`p4` (Player 1–4 = spares in id order). Pressing Load (page ticks: "<ROOM> (main profile)" +
+  the crew players, all ticked) links EVERY room profile to the crew (owner_<u>.txt = <id>/<slot>) and loads each ticked
+  slot back into the same profile; players' names go on Player 1–4, main keeps the room name. So anything played on any
+  profile – also saves made before they joined – goes to the crew at the clean slate, and the next Load = "picked up where
+  I left off". Owner turned trophy pop-ups off by hand (setting stays through clean slates). Helper **1.1.96** (ps4-test,
+  sha 76c54658…) on Kaeden; engine 47abf9c8b4cf (Light 13/5/0 after – same 5 Kaeden notes). Existing VS save is in slot p2
+  (Aliff) → Player 2. NB for roll-out: the rooms' cloud batch is OFF – member uploads need it ON.
 - **Kaeden back to normal 9:43–9:55pm:** spares renamed User1–3 (ps4prof name), test member's 3 games cleaned out of User3,
   `/_restoreall` from day0: 35 games, 28 in, 7 = games no longer installed on Kaeden (CUSA00419, 02671, 05070, 06400, 09973,
   13795, 29291 – kept in the cloud). 247 s (a 32 MB save took 37 s). Verbose pop-ups + test flags still ON.
