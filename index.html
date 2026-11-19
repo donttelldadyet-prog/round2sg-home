@@ -1151,8 +1151,8 @@ var inp=srch.querySelector('input'),clr=srch.querySelector('button');
 inp.addEventListener('input',find);clr.addEventListener('click',function(){inp.value='';find();inp.focus()});
 function find(){var box=srch.closest('.r2-shelves');if(!box)return;var qv=inp.value.trim().toLowerCase(),res=box.querySelector('.r2-res'),GI=window.R2GI||{},cur=window.R2CUR||{},RN={n:'Netflix',d:'Deluxe',v:'VIP'};
  clr.hidden=!qv;box.classList.toggle('srching',!!qv);if(!qv){res.innerHTML='';return}
- /* search every game (PS4, board, card) - games not in the room/tab on screen are tagged with where they are */
- var all=(window.R2ALL||[]).filter(function(x){var g=GI[x.name]||{};return (x.name+' '+(g.g||'')+' '+(x.k==='ps4'?'ps4':x.k==='board'?'board game':'card game')).toLowerCase().indexOf(qv)>-1});
+ /* search the tab on screen (PS4 / board / card) across every room - PS4 games not in the picked room are tagged with where they are (owner 20 Nov) */
+ var all=(window.R2ALL||[]).filter(function(x){var g=GI[x.name]||{};return x.k===cur.lo&&(x.name+' '+(g.g||'')+' '+(x.k==='ps4'?'ps4':x.k==='board'?'board game':'card game')).toLowerCase().indexOf(qv)>-1});
  all.sort(function(a,b){var ha=(a.k===cur.lo&&(a.k!=='ps4'||a.r.indexOf(cur.lr)>-1))?0:1,hb=(b.k===cur.lo&&(b.k!=='ps4'||b.r.indexOf(cur.lr)>-1))?0:1;return ha-hb||a.name.localeCompare(b.name)});
  res.innerHTML=all.length?'<h4>'+all.length+(all.length===1?' match':' matches')+'</h4>':'<p>No games match “'+qv.replace(/[<>&]/g,'')+'”.</p>';
  var gr=document.createElement('div');gr.className='r2-resg';
