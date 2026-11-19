@@ -23,6 +23,17 @@ canvas.r2-char{display:block}
 .r2-p1{animation:r2p1 3.2s steps(1,end) infinite}
 @keyframes r2p1{0%,84%,100%{opacity:1}86%{opacity:.25}88%{opacity:1}90%{opacity:.55}91%{opacity:1}}
 @media (prefers-reduced-motion:reduce){.r2-p1{animation:none}}
+/* Character select: the picked tile flickers softly in its own character colour (owner 19 Nov) */
+.r2-tile[aria-label="Vale"]{--r2-tc:#E8436A}
+.r2-tile[aria-label="Kaeden"]{--r2-tc:#4DB848}
+.r2-tile[aria-label="Scarlett"]{--r2-tc:#F2C21B}
+.r2-tile[aria-label="Bella"]{--r2-tc:#7A5BE0}
+.r2-tile[aria-label="Kai"]{--r2-tc:#24B49A}
+.r2-tile[aria-label="Atlas"]{--r2-tc:#E9E7EF}
+.r2-tile[aria-label="Maximillion"]{--r2-tc:#E0402F}
+.r2-tile[aria-pressed="true"] img{animation:r2tile 3.2s steps(1,end) infinite}
+@keyframes r2tile{0%,84%,100%{filter:drop-shadow(0 0 7px var(--r2-tc)) brightness(1)}86%{filter:drop-shadow(0 0 2px var(--r2-tc)) brightness(.75)}88%{filter:drop-shadow(0 0 9px var(--r2-tc)) brightness(1.08)}90%{filter:drop-shadow(0 0 3px var(--r2-tc)) brightness(.85)}91%{filter:drop-shadow(0 0 7px var(--r2-tc)) brightness(1)}}
+@media (prefers-reduced-motion:reduce){.r2-tile[aria-pressed="true"] img{animation:none;filter:drop-shadow(0 0 7px var(--r2-tc))}}
 </style>
 <style id="r2-css"></style>
 </head>
