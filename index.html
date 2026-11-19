@@ -1030,7 +1030,7 @@ function open(gw){var t=gw.querySelector('.r2-gt');if(!t)return;var n=t.getAttri
  box.querySelector('.kind').textContent=g.k==='ps4'?'PS4 GAME':g.k==='board'?'BOARD GAME':(CATL[g.c]||'CARD GAME');
  box.querySelector('h3').textContent=n;
  box.querySelector('.tags').innerHTML=g.g.split(' \u00b7 ').map(function(x){return '<span>'+esc(x)+'</span>'}).join('');
- var meta=gw.querySelector('div:last-child span'),pl=g.p||(g.k==='ps4'&&meta?meta.textContent.trim():'');box.querySelector('.pl').textContent=pl;
+ var meta=gw.querySelector('div:last-child span'),pl=g.p||(g.k==='ps4'&&meta?meta.textContent.trim():'');if(pl&&!/player/i.test(pl))pl=pl+(pl==='1'?' player':' players');box.querySelector('.pl').textContent=pl;
  box.querySelector('.d').textContent=g.d;
  var rw=box.querySelector('.rw');rw.hidden=g.k!=='ps4';if(g.k==='ps4')[].forEach.call(box.querySelectorAll('.rooms span'),function(sp){sp.classList.toggle('y',g.r.indexOf(sp.getAttribute('data-r'))>-1)});
  var a=box.querySelector('.go'),q=g.k==='ps4'?n+' trailer':n+' how to play';var link=g.k==='ps4'||g.k==='board'||g.c==='p';a.hidden=!link;var hw=g.k==='card'?(HOW[n]||HOW[g.c]):g.k==='board'?HOW[n]:null,hb=box.querySelector('.how');hb.hidden=!hw;if(hw){var st=hw.filter(function(x){return !/^Tip:/.test(x)}),tp=hw.filter(function(x){return /^Tip:/.test(x)})[0];hb.querySelector('ol').innerHTML=st.map(function(x){return '<li>'+esc(x)+'</li>'}).join('');var te=hb.querySelector('.tip');te.hidden=!tp;if(tp)te.innerHTML='<b>TIP</b>'+esc(tp.replace(/^Tip:\s*/,''))}
