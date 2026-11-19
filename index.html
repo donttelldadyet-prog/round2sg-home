@@ -23,6 +23,19 @@ canvas.r2-char{display:block}
 .r2-p1{animation:r2p1 3.2s steps(1,end) infinite}
 @keyframes r2p1{0%,84%,100%{opacity:1}86%{opacity:.25}88%{opacity:1}90%{opacity:.55}91%{opacity:1}}
 @media (prefers-reduced-motion:reduce){.r2-p1{animation:none}}
+/* ROOM SELECT GAME FEEL (owner 19 Nov): P1 tag + glow on the picked tile, glitch on switch, arcade press, Kaeden renovation stamp */
+.r2-tile{position:relative}
+.r2-tile[aria-pressed="true"]::after{content:'P1';position:absolute;left:50%;top:-13px;transform:translateX(-50%);font:8px/1 'Press Start 2P',monospace;letter-spacing:.08em;color:#0b0914;background:var(--r2-accent);padding:4px 5px 3px;box-shadow:0 2px 0 rgba(0,0,0,.6);animation:r2bob .8s steps(2,end) infinite;z-index:4;pointer-events:none}
+@keyframes r2bob{50%{transform:translate(-50%,-3px)}}
+.r2-tile[aria-pressed="true"] img{animation:r2pulse 1.8s ease-in-out infinite}
+@keyframes r2pulse{0%,100%{filter:drop-shadow(0 0 2px var(--r2-accent))}50%{filter:drop-shadow(0 0 11px var(--r2-accent))}}
+.r2-glitch{animation:r2gl .42s steps(1,end) 1}
+@keyframes r2gl{0%{transform:translateX(-10px) skewX(-8deg);filter:hue-rotate(90deg) saturate(2.2);clip-path:inset(0 0 55% 0)}18%{transform:translateX(8px);clip-path:inset(35% 0 20% 0);filter:hue-rotate(-60deg)}36%{transform:translateX(-5px) skewX(5deg);clip-path:inset(62% 0 4% 0);filter:none}54%{transform:translateX(3px);clip-path:inset(8% 0 70% 0)}72%{transform:translateX(-1px);clip-path:none}100%{transform:none;filter:none;clip-path:none}}
+.r2-tile.r2-reno::before{content:'RENOVATING';position:absolute;left:50%;top:48%;transform:translate(-50%,-50%) rotate(-10deg);font:7px/1 'Press Start 2P',monospace;letter-spacing:.06em;background:#F2C21B;color:#2a1f00;padding:4px 5px 3px;box-shadow:0 2px 0 rgba(0,0,0,.55);white-space:nowrap;z-index:3;pointer-events:none}
+button.r2-reno-btn{position:relative;background:repeating-linear-gradient(135deg,#2a2935 0 9px,#22212c 9px 18px)!important;color:transparent!important;cursor:default!important}
+button.r2-reno-btn::after{content:'Under renovation \00B7  back soon';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#F2C21B;font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+#r2-stage button:not(.r2-tile):not([disabled]):active{translate:0 3px;filter:brightness(.88)}
+@media (prefers-reduced-motion:reduce){.r2-tile[aria-pressed="true"]::after,.r2-tile[aria-pressed="true"] img,.r2-glitch{animation:none}}
 </style>
 <style id="r2-css"></style>
 </head>
@@ -890,5 +903,15 @@ class Component extends DCLogic {
 })();
 </script>
 <script>/* LOAD SAVE / SAVE FOUND removed (owner, 12 Nov: more risk than reward – guests use the booking link they're sent). Clear what this phone kept for the hour it was live. */try{localStorage.removeItem('r2.saves')}catch(e){}</script>
+<script>/* ROOM SELECT GAME FEEL (owner 19 Nov). RENO = rooms under renovation: stamp on the tile, Book button off. Remove a name when it reopens. */
+(function(){var RENO=['Kaeden'];
+function tidy(){document.querySelectorAll('.r2-tile').forEach(function(t){t.classList.toggle('r2-reno',RENO.indexOf(t.getAttribute('aria-label'))>-1)});
+ document.querySelectorAll('#r2-stage button').forEach(function(b){var m=/^\s*Book\s+(\w+)\s*$/i.exec(b.textContent),on=!!(m&&RENO.some(function(n){return n.toLowerCase()===m[1].toLowerCase()}));
+  if(on&&!b.hasAttribute('data-r2reno')){b.setAttribute('data-r2reno','');b.classList.add('r2-reno-btn');b.disabled=true}
+  else if(!on&&b.hasAttribute('data-r2reno')){b.removeAttribute('data-r2reno');b.classList.remove('r2-reno-btn');b.disabled=false}})}   /* the page reuses this button for every room: only cover its text, never change it */
+var last=null;function glitch(){var p=document.querySelector('.r2-tile[aria-pressed="true"]'),n=p&&p.getAttribute('aria-label');if(!n||n===last){last=n;return}var first=last===null;last=n;if(first)return;
+ document.querySelectorAll('canvas.r2-char').forEach(function(c){c.classList.remove('r2-glitch');void c.offsetWidth;c.classList.add('r2-glitch');setTimeout(function(){c.classList.remove('r2-glitch')},500)})}
+var q=0;new MutationObserver(function(){if(q)return;q=1;requestAnimationFrame(function(){q=0;tidy();glitch()})}).observe(document.documentElement,{subtree:true,childList:true,characterData:true,attributes:true,attributeFilter:['aria-pressed']});
+tidy();})();</script>
 </body>
 </html>
