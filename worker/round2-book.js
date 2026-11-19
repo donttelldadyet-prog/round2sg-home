@@ -4897,24 +4897,42 @@ async function memGm(env, hb, f) {
   else return { error: 'unknown' };
   await hb.kvSet('mem:' + phone, m); return { ok: true, member: memPub(m) };
 }
+/* 20 Nov 2:20am (owner: "make it more to our theme and design style … scanning on kaeden would open a kaeden themed login or
+   signup page"): each room's colour + character, the same as the TV home screens (round2-tv-launcher web/index.html ROOMS/ASSETS). */
+const MEM_WIX = 'https://static.wixstatic.com/media/', MEM_LOGO = MEM_WIX + 'a46627_0c92a12b5ec442aeaaa57c744095d829~mv2.webp';
+const MEM_ROOMS = {
+  vale: ['Vale', '#E8436A', '#0b0914', 'a46627_a583d7ac9f5e425c8770261a9f4a5dde~mv2.webp'], kaeden: ['Kaeden', '#4DB848', '#0b0914', 'a46627_047b973fc70140b9935452a5eee426db~mv2.webp'],
+  scarlett: ['Scarlett', '#F2C21B', '#0b0914', 'a46627_feafbe9bf95d4bffbea8855d66d0a63c~mv2.webp'], bella: ['Bella', '#7A5BE0', '#ffffff', 'a46627_a61b016ed61045f28c2dba9b6146e9d4~mv2.webp'],
+  kai: ['Kai', '#24B49A', '#0b0914', 'a46627_2c836d63bbdd4332a4a67233df2fb631~mv2.webp'], atlas: ['Atlas', '#E9E7EF', '#0b0914', 'a46627_633e94e1767940b7a6297c4e597d25c3~mv2.webp'],
+  maximillion: ['Maximillion', '#E0402F', '#ffffff', 'a46627_fb0c6ed29fdb4c74b8a4ce1a5c99050c~mv2.webp']
+};
 function memPage(u) {
   const room = String(u.searchParams.get('room') || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12);
+  const R = MEM_ROOMS[room === 'max' ? 'maximillion' : room] || null, ac = R ? R[1] : '#f5c400', ink = R ? R[2] : '#06050a';
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Round2 members</title>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-<style>*{box-sizing:border-box}body{margin:0;background:#06050a;color:#f4f1fb;font:16px/1.5 'Chakra Petch',system-ui,sans-serif}
+<meta name="theme-color" content="#06050a"><style>:root{--ac:${ac};--ink:${ink}}*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(120% 60% at 85% -10%,color-mix(in srgb,var(--ac) 28%,transparent),transparent 62%),#06050a;background-attachment:fixed;color:#f4f1fb;font:16px/1.5 'Chakra Petch',system-ui,sans-serif;min-height:100vh}
+.hero{position:relative;min-height:${R ? 250 : 150}px;margin:0 0 6px;overflow:visible}.hero .logo{height:30px;display:block;margin:0 0 18px}
+.hero .char{position:absolute;right:-18px;top:-8px;height:290px;pointer-events:none;-webkit-mask-image:linear-gradient(to bottom,#000 55%,transparent 98%),linear-gradient(to left,#000 60%,transparent);mask-image:linear-gradient(to bottom,#000 55%,transparent 98%);-webkit-mask-composite:source-in;mask-composite:intersect;filter:drop-shadow(0 0 28px color-mix(in srgb,var(--ac) 45%,transparent))}
+.hero .room{font-family:'Press Start 2P',monospace;font-size:30px;line-height:1.15;color:var(--ac);text-shadow:0 0 18px color-mix(in srgb,var(--ac) 60%,transparent);margin:6px 0 10px;position:relative}
+.hero .tag{position:relative;max-width:58%;font-size:14px;color:#cfc8e3}.hero .kick,.hero h1{position:relative}
+.bar{height:4px;background:linear-gradient(90deg,var(--ac),transparent);margin:0 0 18px}
+input:focus{outline:2px solid var(--ac);outline-offset:-2px}
 main{max-width:460px;margin:0 auto;padding:26px 16px 40px}.px{font-family:'Press Start 2P',monospace;letter-spacing:.08em}
 .kick{font-size:9px;color:#a79fbd}h1{font-family:'Press Start 2P',monospace;font-size:17px;line-height:1.5;margin:10px 0 16px}
-.card{border:1px solid rgba(244,241,251,.14);border-top:4px solid #f5c400;background:#0b0914;padding:16px;margin:0 0 14px}
+.card{border:1px solid rgba(244,241,251,.14);border-top:4px solid var(--ac);background:#0b0914;padding:16px;margin:0 0 14px}
 .tabs{display:flex;gap:8px;margin:0 0 14px}.tabs button{flex:1}label{display:block;font-size:13px;color:#a79fbd;margin:12px 0 4px}
 input{width:100%;padding:12px;border:1px solid rgba(244,241,251,.25);background:#06050a;color:#f4f1fb;font:inherit;font-size:17px;border-radius:0}
-button{padding:13px 14px;border:0;background:#f5c400;color:#06050a;font:600 15px 'Chakra Petch',sans-serif;cursor:pointer;width:100%;margin-top:14px}
+button{padding:13px 14px;border:0;background:var(--ac);color:var(--ink);font:600 15px 'Chakra Petch',sans-serif;cursor:pointer;width:100%;margin-top:14px}
 button.ghost{background:transparent;color:#f4f1fb;border:1px solid rgba(244,241,251,.3)}button.on{background:#f4f1fb;color:#06050a}button.sm{width:auto;padding:8px 12px;margin:0;font-size:13px}
 .err{color:#ff7a7a;min-height:1.2em;margin:10px 0 0;font-size:14px}.ok{color:#7dffa8}.fine{font-size:13px;color:#a79fbd}
 .pics{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:6px}.pics div{font-size:26px;text-align:center;padding:8px 0;border:2px solid transparent;background:#14111f;cursor:pointer}
-.pics div.sel{border-color:#f5c400}.pics div img{width:100%;display:block;aspect-ratio:1}.pics div:has(img){padding:0}.pics .more{font-size:13px;display:flex;align-items:center;justify-content:center;color:#f5c400}.av img{width:100%;height:100%;display:block}.pl{display:flex;gap:12px;align-items:center;justify-content:space-between}.who{display:flex;gap:12px;align-items:center}
-.av{font-size:30px;width:52px;height:52px;flex:none;display:flex;align-items:center;justify-content:center;background:#14111f;border:2px solid #f5c400}
-.badge{display:inline-block;font-size:9px;padding:4px 6px;background:#f5c400;color:#06050a;margin-left:6px;vertical-align:middle}[hidden]{display:none!important}</style></head><body><main>
-<div class="kick px">ROUND2 · MEMBERS${room ? ' · ' + room.toUpperCase() : ''}</div><h1>Your Round2<br>game crew</h1>
+.pics div.sel{border-color:var(--ac)}.pics div img{width:100%;display:block;aspect-ratio:1}.pics div:has(img){padding:0}.pics .more{font-size:13px;display:flex;align-items:center;justify-content:center;color:var(--ac)}.av img{width:100%;height:100%;display:block}.pl{display:flex;gap:12px;align-items:center;justify-content:space-between}.who{display:flex;gap:12px;align-items:center}
+.av{font-size:30px;width:52px;height:52px;flex:none;display:flex;align-items:center;justify-content:center;background:#14111f;border:2px solid var(--ac)}
+.badge{display:inline-block;font-size:9px;padding:4px 6px;background:var(--ac);color:var(--ink);margin-left:6px;vertical-align:middle}[hidden]{display:none!important}</style></head><body><main>
+<header class="hero"><img class="logo" src="${MEM_LOGO}" alt="Round2">${R ? `<img class="char" src="${MEM_WIX + R[3]}" alt="">` : ''}
+<div class="kick px">ROUND2 MEMBERS</div>${R ? `<div class="room">${R[0].toUpperCase()}</div><div class="tag">Join or log in – your crew’s saves, names and pictures load onto this room’s PS4.</div>` : '<h1>Your Round2<br>game crew</h1>'}</header><div class="bar"></div>
 <section id="out"><div class="tabs"><button id="tJ" class="on">Join</button><button id="tL" class="ghost">Log in</button></div>
 <div class="card"><div id="fJ"><label>Crew name – your couple or group name (or just your name)</label><input id="jc" maxlength="24">
 <label>Your player name on the PS4 (2–16 letters or numbers)</label><input id="jn" autocomplete="nickname" maxlength="16">

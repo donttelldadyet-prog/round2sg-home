@@ -134,6 +134,12 @@
     cap; Kaeden may hold more – raise nm[1200] if needed). Page checked: join step shows Lapy's 21 (440px PNGs ~250 KB each –
     heavy on phones; thumbnails = UI follow-up), "More" pages the big pack. Owner: if too big, cut the list down or use our
     own Round2 pictures (we can make .xavatar sets). Not yet tested end-to-end on a PS4 (pick → Load → picture on profile).
+- **2:25am member page themed per room (owner: "more to our theme … scanning on kaeden opens a kaeden themed page"):** engine
+  live ce4f9ab53c9c (27 bindings, 3 timers, Light 14/4/0 before). `?room=<room>` (max → maximillion) → Round2 logo, room name
+  big in Press Start 2P in the room colour, the room's character (same Wix images + colours as the TV home screens, MEM_ROOMS),
+  room-colour glow, cards/buttons/picker in the room colour. No room = Round2 yellow. Bella/Atlas put to rest (owner).
+  Max detector test pop-ups OFF (owner; detector itself stays on) – Max was asleep ("isn't answering"): send
+  `/_inplug.pop.off` to Max next time it's awake.
 - **2:05am DONE – Max:** GTA closed by owner → `/_sback` SAVEDATAPROFILE (6 files, 165,043 B, 0 failed, stamp 1795111178)
   + sce_sdmemory (6 files, 1,212,307 B, 0 failed, 1795111242) from Max main 14a1e943 → copied via the R2 API into
   members/m7xbafbe3/p1/CUSA00419/<save>/<stamp>/ (14 objects) + p1/index.txt (2 lines, no dsha). Then Max updated
