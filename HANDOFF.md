@@ -147,6 +147,10 @@
     /data, /user/data, /system_tmp. Also on Kaeden tonight: tile 0.07 installed (task 314), /_copy.all 3 games OK (GTA progress
     → internal → cloud batch), helper 1.1.102→1.1.105.
   - 4:10am: Kaeden took the 1.1.106 update and went SILENT (no check-in 3+ min). Owner asked to look at the TV.
+  - 4:15am owner: TV on, still jailbroken, only KAEDEN signed in – so the PS4 isn't frozen; the helper hung in the update switch.
+    Most likely the own-program spawn limit: ~8 helper switches on Kaeden since its last restart (1.1.97→…→1.1.106) while
+    OWN_SPAWN_MAX = 5 should have refused at 5 → check own-spawns.txt / kern.boottime counting after the restart. Fix: restart Kaeden
+    + jailbreak (starter brings the helper back). LESSON: batch helper changes; at most ~4 updates per PS4 start.
 - **3:40am RESEARCH (owner OK, nothing changed on any PS4): code inside the PS4's system menu (SceShellUI)** – for a proper log-out
   after a member load (the PS menu's Log Out re-links controllers; our sceUserServiceLogout froze them), a PS-button lock while
   loading + unlock combo (owner idea L2+R2+L3+R3), maybe blocking new controllers.
