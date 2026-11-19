@@ -4253,26 +4253,29 @@ const PS4_REL = 'https://raw.githubusercontent.com/donttelldadyet-prog/round2-tv
 const ps4Ver = (v) => String(v || '0').split('.').map((x) => +x || 0);
 const PS4_SELFUP = '1.0.7';   /* helpers older than this exit to hand over, which got stuck on Max (13 Nov) – they get 1.0.7+ by FTP once */
 const ps4Newer = (a, b) => { const x = ps4Ver(a), y = ps4Ver(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
-async function ps4Latest(env, fresh, hbIn) {
-  const hb = hbIn || book(env), c = await hb.kvGet('ps4rel'), now = Date.now();
+async function ps4Latest(env, fresh, hbIn, ch) {   /* ch 'test' (19 Nov): branch ps4-test – only ever sent by staff to one PS4 (Kaeden test bench), never by quiet time */
+  const T = ch === 'test', KK = T ? 'ps4relTest' : 'ps4rel', BR = T ? 'ps4-test' : 'ps4-release';
+  const hb = hbIn || book(env), c = await hb.kvGet(KK), now = Date.now();
   if (c && !fresh && now - c.at < 10 * 60e3) return c.v ? c : null;
   try {
     const h = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'round2-book' };
     if (env.GH_TOKEN) h.Authorization = 'Bearer ' + env.GH_TOKEN;
-    const hr = await fetch('https://api.github.com/repos/donttelldadyet-prog/round2-tv-launcher/commits/ps4-release', { headers: h }).catch((e) => ({ ok: false, status: 'net ' + e.message }));
+    const hr = await fetch('https://api.github.com/repos/donttelldadyet-prog/round2-tv-launcher/commits/' + BR, { headers: h }).catch((e) => ({ ok: false, status: 'net ' + e.message }));
     const head = hr.ok ? await hr.json().catch(() => null) : null;
     const sha1 = head && /^[0-9a-f]{40}$/.test(head.sha || '') ? head.sha : null;
     if (!sha1) { await hb.kvSet('ps4relErr', { at: now, why: 'GitHub ' + hr.status + (head ? '' : ' ' + (await hr.text?.().catch(() => '') || '').slice(0, 120)) }); return c && c.v ? c : null; }
-    if (c && c.commit === sha1 && c.v) { c.at = now; await hb.kvSet('ps4rel', c); return c; }
+    if (c && c.commit === sha1 && c.v) { c.at = now; await hb.kvSet(KK, c); return c; }
     const info = await fetch(PS4_REL + sha1 + '/round2d.json', { headers: { 'User-Agent': 'round2-book' } }).then((r) => r.ok ? r.json() : null).catch(() => null);
-    if (!info || !/^\d+\.\d+\.\d+$/.test(info.v || '') || !/^[0-9a-f]{64}$/.test(info.sha256 || '') || !(+info.size > 1024)) { await hb.kvSet('ps4rel', { at: now }); return null; }
+    if (!info || !/^\d+\.\d+\.\d+$/.test(info.v || '') || !/^[0-9a-f]{64}$/.test(info.sha256 || '') || !(+info.size > 1024)) { await hb.kvSet(KK, { at: now }); return null; }
     const out = { at: now, v: info.v, sha: info.sha256, size: +info.size, commit: sha1, url: PS4_REL + sha1 + '/round2d.elf' };
-    await hb.kvSet('ps4rel', out); return out;
+    await hb.kvSet(KK, out); return out;
   } catch (e) { return c && c.v ? c : null; }
 }
 async function ps4App(env, req) {   /* the helper downloads the newest version through here */
   if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
-  const rel = await ps4Latest(env); if (!rel) return J({ error: 'no release' }, 404);
+  let q = {}; try { q = JSON.parse(await req.text()); } catch (e) {}
+  const pc = q && q.id ? await book(env).kvGet('ps4cmd:' + ps4Id(q.id)) : null;   /* 19 Nov: an update sent on the test channel downloads from ps4-test */
+  const rel = await ps4Latest(env, false, undefined, pc && pc.do === 'update' && pc.ch === 'test' ? 'test' : undefined); if (!rel) return J({ error: 'no release' }, 404);
   const b = await fetch(rel.url, { headers: { 'User-Agent': 'round2-book' } }).then((r) => r.ok ? r.arrayBuffer() : null).catch(() => null);
   if (!b) return J({ error: 'download failed' }, 502);
   const sha = [...new Uint8Array(await crypto.subtle.digest('SHA-256', b))].map((x) => x.toString(16).padStart(2, '0')).join('');
@@ -4595,10 +4598,12 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
     if (now - ((await hb.kvGet('ps4poll:' + id)) || 0) > 3 * 60e3) return { error: 'The PS4 isn’t answering (off, in rest mode, or not jailbroken yet) – switch it on and jailbreak it first.', off: true };
     if (!rep.boot) return { error: 'This PS4 has no Round2 starter yet – install round2-boot.elf once (FTP + AutoRun), then it updates itself.' };
     if (ps4Newer(PS4_SELFUP, rep.v)) return { error: 'Helper ' + rep.v + ' can’t update itself safely – put round2d.elf ' + PS4_SELFUP + '+ and the new round2-boot.elf on it once by FTP.' };
-    const rel = await ps4Latest(env, true); if (!rel) return { error: 'No PS4 helper release found on GitHub.' };
+    const ch = f.ch === 'test' ? 'test' : undefined;   /* 19 Nov: test channel (branch ps4-test) – staff only, one PS4 at a time */
+    const rel = await ps4Latest(env, true, undefined, ch); if (!rel) return { error: 'No PS4 helper release found on GitHub' + (ch ? ' (test channel)' : '') + '.' };
     if (!ps4Newer(rel.v, rep.v)) return { error: 'Already on the newest version (' + rep.v + ').' };
     const busy = await ps4Busy(env, room, 10); if (busy) return { error: busy + ' – try after that.', busy: true };
     const c = { cid: 'u' + now.toString(36), do: 'update', v: rel.v, sha: rel.sha, size: rel.size, from: rep.v, at: now, by: String(f.by || 'control centre').slice(0, 40), state: 'sent' };
+    if (ch) c.ch = ch;
     await hb.kvSet('ps4cmd:' + id, c); return { ok: true, cmd: c };
   }
   if (act === 'ps4discs') {
