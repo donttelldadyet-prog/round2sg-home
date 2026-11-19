@@ -309,6 +309,15 @@
   a separate normal SSID (NOT the guest network – isolation would break PS4-to-PS4 wake), 2.4 GHz only, WPA2, visible name.
   Saving blips all Wi-Fi ~10–60 s (mesh + Tapo cameras 1–2 min) → scheduled 10:35pm after Vale (reminder set). Never LAN.
 
+> ## 20 Nov 2026, ~7:50am – engine 5081f4c DEPLOYED ON TOP OF the other chat's live ps4Alive (live sha 2ccdc79b96d1)
+> - Widgets now carry, per room: `tv` {app (wApp: Round2 menu / Netflix / YouTube / PS4 / HDMI …), off, at, quiet}, `ps4` {on, g =
+>   runName}, `msgs` (next 3 approved TV messages, from the cached __LIST__ copied by widgetSnap into wsum.ms); plus `events`
+>   (tonight's starts/ends). Side timer: `wtv` now keeps front/frontAt; new `wps4` (ps4map + one kvMany of ps4:<id>, every 5 min).
+> - **Live was 09acc25d02fa = 5c5cc04 + `ps4Alive` (/ps4 alive check-in, helper 1.1.112) NOT YET COMMITTED by the other chat.** My
+>   change was applied onto that live text by exact string anchors, so live = git 5081f4c + ps4Alive. Whoever commits ps4Alive:
+>   rebase on 5081f4c; the next deploy must start from live 2ccdc79b96d1.
+> - Widget script: views via Parameter (`tv`, `msgs`, `times`, `room:Kai`, `nonames`), every room in its colour.
+
 > ## 20 Nov 2026, 7:16am – engine 5c5cc04 DEPLOYED (27 bindings, 3 timers): iPHONE WIDGETS
 > - Owner: "useful iOS lock screen and home screen widgets" → Scriptable app. Engine: `GET /w?k=<key>` (`widgetApi`, ONE `kvMany`:
 >   wkey, wsum, wtv) works out each room's state at ask time (in till / cleaning till / next / free / Kaeden closed), turnover
