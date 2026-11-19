@@ -142,6 +142,24 @@
   (clean kind prep or a queue) – anyone who signs in gets a PS4 message "Hang on <name> – saves are still loading (player k of n).
   Please don't start a game yet." (normal notification, not verbose-only).
   The broader ShellUI probe ("log everything") was NOT continued – stopped there; only the 4:26am list exists.
+- **5:25am MENU ADD-ON BUILT (owner 5:06am: "build the three ideas, before that do the read-only probe"):**
+  - Delivery without helper updates: engine live 9450aaf35cac `/ps4/prx?name=round2_*` (key) serves add-ons from branch
+    **ps4-shell** (<name>.prx + <name>.json {v, sha256, size}); helper **1.1.109/1.1.110** `/_shmod.<name>` saves it to
+    /data/GoldHEN/plugins/ and loads it into SceShellUI (1.1.110 accepts SELF .prx). A module path loads only ONCE per menu start
+    → every new add-on build gets a new name (round2_shprobe2, round2_shprobe3, round2_shell1 …). The menu writes only under
+    /user/data/… (not /data/…). Kaeden helper updates since the 4:20am restart: 1.1.107, 1.1.108 (other session), 1.1.109, 1.1.110.
+  - Probe 1.03 (R2 lib/probe/round2_shprobe3-…txt, every loaded assembly): LoginMgrUtil static SuspendLoginScreen() /
+    ResumeLoginScreen() / IsSuspendedLoginScreen() / LogoutAll(LogoutMethodType) / Logout(int user, type, int, int, LogoutParam);
+    LogoutMethodType: LogoutFromPsImposeMenu 10, LogoutFromPowerMenuOnFunctionArea 11, LogoutFromPsImposeMenuV400 13;
+    PadInternal.Locker(LockType lock, LockType uiMask) (Dispose via DisposableObj) – LockType PSButton 1, Long 2, Double 4,
+    Share 8/16/32, All 0xffffffff; PadManager.Instance.m_padInfo[] (PadInfo.m_curGeneralButtons = GamePadButtons: L2 0x1000,
+    R2 0x2000, L3 0x4000, R3 0x8000); EventAppExternal/TeamChatExternal Lock…PSButton (instance); power menu
+    SystemAreaPowerDialog/PageBase.SelectedLogoutSystem().
+  - **round2_shell1 (1.00)** (ps4/plugin/round2_shell): on load a 60-s SELF-TEST (picker paused + PS/Share locked; L2+R2+L3+R3 held
+    1 s unlocks early), then WATCH: during member loads (/data/round2/memqn or clean run "prep" running) picker paused + PS/Share
+    locked, max 10 min, combo unlocks, released when the load ends; log-out of everyone (type 13) after a load ONLY if
+    /data/round2/shell-logout exists (no helper command for it yet). Log /data/round2/round2_shell1.txt. Calls run on the add-on's
+    own thread, every menu error caught (no memory patching). Not loaded yet – waits for the owner at Kaeden's TV.
 - **4:26am SHELLUI PROBE WORKED (helper 1.1.107 on Kaeden, after the owner's restart):** GoldHEN loads our module into SceShellUI only
   from GoldHEN's own plugin folder (/user/data/GoldHEN/plugins/…; /data = not found, /user/data/round2 = no permission). The menu
   did not crash. Full list: R2 saves/lib/probe/shprobe-73378b38….txt (app.exe = 11,634 types). The useful ones:
