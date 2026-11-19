@@ -89,6 +89,12 @@
 > Bella (1.1.77) silent since 18:55 but ON + on LAN (DDP 200 at 20:10) = can't reach internet again; Atlas (1.1.68) silent since 18:28,
 > ON per owner but NO DDP answer = off the Wi-Fi. Suspect IP clash at .6/.15 – asked owner: Bella Test Internet Connection + router list.
 >
+> **20:36 PER-GAME PREFETCH A/B (helper 1.1.85, `/_pf.on|off`):** member load of test-member (3 games, 14 parts) into User3 after a
+> clean slate: prefetch OFF 36 s → **ON 28 s**; the 12-part game CUSA11379 31.6 s (20:20 run) → **18.7 s** (making parts 16.3 → 6.6 s,
+> 83 answers from the prefetch). Left: big multi-piece files still come piece by piece (CUSA20499 8 MB ≈ 5–6 s) → bundle pieces too.
+> Found: a member moved to a NEW profile re-uploads once (no uploaded.txt in that profile's prep folder) – compare against the member
+> index instead (todo). Prefetch left ON on Kaeden.
+>
 > **NEXT (in order):** (1) Kaeden on 1.1.83 → confirm own-program mode (report `own:1`) → member prep test (clean slate, then
 > `/_prepmember.16c45cc6.16c45cc6.x` into main + a spare) → put Kaeden's saves back. (2) Stage 2: member cloud folders (session
 > end → member's folder; skip GT Sport). (3) Stage 3: morning + after-clean-slate prep from SimplyBook (needs: how a booking is
