@@ -95,6 +95,14 @@
 > Found: a member moved to a NEW profile re-uploads once (no uploaded.txt in that profile's prep folder) – compare against the member
 > index instead (todo). Prefetch left ON on Kaeden.
 >
+> **21:07 TWO MORE FIXES A/B (helper 1.1.86, ps4-test 1407ea64…):** (1) big files' 1 MB pieces in bundles of 6 (`/_bb.on|off`):
+> member load 3 games 30 s → **23 s**, 8 MB game 8.7 → 5.6 s (download 7.1 → 4.0 s). (2) member index carries a DATA fingerprint per
+> part (manifest lines outside sce_sys/), cloud batch skips parts the member already has even from another profile (`/_mi.on|off`):
+> load into a new profile + clean slate → OFF: **13 of 14 parts re-uploaded**; ON: **0 re-uploaded, 14 'unchanged'**. All flags ON
+> on Kaeden (pf, bb, mi). Own-program switches since Kaeden's restart: 4 of 5 (next update may wait for a restart). Kaeden profiles
+> now: main EMPTY, User1 'Test Member3' EMPTY, User2 'Test Member2' EMPTY, User3 'Test Member' (test-member's 3 games) – restore +
+> rename back to User1–3 when testing ends.
+>
 > **NEXT (in order):** (1) Kaeden on 1.1.83 → confirm own-program mode (report `own:1`) → member prep test (clean slate, then
 > `/_prepmember.16c45cc6.16c45cc6.x` into main + a spare) → put Kaeden's saves back. (2) Stage 2: member cloud folders (session
 > end → member's folder; skip GT Sport). (3) Stage 3: morning + after-clean-slate prep from SimplyBook (needs: how a booking is
