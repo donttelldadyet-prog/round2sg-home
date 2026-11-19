@@ -117,6 +117,19 @@
   I left off". Owner turned trophy pop-ups off by hand (setting stays through clean slates). Helper **1.1.96** (ps4-test,
   sha 76c54658…) on Kaeden; engine 47abf9c8b4cf (Light 13/5/0 after – same 5 Kaeden notes). Existing VS save is in slot p2
   (Aliff) → Player 2. NB for roll-out: the rooms' cloud batch is OFF – member uploads need it ON.
+- **1:45am LAPY AVATARS – proof of concept (owner 1:33am "wire up the lapy avatars first"):**
+  - Kaeden has Lapy's Avatar Changer pictures in /data/AVATARS (*.xavatar = zip of avatar.png, avatar64/128/260/440.dds,
+    picture.*, online.json; 21 Lapy "A2xxx" + the big "Avatars (NNNN)" pack).
+  - **Helper 1.1.98** (ps4-test sha 57f2a8a4…, on Kaeden): `/_avlib[.from]` uploads them to R2 saves/lib/av/NNNN.xavatar +
+    lib/av/index.txt ("NNNN<tab>file name", sorted). At Load (`memplay_one`) `av_apply` downloads
+    members/<id>/<slot>/avatar.bin and writes the files into /system_data/priv/cache/profile/0x<USER>/ (old ones kept in
+    /data/round2/avbak; signed-out spares only, never the main). Clean slate's /_avreset already puts the default back.
+  - **Engine** (repo 325b5ae, live sha 1bae762c82ab, 27 bindings, 3 timers, Light 14/4/0 before): `/m/av/list` {all, lapy},
+    `/m/av/NNNN.png` (avatar.png unzipped once, cached in saves/lib/avpng/), player field `av`. Join step: picture picker
+    (Lapy's 21, random one preselected = the "default from the phone step"); added players get a random Lapy picture; each
+    player card has the picker + "More" (30 at a time from the big pack). Picking builds saves/members/<id>/<slot>/avatar.bin
+    ("R2AV <n>\n" then "<name> <len>\n<bytes>" per file). R2 only – no Durable Object calls. Old emoji pics still work.
+  - Other rooms don't need /data/AVATARS: the pictures come from the cloud at Load. Roll-out of 1.1.98 needs the owner's OK.
 - **1:31am owner:** trophy pop-ups switched off by hand on every Kaeden profile (stays through clean slates). He found PS menu
   "Log Out" re-links the controller (PS4 hands it back) while our raw sceUserServiceLogout leaves it stuck. LATER (his OK):
   test renaming a SIGNED-IN spare (never tried, only our own safety rule) – if it works the reset never signs anyone out;
