@@ -68,6 +68,19 @@
 >   MAX 12:58 ✗, from SCARLETT 1:00 (broadcast + direct .15) ✗. Tonight's only successes on the 2.4 GHz PS4s were sent by VALE
 >   ~3 min after rest (Atlas 12:08, Bella 12:44); every other sender/timing failed. Not enough tries to say sender vs timing –
 >   **owner: don't touch Vale tonight (sleeping there); ask before any overnight test.** 1:03am all rested except Vale.
+> - **19 Nov 4:15pm CORRECTION – Bella's 1:34–3:48pm silence was NOT the watchdog.** Bella came back by itself; its logs: helper up
+  since 13:22:27 the whole time (starter "hourly: helper running" 14:21, 15:21), net-fail.log: **114 failed connects to the engine
+  over 8016 s (13:35 → 15:48:47), step 'connect'** (-0x0044). Meanwhile LAN worked (DDP from Kaeden 3:15pm: 200 Ok). Same AP as
+  Bella (cc:ba:bd:28:65:60, 2.4 GHz ch 6): Scarlett, Kaeden, Atlas – none had an outage. So: Bella alone couldn't reach the
+  internet. Suspect IP clash at .6 (someone else's device answering for Bella's address at the router) or a router rule – check
+  the router client list / DHCP reservations during the next outage. The 13:21 watchdog kill IS real (fixed in 1.1.70+).
+  Also: ALL room PS4s now report own:1 (not only Bella) – the watchdog fix matters for every room.
+  **Helper test line:** 1.1.71 = slimming (2.47→1.95 MB: gc-sections + no unwind tables via libmbedtls-ps4-gc.a/sqlite3-gc.o,
+  own-program test payload removed), TLS session resumption (timings 'tls: handshake (session offered)' vs '(full)'), where.txt
+  only for steps ≥10 s (watchdog writes it; ~8,600 fewer writes/day), check-in timing split. 1.1.72 (ps4-test 5cfc7fb, sha
+  8325438f…) = + network path check on the 3rd and every 10th failure (router :80, 1.1.1.1:443, engine IP:443) in net-fail.log.
+  Kaeden on 1.1.72 + /_keepawake.180 since 16:12. Not done (measured: little gain, some risk): AESNI/HAVE_ASM, static buffers
+  (~480 KB bss, all in save/snapshot code), CA bundle trim.
 > - **19 Nov 3:35pm ROOT CAUSE OF BELLA DROPPING OFF = watchdog bug (software, mine).** The 1.1.42 watchdog assumed the running
   clock stops in rest mode – it doesn't (after wakes: Bella 44261 s, Atlas 23491 s, Kaeden 810 s logged as "stuck"). On the others
   (shared program) it only writes a note; **Bella is the only PS4 running the helper as its own program (`own:1`)**, so after any
