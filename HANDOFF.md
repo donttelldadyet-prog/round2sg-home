@@ -134,6 +134,14 @@
     cap; Kaeden may hold more – raise nm[1200] if needed). Page checked: join step shows Lapy's 21 (440px PNGs ~250 KB each –
     heavy on phones; thumbnails = UI follow-up), "More" pages the big pack. Owner: if too big, cut the list down or use our
     own Round2 pictures (we can make .xavatar sets). Not yet tested end-to-end on a PS4 (pick → Load → picture on profile).
+- **4:40am SIGNED-IN RENAME WORKS (owner check on Kaeden):** /_rename.16c45cc7.Karen_test while Karen bozz was signed in → rc 0;
+  the PS4's signed-in list and the quick menu / profile hover show the new name at once; only the home screen's small profile
+  corner keeps the old name until it refreshes (cached). Renamed back to "Karen bozz". **`/_renamesi.on` set on Kaeden** → member
+  loads rename signed-in spares too. Pictures still only change on signed-out profiles (read at sign-in).
+  Helper **1.1.108** (ps4-test, on Kaeden – 2nd update since the 4:20am restart): `load_watch` every 2 s during a member load
+  (clean kind prep or a queue) – anyone who signs in gets a PS4 message "Hang on <name> – saves are still loading (player k of n).
+  Please don't start a game yet." (normal notification, not verbose-only).
+  The broader ShellUI probe ("log everything") was NOT continued – stopped there; only the 4:26am list exists.
 - **4:26am SHELLUI PROBE WORKED (helper 1.1.107 on Kaeden, after the owner's restart):** GoldHEN loads our module into SceShellUI only
   from GoldHEN's own plugin folder (/user/data/GoldHEN/plugins/…; /data = not found, /user/data/round2 = no permission). The menu
   did not crash. Full list: R2 saves/lib/probe/shprobe-73378b38….txt (app.exe = 11,634 types). The useful ones:
