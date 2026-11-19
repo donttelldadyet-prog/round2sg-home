@@ -4813,16 +4813,17 @@ async function memApi(env, req) {
     return save();
   }
   if (act === 'play') {   /* 20 Nov 12:05am: "Load <player> on this PS4" (page opened from the tile's QR) -> helper 1.1.90 /_memplay */
-    const room = String(f.room || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12), p = m.players.find((x) => x.slot === String(f.slot));
-    if (!p) return J({ error: 'That player isn’t in your crew.' });
+    const room = String(f.room || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12), want = (Array.isArray(f.slots) ? f.slots : [f.slot]).map(String);   /* 12:53am owner: tick several players, load at once (helper 1.1.94) */
+    const ps = m.players.filter((x) => want.includes(x.slot)).slice(0, 4), p = ps[0];
+    if (!p) return J({ error: 'Tick at least one player.' });
     const map = (await hb.kvGet('ps4map')) || {}, id = Object.keys(map).find((i) => map[i] === room);
     if (!id) return J({ error: 'This room’s PS4 isn’t set up for members yet – please ask staff.' });
     const K = await hb.kvMany(['ps4poll:' + id, 'ps4cmd:' + id], []), c0 = K['ps4cmd:' + id];
     if (now - (K['ps4poll:' + id] || 0) > 3 * 60e3) return J({ error: 'The PS4 in this room isn’t answering – is it switched on?' });
     if (c0 && (c0.state === 'sent' || c0.state === 'taken') && now - c0.at < 2 * 60e3) return J({ error: 'The PS4 is busy for a moment – try again in a minute.', busy: true });
-    const c = { cid: 'l' + now.toString(36), do: 'look', p: `/_memplay.${m.id}.${p.slot}.${p.shown.replace(/ /g, '_')}`, at: now, by: 'member ' + m.id, state: 'sent', nobusy: true };
-    await hb.kvMany([], [['ps4cmd:' + id, c], ['memplay:' + id, { name: p.shown, cid: c.cid, at: now }]]);
-    return J({ ok: true, sent: true, name: p.shown, room });
+    const names = ps.map((x) => x.shown).join(' + '), c = { cid: 'l' + now.toString(36), do: 'look', p: `/_memplay.${m.id}.` + ps.map((x) => x.slot + '.' + x.shown.replace(/ /g, '_')).join('.'), at: now, by: 'member ' + m.id, state: 'sent', nobusy: true };
+    await hb.kvMany([], [['ps4cmd:' + id, c], ['memplay:' + id, { name: names, cid: c.cid, at: now }]]);
+    return J({ ok: true, sent: true, name: names, room });
   }
   if (act === 'pin') {
     if ((await memMac(env, 'pin|' + m.salt + '|' + String(f.old || ''))) !== m.pin) return J({ error: 'Your current PIN is wrong.' });
@@ -4898,9 +4899,9 @@ $('pls').innerHTML=M.players.map(function(p){sel[p.slot]=p.pic;return '<div clas
 '<button data-sv="1">Save '+esc(p.shown)+'</button><p class="err"></p></div>'}).join('');play()}
 var ROOM=new URLSearchParams(location.search).get('room')||'';
 function play(){if(!ROOM||!M){$('playc').hidden=true;return}$('playc').hidden=false;$('playh').textContent='Play on '+ROOM.toUpperCase()+' now';
-$('playb').innerHTML=M.players.map(function(p){return '<button data-play="'+p.slot+'">'+(P[p.pic]||'')+' Load '+esc(p.shown)+'</button>'}).join('')}
-$('playb').onclick=function(e){var b=e.target.closest('[data-play]');if(!b)return;var e5=$('e5');e5.className='err';e5.textContent='';b.disabled=true;
-api({act:'play',room:ROOM,slot:b.dataset.play}).then(function(r){b.disabled=false;if(r.error){e5.textContent=r.error;if(r.out)out();return}e5.className='err ok';e5.textContent='Sent! Watch the TV – the profile for '+r.name+' will be ready in a moment.'})};
+$('playb').innerHTML=M.players.map(function(p){return '<label style="display:flex;gap:12px;align-items:center;font-size:18px;color:#f4f1fb;margin:10px 0"><input type="checkbox" data-tick="'+p.slot+'" checked style="width:26px;height:26px"> '+(P[p.pic]||'')+' '+esc(p.shown)+'</label>'}).join('')+'<button data-go="1">Load ticked players</button>'}
+$('playb').onclick=function(e){var b=e.target.closest('[data-go]');if(!b)return;var e5=$('e5');e5.className='err';e5.textContent='';var sl=[].map.call(document.querySelectorAll('[data-tick]:checked'),function(x){return x.dataset.tick});if(!sl.length){e5.textContent='Tick at least one player.';return}b.disabled=true;
+api({act:'play',room:ROOM,slots:sl}).then(function(r){b.disabled=false;if(r.error){e5.textContent=r.error;if(r.out)out();return}e5.className='err ok';e5.textContent='Sent! Watch the TV – the profile for '+r.name+' will be ready in a moment.'})};
 $('pls').onclick=function(e){var c=e.target.closest('[data-s]');if(!c)return;var s=c.dataset.s,er=c.querySelector('.err');
 var d=e.target.closest('[data-i]');if(d){sel[s]=+d.dataset.i;[].forEach.call(c.querySelectorAll('.pics div'),function(x){x.className=+x.dataset.i===sel[s]?'sel':''});c.querySelector('.av').textContent=P[sel[s]];return}
 if(e.target.dataset.sv){er.className='err';er.textContent='';api({act:'player',slot:s,shown:c.querySelector('[data-n]').value,pic:sel[s]}).then(function(r){if(r.error){er.textContent=r.error;if(r.out)out();return}show(r);var c2=document.querySelector('[data-s="'+s+'"] .err');if(c2){c2.className='err ok';c2.textContent='Saved.'}});return}
