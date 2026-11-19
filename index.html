@@ -134,6 +134,16 @@ canvas.r2-char{display:block}
 .r2-row::-webkit-scrollbar{display:none}
 .r2-row>.r2-gw{flex:none;scroll-snap-align:start;animation:none}
 .r2-row>.r2-gw>div:nth-child(2){min-height:0!important}
+/* Shelf polish (owner 19 Nov): player badge on the cover, no repeated tags, edge fade, heading line */
+.r2-row>.r2-gw>div:last-child{display:none}
+.r2-row>.r2-gw>div:nth-child(2){min-height:0!important;margin-top:9px!important;font-size:13px!important}
+.r2-pc{position:absolute;right:6px;bottom:6px;z-index:2;display:inline-flex;align-items:center;gap:4px;padding:3px 7px;border-radius:999px;background:rgba(11,9,20,.78);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);border:1px solid rgba(244,241,251,.18);font:700 10.5px/1 'Chakra Petch',sans-serif;color:#f4f1fb;letter-spacing:.02em;pointer-events:none}
+.r2-pc svg{width:11px;height:11px;opacity:.85}
+.r2-row{-webkit-mask-image:linear-gradient(90deg,#000 0,#000 86%,transparent 100%);mask-image:linear-gradient(90deg,#000 0,#000 86%,transparent 100%)}
+.r2-shelf{margin-bottom:14px!important}
+.r2-shelf h4{align-items:center!important}
+.r2-shelf h4:after{content:'';flex:1;height:1px;margin-left:4px;background:linear-gradient(90deg,color-mix(in srgb,var(--r2-accent) 55%,transparent),transparent);order:1}
+.r2-shelf h4 span{order:2;margin-left:8px!important}
 </style>
 <style id="r2-css"></style>
 </head>
@@ -1101,7 +1111,9 @@ function build(){var tiles=[].slice.call(document.querySelectorAll('#r2-stage .r
  box.setAttribute('data-sig',sig);box.innerHTML='';
  order.forEach(function(sh){var sec=document.createElement('section'),row=document.createElement('div');sec.className='r2-shelf';
   sec.innerHTML='<h4>▸ '+sh+' <em>'+groups[sh].length+'</em>'+(groups[sh].length>3?'<span>swipe ›</span>':'')+'</h4>';row.className='r2-row';
-  groups[sh].forEach(function(t){row.appendChild(t.cloneNode(true))});sec.appendChild(row);box.appendChild(sec)})}
+  groups[sh].forEach(function(t){var c=t.cloneNode(true),n=c.querySelector('.r2-gt').getAttribute('aria-label'),g=GI[n]||{},m=t.querySelector('div:last-child span'),pl=g.k==='ps4'&&m?m.textContent.trim():(g.p||'');
+   pl=pl.replace(/\s*players?$/,'').replace(/^1 player$/,'1');if(pl){var b=document.createElement('span');b.className='r2-pc';b.innerHTML='<svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M6 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm5 0a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM0 14c0-2.8 2.7-5 6-5s6 2.2 6 5v1H0zm12.5 1v-1c0-1.5-.6-2.9-1.6-3.9 2.8.1 5.1 1.9 5.1 4.2V15z"/></svg>'+pl;b.setAttribute('aria-label',pl+' players');c.querySelector('.r2-gt').appendChild(b)}
+   row.appendChild(c)});sec.appendChild(row);box.appendChild(sec)})}
 var q=0;new MutationObserver(function(){if(q)return;q=1;requestAnimationFrame(function(){q=0;build()})}).observe(document.documentElement,{subtree:true,childList:true});build();})();</script>
 </body>
 </html>
