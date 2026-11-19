@@ -2730,6 +2730,10 @@ async function gm(env, req) {
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await ps4Gm(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
+  if (/^mem(list|staff|unlock|pin)$/.test(act)) {   /* staff: member accounts (19 Nov) */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    try { return gmJ(await memGm(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
+  }
   if (act === 'queue') {   /* staff: what the timer will send, and the last send */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     if (f.sync) await gmList(env, hb);
@@ -4722,6 +4726,141 @@ async function keyDaily(env) {
   }
   return { sent };
 }
+/* ---- 19 Nov 2026 (owner 9:59pm): MEMBER ACCOUNTS – part 1 of the PS4 login. book.round2.sg/m: join (name, phone, 4-digit
+   PIN) or log in (phone + PIN), then pick the name shown on the PS4 and a profile picture. Staff accounts (owner + girlfriend
+   first) are members marked "staff" (owner 18 Nov: staff play is backed up like a member's, never wiped). Storage: one key
+   'mem:<phone>' per member + the phone list 'memlist'. The PIN is never kept plain (HMAC with the engine's secret + the
+   member's own salt); 5 wrong PINs = locked 15 min. Logged in = a signed token on the phone (no storage call to check it;
+   changing the PIN logs every phone out). Putting the name/picture/saves on a PS4 = part 2 (the Round2 PS4 tile). */
+const MEM_PICS = ['🎮', '🍿', '🎬', '🚀', '👻', '👑', '⭐', '🎲', '🍕', '🎧', '🐱', '⚡'];
+function memPhone(p) { let d = String(p || '').replace(/\D/g, ''); if (d.length === 8 && /^[3689]/.test(d)) d = '65' + d; return /^\d{10,15}$/.test(d) ? d : ''; }
+const memB64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+async function memMac(env, s) {
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode('r2mem1|' + (env.PS4_KEY || env.GM_STAFF || '')), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return memB64(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(s)));
+}
+const memShown = (s) => String(s || '').replace(/[^A-Za-z0-9 ]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16).trim();
+const memName = (s) => String(s || '').replace(/[<>"&]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40);
+const memPub = (m) => ({ id: m.id, name: m.name, phone: m.phone.replace(/^65(\d{8})$/, '$1').replace(/^(\d{4})(\d{4})$/, '$1 $2'), shown: m.shown, pic: m.pic, staff: !!m.staff, since: m.at });
+async function memTok(env, m) { const p = m.phone + '.' + (Date.now() + 180 * 86400e3).toString(36) + '.' + (m.tv || 0); return p + '.' + (await memMac(env, 'tok|' + p)).slice(0, 24); }
+async function memFromTok(env, hb, t) {
+  const a = String(t || '').split('.'); if (a.length !== 4) return null;
+  const p = a.slice(0, 3).join('.'); if ((await memMac(env, 'tok|' + p)).slice(0, 24) !== a[3] || parseInt(a[1], 36) < Date.now()) return null;
+  const m = await hb.kvGet('mem:' + a[0]); return m && String(m.tv || 0) === a[2] ? m : null;
+}
+async function memApi(env, req) {
+  const f = await req.json().catch(() => ({})), act = String(f.act || ''), hb = book(env), who = req.headers.get('cf-connecting-ip') || 'x', now = Date.now();
+  if ((act === 'join' || act === 'login') && !(await hb.gmRate('mem:' + who, 60))) return J({ error: 'Too many tries from here. Wait 10 minutes.' });
+  if (act === 'join') {
+    const phone = memPhone(f.phone), name = memName(f.name), pin = String(f.pin || '');
+    if (name.length < 2) return J({ error: 'Please type your name.' });
+    if (!phone) return J({ error: 'That phone number doesn’t look right.' });
+    if (!/^\d{4}$/.test(pin)) return J({ error: 'The PIN must be 4 digits.' });
+    if (/^(\d)\1{3}$|^1234$|^0000$/.test(pin)) return J({ error: 'Pick a less easy PIN (not 1234 or four of the same).' });
+    if (await hb.kvGet('mem:' + phone)) return J({ error: 'This number already has an account – log in instead.', login: true });
+    const salt = memB64(crypto.getRandomValues(new Uint8Array(9))), id = 'm' + memB64(crypto.getRandomValues(new Uint8Array(6))).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8).padEnd(8, '0');
+    const m = { id, name, phone, salt, pin: await memMac(env, 'pin|' + salt + '|' + pin), at: now, shown: memShown(name.split(' ')[0]) || 'Player', pic: 0, staff: false, tv: 0, bad: 0, lock: 0, by: 'self' };
+    const list = (await hb.kvGet('memlist')) || []; if (!list.includes(phone)) list.push(phone);
+    await hb.kvMany([], [['mem:' + phone, m], ['memlist', list]]);
+    return J({ ok: true, tok: await memTok(env, m), me: memPub(m), pics: MEM_PICS });
+  }
+  if (act === 'login') {
+    const phone = memPhone(f.phone), pin = String(f.pin || ''), m = phone ? await hb.kvGet('mem:' + phone) : null;
+    if (!m) return J({ error: 'No account with this number yet – join instead.', join: true });
+    if (m.lock > now) return J({ error: `Too many wrong PINs. Try again in ${Math.ceil((m.lock - now) / 60e3)} min, or ask staff.` });
+    if ((await memMac(env, 'pin|' + m.salt + '|' + pin)) !== m.pin) {
+      m.bad = (m.bad || 0) + 1; let left = 5 - m.bad; if (left <= 0) { m.lock = now + 15 * 60e3; m.bad = 0; left = 0; }
+      await hb.kvSet('mem:' + phone, m); return J({ error: left ? `Wrong PIN (${left} ${left === 1 ? 'try' : 'tries'} left).` : 'Wrong PIN. Locked for 15 minutes – or ask staff.' });
+    }
+    if (m.bad || m.lock) { m.bad = 0; m.lock = 0; await hb.kvSet('mem:' + phone, m); }
+    return J({ ok: true, tok: await memTok(env, m), me: memPub(m), pics: MEM_PICS });
+  }
+  const m = await memFromTok(env, hb, f.tok); if (!m) return J({ error: 'Please log in again.', out: true });
+  if (act === 'me') return J({ ok: true, me: memPub(m), pics: MEM_PICS });
+  if (act === 'update') {
+    if (f.shown !== undefined) { const s = memShown(f.shown); if (s.length < 2) return J({ error: 'The PS4 name needs 2–16 letters or numbers.' }); m.shown = s; }
+    if (f.name !== undefined) { const s = memName(f.name); if (s.length < 2) return J({ error: 'Please type your name.' }); m.name = s; }
+    if (f.pic !== undefined) { const p = +f.pic; if (!(p >= 0 && p < MEM_PICS.length)) return J({ error: 'Pick one of the pictures.' }); m.pic = p; }
+    await hb.kvSet('mem:' + m.phone, m); return J({ ok: true, me: memPub(m), pics: MEM_PICS });
+  }
+  if (act === 'pin') {
+    if ((await memMac(env, 'pin|' + m.salt + '|' + String(f.old || ''))) !== m.pin) return J({ error: 'Your current PIN is wrong.' });
+    const pin = String(f.pin || ''); if (!/^\d{4}$/.test(pin) || /^(\d)\1{3}$|^1234$|^0000$/.test(pin)) return J({ error: 'The new PIN must be 4 digits, not 1234 or four of the same.' });
+    m.pin = await memMac(env, 'pin|' + m.salt + '|' + pin); m.tv = (m.tv || 0) + 1; await hb.kvSet('mem:' + m.phone, m);
+    return J({ ok: true, tok: await memTok(env, m), me: memPub(m) });
+  }
+  return J({ error: 'unknown' });
+}
+/* staff (control centre / System check): memlist · memstaff (phone, on=1|0) · memunlock (phone) · mempin (phone, pin: staff sets a new PIN) */
+async function memGm(env, hb, f) {
+  const act = String(f.action || '');
+  if (act === 'memlist') { const list = (await hb.kvGet('memlist')) || [], K = list.length ? await hb.kvMany(list.map((p) => 'mem:' + p), []) : {};
+    return { ok: true, n: list.length, members: list.map((p) => K['mem:' + p]).filter(Boolean).map((m) => Object.assign(memPub(m), { full: m.phone, locked: m.lock > Date.now() })) }; }
+  const phone = memPhone(f.phone), m = phone ? await hb.kvGet('mem:' + phone) : null; if (!m) return { error: 'No member with that phone number.' };
+  if (act === 'memstaff') m.staff = String(f.on) === '1';
+  else if (act === 'memunlock') { m.lock = 0; m.bad = 0; }
+  else if (act === 'mempin') { const pin = String(f.pin || ''); if (!/^\d{4}$/.test(pin)) return { error: 'PIN must be 4 digits.' }; m.pin = await memMac(env, 'pin|' + m.salt + '|' + pin); m.tv = (m.tv || 0) + 1; m.lock = 0; m.bad = 0; }
+  else return { error: 'unknown' };
+  await hb.kvSet('mem:' + phone, m); return { ok: true, member: memPub(m) };
+}
+function memPage(u) {
+  const room = String(u.searchParams.get('room') || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12);
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Round2 members</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>*{box-sizing:border-box}body{margin:0;background:#06050a;color:#f4f1fb;font:16px/1.5 'Chakra Petch',system-ui,sans-serif}
+main{max-width:460px;margin:0 auto;padding:26px 16px 40px}.px{font-family:'Press Start 2P',monospace;letter-spacing:.08em}
+.kick{font-size:9px;color:#a79fbd}h1{font-family:'Press Start 2P',monospace;font-size:17px;line-height:1.5;margin:10px 0 16px}
+.card{border:1px solid rgba(244,241,251,.14);border-top:4px solid #f5c400;background:#0b0914;padding:16px;margin:0 0 14px}
+.tabs{display:flex;gap:8px;margin:0 0 14px}.tabs button{flex:1}label{display:block;font-size:13px;color:#a79fbd;margin:12px 0 4px}
+input{width:100%;padding:12px;border:1px solid rgba(244,241,251,.25);background:#06050a;color:#f4f1fb;font:inherit;font-size:17px;border-radius:0}
+button{padding:13px 14px;border:0;background:#f5c400;color:#06050a;font:600 15px 'Chakra Petch',sans-serif;cursor:pointer;width:100%;margin-top:14px}
+button.ghost{background:transparent;color:#f4f1fb;border:1px solid rgba(244,241,251,.3)}button.on{background:#f4f1fb;color:#06050a}
+.err{color:#ff7a7a;min-height:1.2em;margin:10px 0 0;font-size:14px}.ok{color:#7dffa8}.fine{font-size:13px;color:#a79fbd}
+.pics{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:6px}.pics div{font-size:26px;text-align:center;padding:8px 0;border:2px solid transparent;background:#14111f;cursor:pointer}
+.pics div.sel{border-color:#f5c400}.me{display:flex;gap:14px;align-items:center}.av{font-size:40px;width:64px;height:64px;display:flex;align-items:center;justify-content:center;background:#14111f;border:2px solid #f5c400}
+.badge{display:inline-block;font-size:9px;padding:4px 6px;background:#f5c400;color:#06050a;margin-left:6px}[hidden]{display:none!important}</style></head><body><main>
+<div class="kick px">ROUND2 · MEMBERS${room ? ' · ' + room.toUpperCase() : ''}</div><h1>Your Round2<br>game profile</h1>
+<section id="out"><div class="tabs"><button id="tJ" class="on">Join</button><button id="tL" class="ghost">Log in</button></div>
+<div class="card"><div id="fJ"><label>Your name</label><input id="jn" autocomplete="name" maxlength="40">
+<label>Phone number</label><input id="jp" inputmode="tel" autocomplete="tel" placeholder="9123 4567">
+<label>Pick a 4-digit PIN</label><input id="jk" inputmode="numeric" maxlength="4" type="password" autocomplete="new-password">
+<label>PIN again</label><input id="jk2" inputmode="numeric" maxlength="4" type="password" autocomplete="new-password">
+<button id="jb">Join Round2</button><p class="fine">Your saves follow you to any Round2 room. You log in with your phone number and PIN.</p></div>
+<div id="fL" hidden><label>Phone number</label><input id="lp" inputmode="tel" autocomplete="tel" placeholder="9123 4567">
+<label>PIN</label><input id="lk" inputmode="numeric" maxlength="4" type="password" autocomplete="current-password"><button id="lb">Log in</button>
+<p class="fine">Forgot your PIN? Ask staff to reset it.</p></div><p class="err" id="e1"></p></div></section>
+<section id="in" hidden><div class="card"><div class="me"><div class="av" id="av"></div><div><b id="nm"></b><span class="badge px" id="bd"></span><div class="fine" id="ph"></div></div></div></div>
+<div class="card"><b>On the PS4</b><label>Name shown on the PS4 (2–16 letters/numbers)</label><input id="sh" maxlength="16">
+<label>Profile picture</label><div class="pics" id="pics"></div><button id="sv">Save</button><p class="err" id="e2"></p>
+<p class="fine">Coming next: open the Round2 tile on the room's PS4 and your saves, name and picture load into your profile.</p></div>
+<div class="card"><b>Change PIN</b><label>Current PIN</label><input id="po" inputmode="numeric" maxlength="4" type="password">
+<label>New PIN</label><input id="pn" inputmode="numeric" maxlength="4" type="password"><button class="ghost" id="pb">Change PIN</button><p class="err" id="e3"></p></div>
+<button class="ghost" id="lo">Log out</button></section>
+<script>
+var $=function(i){return document.getElementById(i)},T=null,P=[],sel=0;try{T=localStorage.getItem('r2.mem')}catch(e){}
+function api(o){if(T)o.tok=T;return fetch('/m/api',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(o)}).then(function(r){return r.json()}).catch(function(){return{error:'No connection – try again.'}})}
+function keep(t){T=t;try{localStorage.setItem('r2.mem',t)}catch(e){}}
+function tab(j){$('fJ').hidden=!j;$('fL').hidden=j;$('tJ').className=j?'on':'ghost';$('tL').className=j?'ghost':'on';$('e1').textContent=''}
+$('tJ').onclick=function(){tab(1)};$('tL').onclick=function(){tab(0)};
+function show(r){if(r.pics)P=r.pics;var m=r.me;$('out').hidden=true;$('in').hidden=false;$('nm').textContent=m.name;$('ph').textContent=m.phone;
+$('bd').textContent=m.staff?'STAFF':'MEMBER';$('sh').value=m.shown;sel=m.pic||0;$('av').textContent=P[sel]||'';
+$('pics').innerHTML=P.map(function(p,i){return '<div data-i="'+i+'" class="'+(i===sel?'sel':'')+'">'+p+'</div>'}).join('');}
+$('pics').onclick=function(e){var d=e.target.closest('[data-i]');if(!d)return;sel=+d.dataset.i;[].forEach.call($('pics').children,function(c){c.className=+c.dataset.i===sel?'sel':''});$('av').textContent=P[sel]};
+function busy(b,on,t){b.disabled=on;if(t)b.textContent=t}
+$('jb').onclick=function(){var e=$('e1');e.textContent='';if($('jk').value!==$('jk2').value){e.textContent='The two PINs are not the same.';return}
+busy($('jb'),1,'Joining…');api({act:'join',name:$('jn').value,phone:$('jp').value,pin:$('jk').value}).then(function(r){busy($('jb'),0,'Join Round2');
+if(r.error){e.textContent=r.error;if(r.login){$('lp').value=$('jp').value;tab(0)}return}keep(r.tok);show(r)})};
+$('lb').onclick=function(){var e=$('e1');e.textContent='';busy($('lb'),1,'Logging in…');api({act:'login',phone:$('lp').value,pin:$('lk').value}).then(function(r){busy($('lb'),0,'Log in');
+if(r.error){e.textContent=r.error;if(r.join){$('jp').value=$('lp').value;tab(1)}return}keep(r.tok);show(r)})};
+$('sv').onclick=function(){var e=$('e2');e.className='err';e.textContent='';busy($('sv'),1,'Saving…');api({act:'update',shown:$('sh').value,pic:sel}).then(function(r){busy($('sv'),0,'Save');
+if(r.error){e.textContent=r.error;if(r.out)out();return}show(r);e.className='err ok';e.textContent='Saved.'})};
+$('pb').onclick=function(){var e=$('e3');e.className='err';e.textContent='';api({act:'pin',old:$('po').value,pin:$('pn').value}).then(function(r){
+if(r.error){e.textContent=r.error;if(r.out)out();return}keep(r.tok);$('po').value=$('pn').value='';e.className='err ok';e.textContent='PIN changed. Other phones are logged out.'})};
+function out(){T=null;try{localStorage.removeItem('r2.mem')}catch(e){}$('in').hidden=true;$('out').hidden=false}
+$('lo').onclick=out;
+if(T)api({act:'me'}).then(function(r){if(r.ok)show(r);else out()});
+</script></main></body></html>`;
+}
 const HANDLER = {
   /* THREE TIMERS (14 Nov, owner: "let's try 1" – split the one timer). Until today one 5-minute timer did everything in one
      run, and one run may make only 50 outside requests (free plan): at 10am the 1-hour reminders lost to the sweeps. Each
@@ -4975,6 +5114,8 @@ const HANDLER = {
         }
         return Response.redirect('https://cue.round2.sg/' + tv.code, 302);
       }
+      if (u.pathname === '/m' || u.pathname === '/m/') return H(memPage(u));   /* 19 Nov: member join / log in (phone + PIN) */
+      if (u.pathname === '/m/api' && req.method === 'POST') return await memApi(env, req);
       if (u.pathname === '/ps4/in' && req.method === 'POST') return await ps4In(env, req);
       if (u.pathname === '/ps4/resetok' && req.method === 'POST') return await ps4ResetOk(env, req);   /* 17 Nov: last check before a reset */   /* room PS4 check-ins (13 Nov) */
       if (u.pathname === '/ps4/games') return await ps4Games(env);
