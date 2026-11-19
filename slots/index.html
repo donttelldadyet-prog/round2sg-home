@@ -212,6 +212,14 @@ h3.nm, .nm { color: var(--rc); }
 .chips button { font: inherit; font-size: 14px; padding: 7px 11px; cursor: pointer; background: transparent; color: var(--ink); border: 1px solid var(--line); min-width: 74px; }
 .chips button small { display: block; font-size: 10px; color: var(--mute); text-transform: uppercase; letter-spacing: .06em; }
 .chips button.eb { border-color: rgba(102,199,255,.6); }
+/* owner 20 Nov: the Early bird start looks a little special - blue glow, $35 tag, a slow shine */
+#pTimes button.eb { overflow: visible; border-color: var(--eb); background: linear-gradient(160deg, rgba(102,199,255,.22), rgba(102,199,255,.06)); box-shadow: 0 0 14px rgba(102,199,255,.28), inset 0 0 0 1px rgba(102,199,255,.25); }
+#pTimes button.eb small { color: var(--eb); font-weight: 700; }
+#pTimes button.eb::after { content: '$35'; position: absolute; top: -9px; right: -6px; font: 7px 'Press Start 2P', monospace; letter-spacing: .06em; padding: 4px 5px; background: var(--eb); color: #0b2238; }
+#pTimes button.eb::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.22) 50%, transparent 65%) -150% 0 / 250% 100% no-repeat; animation: r2ebshine 3.6s ease-in-out infinite; }
+@keyframes r2ebshine { 0%, 55% { background-position: 150% 0; } 100% { background-position: -150% 0; } }
+@media (prefers-reduced-motion: reduce) { #pTimes button.eb::before { animation: none; } }
+#pTimes button.eb[aria-pressed="true"] small { color: var(--acc-ink); }
 #pTimes { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); }   /* start times fill the row evenly, no gap on the right */
 #pTimes button { min-width: 0; padding-left: 4px; padding-right: 4px; }
 #pLens { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 8px; }   /* lengths: equal boxes, 2 per row on a phone; row gap leaves room for the SAVE tags */
