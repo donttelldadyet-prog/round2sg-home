@@ -289,10 +289,11 @@ h3.nm, .nm { color: var(--rc); }
 #cKind button { display: flex; align-items: center; justify-content: center; gap: 7px; }
 #cKind .kic { width: 16px; height: 16px; flex: none; color: var(--acc); }
 #cKind button[aria-pressed="true"] .kic { color: var(--acc-ink); }
-/* owner 20 Nov: arcade ON/OFF switch instead of the plain tick box */
-.cel input#cOn { -webkit-appearance: none; appearance: none; width: 46px; height: 26px; margin: 0; border: 2px solid var(--line); border-radius: 0; cursor: pointer; flex: none;
-  background: linear-gradient(var(--mute), var(--mute)) no-repeat 3px 50% / 16px 16px, #06050a; transition: background-position .2s cubic-bezier(.3,.8,.3,1.2), background-color .2s; }
-.cel input#cOn:checked { border-color: var(--acc); background: linear-gradient(var(--acc-ink), var(--acc-ink)) no-repeat calc(100% - 3px) 50% / 16px 16px, var(--acc); box-shadow: 0 0 12px color-mix(in srgb, var(--acc) 45%, transparent); }
+/* owner 20 Nov: smooth on/off switch (grey off, room colour on) instead of the plain tick box */
+.cel input#cOn { -webkit-appearance: none; appearance: none; position: relative; width: 44px; height: 26px; margin: 0; border: 0; border-radius: 999px; background: #3a3746; cursor: pointer; flex: none; transition: background-color .2s; }
+.cel input#cOn::before { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); transition: transform .2s cubic-bezier(.3,.8,.3,1.1); }
+.cel input#cOn:checked { background: var(--acc); }
+.cel input#cOn:checked::before { transform: translateX(18px); }
 .cel input#cOn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .cel2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .fl textarea { display: block; width: 100%; margin-top: 4px; padding: 11px 12px; font: 16px 'Chakra Petch', sans-serif; color: var(--ink); background: #06050a; border: 1px solid var(--line); resize: vertical; }
