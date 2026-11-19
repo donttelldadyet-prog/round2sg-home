@@ -134,6 +134,23 @@
     cap; Kaeden may hold more – raise nm[1200] if needed). Page checked: join step shows Lapy's 21 (440px PNGs ~250 KB each –
     heavy on phones; thumbnails = UI follow-up), "More" pages the big pack. Owner: if too big, cut the list down or use our
     own Round2 pictures (we can make .xavatar sets). Not yet tested end-to-end on a PS4 (pick → Load → picture on profile).
+- **4:26am SHELLUI PROBE WORKED (helper 1.1.107 on Kaeden, after the owner's restart):** GoldHEN loads our module into SceShellUI only
+  from GoldHEN's own plugin folder (/user/data/GoldHEN/plugins/…; /data = not found, /user/data/round2 = no permission). The menu
+  did not crash. Full list: R2 saves/lib/probe/shprobe-73378b38….txt (app.exe = 11,634 types). The useful ones:
+  - **Sce.Vsh.ShellUI.LoginMgrUtil** (static helpers): Logout(5 args), LogoutSync(3), SilentLogout(2), **LogoutAll(1)**,
+    SignoutSync(1), DisconnectDevice(1), LaunchSwitchUser(1), BackgroundAutoLogin(0), GetFirstForegroundUserId(0),
+    **SuspendLoginScreen(0) / ResumeLoginScreen(0) / IsSuspendedLoginScreen(0)** ← could stop the profile picker popping up when a
+    controller is switched on during a load (owner's clash worry), UnbindDevice(2), NotifyPadConnectionChange(1).
+  - **LoginMgrUtilInternal**: Logout(3), DisconnectAllDevice(1), ArbitrarilyDisconnectDevice(1), DisconnectNotAssignAllDevice(2),
+    StartSwitchUser(1), SetForegroundUser(5), GetLoginUserIdList, SetUserName(3), StartLogoutProcess/FinishedLogoutProcess,
+    BtDeviceSwitchUser(2), PopToLoginScene(1), CancelLoginFlow(2).
+  - Power menu: **TopMenu PageBase.SelectedLogoutSystem(0) / SelectedSwitchUser(0) / SelectedEnterStandby(0)**, LogoutJob.Run().
+  - PS button: **EventApp.EventAppExternal.LockShareAndPSButton(0)/UnlockShareAndPSButton(0)**, TeamChat.TeamChatExternal
+    LockPSButton(0)/UnlockPSButton(0), PadInternal.PadManager (Instance, ForceIntercept(1), EmulatePSButton, LockTypeChangedAction,
+    IsControllerConnected), PSButtonLocker/LongLocker/DoubleLocker classes, PadInfo.GetButtonState(1) (for an unlock combo).
+  - NEXT (read-only again): probe v2 = full signatures (parameter types, static or not) of those classes before calling anything;
+    then, with the owner watching Kaeden: SuspendLoginScreen + LockShareAndPSButton during a load, LogoutAll / SelectedLogoutSystem
+    after it. Helper updates since the restart: 1 (1.1.107) – keep it to ~4 per restart.
 - **4:00am SHELLUI PROBE (owner 3:50am "probe the sceShellui and make logs using the helper"):**
   - ShellUI's C# program is encrypted on disk (/system_ex/app/NPXS20001/psm/Application/app.exe.sprx 16.5 MB, Sce.Vsh.*.dll.sprx)
     → names have to be read from inside the running menu. HEN's plugin_mono shows the known names (Sce.Vsh.ShellUI.Settings.Core
