@@ -49,6 +49,12 @@
   /data/round2/tile.ver + report field "tile". Engine (live 2680475db3ed) reads branch **ps4-tile** (round2_tile.json +
   round2_tile.pkg; 0.02 = 129f7c31…, 6619136 bytes). UNTESTED: whether BGFT accepts a request from the helper's process.
   Kaeden update to 1.1.87 refused 11:38pm: the tile (RTWO00001) was open – counts as "a game is open".
+- **11:50pm tile auto-update result:** 1.1.87 on Kaeden: download + SHA OK, BGFT module + IntInit OK, register → **0x80990088**
+  for 0.02 and 0.03 = "package already installed" (DirectPackageInstaller payload source reads it so; DPI also proves BGFT works
+  from a payload). Fix **1.1.88** (ps4-test 5ca3608, sha 38222f96…): on 0x80990088 remove the old tile
+  (libSceAppInstUtil sceAppInstUtilInitialize + sceAppInstUtilAppUnInstall("RTWO00001")) then register again. Kaeden refused
+  the update: 5 own-program switches since its start → **needs a full restart + jailbreak**, then ps4update ch=test, then
+  look `/_tile.now`. Tile 0.03 is on branch ps4-tile (shows "tile 0.03" bottom right).
 - **Kaeden back to normal 9:43–9:55pm:** spares renamed User1–3 (ps4prof name), test member's 3 games cleaned out of User3,
   `/_restoreall` from day0: 35 games, 28 in, 7 = games no longer installed on Kaeden (CUSA00419, 02671, 05070, 06400, 09973,
   13795, 29291 – kept in the cloud). 247 s (a 32 MB save took 37 s). Verbose pop-ups + test flags still ON.
