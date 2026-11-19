@@ -117,6 +117,12 @@
   I left off". Owner turned trophy pop-ups off by hand (setting stays through clean slates). Helper **1.1.96** (ps4-test,
   sha 76c54658…) on Kaeden; engine 47abf9c8b4cf (Light 13/5/0 after – same 5 Kaeden notes). Existing VS save is in slot p2
   (Aliff) → Player 2. NB for roll-out: the rooms' cloud batch is OFF – member uploads need it ON.
+- **1:30am helper 1.1.97 (ps4-test, sha 4bb56388…) on Kaeden:** ticked players fill Player 1.. in order (only Aliff ticked →
+  Player 1), main → main; Load links main + every spare (spares nobody was loaded into → extra crew slots x<k>, so a +1's play
+  never overwrites a crew player). Before it the owner's Load on 1.1.96 worked (Karen bozz / Aliff Bozz, 0 failed). Reset
+  kaedentest3: 1 game, 0 failed, 2 signed out (room reset still signs out signed-in spares to rename them). `/_regscan.<u>`
+  is useless as written (sceRegMgrGetInt answers 0 for every offset) – trophy pop-up setting not found yet; it is per
+  profile and survives clean slates, so setting it once by hand per profile works meanwhile.
 - **Kaeden back to normal 9:43–9:55pm:** spares renamed User1–3 (ps4prof name), test member's 3 games cleaned out of User3,
   `/_restoreall` from day0: 35 games, 28 in, 7 = games no longer installed on Kaeden (CUSA00419, 02671, 05070, 06400, 09973,
   13795, 29291 – kept in the cloud). 247 s (a 32 MB save took 37 s). Verbose pop-ups + test flags still ON.
