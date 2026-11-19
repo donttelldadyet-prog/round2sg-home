@@ -68,6 +68,22 @@
 >   MAX 12:58 ✗, from SCARLETT 1:00 (broadcast + direct .15) ✗. Tonight's only successes on the 2.4 GHz PS4s were sent by VALE
 >   ~3 min after rest (Atlas 12:08, Bella 12:44); every other sender/timing failed. Not enough tries to say sender vs timing –
 >   **owner: don't touch Vale tonight (sleeping there); ask before any overnight test.** 1:03am all rested except Vale.
+> - **19 Nov 6:05pm KAEDEN TEST BENCH – backup + download tests (helper test line 1.1.73→1.1.78, ps4-test bec9ed3+).**
+  New looks: `/_copy.all` (internal copy only, nothing removed), `/_copycheck` (internal vs restore point, files+bytes),
+  `/_restoreall` (every restore-point game /_gmove'd back into its profile, timed), `/_bpop.on|off` (verbose pop-ups, test bench
+  only), keep-awake survives restarts (keepawake.txt). Kaeden: day0 restore point 81 parts 137 MB 0 failed; copy 79 parts
+  129 MB, copycheck 79 same (2 homebrew skipped); cloud batch 79/79. Clean slate (owner OK 5:25pm) → restore test BEFORE
+  (1.1.77): 28 of 35 games in 297 s (8.5 s/game; 7 refused – game not installed on Kaeden, saves safe in cloud); time is mostly
+  MAKING SAVE PARTS (2–7 s, up to 21 s), download ~1.3 MB/s (32 MB save = 25 s), into profile 0.1–2 s. 1.1.78: SAFER RESTORE
+  (download+check every file to prep first, only then clear+fill the save), uploaded.txt/cloud.txt kept on re-copy (bug: 1.1.77
+  re-sent 16 unchanged parts after a clean slate), restore writes cloud-manifest.txt (it overwrote prep manifest.txt – would have
+  made the cloud batch think the copy was damaged), clean/reset/purge end with sign out all + main signed back in (Kaeden 17:50:
+  ok). AFTER run (1.1.78): 28 of 35 in 225 s (6.4 s/game). Kaeden cloud batch OFF (127 waiting – most legitimately re-sent once
+  because 1.1.77 wiped their uploaded.txt); skip-unchanged still to be proven: let it finish, clean slate again, expect 'unchanged'.
+  Bella: 1.1.77 since 17:41 (own program), /_keepawake.500. Bella's 2nd silence 15:58–17:37 = REST MODE (slow.log: guard step,
+  wall 0 s / running clock 5952 s; no net failures) – guests' TV off. Only the 13:34–15:48 connect failures are the open mystery.
+  Fast-crypto build still not tested (libmbedtls-ps4-fast.a, tls/r2_mbedtls_config_fast.h). Kaeden: old helpers linger in its
+  shared program after updates (3 'woke from rest' lines per wake) – to fix.
 > - **19 Nov 4:15pm CORRECTION – Bella's 1:34–3:48pm silence was NOT the watchdog.** Bella came back by itself; its logs: helper up
   since 13:22:27 the whole time (starter "hourly: helper running" 14:21, 15:21), net-fail.log: **114 failed connects to the engine
   over 8016 s (13:35 → 15:48:47), step 'connect'** (-0x0044). Meanwhile LAN worked (DDP from Kaeden 3:15pm: 200 Ok). Same AP as
