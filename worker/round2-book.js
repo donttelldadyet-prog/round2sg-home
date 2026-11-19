@@ -97,22 +97,6 @@ function noteMidOut(b) {
   return Object.assign({}, b, { end_date_time: addDays(en.slice(0, 10), -1) + ' 23:59:59' });
 }
 function noteMidIn(n) { if (n && / 23:59:59$/.test(String(n.end_date_time || ''))) n.end_date_time = nextDayStr(String(n.end_date_time).slice(0, 10)) + ' 00:00:00'; return n; }
-/* one-off (17 Nov): notes already in SimplyBook that end at 00:00:00 of the next day → re-saved (noteMidOut makes them 23:59:59).
-   Runs once from the side timer (DO kv oneoffMid); remove with the next engine change. */
-async function oneoffMid(env) {
-  const hb = book(env); if (await hb.kvGet('oneoffMid')) return;
-  await hb.kvSet('oneoffMid', { at: Date.now(), state: 'running' });
-  const s2 = await sb2(env), from = sgDay(Date.now() - 86400e3), L = await notesRange(s2, from, addDays(from, 60)), fixed = [];
-  /* read through sb2, so one already saved as 23:59:59 also reads as 00:00:00 and is simply saved again (harmless) */
-  for (const n of L) {
-    const st = String(n.start_date_time || ''), en = String(n.end_date_time || '');
-    if (!/ 00:00:00$/.test(en) || en.slice(0, 10) === st.slice(0, 10)) continue;
-    await s2('PUT', '/admin/calendar-notes/' + n.id, { provider_id: +n.provider_id, service_id: n.service_id || null, start_date_time: st, end_date_time: en, note_type_id: n.note_type_id || 1, note: n.note, mode: n.mode || 'provider', time_blocked: !!n.time_blocked })
-      .then(() => fixed.push(n.id + ' ' + st.slice(5, 16) + '–' + en.slice(5, 16))).catch((e) => fixed.push(n.id + ' FAILED ' + String(e.message).slice(0, 80)));
-    if (fixed.length >= 20) break;
-  }
-  await hb.kvSet('oneoffMid', { at: Date.now(), state: 'done', fixed });
-}
 async function sb2(env) {
   if (!sb2tok || sb2tok.t < Date.now()) sb2tok = await tokGet(env, 'tokRest');
   if (!sb2tok || sb2tok.t < Date.now()) {
@@ -2838,6 +2822,12 @@ async function gm(env, req) {
     if (f.ask === '1') { const ok = await fetch(base + '/cmd.json', { method: 'PUT', body: JSON.stringify({ id: 'l' + now.toString(36), do: 'log', at: now }) }).then((r) => r.ok).catch(() => false); return gmJ({ ok, asked: now }); }
     return gmJ({ ok: true, diag: await fetch(base + '/diag.json').then((r) => r.json()).catch(() => null) });
   }
+  if (act === 'widgetkey') {   /* staff (20 Nov): the key the iPhone widgets use (reset=1 makes a new one – old widgets stop) */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const hb = book(env); let k = await hb.kvGet('wkey');
+    if (!k || f.reset === '1') { k = [...crypto.getRandomValues(new Uint8Array(18))].map((x) => 'abcdefghjkmnpqrstuvwxyz23456789'[x % 31]).join(''); await hb.kvSet('wkey', k); }
+    return gmJ({ ok: true, key: k, url: WIDGET_URL });
+  }
   if (act === 'tvmsgs') {   /* staff, read-only (4 Nov): each room's message on the TV, when it first showed, and the last OK */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     if (!env.TV_KEY) return gmJ({ error: 'no TV key' });
@@ -5096,6 +5086,53 @@ async function ps4TilePkg(env, req) {
   if (sha !== r.sha || b.byteLength !== +r.size) { TILE_REL = null; return J({ error: 'file check failed' }, 502); }
   return new Response(b, { headers: { 'content-type': 'application/octet-stream', 'x-r2-v': r.v } });
 }
+/* ===== PHONE WIDGETS (owner, 20 Nov: "useful iOS lock screen and home screen widgets – improve my day to day") =====
+   iPhone widgets need an installed app, so they run in the free Scriptable app: control centre › Tests & systems › Phone setup
+   gives the script with the key in it. The widget asks GET /w?k=<key> (every ~5–15 min, iOS decides) → ONE Durable Object call.
+   Nothing here reads SimplyBook: the "now" timer's 10-minute tick already reads tonight + tomorrow (Auto wrap-up, noise rule) and
+   widgetSnap keeps a small copy of it (kv wsum); the "side" timer copies each TV's last check-in every 10 min (kv wtv). The
+   answer is worked out at ask time (who's in now, cleaning, next, turnover gaps, TVs quiet), so it's current to the minute. */
+const WIDGET_URL = 'https://round2-book.donttelldadyet.workers.dev/w';
+const W_ORDER = [5, 7, 8, 9, 10, 12, 11];
+function wName(S) { const t = String(S.name || '').split(' · ')[0].replace(/\s*\d+\s*(?:pax|ppl|pp)\b.*$/i, '').trim(); return t.slice(0, 18) || (S.k === 'n' ? 'note' : 'guest'); }
+async function widgetSnap(env, hb) {
+  const t = sgDay(Date.now() - SHADOW_TILL * 60e3), [D, D2] = await Promise.all([sessDay(env, t), sessDay(env, addDays(t, 1))]);
+  const d0 = sgMs0(t + ' 00:00') + SHADOW_TILL * 60e3, seen = new Set(), ss = [];
+  for (const S of D.sessions.concat(D2.sessions)) {
+    if (S.sys || seen.has(S.key) || S.end <= d0 - 3600e3 || S.s >= d0 + 2 * 86400e3) continue; seen.add(S.key);
+    ss.push({ u: S.unit, s: S.s, e: S.guestEnd, c: S.end, n: wName(S), x: S.ext && S.ext.length ? 1 : 0 });
+  }
+  ss.sort((a, b) => a.s - b.s);
+  await hb.kvSet('wsum', { t: Date.now(), night: t, d0, ss });
+}
+async function widgetApi(env, u) {
+  const k = String(u.searchParams.get('k') || '');
+  if (k.length < 16) return J({ error: 'no key' }, 403);
+  const o = await book(env).kvMany(['wkey', 'wsum', 'wtv'], []);
+  if (!o.wkey || o.wkey !== k) return J({ error: 'wrong key' }, 403);
+  const now = Date.now(), W = o.wsum || { ss: [] }; W.ss = (W.ss || []).sort((a, b) => a.s - b.s); const d0 = W.d0 || 0, d1 = d0 + 86400e3, tv = (o.wtv && o.wtv.r) || {};
+  const rooms = [], warn = [];
+  for (const u0 of W_ORDER) {
+    const L = W.ss.filter((x) => x.u === u0), cur = L.find((x) => x.s <= now && now < x.e), cl = L.find((x) => x.e <= now && now < x.c), nx = L.find((x) => x.s > now);
+    const r = { r: ROOMS[u0][0], st: cur ? 'in' : cl ? 'clean' : nx && nx.s < d1 ? 'next' : 'free' };
+    if (cur) Object.assign(r, { till: cur.e, n: cur.n, since: cur.s, x: cur.x });
+    if (cl) r.till = cl.c;
+    if (nx) Object.assign(r, { next: nx.s, nn: nx.n });
+    if (u0 === 7 && !L.length) r.st = 'closed';   /* Kaeden: under renovation – shown closed until it has sessions again */
+    /* turnover: from this guest's end (+15 min cleaning) to the next start */
+    const prev = cur || cl; if (prev && nx) r.gap = Math.round((nx.s - prev.e) / 60e3);
+    rooms.push(r);
+    /* a room with someone in it (or due within 45 min) whose TV hasn't checked in for 20 min */
+    const h = tv[GM_ROOM[u0]];
+    if (o.wtv && (cur || (nx && nx.s - now < 45 * 60e3)) && h && h.t && now - h.t > 20 * 60e3) warn.push(ROOMS[u0][0] + ' TV quiet ' + Math.round((now - h.t) / 60e3) + ' min');
+  }
+  const night = W.ss.filter((x) => x.s >= d0 && x.s < d1);
+  const counts = { total: night.length, done: night.filter((x) => x.e <= now).length, in: rooms.filter((x) => x.st === 'in').length, left: night.filter((x) => x.s > now).length, open: rooms.filter((x) => x.st !== 'closed').length };
+  const nextStart = W.ss.filter((x) => x.s > now)[0] || null, ends = W.ss.filter((x) => x.s <= now && x.e > now).sort((a, b) => a.e - b.e)[0] || null;
+  const age = Math.round((now - (W.t || 0)) / 60e3); if (age > 25) warn.unshift('Widget data ' + age + ' min old');
+  return J({ ok: true, now, night: W.night, counts, rooms, warn,
+    nextStart: nextStart && { r: ROOMS[nextStart.u][0], at: nextStart.s, n: nextStart.n }, nextEnd: ends && { r: ROOMS[ends.u][0], at: ends.e, n: ends.n }, age });
+}
 const HANDLER = {
   /* THREE TIMERS (14 Nov, owner: "let's try 1" – split the one timer). Until today one 5-minute timer did everything in one
      run, and one run may make only 50 outside requests (free plan): at 10am the 1-hour reminders lost to the sweeps. Each
@@ -5125,6 +5162,9 @@ const HANDLER = {
     const side = () => {
       if (env.TV_KEY) go(Promise.all(['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max'].map((r) => fetch(FB_BASE + env.TV_KEY + '/' + r + '/msgAck.json').then((x) => x.json()).then((k) => hb.ackNote(r, k)).catch(() => null))));   /* every OK, kept per message */
       go(paidSweep(env).catch(() => null));   /* paid at HitPay but not booked? book it (every 5 min) */
+      if (env.TV_KEY && mm % 10 === 1) { const R7 = ['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max'];   /* phone widgets: each TV's last check-in (20 Nov) */
+        go(Promise.all(R7.map((r) => fetch(FB_BASE + env.TV_KEY + '/' + r + '/helper.json').then((x) => x.json()).catch(() => null)))
+          .then((H) => hb.kvSet('wtv', { t: Date.now(), r: Object.fromEntries(R7.map((r, i) => [r, H[i] ? { t: +H[i].t || 0, pw: H[i].pw || '', tv: H[i].tv || '' } : null])) })).catch(() => null)); }
       /* paid moves that never ran (HitPay's message missed and the guest closed the page): finish them, or alert staff */
       go((async () => { for (const m of await hb.mvRecent(Date.now() - 48 * 3600e3)) if (m.status === 'pending' && Date.now() - m.t > 60e3) {
         const r = await mvComplete(env, m.ref, 'sweep').catch((e) => ({ error: String(e.message || e) }));
@@ -5138,7 +5178,6 @@ const HANDLER = {
         }
       } })());
       go(diagReq(env).catch(() => null));   /* staff questions left in KV (diag:req → diag:res) */
-      go(oneoffMid(env).catch(() => null));   /* one-off 17 Nov – remove next time */
       go(keyDaily(env));
     };
     const sweep = () => {
@@ -5172,6 +5211,7 @@ const HANDLER = {
         go(autoRun(env, 'cron')); go(msgOrphans(env, 'cron')); go(waitWarn(env)); go(holdSweep(env));
         go(ps4ResetRun(env).catch(() => null));   /* 17 Nov: PS4 reset after each guest session (same calendar read; kv ps4resetAuto) */
         { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(noiseSync(env, [t, addDays(t, 1)], 'cron')); }   /* noise rule: tonight + tomorrow */
+        go(widgetSnap(env, hb).catch(() => null));   /* phone widgets (20 Nov): a copy of the same two reads – no extra requests */
       }
       /* the other two timers missing? do their jobs here, as before the split */
       if (stale('side', 12 * 60e3)) { fb.push('side'); side(); }
@@ -5196,6 +5236,7 @@ const HANDLER = {
     try {
       if (req.method === 'OPTIONS') return J({});
       if (u.pathname === '/ph') return J([...(await holidays())].sort());
+      if (u.pathname === '/w') return await widgetApi(env, u);   /* phone widgets (20 Nov) */
       /* one clock for everything (owner, 2 Nov): every TV and page sets its time from here, not from its own clock */
       if (u.pathname === '/time') { const t = Date.now(); return J({ t, sg: sgStr(t), today: sgDay(t), night: sgDay(t - SHADOW_TILL * 60e3) }); }
       /* control centre › Systems / Test bench: which mode the engine is in and what's switched on (yes/no only, never a secret) */
