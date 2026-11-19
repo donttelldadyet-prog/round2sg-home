@@ -76,6 +76,10 @@
   on Kaeden automatically (task 306). Untested end-to-end yet.
 - Owner 12:06am: Claude's waits between checks – poll every ~8 s instead of long fixed sleeps; long waits only where truly
   needed (Wi-Fi reconnects, PS4 restarts).
+- **12:20am member test setup (owner):** Vampire Survivors (CUSA47783) from Kaeden's day0 restore point (main KAEDEN 16c45cc6:
+  VSSaveData + sce_sdmemory, 43 objects, 34,000,858 bytes) copied via the R2 API into **members/m7xbafbe3/p2** (crew ROUND2_,
+  player p2 = Aliff Bozz) at …/CUSA47783/<part>/1795105033; index.txt written (2 lines, no dsha). Then clean slate on Kaeden
+  (all 4 profiles, 28 games). Next: owner logs in from the tile, presses Load Aliff Bozz → /_memplay should load VS into a spare.
 - **Kaeden back to normal 9:43–9:55pm:** spares renamed User1–3 (ps4prof name), test member's 3 games cleaned out of User3,
   `/_restoreall` from day0: 35 games, 28 in, 7 = games no longer installed on Kaeden (CUSA00419, 02671, 05070, 06400, 09973,
   13795, 29291 – kept in the cloud). 247 s (a 32 MB save took 37 s). Verbose pop-ups + test flags still ON.
