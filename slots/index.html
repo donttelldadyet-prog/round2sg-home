@@ -221,6 +221,10 @@ h3.nm, .nm { color: var(--rc); }
 @media (prefers-reduced-motion: reduce) { #pTimes button.eb::before { animation: none; } }
 #pTimes button.eb[aria-pressed="true"] { background: var(--acc); color: var(--acc-ink); border-color: var(--eb); }
 #pTimes button.eb[aria-pressed="true"] small { color: var(--acc-ink); opacity: .85; }
+#pTimes .tgrp { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 8px; margin: 6px 0 8px; font: 8px 'Press Start 2P', monospace; letter-spacing: .1em; color: var(--mute); }
+#pTimes .tgrp:first-child { margin-top: 2px; }
+#pTimes .tgrp span { font: 12px 'Chakra Petch', sans-serif; letter-spacing: 0; opacity: .8; }
+#pTimes .tgrp:not(:first-child) { margin-top: 14px; }
 #pTimes { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); }   /* start times fill the row evenly, no gap on the right */
 #pTimes button { min-width: 0; padding-left: 4px; padding-right: 4px; }
 #pLens { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 8px; }   /* lengths: equal boxes, 2 per row on a phone; row gap leaves room for the SAVE tags */
@@ -651,8 +655,11 @@ h3.nm, .nm { color: var(--rc); }
     /* like the TV launcher: once a room is picked, its character's colour leads (buttons, selections) */
     $('modal').style.setProperty('--acc', ROOMS[uid][1]); $('modal').style.setProperty('--acc-ink', uid == 10 || uid == 11 ? '#ffffff' : '#0b0914');
     $('mSub').textContent = dayLabel(day);
+    /* owner 20 Nov: start times split into Daytime / Evening (from 5pm) so the long grid is easier to scan */
+    var grp = info.list.some(function (o) { return o.m < 1020; }) && info.list.some(function (o) { return o.m >= 1020; }), lastG = '';
     $('pTimes').innerHTML = info.list.map(function (o) {
-      return '<button type="button" data-m="' + o.m + '" class="' + (o.eb ? 'eb' : '') + '" aria-pressed="' + (o.m === cur.start) + '">' + clock(o.m) + '<small>' + (o.eb ? 'Early bird' : 'from ' + money(o.price)) + '</small></button>';
+      var g = o.m >= 1020 ? 'EVENING' : 'DAYTIME', hd = grp && g !== lastG ? '<div class="tgrp">' + g + '<span>' + (g === 'EVENING' ? 'from 5pm' : 'before 5pm') + '</span></div>' : ''; lastG = g;
+      return hd + '<button type="button" data-m="' + o.m + '" class="' + (o.eb ? 'eb' : '') + '" aria-pressed="' + (o.m === cur.start) + '">' + clock(o.m) + '<small>' + (o.eb ? 'Early bird' : 'from ' + money(o.price)) + '</small></button>';
     }).join('');
     step('pick'); drawLens(); $('modal').hidden = false; document.body.style.overflow = 'hidden';
     count('board_pick'); count('board_room_' + GM[uid]);
@@ -675,7 +682,7 @@ h3.nm, .nm { color: var(--rc); }
     }
     if (cur.len == null || cur.len > o.maxH) cur.len = 3;
     var best = [5, 6].map(function (x) { return saving(o, x); });
-    $('pSave').textContent = o.eb ? 'Early bird: the $35 start is the deal; extra hours are the normal hourly rate.' : (best[0] || best[1]) ? 'Stay longer, pay less per hour.' : '';
+    $('pSave').textContent = o.eb ? 'Early bird: $35 for the first 3 hours. Extra hours at the usual rate.' : (best[0] || best[1]) ? 'Stay longer, pay less per hour.' : '';
     $('pLens').innerHTML = h; markLen(); summary();
   }
   function markLen() { Array.prototype.forEach.call($('pLens').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(+b.getAttribute('data-i') === cur.len)); }); }
@@ -693,6 +700,9 @@ h3.nm, .nm { color: var(--rc); }
     cur.start = +b.getAttribute('data-m');
     Array.prototype.forEach.call($('pTimes').querySelectorAll('button'), function (x) { x.setAttribute('aria-pressed', String(x === b)); });
     drawLens();
+    /* owner 20 Nov: glide down to HOW LONG when it's below the fold (phones) */
+    var st = $('pLens').closest('.step'), r = st.getBoundingClientRect();
+    if (r.top > window.innerHeight * .55) setTimeout(function () { st.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 120);
   });
   $('pLens').addEventListener('click', function (e) { var b = e.target.closest('button[data-i]'); if (!b || b.disabled) return; cur.len = +b.getAttribute('data-i'); markLen(); summary(); });
 
