@@ -134,6 +134,19 @@
     cap; Kaeden may hold more – raise nm[1200] if needed). Page checked: join step shows Lapy's 21 (440px PNGs ~250 KB each –
     heavy on phones; thumbnails = UI follow-up), "More" pages the big pack. Owner: if too big, cut the list down or use our
     own Round2 pictures (we can make .xavatar sets). Not yet tested end-to-end on a PS4 (pick → Load → picture on profile).
+- **4:00am SHELLUI PROBE (owner 3:50am "probe the sceShellui and make logs using the helper"):**
+  - ShellUI's C# program is encrypted on disk (/system_ex/app/NPXS20001/psm/Application/app.exe.sprx 16.5 MB, Sce.Vsh.*.dll.sprx)
+    → names have to be read from inside the running menu. HEN's plugin_mono shows the known names (Sce.Vsh.ShellUI.Settings.Core
+    UIManager, Sce.Vsh.ShellUI.TopMenu AreaManager, BootHelper.BootAndAdd …) – no log-out.
+  - Built **round2_shprobe.prx** (ps4/plugin/round2_shprobe, GoldHEN plugin SDK + libmonosgen): READ-ONLY – lists every class/method
+    of app.exe, platform.dll (+ a few Sce.Vsh libs) whose name mentions logout/login/signin/signout/user-select/switch-user/pad/
+    controller/PS button/quick menu/power menu/standby → shprobe.txt, uploaded to R2 saves/lib/probe/shprobe-<console>.txt.
+  - Helper 1.1.103–1.1.106: `/_ghver`, `/_shprobe` (refused while a game is open) load it with GoldHEN's SDK call (indirect syscall
+    500, cmd 6 = load a module into a running process). Kaeden (GoldHEN on 13.50): version cmd answers -256 (odd) but proc-info
+    works ("pid 87 name 'Payload'"). 1.1.105 load: result 0x80020002 = file not found (the menu can't see /data) → 1.1.106 tries
+    /data, /user/data, /system_tmp. Also on Kaeden tonight: tile 0.07 installed (task 314), /_copy.all 3 games OK (GTA progress
+    → internal → cloud batch), helper 1.1.102→1.1.105.
+  - 4:10am: Kaeden took the 1.1.106 update and went SILENT (no check-in 3+ min). Owner asked to look at the TV.
 - **3:40am RESEARCH (owner OK, nothing changed on any PS4): code inside the PS4's system menu (SceShellUI)** – for a proper log-out
   after a member load (the PS menu's Log Out re-links controllers; our sceUserServiceLogout froze them), a PS-button lock while
   loading + unlock combo (owner idea L2+R2+L3+R3), maybe blocking new controllers.
