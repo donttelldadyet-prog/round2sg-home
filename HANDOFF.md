@@ -134,6 +134,22 @@
     cap; Kaeden may hold more – raise nm[1200] if needed). Page checked: join step shows Lapy's 21 (440px PNGs ~250 KB each –
     heavy on phones; thumbnails = UI follow-up), "More" pages the big pack. Owner: if too big, cut the list down or use our
     own Round2 pictures (we can make .xavatar sets). Not yet tested end-to-end on a PS4 (pick → Load → picture on profile).
+- **3:20am helper 1.1.102 (ps4-test; source ps4-helper) – owner 3:15am design:**
+  - **SAVE WATCH:** while a game runs, every 15 min the helper compares each save file of that game (every profile:
+    /user/home/<u>/savedata/<game>/sdimg_<part>, time + size) with what it was at the last internal copy (new file
+    prep/<u>/<game>/<part>/sdimg.mt, written by sv_local_copy). First difference = "changed", checks stop. When the game closes
+    (or another game replaces it; the Round2 tile doesn't count): 3 s wait, then every changed part → sv_local_copy (internal copy
+    + fingerprints, queued in pending.txt with the member tag) → the cloud batch (Kaeden: on) sends only changed files to the
+    crew. Skipped during a clean slate/backup (they copy anyway); never PS Vue, protected house saves, homebrew, the tile. Saves
+    are never read while the game is open. Logged "save watch: …".
+  - **PLAIN POP-UPS (verbose):** raw save.log lines are no longer echoed as pop-ups (`/_bpop.tech` brings them back,
+    `/_bpop.plain` off). New messages: "Cloud -> PS4: downloading <game> for <name> (k of n)…", "PS4 -> profile: <game> is in
+    <name>'s profile", "Profile -> PS4: copying <name>'s <game> save to this PS4", "<game>: saved to this PS4, then cleared from
+    <name>'s profile", "PS4 -> Round2 cloud: <game> (<name>) uploaded to the crew's account", "Naming the profile '<name>'",
+    "Putting the profiles back in order…", "Putting the chosen picture on profile…", "<name> is READY: n games loaded",
+    "<game> started – your progress is saved to Round2 when you close the game", "<game> closed – <name>'s progress is saved…".
+  - Kaeden is still on 1.1.100 + tile 0.06 (GTA open). A watcher in the control-centre tab sends ps4update (test) → /_tile.now →
+    /_copy.all (to catch tonight's GTA progress, which 1.1.100 didn't watch) as soon as GTA closes.
 - **3:10am owner bug report → helper 1.1.101 + tile 0.07 + engine 8f82bf6b0943 (27 bindings, 3 timers):**
   1) "profile wasn't in order": the PS4 lists the last signed-in profile first (0x0900, see 1.1.48 /_uorder); the reset puts main
      + Player 1-4 back but a member load didn't. 1.1.101 `keep_order`: after every member-load batch AND once a minute (only when
