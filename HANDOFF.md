@@ -16,6 +16,11 @@
   easy PINs refused (all same, 1234…, 4321…); numbers only on the page and the server. The tile's PIN box must use the PS4
   **number keypad** (IME number type), not the full keyboard (owner). Max update to 1.1.86 (owner OK) was **refused: "a game is
   open"** (girlfriend in GTA V on Max main) → resend when GTA is closed; then tag Max main to her member id.
+- **10:20pm:** one name only (owner): the join name IS the PS4 name (2–16 letters/numbers), editable on the member page (engine
+  live 51e3f3ebf8b7, Light 14/4/0 after). First member **Karen** (m7xbafbe3) marked staff. **TO DO (owner):** profile pictures
+  from Lapy's Avatar Changer + its big avatar pack instead of the emoji set. **Open design (owner thinking):** couples / +1 –
+  extra profiles under one membership (name + picture + own saves = a member slot) vs each person their own membership; owner
+  feels a free linked 2nd member is wrong, and the main holder must be able to remove a +1 profile (break-ups).
 - **Kaeden back to normal 9:43–9:55pm:** spares renamed User1–3 (ps4prof name), test member's 3 games cleaned out of User3,
   `/_restoreall` from day0: 35 games, 28 in, 7 = games no longer installed on Kaeden (CUSA00419, 02671, 05070, 06400, 09973,
   13795, 29291 – kept in the cloud). 247 s (a 32 MB save took 37 s). Verbose pop-ups + test flags still ON.

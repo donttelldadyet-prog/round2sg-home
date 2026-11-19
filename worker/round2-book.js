@@ -4753,14 +4753,14 @@ async function memApi(env, req) {
   const f = await req.json().catch(() => ({})), act = String(f.act || ''), hb = book(env), who = req.headers.get('cf-connecting-ip') || 'x', now = Date.now();
   if ((act === 'join' || act === 'login') && !(await hb.gmRate('mem:' + who, 60))) return J({ error: 'Too many tries from here. Wait 10 minutes.' });
   if (act === 'join') {
-    const phone = memPhone(f.phone), name = memName(f.name), pin = String(f.pin || '');
-    if (name.length < 2) return J({ error: 'Please type your name.' });
+    const phone = memPhone(f.phone), name = memShown(f.name), pin = String(f.pin || '');   /* owner 10:17pm: one name = the PS4 name */
+    if (name.length < 2) return J({ error: 'Type your name for the PS4 (2–16 letters or numbers).' });
     if (!phone) return J({ error: 'That phone number doesn’t look right.' });
     if (!/^\d{4,8}$/.test(pin)) return J({ error: 'The PIN must be 4 to 8 numbers.' });
     if (memWeak(pin)) return J({ error: 'Pick a less easy PIN (not 1234… or all the same number).' });
     if (await hb.kvGet('mem:' + phone)) return J({ error: 'This number already has an account – log in instead.', login: true });
     const salt = memB64(crypto.getRandomValues(new Uint8Array(9))), id = 'm' + memB64(crypto.getRandomValues(new Uint8Array(6))).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8).padEnd(8, '0');
-    const m = { id, name, phone, salt, pin: await memMac(env, 'pin|' + salt + '|' + pin), at: now, shown: memShown(name.split(' ')[0]) || 'Player', pic: 0, staff: false, tv: 0, bad: 0, lock: 0, by: 'self' };
+    const m = { id, name, phone, salt, pin: await memMac(env, 'pin|' + salt + '|' + pin), at: now, shown: name, pic: 0, staff: false, tv: 0, bad: 0, lock: 0, by: 'self' };
     const list = (await hb.kvGet('memlist')) || []; if (!list.includes(phone)) list.push(phone);
     await hb.kvMany([], [['mem:' + phone, m], ['memlist', list]]);
     return J({ ok: true, tok: await memTok(env, m), me: memPub(m), pics: MEM_PICS });
@@ -4779,7 +4779,7 @@ async function memApi(env, req) {
   const m = await memFromTok(env, hb, f.tok); if (!m) return J({ error: 'Please log in again.', out: true });
   if (act === 'me') return J({ ok: true, me: memPub(m), pics: MEM_PICS });
   if (act === 'update') {
-    if (f.shown !== undefined) { const s = memShown(f.shown); if (s.length < 2) return J({ error: 'The PS4 name needs 2–16 letters or numbers.' }); m.shown = s; }
+    if (f.shown !== undefined) { const s = memShown(f.shown); if (s.length < 2) return J({ error: 'The PS4 name needs 2–16 letters or numbers.' }); m.shown = s; m.name = s; }
     if (f.name !== undefined) { const s = memName(f.name); if (s.length < 2) return J({ error: 'Please type your name.' }); m.name = s; }
     if (f.pic !== undefined) { const p = +f.pic; if (!(p >= 0 && p < MEM_PICS.length)) return J({ error: 'Pick one of the pictures.' }); m.pic = p; }
     await hb.kvSet('mem:' + m.phone, m); return J({ ok: true, me: memPub(m), pics: MEM_PICS });
@@ -4822,7 +4822,7 @@ button.ghost{background:transparent;color:#f4f1fb;border:1px solid rgba(244,241,
 .badge{display:inline-block;font-size:9px;padding:4px 6px;background:#f5c400;color:#06050a;margin-left:6px}[hidden]{display:none!important}</style></head><body><main>
 <div class="kick px">ROUND2 · MEMBERS${room ? ' · ' + room.toUpperCase() : ''}</div><h1>Your Round2<br>game profile</h1>
 <section id="out"><div class="tabs"><button id="tJ" class="on">Join</button><button id="tL" class="ghost">Log in</button></div>
-<div class="card"><div id="fJ"><label>Your name</label><input id="jn" autocomplete="name" maxlength="40">
+<div class="card"><div id="fJ"><label>Your name on the PS4 (2–16 letters or numbers)</label><input id="jn" autocomplete="nickname" maxlength="16">
 <label>Phone number</label><input id="jp" inputmode="tel" autocomplete="tel" placeholder="9123 4567">
 <label>Pick a PIN (4 to 8 numbers)</label><input id="jk" inputmode="numeric" maxlength="8" type="password" autocomplete="new-password">
 <label>PIN again</label><input id="jk2" inputmode="numeric" maxlength="8" type="password" autocomplete="new-password">
@@ -4831,7 +4831,7 @@ button.ghost{background:transparent;color:#f4f1fb;border:1px solid rgba(244,241,
 <label>PIN</label><input id="lk" inputmode="numeric" maxlength="8" type="password" autocomplete="current-password"><button id="lb">Log in</button>
 <p class="fine">Forgot your PIN? Ask staff to reset it.</p></div><p class="err" id="e1"></p></div></section>
 <section id="in" hidden><div class="card"><div class="me"><div class="av" id="av"></div><div><b id="nm"></b><span class="badge px" id="bd"></span><div class="fine" id="ph"></div></div></div></div>
-<div class="card"><b>On the PS4</b><label>Name shown on the PS4 (2–16 letters/numbers)</label><input id="sh" maxlength="16">
+<div class="card"><b>On the PS4</b><label>Your name on the PS4 (change it any time)</label><input id="sh" maxlength="16">
 <label>Profile picture</label><div class="pics" id="pics"></div><button id="sv">Save</button><p class="err" id="e2"></p>
 <p class="fine">Coming next: open the Round2 tile on the room's PS4 and your saves, name and picture load into your profile.</p></div>
 <div class="card"><b>Change PIN</b><label>Current PIN</label><input id="po" inputmode="numeric" maxlength="8" type="password">
@@ -4843,7 +4843,7 @@ function api(o){if(T)o.tok=T;return fetch('/m/api',{method:'POST',headers:{'cont
 function keep(t){T=t;try{localStorage.setItem('r2.mem',t)}catch(e){}}
 function tab(j){$('fJ').hidden=!j;$('fL').hidden=j;$('tJ').className=j?'on':'ghost';$('tL').className=j?'ghost':'on';$('e1').textContent=''}
 $('tJ').onclick=function(){tab(1)};$('tL').onclick=function(){tab(0)};
-function show(r){if(r.pics)P=r.pics;var m=r.me;$('out').hidden=true;$('in').hidden=false;$('nm').textContent=m.name;$('ph').textContent=m.phone;
+function show(r){if(r.pics)P=r.pics;var m=r.me;$('out').hidden=true;$('in').hidden=false;$('nm').textContent=m.shown;$('ph').textContent=m.phone;
 $('bd').textContent=m.staff?'STAFF':'MEMBER';$('sh').value=m.shown;sel=m.pic||0;$('av').textContent=P[sel]||'';
 $('pics').innerHTML=P.map(function(p,i){return '<div data-i="'+i+'" class="'+(i===sel?'sel':'')+'">'+p+'</div>'}).join('');}
 $('pics').onclick=function(e){var d=e.target.closest('[data-i]');if(!d)return;sel=+d.dataset.i;[].forEach.call($('pics').children,function(c){c.className=+c.dataset.i===sel?'sel':''});$('av').textContent=P[sel]};
