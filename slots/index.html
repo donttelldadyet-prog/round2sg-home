@@ -324,9 +324,9 @@ h3.nm, .nm { color: var(--rc); }
     </div>
     <div id="det" hidden>
       <div class="step"><h4><i data-ic="user"></i>3 · YOUR DETAILS</h4>
-        <label class="fl">Name<span class="req" aria-hidden="true">*</span><input id="fName" aria-required="true" autocomplete="name" placeholder="e.g. Alex Tan"></label>
+        <label class="fl">Name<span class="req" aria-hidden="true">*</span><input id="fName" aria-required="true" autocomplete="name"></label>
         <label class="fl">Mobile (WhatsApp)<span class="req" aria-hidden="true">*</span><span class="tel"><input id="fCc" type="tel" inputmode="tel" autocomplete="tel-country-code" value="+65" aria-label="Country code" maxlength="5"><input id="fPhone" type="tel" autocomplete="tel-national" inputmode="tel" placeholder="8123 4567" aria-label="Mobile number"></span><span class="fh">We’ll WhatsApp you here. Overseas? Change +65.</span></label>
-        <label class="fl">Email<span class="req" aria-hidden="true">*</span><input id="fEmail" aria-required="true" type="email" autocomplete="email" placeholder="you@email.com"><span class="fh">Your confirmation and receipt go here.</span></label>
+        <label class="fl">Email<span class="req" aria-hidden="true">*</span><input id="fEmail" aria-required="true" type="email" autocomplete="email"><span class="fh">Your confirmation and receipt go here.</span></label>
         <label class="fl">Guests<span class="req" aria-hidden="true">*</span><select id="fPax"></select></label>
       </div>
       <div class="step celstep">
@@ -745,7 +745,7 @@ h3.nm, .nm { color: var(--rc); }
   $('pGo').addEventListener('click', function () {
     var o = startObj();
     $('dWhen').innerHTML = '<span class="sumrm" style="color:' + ROOMS[cur.uid][1] + '">' + ic(CHARIC[cur.uid]) + ROOMS[cur.uid][0] + '’s room</span><br>' + when();   /* owner 20 Nov: room named here too */ $('dPrice').textContent = money(o.prices[cur.len]); $('dErr').textContent = '';
-    var max = ROOMS[cur.uid][3], h = ''; for (var i = 1; i <= max; i++) h += '<option value="' + i + '">' + i + (i === 1 ? ' guest' : ' guests') + (i === max ? ' (max)' : '') + '</option>'; $('fPax').innerHTML = h; $('fPax').value = Math.min(2, max);
+    var max = ROOMS[cur.uid][3], h = ''; for (var i = 1; i <= max; i++) h += '<option value="' + i + '">' + i + ' pax' + (i === max ? ' (max)' : '') + '</option>'; $('fPax').innerHTML = h; $('fPax').value = Math.min(2, max);
     try { var me = JSON.parse(localStorage.getItem('r2.me') || '{}'); ['Name', 'Phone', 'Email'].forEach(function (k) { if (me[k] && !$('f' + k).value) $('f' + k).value = me[k]; }); if (me.Cc) $('fCc').value = me.Cc; } catch (e) {}
     step('det'); count('board_continue');
     count('board_len_' + cur.len); count(o.eb ? 'board_eb' : data.ph ? 'board_ph' : data.peak ? 'board_peak' : 'board_offpeak');
