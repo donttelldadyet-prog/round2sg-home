@@ -68,6 +68,11 @@
 >   MAX 12:58 ✗, from SCARLETT 1:00 (broadcast + direct .15) ✗. Tonight's only successes on the 2.4 GHz PS4s were sent by VALE
 >   ~3 min after rest (Atlas 12:08, Bella 12:44); every other sender/timing failed. Not enough tries to say sender vs timing –
 >   **owner: don't touch Vale tonight (sleeping there); ask before any overnight test.** 1:03am all rested except Vale.
+> - **19 Nov 1:55pm BOOKING KEEP-AWAKE REMOVED (owner: "if staff turn on, just expect ps4 to follow their own power save rules").**
+  Engine 17153da (27 bindings, 3 timers): ps4ResetRun no longer writes kv `ps4awake`; ps4Cmd always sends `"aw":0`, so helpers
+  1.1.68+ drop any window (save.log "booking keep-awake off"). Why: Bella was switched on 75 min early and slept at 1:34 before its
+  window opened. Helper code for `aw` stays until the slimming pass (harmless at 0). Light check before/after 15/3/0.
+  Remote wake today: Kaeden (2.4 GHz, original PS4) woke after ~8 min asleep via Vale; Bella did NOT after ~10 min.
 > - **19 Nov 1:33pm TEST CHANNEL + TIMINGS.** Engine 9921f17 (27 bindings, 3 timers): branch **ps4-test** = test releases; staff
 >   `ps4update` with `ch=test` sends it to ONE PS4; `/ps4/app` serves the channel of that PS4's update command; quiet-time updates
 >   only ever use ps4-release (still 1.1.68). **Kaeden on 1.1.69 (test)**: in-memory timings (no disk writes) – report field `tm`

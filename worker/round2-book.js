@@ -4129,17 +4129,8 @@ const PS4_RESET_MIN = '1.1.55', PS4_RESET_STAFF = '1.1.53';   /* automatic = cou
 const ps4ResetOn = (A, now) => !!(A && A.on && !(A.from && now < A.from));
 async function ps4ResetRun(env) {
   const hb = book(env), now = Date.now(), A = await hb.kvGet('ps4resetAuto');
-  /* 19 Nov (owner 12:52am, "option 2"): keep each room's PS4 awake from 30 min before a real guest session until 30 min after
-     its guest end (late guests find it on; guests on Netflix don't let it sleep before the clean slate). Written here every
-     10 min from the same calendar read (no extra SimplyBook requests); each PS4's minute check-in reads it in its one kvMany. */
-  try {
-    const n0 = sgDay(now - SHADOW_TILL * 60e3), aw = {};
-    for (const d of [n0, addDays(n0, 1)]) for (const S of (await sessDay(env, d)).sessions) {
-      const room = GM_ROOM[S.unit];
-      if (room && realGuests(S, S.unit) && !S.orphanExt && S.guestEnd + 30 * 60e3 > now && S.s - 30 * 60e3 < now + 18 * 3600e3) (aw[room] = aw[room] || []).push([S.s - 30 * 60e3, S.guestEnd + 30 * 60e3]);
-    }
-    if (JSON.stringify((await hb.kvGet('ps4awake')) || {}) !== JSON.stringify(aw)) await hb.kvSet('ps4awake', aw);
-  } catch (e) {}
+  /* Booking keep-awake (19 Nov 12:52am) REMOVED 19 Nov 1:51pm (owner): when staff switch a PS4 on it just follows its own
+     power-save settings. ps4Cmd still sends "aw":0 so helpers 1.1.68+ drop any window they were holding. */
   if (!ps4ResetOn(A, now)) return { off: true };
   const after = Math.min(30, Math.max(2, +A.after || 10)), night = sgDay(now - SHADOW_TILL * 60e3), plan = [];
   for (const d of [night, addDays(night, 1)]) for (const S of (await sessDay(env, d)).sessions)
@@ -4367,13 +4358,9 @@ async function ps4Cmd(env, req) {   /* the helper, every minute: anything for me
   let r = {}; try { r = JSON.parse(await req.text()); } catch (e) {}
   const id = ps4Id(r.id); if (id.length < 16) return J({ error: 'no console id' }, 400);
   const now = Date.now();
-  const { h: hb } = await hbSnap(book(env), ['ps4cmd:' + id, 'ps4map', 'ps4auto', 'ps4:' + id, 'ps4rel', 'ps4wakeRun', 'ps4wake', 'ps4autoTry:' + id, 'ps4autoChk:' + id, 'ps4resetAuto', 'ps4resetPlan', 'ps4resetLog', 'ps4resetChk:' + id, 'ps4awake'], [['ps4poll:' + id, now]]);
+  const { h: hb } = await hbSnap(book(env), ['ps4cmd:' + id, 'ps4map', 'ps4auto', 'ps4:' + id, 'ps4rel', 'ps4wakeRun', 'ps4wake', 'ps4autoTry:' + id, 'ps4autoChk:' + id, 'ps4resetAuto', 'ps4resetPlan', 'ps4resetLog', 'ps4resetChk:' + id], [['ps4poll:' + id, now]]);
   const c = await hb.kvGet('ps4cmd:' + id);
-  { /* 19 Nov: "aw" = seconds this PS4 should stay awake (helper 1.1.68+; older helpers ignore it) */
-    const rm = ((await hb.kvGet('ps4map')) || {})[id], win = rm ? (((await hb.kvGet('ps4awake')) || {})[rm] || []) : [];
-    let until = 0; for (const [a, b] of win) if (a <= now && now < b && b > until) until = b;
-    var aw = until ? Math.round((until - now) / 1000) : 0;
-  }
+  const aw = 0;   /* keep-awake removed 19 Nov (owner); 0 tells helpers 1.1.68+ to let the PS4 sleep by its own settings */
   const Jaw = (o) => J(Object.assign(o, { aw }));
   if (!c || c.state !== 'sent') {
     const room0 = ((await hb.kvGet('ps4map')) || {})[id];
