@@ -102,6 +102,13 @@
   /_memtag.16c45cc7.off (so the blank VS save wasn't sent to the member), `/_reset.kaedentest2` (2 games, 0 failed; note the
   room reset still signs out signed-in spares so it can rename them). Owner suspects trophies slow/interfere with game start –
   asked what he sees.
+- **1:15am owner feedback after the first success:** (1) 20–30 s from "Load" to the PS4 starting = the once-a-minute check-in →
+  helper **1.1.95** (ps4-test, sha ca4afa87…) checks in every 6 s while the Round2 tile is open; (2) members' saves should also
+  go into the MAIN profile → the FIRST ticked player loads into main (keeps the room name; GT Sport stays protected; a main
+  already linked to someone else is skipped), the rest into spares; tile says "You're on the KAEDEN profile – just play"
+  (engine 3fb25cca59ec); (3) trophy pop-ups: an almost-complete game re-awards every trophy on a fresh profile – no PS4 switch
+  for trophies; options = per-profile pop-up setting (owner to check), or copying trophy data per player (not built).
+  Kaeden on 1.1.95. /_profiles baseline taken (72 keys) for a later registry diff.
 - **Kaeden back to normal 9:43–9:55pm:** spares renamed User1–3 (ps4prof name), test member's 3 games cleaned out of User3,
   `/_restoreall` from day0: 35 games, 28 in, 7 = games no longer installed on Kaeden (CUSA00419, 02671, 05070, 06400, 09973,
   13795, 29291 – kept in the cloud). 247 s (a 32 MB save took 37 s). Verbose pop-ups + test flags still ON.
