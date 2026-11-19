@@ -130,6 +130,13 @@
     player card has the picker + "More" (30 at a time from the big pack). Picking builds saves/members/<id>/<slot>/avatar.bin
     ("R2AV <n>\n" then "<name> <len>\n<bytes>" per file). R2 only – no Durable Object calls. Old emoji pics still work.
   - Other rooms don't need /data/AVATARS: the pictures come from the cloud at Load. Roll-out of 1.1.98 needs the owner's OK.
+  - **1:55am library uploaded:** /_avlib on Kaeden → "1200 avatars found, 1200 uploaded, 0 failed" (1200 = the helper's
+    cap; Kaeden may hold more – raise nm[1200] if needed). Page checked: join step shows Lapy's 21 (440px PNGs ~250 KB each –
+    heavy on phones; thumbnails = UI follow-up), "More" pages the big pack. Owner: if too big, cut the list down or use our
+    own Round2 pictures (we can make .xavatar sets). Not yet tested end-to-end on a PS4 (pick → Load → picture on profile).
+- **1:51am owner: park Max's GTA V save under Karen** (crew ROUND2_ m7xbafbe3, player p1 "Karen bozz"). Max main = 14a1e943,
+  GTA V = CUSA00419, saves SAVEDATAPROFILE + sce_sdmemory (+ sce_bu_sce_sdmemory), GTA was RUNNING (sdmemory written
+  1:51am) → needs a save + close first, then /_sback and copy into members/m7xbafbe3/p1 like Vampire Survivors (12:20am).
 - **1:31am owner:** trophy pop-ups switched off by hand on every Kaeden profile (stays through clean slates). He found PS menu
   "Log Out" re-links the controller (PS4 hands it back) while our raw sceUserServiceLogout leaves it stuck. LATER (his OK):
   test renaming a SIGNED-IN spare (never tried, only our own safety rule) – if it works the reset never signs anyone out;
