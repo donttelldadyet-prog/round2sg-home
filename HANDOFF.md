@@ -134,6 +134,15 @@
     cap; Kaeden may hold more – raise nm[1200] if needed). Page checked: join step shows Lapy's 21 (440px PNGs ~250 KB each –
     heavy on phones; thumbnails = UI follow-up), "More" pages the big pack. Owner: if too big, cut the list down or use our
     own Round2 pictures (we can make .xavatar sets). Not yet tested end-to-end on a PS4 (pick → Load → picture on profile).
+- **2:45am Round2 TILE 0.06 (owner 2:33am: "tile also show a similar theme, also needs loading bars … feedback to guests"):**
+  engine live 3abf38a5ab8f (27 bindings, 3 timers): /ps4/tile adds `color` (hex, no #), `rname`, and `done`/`total` while
+  loading/reset; `/ps4/tileart?room=` = the room character as a 480x640 PNG (Wix /v1/fill → R2 saves/lib/tileart/<room>-480.png;
+  no decoding in the worker – free-plan CPU). Tile 0.06 (ps4-tile sha 193d8fac…, source ps4/tile on ps4-helper, stb_image PNG
+  decode): room-colour glow + top bar, room name in Press Start 2P, character on the right fading left/bottom, QR card with a
+  pulsing room-colour frame when idle; while loading/reset an animated bar (n of m games, %, shimmer, eased) or a sliding bar
+  while it waits for the count; "All set" green bar when done. Composed once into BASE, each frame copies it + draws the moving
+  parts. Installed on Kaeden via /_tile.now (task 310). NOT yet seen on the TV – owner to check. Kaeden helper is 1.1.98 (1.1.99
+  only adds the tile switch).
 - **2:25am member page themed per room (owner: "more to our theme … scanning on kaeden opens a kaeden themed page"):** engine
   live ce4f9ab53c9c (27 bindings, 3 timers, Light 14/4/0 before). `?room=<room>` (max → maximillion) → Round2 logo, room name
   big in Press Start 2P in the room colour, the room's character (same Wix images + colours as the TV home screens, MEM_ROOMS),
