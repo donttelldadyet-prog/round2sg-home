@@ -5030,7 +5030,11 @@ async function ps4Tile(env, u) {
   const mp = K['memplay:' + id], lk = K['ps4look:' + id];   /* 20 Nov: a member pressed Load on their phone (helper 1.1.90 /_memplay) */
   if (room && mp && now - mp.at < 20 * 60e3) {
     const res = lk && lk.at >= mp.at - 5e3 && lk.list ? lk.list : null, nm = mp.name, prep = cl.kind === 'prep' && (cl.state === 'running' || cl.state === 'paused');
-    if (!res || prep) { o.status = 'loading'; o.title = 'Hi ' + nm + '!'; o.line = prep ? `Loading ${nm}'s saves: ${cl.done || 0} of ${cl.total || 0} games. Please don't start a game yet.` : `Getting a profile ready for ${nm}...`; o.line2 = 'This screen updates by itself.'; }
+    /* 20 Nov 3:05am (owner: it said "all done" between players – ready only when EVERY ticked player is loaded): helper 1.1.101
+       reports memq {left, of, now} while players wait in the queue */
+    const mq = (K['ps4:' + id] || {}).memq, more = !!(mq && +mq.left > 0), who = mq && mq.now ? mq.now : nm;
+    if (mq && +mq.of > 1) { o.pk = String(Math.max(1, +mq.of - (+mq.left || 0))); o.pn = String(+mq.of); o.pnow = String(who).slice(0, 24); }
+    if (!res || prep || more) { o.status = 'loading'; o.title = 'Hi ' + nm + '!'; o.line = prep ? `Loading ${who}'s saves${o.pn ? ` (player ${o.pk} of ${o.pn})` : ''}: ${cl.done || 0} of ${cl.total || 0} games. Please don't start a game yet.` : more ? `Getting ${who}'s profile ready${o.pn ? ` (player ${o.pk} of ${o.pn})` : ''}...` : `Getting a profile ready for ${nm}...`; o.line2 = 'Please don\'t start a game yet - this screen updates by itself.'; }
     else if (res['memplay/loading'] && cl.kind === 'prep' && cl.state === 'done' && cl.fails > 0) { o.status = 'off'; o.title = 'Sorry, ' + nm; o.line = `${cl.fails} of ${cl.total} games could not be loaded. Your saves are safe on your Round2 account.`; o.line2 = 'Please ask staff - they can load them again.'; }   /* 20 Nov 12:50am: the tile said Ready although Vampire Survivors failed */
     else if (res['memplay/loading'] || res['memplay/ready']) { o.status = 'done'; o.title = 'Ready, ' + nm + '!'; const onMain = /^main /.test(String(res['memplay/loading'] || res['memplay/ready'])), first = nm.split(' + ')[0], R = room.toUpperCase();   /* helper 1.1.95: the first ticked player goes into the main profile */
       o.line = `Your saves are back on the profiles you ticked - pick up where you left off.`; o.line2 = `The ${R} profile and Player 1-4 all save to your crew after the session. PS button > switch user to change profile.`; void onMain; void first; }
