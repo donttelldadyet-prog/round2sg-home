@@ -80,6 +80,12 @@
   VSSaveData + sce_sdmemory, 43 objects, 34,000,858 bytes) copied via the R2 API into **members/m7xbafbe3/p2** (crew ROUND2_,
   player p2 = Aliff Bozz) at …/CUSA47783/<part>/1795105033; index.txt written (2 lines, no dsha). Then clean slate on Kaeden
   (all 4 profiles, 28 games). Next: owner logs in from the tile, presses Load Aliff Bozz → /_memplay should load VS into a spare.
+- **12:35am CONTROLLER FREEZE (owner):** after the clean slate's profile refresh (sign everyone out, main back in) the controller
+  was "frozen" (PS button only reopened the last app). Manual fix: hold PS 10 s (controller off) → press PS → user select.
+  Helper **1.1.91** added `/_padoff` (dlsym libScePad scePadInit/GetHandle/Open/DisconnectDevice): on Kaeden the job was
+  "taken" and the helper **stopped checking in** (hung inside the pad call, like the 13 Nov Vale pad probe). Do NOT turn on
+  /_padoff.on. Watchdog restarts an own-program helper after 20 min stuck, or restart Kaeden. Clean slate before it: 28/28,
+  0 failed, 69 parts. Next: find a safe controller-off path (or don't sign everyone out in refresh_profiles).
 - **Kaeden back to normal 9:43–9:55pm:** spares renamed User1–3 (ps4prof name), test member's 3 games cleaned out of User3,
   `/_restoreall` from day0: 35 games, 28 in, 7 = games no longer installed on Kaeden (CUSA00419, 02671, 05070, 06400, 09973,
   13795, 29291 – kept in the cloud). 247 s (a 32 MB save took 37 s). Verbose pop-ups + test flags still ON.
