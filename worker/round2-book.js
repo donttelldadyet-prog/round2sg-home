@@ -5027,8 +5027,23 @@ async function ps4Tile(env, u) {
     else if (res['memplay/waits']) { o.status = 'reset'; o.title = 'Please wait'; o.line = `The room is being reset first. Press Load for ${nm} on your phone again in a minute.`; o.line2 = ''; }
     else if (res['memplay/refused'] || res['memplay/error']) { o.status = 'off'; o.title = 'Sorry, ' + nm; o.line = String(res['memplay/refused'] || res['memplay/error']).replace(/^- /, ''); o.line2 = 'Please ask staff.'; }
   }
+  /* 20 Nov 2:40am (owner: the tile themed like the member page + loading bars for guests): room colour + name, and the counts
+     for the tile's progress bar (strings – the tile reads "key":"value" only) */
+  { const R = MEM_ROOMS[room === 'max' ? 'maximillion' : room]; if (R) { o.color = R[1].slice(1); o.rname = R[0]; } }
+  if (o.status === 'loading' || o.status === 'reset') { const busy = cl.state === 'running' || cl.state === 'paused'; o.done = String(busy ? cl.done || 0 : 0); o.total = String(busy ? cl.total || 0 : 0); }
   TILE_MEMO.set(id, { t: now, o }); if (TILE_MEMO.size > 50) TILE_MEMO.delete(TILE_MEMO.keys().next().value);
   return J(o);
+}
+/* the room's character for the tile (same picture as the TV home screen / member page), as a PNG the tile decodes itself
+   (no picture work here – the free plan's CPU limit). Kept in R2 saves/lib/tileart/<room>.png after the first fetch. */
+async function ps4TileArt(env, u) {
+  const room = String(u.searchParams.get('room') || '').toLowerCase().replace(/[^a-z]/g, ''), R = MEM_ROOMS[room === 'max' ? 'maximillion' : room];
+  if (!R || !env.SAVES) return new Response('no', { status: 404 });
+  const k = 'saves/lib/tileart/' + room + '-480.png', hd = { 'content-type': 'image/png', 'cache-control': 'public, max-age=86400' };
+  const c = await env.SAVES.get(k); if (c) return new Response(c.body, { headers: hd });
+  const b = await fetch(MEM_WIX + R[3] + '/v1/fill/w_480,h_640,al_c/a.png').then((r) => r.ok ? r.arrayBuffer() : null).catch(() => null);
+  if (!b || b.byteLength < 100) return new Response('no', { status: 502 });
+  await env.SAVES.put(k, b); return new Response(b, { headers: hd });
 }
 /* 19 Nov 11:30pm (owner: the helper keeps the tile up to date): the tile's newest version = branch ps4-tile of round2-tv-launcher
    (round2_tile.json {v, sha256, size} + round2_tile.pkg). Helper 1.1.87+ asks /ps4/tileinfo every 30 min and downloads
@@ -5308,6 +5323,7 @@ const HANDLER = {
       }
       if (u.pathname === '/m' || u.pathname === '/m/') return H(memPage(u));   /* 19 Nov: member join / log in (phone + PIN) */
       if (u.pathname === '/m/api' && req.method === 'POST') return await memApi(env, req);
+      if (u.pathname === '/ps4/tileart') return await ps4TileArt(env, u);   /* 20 Nov: the tile's room character */
       if (u.pathname === '/m/av/list') { const L = await memAvIndex(env); return new Response(JSON.stringify(L), { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=600' } }); }   /* 20 Nov: Lapy's avatars */
       { const am = u.pathname.match(/^\/m\/av\/(\d{4})\.png$/); if (am) return await memAvPng(env, am[1]); }
       if (u.pathname === '/ps4/in' && req.method === 'POST') return await ps4In(env, req);
