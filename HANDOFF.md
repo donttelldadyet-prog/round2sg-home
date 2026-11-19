@@ -68,6 +68,11 @@
 >   MAX 12:58 ✗, from SCARLETT 1:00 (broadcast + direct .15) ✗. Tonight's only successes on the 2.4 GHz PS4s were sent by VALE
 >   ~3 min after rest (Atlas 12:08, Bella 12:44); every other sender/timing failed. Not enough tries to say sender vs timing –
 >   **owner: don't touch Vale tonight (sleeping there); ask before any overnight test.** 1:03am all rested except Vale.
+> - **19 Nov 2:12pm BOOKING KEEP-AWAKE v2 (owner OK 2:10pm).** Engine 01bc24f (27 bindings, 3 timers): a PS4 that is ON stays awake
+  from **2 h before** a real guest session until **guest end + 15 min**; next booking > 2 h away / none left → its own power-save
+  rules (cap). Overlapping windows chain (back-to-back). Engine-only (helpers 1.1.68+ already obey `aw`). Light check before 15/3/0,
+  after 14/4/0 (4th = a guest's /checkout SimplyBook request during the run, not this). Step 3 still to build after the Kaeden 1-h
+  wake test: engine wakes a sleeping PS4 15 min before its next booking (Kai/Vale/Max/Scarlett/Kaeden; Bella/Atlas need a cable).
 > - **19 Nov 1:55pm BOOKING KEEP-AWAKE REMOVED (owner: "if staff turn on, just expect ps4 to follow their own power save rules").**
   Engine 17153da (27 bindings, 3 timers): ps4ResetRun no longer writes kv `ps4awake`; ps4Cmd always sends `"aw":0`, so helpers
   1.1.68+ drop any window (save.log "booking keep-awake off"). Why: Bella was switched on 75 min early and slept at 1:34 before its
