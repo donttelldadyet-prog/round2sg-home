@@ -41,7 +41,7 @@ canvas.r2-char{display:block}
 /* GAME LIBRARY polish (owner 19 Nov): straight covers, soft shine, accent lift on tap, player tags */
 #r2-stage .r2-gw .r2-gt,#r2-stage .r2-gw:nth-child(n) .r2-gt{transform:none;border-radius:6px;box-shadow:0 0 0 1px rgba(244,241,251,.14),0 10px 18px -10px rgba(0,0,0,.9)!important;transition:transform .25s cubic-bezier(.2,.8,.25,1.2),box-shadow .25s ease!important}
 #r2-stage .r2-gw .r2-gt::after{content:'';position:absolute;inset:0;background:linear-gradient(155deg,rgba(255,255,255,.16) 0%,rgba(255,255,255,0) 38%),linear-gradient(0deg,rgba(6,5,10,.35) 0%,rgba(6,5,10,0) 30%);pointer-events:none}
-#r2-stage .r2-gw:hover .r2-gt,#r2-stage .r2-gw:active .r2-gt{transform:translateY(-5px) scale(1.04);box-shadow:0 0 0 1.5px var(--r2-accent),0 14px 24px -8px color-mix(in srgb,var(--r2-accent) 55%,transparent)!important}
+#r2-stage .r2-gw:hover .r2-gt,#r2-stage .r2-gw:active .r2-gt{transform:translateY(-4px) scale(1.03);transform-origin:50% 100%;box-shadow:0 0 0 1.5px var(--r2-accent),0 14px 24px -8px color-mix(in srgb,var(--r2-accent) 55%,transparent)!important}
 #r2-stage .r2-gw>div:last-child>span{display:inline-block;padding:2px 8px;border:1px solid rgba(244,241,251,.16);border-radius:999px;background:rgba(244,241,251,.05);font-size:11px;color:#d6d0e3}
 /* GAME PREVIEW card (owner 19 Nov): tap any game in the Loadout library */
 #r2-stage .r2-gw{cursor:pointer}
@@ -130,7 +130,7 @@ canvas.r2-char{display:block}
 .r2-shelf h4{display:flex;align-items:baseline;gap:10px;margin:0 16px 10px;font:9px/1.2 'Press Start 2P',monospace;letter-spacing:.12em;color:var(--r2-accent)}
 .r2-shelf h4 em{font:600 12px 'Chakra Petch',sans-serif;font-style:normal;letter-spacing:0;color:#a79fbd}
 .r2-shelf h4 span{margin-left:auto;font:600 11px 'Chakra Petch',sans-serif;letter-spacing:.04em;color:#a79fbd}
-.r2-row{display:flex;gap:13px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 16px 8px;scroll-padding:0 16px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.r2-row{display:flex;gap:13px;overflow-x:auto;scroll-snap-type:x mandatory;padding:16px 16px 12px;margin-top:-10px;scroll-padding:0 16px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .r2-row::-webkit-scrollbar{display:none}
 .r2-row>.r2-gw{flex:none;scroll-snap-align:start;animation:none}
 .r2-row>.r2-gw>div:nth-child(2){min-height:0!important}
