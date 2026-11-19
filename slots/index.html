@@ -275,6 +275,17 @@ h3.nm, .nm { color: var(--rc); }
 /* owner 20 Nov: tighter Celebrating box - 4 kinds as an even 2x2, For + From side by side */
 #cKind { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 #cKind button { min-width: 0; padding: 9px 2px; font-size: 13px; }
+.celtv { margin: 16px auto 4px; max-width: 360px; }   /* owner 20 Nov: live TV preview, same card as the room TV (round2-tv-launcher msg page) */
+.celtv .scr { background: #0b0914; border: 6px solid #22202b; border-radius: 4px; padding: 14px; box-shadow: 0 8px 28px rgba(0,0,0,.5), 0 0 24px color-mix(in srgb, var(--acc) 22%, transparent); }
+.celtv .stand { display: block; width: 70px; height: 8px; margin: 0 auto; background: #22202b; clip-path: polygon(15% 0, 85% 0, 100% 100%, 0 100%); }
+.celtv .box { background: #110E1A; padding: 16px 12px 14px; text-align: center; box-shadow: inset 0 0 0 2px var(--acc); }
+.celtv .tic { width: 34px; height: 34px; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; background: var(--acc); color: var(--acc-ink); }
+.celtv .tic svg { width: 20px; height: 20px; }
+.celtv .tg { font-size: 9px; letter-spacing: .18em; color: var(--acc); text-transform: uppercase; }
+.celtv h5 { margin: 6px 0; font-size: 16px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink); overflow-wrap: anywhere; text-wrap: balance; }
+.celtv p { margin: 0; font-size: 12px; line-height: 1.45; color: #e4def0; overflow-wrap: anywhere; }
+.celtv .fr { margin-top: 6px; font-size: 12px; color: var(--acc); font-weight: 600; letter-spacing: .06em; }
+.celtv .okb { display: inline-block; margin-top: 10px; padding: 3px 12px; background: var(--acc); color: var(--acc-ink); font-size: 9px; font-weight: 700; letter-spacing: .12em; }
 .cel2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .fl textarea { display: block; width: 100%; margin-top: 4px; padding: 11px 12px; font: 16px 'Chakra Petch', sans-serif; color: var(--ink); background: #06050a; border: 1px solid var(--line); resize: vertical; }
 .fl input, .fl select { display: block; width: 100%; margin-top: 4px; padding: 11px 12px; font: 16px 'Chakra Petch', sans-serif; color: var(--ink); background: #06050a; border: 1px solid var(--line); text-transform: none; letter-spacing: 0; }
@@ -344,6 +355,7 @@ h3.nm, .nm { color: var(--rc); }
           <label class="fl">Headline (editable)<input id="cTitle" maxlength="60"></label>
           <label class="fl">Message (editable)<textarea id="cText" maxlength="600" rows="4"></textarea></label>
           
+          <div class="celtv" aria-live="polite"><div class="scr" id="cPrev"></div><i class="stand" aria-hidden="true"></i></div>
           <label class="fl">Show it<select id="cAfter"><option value="0">When the session starts</option><option value="15">15 min in</option><option value="30">30 min in</option><option value="45">45 min in</option><option value="60">1 hour in</option></select></label>
         </div>
       </div>
@@ -724,11 +736,22 @@ h3.nm, .nm { color: var(--rc); }
     if (!cTextEdited) $('cText').value = c[1];
     if (!$('cFrom').value) $('cFrom').value = $('fName').value.trim();
   }
-  $('cOn').addEventListener('change', function () { $('cBox').hidden = !this.checked; if (this.checked) celFill(); });
+  /* the TV card, as the room TV shows it (same tags and icons as the guest message page) */
+  var CTV = { birthday: ['Birthday', '<path fill="currentColor" fill-rule="evenodd" d="M7.5 7h1.6v4.5H7.5z M11.2 7h1.6v4.5h-1.6z M14.9 7h1.6v4.5h-1.6z M8.3 2.8c1 1.2 1.1 2.2 0 3.2-1.1-1-1-2 0-3.2z M12 2.8c1 1.2 1.1 2.2 0 3.2-1.1-1-1-2 0-3.2z M15.7 2.8c1 1.2 1.1 2.2 0 3.2-1.1-1-1-2 0-3.2z M5 12.5h14a1.5 1.5 0 0 1 1.5 1.5v2.2c-1.2 0-1.9 1-2.8 1s-1.6-1-2.8-1-1.9 1-2.9 1-1.7-1-2.9-1-1.9 1-2.8 1-1.6-1-2.8-1V14A1.5 1.5 0 0 1 5 12.5z M3.5 18.2c1 0 1.6.9 2.8.9s1.8-.9 2.8-.9 1.8.9 2.9.9 1.8-.9 2.9-.9 1.7.9 2.8.9 1.8-.9 2.8-.9V21h-17z"/>'],
+    anniversary: ['Anniversary', '<path fill="currentColor" d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>'],
+    celebrate: ['Celebration', '<path fill="currentColor" d="M12 1.8l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9l7.1-.6z"/>'],
+    note: ['A message for you', '<path fill="currentColor" fill-rule="evenodd" d="M3 4.5h18a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1z M4 7.4V17.5h16V7.4l-8 5.6z M5.6 6.5L12 11l6.4-4.5z"/>'] };
+  function celPrev() {
+    var k = CTV[cKind], to = $('cTo').value.trim(), fr = $('cFrom').value.trim();
+    $('cPrev').innerHTML = '<div class="box"><div class="tic"><svg viewBox="0 0 24 24" aria-hidden="true">' + k[1] + '</svg></div><div class="tg">' + esc(k[0] + (to ? ' · for ' + to : '')) + '</div>' +
+      '<h5>' + esc($('cTitle').value.trim() || '…') + '</h5><p>' + esc($('cText').value.trim()) + '</p>' + (fr ? '<div class="fr">— ' + esc(fr) + '</div>' : '') + '<div class="okb">[OK] SEEN IT</div></div>';
+  }
+  ['cTo', 'cTitle', 'cText', 'cFrom'].forEach(function (id) { $(id).addEventListener('input', function () { setTimeout(celPrev, 0); }); });
+  $('cOn').addEventListener('change', function () { $('cBox').hidden = !this.checked; if (this.checked) { celFill(); celPrev(); } });
   $('cKind').addEventListener('click', function (e) {
     var b = e.target.closest('button[data-k]'); if (!b) return; cKind = b.getAttribute('data-k');
     Array.prototype.forEach.call(this.querySelectorAll('button'), function (x) { x.setAttribute('aria-pressed', String(x === b)); });
-    celFill();
+    celFill(); celPrev();
   });
   $('cTo').addEventListener('input', celFill);
   $('cTitle').addEventListener('input', function () { cTitleEdited = true; });
@@ -748,6 +771,8 @@ h3.nm, .nm { color: var(--rc); }
   /* details: remembered on this phone for next time */
   $('pGo').addEventListener('click', function () {
     var o = startObj();
+    (function () { var sel = $('cAfter'), v = sel.value || '0';   /* owner 20 Nov: show-it times as real clock times (3pm booking: 3:15pm · 15 min in) */
+      sel.innerHTML = [0, 15, 30, 45, 60].map(function (a) { return '<option value="' + a + '">' + clock(o.m + a) + ' · ' + (a ? (a === 60 ? '1 hour in' : a + ' min in') : 'at the start') + '</option>'; }).join(''); sel.value = v; })();
     $('dWhen').innerHTML = '<span class="sumrm" style="color:' + ROOMS[cur.uid][1] + '">' + ic(CHARIC[cur.uid]) + ROOMS[cur.uid][0] + '’s room</span><br>' + when();   /* owner 20 Nov: room named here too */ $('dPrice').textContent = money(o.prices[cur.len]); $('dErr').textContent = '';
     var max = ROOMS[cur.uid][3], h = ''; for (var i = 1; i <= max; i++) h += '<option value="' + i + '">' + i + ' pax' + (i === max ? ' (max)' : '') + '</option>'; $('fPax').innerHTML = h; $('fPax').value = Math.min(2, max);
     try { var me = JSON.parse(localStorage.getItem('r2.me') || '{}'); ['Name', 'Phone', 'Email'].forEach(function (k) { if (me[k] && !$('f' + k).value) $('f' + k).value = me[k]; }); if (me.Cc) $('fCc').value = me.Cc; } catch (e) {}
