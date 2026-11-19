@@ -31,11 +31,13 @@ canvas.r2-char{display:block}
 .r2-tile[aria-label="Kai"]{--r2-tc:#24B49A}
 .r2-tile[aria-label="Atlas"]{--r2-tc:#E9E7EF}
 .r2-tile[aria-label="Maximillion"]{--r2-tc:#E0402F}
-.r2-tile{--r2-tg:color-mix(in srgb,var(--r2-tc) 45%,transparent)}
+.r2-tile{--r2-tg:color-mix(in srgb,var(--r2-tc) 45%,transparent);position:relative;isolation:isolate}
+.r2-tile[aria-pressed="true"]::before{content:'';position:absolute;inset:6% 10%;background:var(--r2-tc);filter:blur(18px);opacity:.45;z-index:-1;pointer-events:none;animation:r2halo 3.6s ease-in-out infinite}   /* soft colour glow behind the picked tile */
+@keyframes r2halo{0%,100%{opacity:.32}50%{opacity:.55}}
 .r2-tile[aria-pressed="true"] img{animation:r2lit .5s ease-out,r2tile 3.6s ease-in-out .5s infinite;filter:drop-shadow(0 0 1px var(--r2-tg)) brightness(1.12) saturate(1.08)}
 @keyframes r2lit{0%{filter:drop-shadow(0 0 14px var(--r2-tc)) brightness(1.7) saturate(1.2)}100%{filter:drop-shadow(0 0 1px var(--r2-tg)) brightness(1.12) saturate(1.08)}}
 @keyframes r2tile{0%,100%{filter:drop-shadow(0 0 1px var(--r2-tg)) brightness(1.12) saturate(1.08)}50%{filter:drop-shadow(0 0 5px var(--r2-tg)) brightness(1.12) saturate(1.08)}}
-@media (prefers-reduced-motion:reduce){.r2-tile[aria-pressed="true"] img{animation:none;filter:drop-shadow(0 0 3px var(--r2-tg)) brightness(1.12) saturate(1.08)}}
+@media (prefers-reduced-motion:reduce){.r2-tile[aria-pressed="true"]::before{animation:none}.r2-tile[aria-pressed="true"] img{animation:none;filter:drop-shadow(0 0 3px var(--r2-tg)) brightness(1.12) saturate(1.08)}}
 </style>
 <style id="r2-css"></style>
 </head>
