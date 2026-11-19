@@ -1017,7 +1017,7 @@ function mount(el){el.setAttribute('data-r2c','on');var i=-1,tm=null,full='',typ
   img.classList.add('out');nm.style.opacity='0';Q('.r2c-skip').hidden=true}
  el.addEventListener('click',function(e){e.stopPropagation();if(e.target.closest('.r2c-skip')){show(LINES.length);return}
   if(e.target.closest('.bk')){var b=[].slice.call(document.querySelectorAll('#r2-stage button')).find(function(x){return /^\s*book\s*$/i.test(x.textContent)&&x.offsetParent});if(b)b.click();return}
-  if(e.target.closest('.rp')){mount(el);return}next()});
+  if(e.target.closest('.rp')){var f=document.createElement('div');f.className='r2c';f.setAttribute('data-r2c','');el.replaceWith(f);mount(f);return}next()});
  el.setAttribute('tabindex','0');el.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();next()}});
  show(0)}
 function scan(){document.querySelectorAll('[data-r2c=""]').forEach(mount)}
