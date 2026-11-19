@@ -4869,7 +4869,9 @@ async function memApi(env, req) {
     if (!p) return J({ error: 'Tick at least one player.' });
     const map = (await hb.kvGet('ps4map')) || {}, id = Object.keys(map).find((i) => map[i] === room);
     if (!id) return J({ error: 'This room’s PS4 isn’t set up for members yet – please ask staff.' });
-    const K = await hb.kvMany(['ps4poll:' + id, 'ps4cmd:' + id], []), c0 = K['ps4cmd:' + id];
+    const K = await hb.kvMany(['ps4poll:' + id, 'ps4cmd:' + id, 'tiletok:' + id], []), c0 = K['ps4cmd:' + id], tk = K['tiletok:' + id];
+    /* 20 Nov 2:55am (owner): the QR's code only works for the session it was shown in – a guest who scanned and went home can't load */
+    if (!tk || !f.k || String(f.k) !== tk.k || now >= tk.until) return J({ error: 'This code has run out. Scan the code on the room’s TV again to load.', rescan: true });
     if (now - (K['ps4poll:' + id] || 0) > 3 * 60e3) return J({ error: 'The PS4 in this room isn’t answering – is it switched on?' });
     if (c0 && (c0.state === 'sent' || c0.state === 'taken') && now - c0.at < 2 * 60e3) return J({ error: 'The PS4 is busy for a moment – try again in a minute.', busy: true });
     const names = ps.filter((x) => x.slot !== 'main').map((x) => x.shown).join(' + ') || m.crew, c = { cid: 'l' + now.toString(36), do: 'look', p: `/_memplay.${m.id}.` + ps.map((x) => x.slot + '.' + x.shown.replace(/ /g, '_')).join('.'), at: now, by: 'member ' + m.id, state: 'sent', nobusy: true };
@@ -4973,11 +4975,12 @@ $('pls').innerHTML=M.players.map(function(p){sel[p.slot]=p.av||p.pic;return '<di
 (M.players.length>1?'<button class="ghost sm" data-del="1">Remove</button>':'')+'</div><label>Name on the PS4</label><input data-n="1" maxlength="16" value="'+esc(p.shown)+'">'+
 '<label>Picture on the PS4</label><div class="pics">'+(AV.all.length?grid(p.av,MORE[p.slot]):P.map(function(x,i){return '<div data-i="'+i+'" class="'+(i===p.pic?'sel':'')+'">'+x+'</div>'}).join(''))+'</div>'+
 '<button data-sv="1">Save '+esc(p.shown)+'</button><p class="err"></p></div>'}).join('');play()}
-var ROOM=new URLSearchParams(location.search).get('room')||'';
+var ROOM=new URLSearchParams(location.search).get('room')||'',KEY=new URLSearchParams(location.search).get('k')||'';
 function play(){if(!ROOM||!M){$('playc').hidden=true;return}$('playc').hidden=false;$('playh').textContent='Play on '+ROOM.toUpperCase()+' now';
+if(!KEY){$('playb').innerHTML='<p class="fine">To load your saves, open the Round2 tile on this room’s PS4 and scan its code.</p>';return}
 $('playb').innerHTML=[{slot:'main',shown:ROOM.toUpperCase()+' (main profile)',pic:-1}].concat(M.players).map(function(p){return '<label style="display:flex;gap:12px;align-items:center;font-size:18px;color:#f4f1fb;margin:10px 0"><input type="checkbox" data-tick="'+p.slot+'" checked style="width:26px;height:26px"> <span class="av" style="width:36px;height:36px;font-size:20px;border-width:1px">'+(p.slot==='main'?'🏠':face(p))+'</span> '+esc(p.shown)+'</label>'}).join('')+'<button data-go="1">Load ticked profiles</button><p class="fine">Everything played in this room – the main profile and Player 1-4 – is saved to your crew after the session.</p>'}
 $('playb').onclick=function(e){var b=e.target.closest('[data-go]');if(!b)return;var e5=$('e5');e5.className='err';e5.textContent='';var sl=[].map.call(document.querySelectorAll('[data-tick]:checked'),function(x){return x.dataset.tick});if(!sl.length){e5.textContent='Tick at least one player.';return}b.disabled=true;
-api({act:'play',room:ROOM,slots:sl}).then(function(r){b.disabled=false;if(r.error){e5.textContent=r.error;if(r.out)out();return}e5.className='err ok';e5.textContent='Sent! Watch the TV – the profile for '+r.name+' will be ready in a moment.'})};
+api({act:'play',room:ROOM,slots:sl,k:KEY}).then(function(r){b.disabled=false;if(r.error){e5.textContent=r.error;if(r.out)out();return}e5.className='err ok';e5.textContent='Sent! Watch the TV – the profile for '+r.name+' will be ready in a moment.'})};
 $('pls').onclick=function(e){var c=e.target.closest('[data-s]');if(!c)return;var s=c.dataset.s,er=c.querySelector('.err');
 var a=e.target.closest('[data-a]');if(a){sel[s]=a.dataset.a;[].forEach.call(c.querySelectorAll('.pics [data-a]'),function(x){x.className=x.dataset.a===sel[s]?'sel':''});c.querySelector('.av').innerHTML='<img src="'+avu(sel[s])+'" alt="">';return}
 if(e.target.closest('[data-more]')){MORE[s]=(MORE[s]||0)+1;c.querySelector('.pics').innerHTML=grid(sel[s],MORE[s]);return}
@@ -5005,11 +5008,18 @@ if(T)api({act:'me'}).then(function(r){if(r.ok)show(r);else out()});
    and the same answer is reused for 10 s per PS4 (in memory) so an idle tile can't eat the Durable Object budget.
    Text is plain ASCII on purpose: the tile draws bytes, not UTF-8. */
 const TILE_MEMO = new Map();
+/* 20 Nov 2:55am (owner: "regenerate qr code for particular session bcs guests who scan and leave can press load after their session
+   ends"): the QR carries a code (&k=) that only works until the end of the session it was shown in (guest end + 15 min, from
+   kv ps4awake – written every 10 min from tonight's calendar, no extra SimplyBook requests). No session (staff test, walk-in) =
+   30 min. The tile shows the new code by itself; Load on the phone checks it. kv tiletok:<ps4 id> = { k, at, until, room }. */
+function tileTokUntil(aw, room, now) { const W = ((aw || {})[room] || []).filter((w) => w[0] <= now && now < w[1]).sort((a, b) => a[1] - b[1])[0]; return W ? W[1] : now + 30 * 60e3; }
 async function ps4Tile(env, u) {
   const id = ps4Id(u.searchParams.get('id')), now = Date.now(); if (!id) return J({ error: 'no id' }, 400);
   const m = TILE_MEMO.get(id); if (m && now - m.t < 10e3) return J(m.o);
-  const K = await book(env).kvMany(['ps4map', 'ps4:' + id, 'memplay:' + id, 'ps4look:' + id], []), room = (K.ps4map || {})[id] || '', cl = (K['ps4:' + id] || {}).clean || {};
-  const o = { ok: true, room, url: room ? PUBLIC_BOOK + '/m?room=' + room : PUBLIC_BOOK + '/m', status: 'ready',
+  const K = await book(env).kvMany(['ps4map', 'ps4:' + id, 'memplay:' + id, 'ps4look:' + id, 'tiletok:' + id, 'ps4awake'], []), room = (K.ps4map || {})[id] || '', cl = (K['ps4:' + id] || {}).clean || {};
+  let tk = K['tiletok:' + id];
+  if (room && (!tk || !tk.k || now >= tk.until || tk.room !== room)) { tk = { k: memB64(crypto.getRandomValues(new Uint8Array(9))).replace(/[^A-Za-z0-9]/g, '').slice(0, 8), at: now, until: tileTokUntil(K.ps4awake, room, now), room }; await book(env).kvSet('tiletok:' + id, tk); }
+  const o = { ok: true, room, url: room ? PUBLIC_BOOK + '/m?room=' + room + '&k=' + tk.k : PUBLIC_BOOK + '/m', status: 'ready',
     line: 'Members: log in on your phone and your saves load into this PS4.', line2: 'Not a member yet? Scan to join - your saves follow you to every Round2 room.' };
   if (!room) { o.status = 'off'; o.line = 'This PS4 is not linked to a room yet - please ask staff.'; o.line2 = ''; }
   else if (cl.state === 'running' || cl.state === 'paused') {

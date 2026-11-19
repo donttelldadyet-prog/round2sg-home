@@ -134,6 +134,14 @@
     cap; Kaeden may hold more – raise nm[1200] if needed). Page checked: join step shows Lapy's 21 (440px PNGs ~250 KB each –
     heavy on phones; thumbnails = UI follow-up), "More" pages the big pack. Owner: if too big, cut the list down or use our
     own Round2 pictures (we can make .xavatar sets). Not yet tested end-to-end on a PS4 (pick → Load → picture on profile).
+- **3:00am SESSION CODE ON THE QR (owner 2:51am: guests who scanned could press Load from home after their session):** engine live
+  7e0836c9aa97 (27 bindings, 3 timers; Light 15/3/0 before and after). The tile's QR is now book.round2.sg/m?room=<room>&k=<code>;
+  kv `tiletok:<ps4 id>` {k, at, until, room}; until = end of the session window covering "now" in kv ps4awake (guest end + 15 min,
+  written every 10 min from tonight's calendar – no extra SimplyBook requests), else 30 min (staff test / no booking). The tile
+  gets a new code by itself when it runs out. memApi `play` refuses a missing/wrong/expired code ("This code has run out. Scan
+  the code on the room's TV again"); a page opened without &k shows "open the Round2 tile and scan its code" instead of the ticks.
+  Joining / logging in / editing the crew still works from anywhere. A guest extension makes the code expire at the OLD end
+  (+15 min) – they just rescan (could re-check ps4awake on Load later).
 - **2:50am names didn't change (owner):** his Load (Karen + Aliff, 2:40 and again 2:43) loaded fine (GTA → 16c45cc7 in 4–8 s,
   Vampire Survivors → 16c45cc8, 0 failed) but Player 1/2 were SIGNED IN, so no rename and no picture (our own "never rename a
   signed-in profile" rule). Helper **1.1.100** (ps4-test sha 9bd2f6cf…, on Kaeden): `/_rename.<user>.<Name>` (works on signed-in
