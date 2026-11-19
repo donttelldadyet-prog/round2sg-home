@@ -68,6 +68,11 @@
 >   MAX 12:58 ✗, from SCARLETT 1:00 (broadcast + direct .15) ✗. Tonight's only successes on the 2.4 GHz PS4s were sent by VALE
 >   ~3 min after rest (Atlas 12:08, Bella 12:44); every other sender/timing failed. Not enough tries to say sender vs timing –
 >   **owner: don't touch Vale tonight (sleeping there); ask before any overnight test.** 1:03am all rested except Vale.
+> - **19 Nov 1:27pm KAEDEN = TEST BENCH, ONLINE.** Owner copied the files (helper 1.1.68, starter 2, Round2 nanoDNS build, same
+>   nanodns.ini 3eeb2b5a470c, detector 1.01 not switched on) + key, AutoRun via GoldHEN's "Enable PayLoader" (newer GoldHEN's name
+>   for the 9090 server the starter uses). Kaeden: console 73378b38f36f345372e93e1fd488bbea, CUH-1000A, **FW 13.50** (rooms are
+>   9.00/11.00 → own-program mode not used there; firmware-specific results need a confirm on a room), 192.168.88.5, 2.4 GHz 100%,
+>   Sony blocked, profile KAEDEN, 29 games, 72.6/444 GB free. Next: speed-up list step 1 (timing logs) on Kaeden.
 > - **19 Nov 12:45pm HELPER 1.1.68 RELEASED (owner OK: keep-awake during bookings)** – ps4-release 9481fa1 (sha cf8bb874…);
 >   engine 8c5d525 `PS4_AUTO_HOLD_ABOVE = ''` (hold off) → PS4s take it in quiet time (no session room within 60 min, no game).
 >   Light check before: 14 passed / 0 failed. Check `awakeBook` in a room's report once it runs 1.1.68 with a booking near.
