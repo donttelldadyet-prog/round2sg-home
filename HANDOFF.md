@@ -66,6 +66,16 @@
   Atlas (1.1.68, no path check): 21:31–21:49 drop (1115 s) on the old network; 23:17–23:20 fails while moving; restarted 23:21;
   then "stuck 613 s in read" 23:21–23:31 – the same after-start stall it had at 18:04–18:14, so most likely the old helper's
   start-up hang, not Wi-Fi. Watch overnight.
+- **20 Nov 12:15am MEMBER "LOAD ON THIS PS4" (owner: logged in on the phone, no feedback on the tile):** engine live
+  88b9b8e54017 (memApi act `play` {tok, room, slot} → look `/_memplay.<id>.<slot>.<Name>` with nobusy, kv `memplay:<ps4id>`;
+  /ps4/tile shows Hi <name> / Loading n of m / Ready – sign in as <name> / waits / refused from memplay + ps4look). Page:
+  "Play on <ROOM> now" card with a Load button per player when opened with ?room=. Helper **1.1.90** (ps4-test, sha b2df2d0c…):
+  /_memplay picks the player's linked spare or the first free spare (never main, not signed in, not linked), memload (rename +
+  link + load) or, with nothing in the cloud yet, memtag + rename; the tile open no longer counts as a game (helper update,
+  save steps); tile updates close the tile first (owner: never by hand). Tile **0.05** (title line from the engine) installed
+  on Kaeden automatically (task 306). Untested end-to-end yet.
+- Owner 12:06am: Claude's waits between checks – poll every ~8 s instead of long fixed sleeps; long waits only where truly
+  needed (Wi-Fi reconnects, PS4 restarts).
 - **Kaeden back to normal 9:43–9:55pm:** spares renamed User1–3 (ps4prof name), test member's 3 games cleaned out of User3,
   `/_restoreall` from day0: 35 games, 28 in, 7 = games no longer installed on Kaeden (CUSA00419, 02671, 05070, 06400, 09973,
   13795, 29291 – kept in the cloud). 247 s (a 32 MB save took 37 s). Verbose pop-ups + test flags still ON.

@@ -4812,6 +4812,18 @@ async function memApi(env, req) {
     const [g] = m.players.splice(i, 1); m.gone = (m.gone || []).concat([{ slot: g.slot, shown: g.shown, at: now }]).slice(-20);
     return save();
   }
+  if (act === 'play') {   /* 20 Nov 12:05am: "Load <player> on this PS4" (page opened from the tile's QR) -> helper 1.1.90 /_memplay */
+    const room = String(f.room || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12), p = m.players.find((x) => x.slot === String(f.slot));
+    if (!p) return J({ error: 'That player isn’t in your crew.' });
+    const map = (await hb.kvGet('ps4map')) || {}, id = Object.keys(map).find((i) => map[i] === room);
+    if (!id) return J({ error: 'This room’s PS4 isn’t set up for members yet – please ask staff.' });
+    const K = await hb.kvMany(['ps4poll:' + id, 'ps4cmd:' + id], []), c0 = K['ps4cmd:' + id];
+    if (now - (K['ps4poll:' + id] || 0) > 3 * 60e3) return J({ error: 'The PS4 in this room isn’t answering – is it switched on?' });
+    if (c0 && (c0.state === 'sent' || c0.state === 'taken') && now - c0.at < 2 * 60e3) return J({ error: 'The PS4 is busy for a moment – try again in a minute.', busy: true });
+    const c = { cid: 'l' + now.toString(36), do: 'look', p: `/_memplay.${m.id}.${p.slot}.${p.shown.replace(/ /g, '_')}`, at: now, by: 'member ' + m.id, state: 'sent', nobusy: true };
+    await hb.kvMany([], [['ps4cmd:' + id, c], ['memplay:' + id, { name: p.shown, cid: c.cid, at: now }]]);
+    return J({ ok: true, sent: true, name: p.shown, room });
+  }
   if (act === 'pin') {
     if ((await memMac(env, 'pin|' + m.salt + '|' + String(f.old || ''))) !== m.pin) return J({ error: 'Your current PIN is wrong.' });
     const pin = String(f.pin || ''); if (!/^\d{4,8}$/.test(pin) || memWeak(pin)) return J({ error: 'The new PIN must be 4 to 8 numbers, not 1234… or all the same number.' });
@@ -4864,6 +4876,7 @@ button.ghost{background:transparent;color:#f4f1fb;border:1px solid rgba(244,241,
 <section id="in" hidden><div class="card"><div class="fine">CREW<span class="badge px" id="bd"></span></div><label>Crew name</label><input id="cr" maxlength="24">
 <button class="ghost" id="crb">Save crew name</button><div class="fine" id="ph" style="margin-top:10px"></div><p class="err" id="e0"></p></div>
 <div id="pls"></div>
+<div class="card" id="playc" hidden><b id="playh"></b><p class="fine">Pick who is playing now. Their saves load into a profile with their name.</p><div id="playb"></div><p class="err" id="e5"></p></div>
 <div class="card" id="addc"><b>Add a player</b><label>Their name on the PS4</label><input id="an" maxlength="16"><button class="ghost" id="ab">Add player</button>
 <p class="err" id="e4"></p></div>
 <div class="card"><b>Change PIN</b><label>Current PIN</label><input id="po" inputmode="numeric" maxlength="8" type="password">
@@ -4882,7 +4895,12 @@ $('ph').textContent='Phone '+M.phone+' · '+M.players.length+' of '+M.max+' play
 $('pls').innerHTML=M.players.map(function(p){sel[p.slot]=p.pic;return '<div class="card" data-s="'+p.slot+'"><div class="pl"><div class="who"><div class="av">'+(P[p.pic]||'')+'</div><b>'+esc(p.shown)+'</b></div>'+
 (M.players.length>1?'<button class="ghost sm" data-del="1">Remove</button>':'')+'</div><label>Name on the PS4</label><input data-n="1" maxlength="16" value="'+esc(p.shown)+'">'+
 '<label>Picture</label><div class="pics">'+P.map(function(x,i){return '<div data-i="'+i+'" class="'+(i===p.pic?'sel':'')+'">'+x+'</div>'}).join('')+'</div>'+
-'<button data-sv="1">Save '+esc(p.shown)+'</button><p class="err"></p></div>'}).join('')}
+'<button data-sv="1">Save '+esc(p.shown)+'</button><p class="err"></p></div>'}).join('');play()}
+var ROOM=new URLSearchParams(location.search).get('room')||'';
+function play(){if(!ROOM||!M){$('playc').hidden=true;return}$('playc').hidden=false;$('playh').textContent='Play on '+ROOM.toUpperCase()+' now';
+$('playb').innerHTML=M.players.map(function(p){return '<button data-play="'+p.slot+'">'+(P[p.pic]||'')+' Load '+esc(p.shown)+'</button>'}).join('')}
+$('playb').onclick=function(e){var b=e.target.closest('[data-play]');if(!b)return;var e5=$('e5');e5.className='err';e5.textContent='';b.disabled=true;
+api({act:'play',room:ROOM,slot:b.dataset.play}).then(function(r){b.disabled=false;if(r.error){e5.textContent=r.error;if(r.out)out();return}e5.className='err ok';e5.textContent='Sent! Watch the TV – the profile for '+r.name+' will be ready in a moment.'})};
 $('pls').onclick=function(e){var c=e.target.closest('[data-s]');if(!c)return;var s=c.dataset.s,er=c.querySelector('.err');
 var d=e.target.closest('[data-i]');if(d){sel[s]=+d.dataset.i;[].forEach.call(c.querySelectorAll('.pics div'),function(x){x.className=+x.dataset.i===sel[s]?'sel':''});c.querySelector('.av').textContent=P[sel[s]];return}
 if(e.target.dataset.sv){er.className='err';er.textContent='';api({act:'player',slot:s,shown:c.querySelector('[data-n]').value,pic:sel[s]}).then(function(r){if(r.error){er.textContent=r.error;if(r.out)out();return}show(r);var c2=document.querySelector('[data-s="'+s+'"] .err');if(c2){c2.className='err ok';c2.textContent='Saved.'}});return}
@@ -4911,7 +4929,7 @@ const TILE_MEMO = new Map();
 async function ps4Tile(env, u) {
   const id = ps4Id(u.searchParams.get('id')), now = Date.now(); if (!id) return J({ error: 'no id' }, 400);
   const m = TILE_MEMO.get(id); if (m && now - m.t < 10e3) return J(m.o);
-  const K = await book(env).kvMany(['ps4map', 'ps4:' + id], []), room = (K.ps4map || {})[id] || '', cl = (K['ps4:' + id] || {}).clean || {};
+  const K = await book(env).kvMany(['ps4map', 'ps4:' + id, 'memplay:' + id, 'ps4look:' + id], []), room = (K.ps4map || {})[id] || '', cl = (K['ps4:' + id] || {}).clean || {};
   const o = { ok: true, room, url: room ? PUBLIC_BOOK + '/m?room=' + room : PUBLIC_BOOK + '/m', status: 'ready',
     line: 'Members: log in on your phone and your saves load into this PS4.', line2: 'Not a member yet? Scan to join - your saves follow you to every Round2 room.' };
   if (!room) { o.status = 'off'; o.line = 'This PS4 is not linked to a room yet - please ask staff.'; o.line2 = ''; }
@@ -4919,6 +4937,14 @@ async function ps4Tile(env, u) {
     const n = `${cl.done || 0} of ${cl.total || 0} games`;
     if (cl.kind === 'prep') { o.status = 'loading'; o.line = `Loading member saves: ${n}. Please don't start a game yet.`; o.line2 = 'This page updates by itself. It only takes a minute or two.'; }
     else { o.status = 'reset'; o.line = `This room is being reset (${n}). Member saves load right after.`; o.line2 = 'Please don\'t start a game yet - it only takes a minute or two.'; }
+  }
+  const mp = K['memplay:' + id], lk = K['ps4look:' + id];   /* 20 Nov: a member pressed Load on their phone (helper 1.1.90 /_memplay) */
+  if (room && mp && now - mp.at < 20 * 60e3) {
+    const res = lk && lk.at >= mp.at - 5e3 && lk.list ? lk.list : null, nm = mp.name, prep = cl.kind === 'prep' && (cl.state === 'running' || cl.state === 'paused');
+    if (!res || prep) { o.status = 'loading'; o.title = 'Hi ' + nm + '!'; o.line = prep ? `Loading ${nm}'s saves: ${cl.done || 0} of ${cl.total || 0} games. Please don't start a game yet.` : `Getting a profile ready for ${nm}...`; o.line2 = 'This screen updates by itself.'; }
+    else if (res['memplay/loading'] || res['memplay/ready']) { o.status = 'done'; o.title = 'Ready, ' + nm + '!'; o.line = `Sign in as "${nm}" (PS button > switch user) and play.`; o.line2 = 'Your progress is kept on your Round2 account.'; }
+    else if (res['memplay/waits']) { o.status = 'reset'; o.title = 'Please wait'; o.line = `The room is being reset first. Press Load for ${nm} on your phone again in a minute.`; o.line2 = ''; }
+    else if (res['memplay/refused'] || res['memplay/error']) { o.status = 'off'; o.title = 'Sorry, ' + nm; o.line = String(res['memplay/refused'] || res['memplay/error']).replace(/^- /, ''); o.line2 = 'Please ask staff.'; }
   }
   TILE_MEMO.set(id, { t: now, o }); if (TILE_MEMO.size > 50) TILE_MEMO.delete(TILE_MEMO.keys().next().value);
   return J(o);
