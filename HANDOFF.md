@@ -68,6 +68,11 @@
 >   MAX 12:58 ✗, from SCARLETT 1:00 (broadcast + direct .15) ✗. Tonight's only successes on the 2.4 GHz PS4s were sent by VALE
 >   ~3 min after rest (Atlas 12:08, Bella 12:44); every other sender/timing failed. Not enough tries to say sender vs timing –
 >   **owner: don't touch Vale tonight (sleeping there); ask before any overnight test.** 1:03am all rested except Vale.
+> - **19 Nov 3:16pm BELLA IS ON BUT ITS HELPER IS SILENT.** Last check-in 13:33:57. I wrongly read that as "Bella went to sleep" –
+  owner saw it ON before the 2:30 guests; DDP from Kaeden 3:15pm: 192.168.88.6 answers "200 Ok" (= on). So the helper stopped at
+  13:34 (crash / full restart without re-jailbreak / hang – can't tell remotely). The 1:44 and 2:12 "failed wakes" on Bella
+  were therefore NOT rest-mode wake failures. Lesson: silent check-ins ≠ asleep; confirm with `/_ddp.<ip>` from another PS4
+  (200 Ok = on, 620 = standby, no answer = off/unreachable). Kaeden: woke after 8 min, 13.5 min, 1 h (Vale/Scarlett senders).
 > - **19 Nov 2:12pm BOOKING KEEP-AWAKE v2 (owner OK 2:10pm).** Engine 01bc24f (27 bindings, 3 timers): a PS4 that is ON stays awake
   from **2 h before** a real guest session until **guest end + 15 min**; next booking > 2 h away / none left → its own power-save
   rules (cap). Overlapping windows chain (back-to-back). Engine-only (helpers 1.1.68+ already obey `aw`). Light check before 15/3/0,
