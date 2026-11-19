@@ -278,13 +278,13 @@ class Component extends DCLogic {
 
     const T = { n: { tier: 'Netflix room', off: '$49', peak: '$69' }, d: { tier: 'Deluxe room', off: '$79', peak: '$99' }, v: { tier: 'VIP room', off: '$109', peak: '$129' } };
     const chars = [
-      { name: 'Vale', t: 'n', color: '#E8436A', ink: '#0b0914', pax: '1–3 pax', screen: '65" TV', extra: 'PS4 · Netflix + Prime', desc: 'A playful rebel with a softer side. Bauhaus pink and grey, warm lighting.' },
-      { name: 'Kaeden', t: 'n', color: '#4DB848', ink: '#0b0914', pax: '1–3 pax', screen: '65" TV', extra: 'PS4 · Netflix + Prime', desc: 'Simplicity done right. Soft greys, warm rattan and living greenery.' },
-      { name: 'Scarlett', t: 'n', color: '#F2C21b', ink: '#0b0914', pax: '1–3 pax', screen: '65" TV', extra: 'PS4 · Netflix + Prime', desc: 'A dark cosmic escape with starlight and dreamy projections.' },
-      { name: 'Bella', t: 'd', color: '#7A5BE0', ink: '#ffffff', pax: '1–4 pax', screen: '75" TV', extra: 'PS4 Pro · Enhanced audio · Bigger room & TV · Netflix, Prime + HBO Max', desc: 'Mystic lore, vintage books and candlelit dark-academia charm.' },
-      { name: 'Kai', t: 'd', color: '#24B49A', ink: '#0b0914', pax: '1–4 pax', screen: '75" TV', extra: 'PS4 Pro · Enhanced audio · Bigger room & TV · Netflix, Prime + HBO Max', desc: 'Calm and grounded. Natural textures for a quiet, peaceful escape.' },
-      { name: 'Atlas', t: 'd', color: '#E9E7EF', ink: '#0b0914', pax: '1–5 pax', screen: '75" TV', extra: 'PS4 Pro · Enhanced audio · Bigger room & TV · Netflix, Prime + HBO Max', desc: 'Graceful and dreamy. Greek-inspired details and warm whites.' },
-      { name: 'Max', t: 'v', color: '#E0402F', ink: '#ffffff', pax: '1–6 pax', screen: '85" TV', extra: 'PS4 Pro · Home theatre audio · Racing sim · Biggest room & TV · Netflix, Prime + HBO Max', desc: 'Lives for speed. A full racing simulator and the biggest screen.' }
+      { name: 'Vale', t: 'n', color: '#E8436A', ink: '#0b0914', pax: '1–3 pax', screen: '65" TV', extra: 'PS4 · Netflix · Prime Video', desc: 'A playful rebel with a softer side. Bauhaus pink and grey, warm lighting.' },
+      { name: 'Kaeden', t: 'n', color: '#4DB848', ink: '#0b0914', pax: '1–3 pax', screen: '65" TV', extra: 'PS4 · Netflix · Prime Video', desc: 'Simplicity done right. Soft greys, warm rattan and living greenery.' },
+      { name: 'Scarlett', t: 'n', color: '#F2C21b', ink: '#0b0914', pax: '1–3 pax', screen: '65" TV', extra: 'PS4 · Netflix · Prime Video', desc: 'A dark cosmic escape with starlight and dreamy projections.' },
+      { name: 'Bella', t: 'd', color: '#7A5BE0', ink: '#ffffff', pax: '1–4 pax', screen: '75" TV', extra: 'PS4 Pro · Netflix · Prime Video · HBO Max · Enhanced audio · Bigger room & TV', desc: 'Mystic lore, vintage books and candlelit dark-academia charm.' },
+      { name: 'Kai', t: 'd', color: '#24B49A', ink: '#0b0914', pax: '1–4 pax', screen: '75" TV', extra: 'PS4 Pro · Netflix · Prime Video · HBO Max · Enhanced audio · Bigger room & TV', desc: 'Calm and grounded. Natural textures for a quiet, peaceful escape.' },
+      { name: 'Atlas', t: 'd', color: '#E9E7EF', ink: '#0b0914', pax: '1–5 pax', screen: '75" TV', extra: 'PS4 Pro · Netflix · Prime Video · HBO Max · Enhanced audio · Bigger room & TV', desc: 'Graceful and dreamy. Greek-inspired details and warm whites.' },
+      { name: 'Max', t: 'v', color: '#E0402F', ink: '#ffffff', pax: '1–6 pax', screen: '85" TV', extra: 'PS4 Pro · Netflix · Prime Video · HBO Max · Racing sim · Home theatre audio · Biggest room & TV', desc: 'Lives for speed. A full racing simulator and the biggest screen.' }
     ].map((c) => ({ ...c, ...T[c.t], tierUpper: T[c.t].tier.toUpperCase() }));
 
     const inRooms = menu === 1;
