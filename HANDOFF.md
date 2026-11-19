@@ -134,6 +134,21 @@
     cap; Kaeden may hold more – raise nm[1200] if needed). Page checked: join step shows Lapy's 21 (440px PNGs ~250 KB each –
     heavy on phones; thumbnails = UI follow-up), "More" pages the big pack. Owner: if too big, cut the list down or use our
     own Round2 pictures (we can make .xavatar sets). Not yet tested end-to-end on a PS4 (pick → Load → picture on profile).
+- **3:10am owner bug report → helper 1.1.101 + tile 0.07 + engine 8f82bf6b0943 (27 bindings, 3 timers):**
+  1) "profile wasn't in order": the PS4 lists the last signed-in profile first (0x0900, see 1.1.48 /_uorder); the reset puts main
+     + Player 1-4 back but a member load didn't. 1.1.101 `keep_order`: after every member-load batch AND once a minute (only when
+     out of order; logged "profile order put back") → main, then spares by id.
+  2) tile said "all done" between ticked players: the report wasn't sent while the queue moved on (report only every 5 min or at
+     the end). 1.1.101 reports after each game of a member load (≥4 s apart) and when a player finishes; report field
+     `memq {left, of, now}` (files /data/round2/memq + memqn). Engine: still "loading" while memq.left > 0; tile gets pk/pn/pnow →
+     bar label "Aliff Bozz (player 2 of 2) - 0 of 1 games".
+  3) tile layout: names went behind the QR → 0.07: character picture removed, text column 130-1070 (title wraps), QR card at
+     x 1270. (/ps4/tileart stays in the engine, unused.)
+  Both wait on Kaeden: the girlfriend is playing GTA on Kaeden (Karen bozz signed in) – the update is refused while a game is
+  open → send ps4update (test) + /_tile.now after she closes it.
+  Owner question: does the helper see save changes while a game runs? No – saves are copied only with the game closed (the reset
+  closes it first); member saves go back to the crew at the clean slate. Offered: "save to crew when the game closes" (only the
+  changed files of that game, e.g. GTA's 1 MB memory.dat).
 - **3:00am SESSION CODE ON THE QR (owner 2:51am: guests who scanned could press Load from home after their session):** engine live
   7e0836c9aa97 (27 bindings, 3 timers; Light 15/3/0 before and after). The tile's QR is now book.round2.sg/m?room=<room>&k=<code>;
   kv `tiletok:<ps4 id>` {k, at, until, room}; until = end of the session window covering "now" in kv ps4awake (guest end + 15 min,
