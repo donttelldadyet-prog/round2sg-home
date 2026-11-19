@@ -71,30 +71,32 @@ canvas.r2-char{display:block}
 .r2c{position:relative;margin:4px 0 14px;user-select:none;-webkit-user-select:none;cursor:pointer;--cc:#E8436A}
 .r2c-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font:8px/1 'Press Start 2P',monospace;letter-spacing:.12em;color:#a79fbd}
 .r2c-top button{font:inherit;letter-spacing:inherit;color:#f4f1fb;background:transparent;border:1px solid rgba(244,241,251,.3);padding:7px 9px;cursor:pointer}
-.r2c-stage{position:relative;height:300px;overflow:hidden;border:1px solid rgba(244,241,251,.12);background:radial-gradient(70% 80% at 50% 70%,color-mix(in srgb,var(--cc) 38%,transparent),transparent 70%),#0b0914;transition:background .5s}
-.r2c-stage:after{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 1px,transparent 1px 3px)}
-.r2c-ring{position:absolute;left:50%;top:26px;width:250px;height:250px;margin-left:-125px;border-radius:50%;border:1px solid color-mix(in srgb,var(--cc) 50%,transparent);transition:border-color .5s}
-.r2c-char{position:absolute;left:50%;bottom:-120px;height:440px;transform:translateX(-50%);transition:transform .45s cubic-bezier(.2,.8,.25,1),opacity .35s;filter:drop-shadow(0 0 18px color-mix(in srgb,var(--cc) 40%,transparent))}
-.r2c-char.out{opacity:0;transform:translateX(-10%)}
-.r2c-name{position:absolute;left:14px;bottom:14px;max-height:56px;max-width:46%;z-index:2;opacity:.95}
-.r2c-box{position:relative;margin-top:-26px;z-index:3;padding:20px 16px 26px;min-height:112px;background:rgba(11,9,20,.96);border:2px solid var(--cc);box-shadow:0 0 0 3px #0b0914,0 0 26px -6px var(--cc);transition:border-color .4s,box-shadow .4s}
+.r2c-box{position:relative;display:flex;gap:14px;align-items:flex-start;margin-top:16px;padding:18px 14px 24px;min-height:120px;background:linear-gradient(135deg,color-mix(in srgb,var(--cc) 10%,transparent),transparent 60%),rgba(11,9,20,.96);border:2px solid var(--cc);box-shadow:0 0 0 3px #0b0914,0 0 26px -8px var(--cc);transition:border-color .4s,box-shadow .4s,background .4s}
+.r2c-box:after{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.07) 0 1px,transparent 1px 3px)}
+.r2c-pic{flex:none;width:84px;transition:transform .3s cubic-bezier(.2,.8,.25,1.4),opacity .2s;filter:drop-shadow(0 0 10px color-mix(in srgb,var(--cc) 45%,transparent))}
+.r2c-pic img{display:block;width:100%}
+.r2c-pic.out{opacity:0;transform:scale(.8) translateY(6px)}
+.r2c-pic.talk{animation:r2c-talk .32s ease-in-out infinite alternate}
+@keyframes r2c-talk{from{transform:translateY(0) rotate(0)}to{transform:translateY(-3px) rotate(-1.5deg)}}
+.r2c-say{flex:1;min-width:0}
+.r2c-say .r2c-plate{position:static;display:inline-block;margin:0 0 8px}
 .r2c-plate{position:absolute;left:12px;top:-12px;padding:6px 9px 5px;background:var(--cc);color:#0b0914;font:9px/1 'Press Start 2P',monospace;letter-spacing:.1em}
 .r2c-plate.lt{color:#fff}
-.r2c-txt{margin:0;font-size:16px;line-height:1.55;color:#f4f1fb;min-height:4.6em}
+.r2c-txt{margin:0;font-size:15px;line-height:1.55;color:#f4f1fb;min-height:4.7em}
 .r2c-more{position:absolute;right:12px;bottom:8px;font-size:11px;color:var(--cc);animation:r2c-b 1s steps(1,end) infinite}
 .r2c-more[hidden]{display:none}
 @keyframes r2c-b{50%{opacity:0}}
 .r2c-dots{display:flex;gap:5px;justify-content:center;margin-top:10px}
 .r2c-dots i{width:6px;height:6px;background:rgba(244,241,251,.2)}
 .r2c-dots i.on{background:var(--cc)}
-.r2c-end{text-align:center;padding:6px 0 2px}
+.r2c-end{flex:1;text-align:center;padding:6px 0 2px}
 .r2c-end p{margin:4px 0 14px;font-size:19px;line-height:1.3;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#f4f1fb}
 .r2c-end .bk{height:48px;padding:0 22px;border:0;background:var(--cc);color:#0b0914;font-weight:800;font-size:14px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;margin:0 6px 8px}
 .r2c-end .rp{height:48px;padding:0 16px;border:1px solid rgba(244,241,251,.3);background:transparent;color:#f4f1fb;font-weight:700;font-size:13px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
 .r2c-full{margin:6px 0 10px;border-top:1px solid rgba(244,241,251,.12);padding-top:10px}
 .r2c-full summary{cursor:pointer;font:8px/1.6 'Press Start 2P',monospace;letter-spacing:.12em;color:#a79fbd;padding:6px 0}
 .r2c-full p{font-size:14px!important}
-@media (prefers-reduced-motion:reduce){.r2c-char,.r2c-stage,.r2c-box{transition:none}.r2c-more{animation:none}}
+@media (prefers-reduced-motion:reduce){.r2c-pic,.r2c-box{transition:none}.r2c-pic.talk,.r2c-more{animation:none}}
 </style>
 <style id="r2-css"></style>
 </head>
@@ -1001,20 +1003,20 @@ var LINES=[
 var red=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function A(n){try{return window.R2A?window.R2A(n):''}catch(e){return ''}}
 function mount(el){el.setAttribute('data-r2c','on');var i=-1,tm=null,full='',typing=false;
- el.innerHTML='<div class="r2c-top"><span class="r2c-pg"></span><button type="button" class="r2c-skip">SKIP ›</button></div><div class="r2c-stage"><div class="r2c-ring"></div><img class="r2c-char" alt=""><img class="r2c-name" alt=""></div><div class="r2c-box" aria-live="polite"><div class="r2c-plate"></div><p class="r2c-txt"></p><span class="r2c-more" aria-hidden="true">▼</span></div><div class="r2c-dots">'+LINES.map(function(){return '<i></i>'}).join('')+'</div>';
- var Q=function(c){return el.querySelector(c)},img=Q('.r2c-char'),nm=Q('.r2c-name'),txt=Q('.r2c-txt'),more=Q('.r2c-more'),plate=Q('.r2c-plate');
- Object.keys(C).forEach(function(k){new Image().src=A('r2-char-'+k+'-poster.webp')});
+ el.innerHTML='<div class="r2c-top"><span class="r2c-pg"></span><button type="button" class="r2c-skip">SKIP ›</button></div><div class="r2c-box" aria-live="polite"><div class="r2c-pic"><img class="r2c-char" alt=""></div><div class="r2c-say"><div class="r2c-plate"></div><p class="r2c-txt"></p></div><span class="r2c-more" aria-hidden="true">▼</span></div><div class="r2c-dots">'+LINES.map(function(){return '<i></i>'}).join('')+'</div>';
+ var Q=function(c){return el.querySelector(c)},img=Q('.r2c-char'),pic=Q('.r2c-pic'),txt=Q('.r2c-txt'),more=Q('.r2c-more'),plate=Q('.r2c-plate');
+ Object.keys(C).forEach(function(k){new Image().src=A('r2-tile-'+k+'.webp')});
  function show(n){i=n;if(i>=LINES.length)return end();var L=LINES[i],c=C[L[0]];el.style.setProperty('--cc',c[1]);
   plate.textContent=c[0].toUpperCase();plate.classList.toggle('lt',!!c[2]);Q('.r2c-pg').textContent=(i+1)+' / '+LINES.length;
   [].forEach.call(el.querySelectorAll('.r2c-dots i'),function(d,k){d.classList.toggle('on',k<=i)});
-  var src=A('r2-char-'+L[0]+'-poster.webp');if(img.getAttribute('src')!==src){img.classList.add('out');setTimeout(function(){img.src=src;img.alt=c[0];nm.src=A('r2-name-'+L[0]+'.webp');nm.alt=c[0];img.classList.remove('out')},red?0:180)}
+  var src=A('r2-tile-'+L[0]+'.webp');if(img.getAttribute('src')!==src){pic.classList.add('out');setTimeout(function(){img.src=src;img.alt=c[0];pic.classList.remove('out')},red?0:160)}
   full=L[1];more.hidden=true;clearTimeout(tm);
   if(red){txt.textContent=full;more.hidden=false;typing=false;return}
-  typing=true;var k=0,chars=Array.from(full);txt.textContent='';(function t(){txt.textContent=chars.slice(0,++k).join('');if(k<chars.length)tm=setTimeout(t,24);else{typing=false;more.hidden=false}})()}
- function next(){if(Q('.r2c-end'))return;if(typing){clearTimeout(tm);txt.textContent=full;typing=false;more.hidden=false;return}show(i+1)}
+  typing=true;pic.classList.add('talk');var k=0,chars=Array.from(full);txt.textContent='';(function t(){txt.textContent=chars.slice(0,++k).join('');if(k<chars.length)tm=setTimeout(t,24);else{typing=false;pic.classList.remove('talk');more.hidden=false}})()}
+ function next(){if(Q('.r2c-end'))return;if(typing){clearTimeout(tm);txt.textContent=full;typing=false;pic.classList.remove('talk');more.hidden=false;return}show(i+1)}
  function end(){clearTimeout(tm);typing=false;el.style.setProperty('--cc','#F2C21B');Q('.r2c-pg').textContent='THE END';[].forEach.call(el.querySelectorAll('.r2c-dots i'),function(d){d.classList.add('on')});
   var box=Q('.r2c-box');box.innerHTML='<div class="r2c-plate">ROUND2</div><div class="r2c-end"><p>This is your second round. Make it unforgettable.</p><button type="button" class="bk">Book your round ›</button><button type="button" class="rp">↺ Replay</button></div>';
-  img.classList.add('out');nm.style.opacity='0';Q('.r2c-skip').hidden=true}
+  Q('.r2c-skip').hidden=true}
  el.addEventListener('click',function(e){e.stopPropagation();if(e.target.closest('.r2c-skip')){show(LINES.length);return}
   if(e.target.closest('.bk')){var b=[].slice.call(document.querySelectorAll('#r2-stage button')).find(function(x){return /^\s*book\s*$/i.test(x.textContent)&&x.offsetParent});if(b)b.click();return}
   if(e.target.closest('.rp')){var f=document.createElement('div');f.className='r2c';f.setAttribute('data-r2c','');el.replaceWith(f);mount(f);return}next()});
