@@ -55,6 +55,17 @@
   (libSceAppInstUtil sceAppInstUtilInitialize + sceAppInstUtilAppUnInstall("RTWO00001")) then register again. Kaeden refused
   the update: 5 own-program switches since its start → **needs a full restart + jailbreak**, then ps4update ch=test, then
   look `/_tile.now`. Tile 0.03 is on branch ps4-tile (shows "tile 0.03" bottom right).
+- **11:55pm TILE AUTO-UPDATE WORKS:** Kaeden 1.1.88 `/_tile.now`: "old one removed first (init 0, remove 0)" → "install started
+  (task 302)" → owner's TV shows **tile 0.03**, Kaeden reports tile 0.03. Tile screen readable now; it couldn't reach the
+  engine: "https/http 0xfffffa88" = HTTP 400 = **no PS4 id** (the app can't get sceKernelGetOpenPsId). Fix: helper **1.1.89**
+  writes /data/round2/tile-id.txt at start; tile **0.04** reads /user/data/round2/tile-id.txt (then /data/…, then kernel) and
+  shows "id <source>" bottom right. Published (ps4-test 1.1.89 sha 54a82e1f…, ps4-tile 0.04 sha 99bb36a3…). Kaeden update
+  waits for the tile to be closed.
+- **Bella/Atlas on round2-ps4 (logs read 11:53pm, not assumed):** Bella: drop 21:22–21:40 (1064 s, path check: router/internet/
+  engine all no answer) on the old network; 23:08 + 23:12 one-minute fails while it was being moved; since 23:14 none.
+  Atlas (1.1.68, no path check): 21:31–21:49 drop (1115 s) on the old network; 23:17–23:20 fails while moving; restarted 23:21;
+  then "stuck 613 s in read" 23:21–23:31 – the same after-start stall it had at 18:04–18:14, so most likely the old helper's
+  start-up hang, not Wi-Fi. Watch overnight.
 - **Kaeden back to normal 9:43–9:55pm:** spares renamed User1–3 (ps4prof name), test member's 3 games cleaned out of User3,
   `/_restoreall` from day0: 35 games, 28 in, 7 = games no longer installed on Kaeden (CUSA00419, 02671, 05070, 06400, 09973,
   13795, 29291 – kept in the cloud). 247 s (a 32 MB save took 37 s). Verbose pop-ups + test flags still ON.
