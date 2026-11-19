@@ -86,6 +86,10 @@
   "taken" and the helper **stopped checking in** (hung inside the pad call, like the 13 Nov Vale pad probe). Do NOT turn on
   /_padoff.on. Watchdog restarts an own-program helper after 20 min stuck, or restart Kaeden. Clean slate before it: 28/28,
   0 failed, 69 parts. Next: find a safe controller-off path (or don't sign everyone out in refresh_profiles).
+- **12:45am Kaeden = room rules (owner):** helper **1.1.92** (ps4-test, sha 02cde718…): clean slate no longer signs anyone out
+  (refresh_profiles is a no-op; the sign-out froze controllers), /_padoff removed. Owner added a 4th spare; full `/_reset`
+  (label kaedentest): 1 game, 0 failed, profiles now KAEDEN + **Player 1–4** (16c45cc7–16c45cca), 0 signed out. Ready for
+  the owner's real run: tile → QR → log in → Load Aliff Bozz (Vampire Survivors in members/m7xbafbe3/p2).
 - **Kaeden back to normal 9:43–9:55pm:** spares renamed User1–3 (ps4prof name), test member's 3 games cleaned out of User3,
   `/_restoreall` from day0: 35 games, 28 in, 7 = games no longer installed on Kaeden (CUSA00419, 02671, 05070, 06400, 09973,
   13795, 29291 – kept in the cloud). 247 s (a 32 MB save took 37 s). Verbose pop-ups + test flags still ON.
