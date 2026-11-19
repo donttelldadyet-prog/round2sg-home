@@ -134,6 +134,17 @@
     cap; Kaeden may hold more – raise nm[1200] if needed). Page checked: join step shows Lapy's 21 (440px PNGs ~250 KB each –
     heavy on phones; thumbnails = UI follow-up), "More" pages the big pack. Owner: if too big, cut the list down or use our
     own Round2 pictures (we can make .xavatar sets). Not yet tested end-to-end on a PS4 (pick → Load → picture on profile).
+- **2:05am DONE – Max:** GTA closed by owner → `/_sback` SAVEDATAPROFILE (6 files, 165,043 B, 0 failed, stamp 1795111178)
+  + sce_sdmemory (6 files, 1,212,307 B, 0 failed, 1795111242) from Max main 14a1e943 → copied via the R2 API into
+  members/m7xbafbe3/p1/CUSA00419/<save>/<stamp>/ (14 objects) + p1/index.txt (2 lines, no dsha). Then Max updated
+  1.1.68 → **1.1.99** (owner OK; ps4-test sha 091766f8…). **1.1.99 = 1.1.98 + the tile only installs where switched on**
+  (`/_tile.on`, or already installed = Kaeden; `/_tile.off`) – owner: Max gets the fixes/functions, not the test bench (no tile;
+  verbose pop-ups stay off – they need /data/round2/popups-verbose). Max /_tile.now → "switched off"; then `/_rest` → rest mode.
+  Max's detector test pop-ups (inplug) were ON from earlier – left as they were.
+- **2:05am Bella/Atlas on round2-ps4 (read from their logs):** both on round2-ps4, channel 6, same access point
+  de:ba:bd:28:65:60, signal 82 %, IPs .120.2/.120.3, DNS 127.0.0.1. net-fail.log: last failures were during the move (Bella
+  23:12, Atlas 23:20) – **none since** (~2 h 45 min). Hourly "helper running" lines every hour on both; no restarts since
+  (Bella helper up since 17:41, Atlas since 23:21). Max (old network "round2") is on channel 36.
 - **1:51am owner: park Max's GTA V save under Karen** (crew ROUND2_ m7xbafbe3, player p1 "Karen bozz"). Max main = 14a1e943,
   GTA V = CUSA00419, saves SAVEDATAPROFILE + sce_sdmemory (+ sce_bu_sce_sdmemory), GTA was RUNNING (sdmemory written
   1:51am) → needs a save + close first, then /_sback and copy into members/m7xbafbe3/p1 like Vampire Survivors (12:20am).
