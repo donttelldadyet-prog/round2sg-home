@@ -41,6 +41,14 @@
   - Owner saved Multi-SSID **round2-ps4** (2.4 GHz, WPA2). Bella 192.168.120.2, Atlas 192.168.120.3 – a **separate subnet**:
     Kaeden → `/_ddp.192.168.120.2` = **no answer** → PS4s on round2 can't wake Bella/Atlas; laptop on round2 can't FTP them.
     Owner to choose: keep as a short test vs undo.
+- **11:40pm TILE AUTO-UPDATE (owner: "teach the helper to update the tile"):** helper **1.1.87** (ps4-helper 41be6cb+, published
+  ps4-test 4e99080, sha e0c17fe2…) checks `GET /ps4/tileinfo` 2 min after start + every 30 min (+ look `/_tile.now`), downloads
+  `POST /ps4/tilepkg` (size + SHA-256) to /data/pkg/round2-tile.pkg and starts the PS4's background installer (BGFT via
+  dlsym libSceBgft: IntInit / IntDownloadRegisterTaskByStorageEx (path /user/data/pkg/…) / DownloadStartTask). Never while a
+  game/the tile is open or during clean/backup. Refused → file stays in /data/pkg for Debug Settings › Package Installer (hdd).
+  /data/round2/tile.ver + report field "tile". Engine (live 2680475db3ed) reads branch **ps4-tile** (round2_tile.json +
+  round2_tile.pkg; 0.02 = 129f7c31…, 6619136 bytes). UNTESTED: whether BGFT accepts a request from the helper's process.
+  Kaeden update to 1.1.87 refused 11:38pm: the tile (RTWO00001) was open – counts as "a game is open".
 - **Kaeden back to normal 9:43–9:55pm:** spares renamed User1–3 (ps4prof name), test member's 3 games cleaned out of User3,
   `/_restoreall` from day0: 35 games, 28 in, 7 = games no longer installed on Kaeden (CUSA00419, 02671, 05070, 06400, 09973,
   13795, 29291 – kept in the cloud). 247 s (a 32 MB save took 37 s). Verbose pop-ups + test flags still ON.

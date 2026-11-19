@@ -4923,6 +4923,29 @@ async function ps4Tile(env, u) {
   TILE_MEMO.set(id, { t: now, o }); if (TILE_MEMO.size > 50) TILE_MEMO.delete(TILE_MEMO.keys().next().value);
   return J(o);
 }
+/* 19 Nov 11:30pm (owner: the helper keeps the tile up to date): the tile's newest version = branch ps4-tile of round2-tv-launcher
+   (round2_tile.json {v, sha256, size} + round2_tile.pkg). Helper 1.1.87+ asks /ps4/tileinfo every 30 min and downloads
+   /ps4/tilepkg when its PS4 doesn't have that version yet. No storage calls; the json is reused for 5 min. */
+let TILE_REL = null;
+async function ps4TileRel() {
+  const now = Date.now(); if (TILE_REL && now - TILE_REL.at < 5 * 60e3) return TILE_REL.info;
+  const info = await fetch(PS4_REL + 'ps4-tile/round2_tile.json?t=' + Math.floor(now / 300e3), { headers: { 'User-Agent': 'round2-book' } }).then((r) => r.ok ? r.json() : null).catch(() => null);
+  const ok = info && /^\d+\.\d+$/.test(info.v || '') && /^[0-9a-f]{64}$/.test(info.sha256 || '') && +info.size > 1024 && +info.size < 32 * 1024 * 1024 ? { v: info.v, sha: info.sha256, size: String(+info.size) } : null;
+  TILE_REL = { at: now, info: ok }; return ok;
+}
+async function ps4TileInfo(env, req) {
+  if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
+  const r = await ps4TileRel(); return r ? J(r) : J({ error: 'no tile release' }, 404);
+}
+async function ps4TilePkg(env, req) {
+  if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
+  const r = await ps4TileRel(); if (!r) return J({ error: 'no tile release' }, 404);
+  const b = await fetch(PS4_REL + 'ps4-tile/round2_tile.pkg?v=' + r.v, { headers: { 'User-Agent': 'round2-book' } }).then((x) => x.ok ? x.arrayBuffer() : null).catch(() => null);
+  if (!b) return J({ error: 'download failed' }, 502);
+  const sha = [...new Uint8Array(await crypto.subtle.digest('SHA-256', b))].map((x) => x.toString(16).padStart(2, '0')).join('');
+  if (sha !== r.sha || b.byteLength !== +r.size) { TILE_REL = null; return J({ error: 'file check failed' }, 502); }
+  return new Response(b, { headers: { 'content-type': 'application/octet-stream', 'x-r2-v': r.v } });
+}
 const HANDLER = {
   /* THREE TIMERS (14 Nov, owner: "let's try 1" – split the one timer). Until today one 5-minute timer did everything in one
      run, and one run may make only 50 outside requests (free plan): at 10am the 1-hour reminders lost to the sweeps. Each
@@ -5182,6 +5205,8 @@ const HANDLER = {
       if (u.pathname === '/ps4/resetok' && req.method === 'POST') return await ps4ResetOk(env, req);   /* 17 Nov: last check before a reset */   /* room PS4 check-ins (13 Nov) */
       if (u.pathname === '/ps4/games') return await ps4Games(env);
       if (u.pathname === '/ps4/tile') return await ps4Tile(env, u);   /* 19 Nov: the Round2 PS4 tile's status */
+      if (u.pathname === '/ps4/tileinfo') return await ps4TileInfo(env, req);   /* helper 1.1.87: newest tile version */
+      if (u.pathname === '/ps4/tilepkg' && req.method === 'POST') return await ps4TilePkg(env, req);   /* helper 1.1.87: the tile .pkg */
       if (u.pathname === '/ps4/cmd' && req.method === 'POST') return await ps4Cmd(env, req);   /* helper: waiting command? (every minute) */
       if (u.pathname === '/ps4/done' && req.method === 'POST') return await ps4Done(env, req);
       if (u.pathname === '/ps4/app' && req.method === 'POST') return await ps4App(env, req);
