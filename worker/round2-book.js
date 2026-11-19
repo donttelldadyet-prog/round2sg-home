@@ -5069,6 +5069,20 @@ async function ps4TileRel() {
   const ok = info && /^\d+\.\d+$/.test(info.v || '') && /^[0-9a-f]{64}$/.test(info.sha256 || '') && +info.size > 1024 && +info.size < 32 * 1024 * 1024 ? { v: info.v, sha: info.sha256, size: String(+info.size) } : null;
   TILE_REL = { at: now, info: ok }; return ok;
 }
+/* 20 Nov 5:10am (owner: build the menu add-on – proper log-out, PS-button lock, no profile picker during a load): Round2 add-ons that
+   the helper loads into the PS4's system menu (SceShellUI) live on branch ps4-shell of round2-tv-launcher as <name>.prx + <name>.json
+   {v, sha256, size}. Helper 1.1.109+ fetches them here (key needed), so an add-on change needs no helper update. No storage calls. */
+async function ps4Prx(env, req, u) {
+  if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
+  const name = String(u.searchParams.get('name') || ''); if (!/^round2_[a-z0-9_]{1,24}$/.test(name)) return J({ error: 'bad name' }, 400);
+  const t = Math.floor(Date.now() / 60e3), info = await fetch(PS4_REL + 'ps4-shell/' + name + '.json?t=' + t, { headers: { 'User-Agent': 'round2-book' } }).then((r) => r.ok ? r.json() : null).catch(() => null);
+  if (!info || !/^[0-9a-f]{64}$/.test(info.sha256 || '')) return J({ error: 'no such add-on' }, 404);
+  const b = await fetch(PS4_REL + 'ps4-shell/' + name + '.prx?v=' + encodeURIComponent(info.v || '') + '&t=' + t, { headers: { 'User-Agent': 'round2-book' } }).then((x) => x.ok ? x.arrayBuffer() : null).catch(() => null);
+  if (!b) return J({ error: 'download failed' }, 502);
+  const sha = [...new Uint8Array(await crypto.subtle.digest('SHA-256', b))].map((x) => x.toString(16).padStart(2, '0')).join('');
+  if (sha !== info.sha256 || b.byteLength !== +info.size) return J({ error: 'file check failed' }, 502);
+  return new Response(b, { headers: { 'content-type': 'application/octet-stream', 'x-r2-v': String(info.v || ''), 'x-r2-sha': sha } });
+}
 async function ps4TileInfo(env, req) {
   if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
   const r = await ps4TileRel(); return r ? J(r) : J({ error: 'no tile release' }, 404);
@@ -5345,7 +5359,8 @@ const HANDLER = {
       if (u.pathname === '/ps4/games') return await ps4Games(env);
       if (u.pathname === '/ps4/tile') return await ps4Tile(env, u);   /* 19 Nov: the Round2 PS4 tile's status */
       if (u.pathname === '/ps4/tileinfo') return await ps4TileInfo(env, req);   /* helper 1.1.87: newest tile version */
-      if (u.pathname === '/ps4/tilepkg' && req.method === 'POST') return await ps4TilePkg(env, req);   /* helper 1.1.87: the tile .pkg */
+      if (u.pathname === '/ps4/tilepkg' && req.method === 'POST') return await ps4TilePkg(env, req);
+      if (u.pathname === '/ps4/prx') return await ps4Prx(env, req, u);   /* helper 1.1.109: Round2 system-menu add-ons */   /* helper 1.1.87: the tile .pkg */
       if (u.pathname === '/ps4/cmd' && req.method === 'POST') return await ps4Cmd(env, req);   /* helper: waiting command? (every minute) */
       if (u.pathname === '/ps4/done' && req.method === 'POST') return await ps4Done(env, req);
       if (u.pathname === '/ps4/app' && req.method === 'POST') return await ps4App(env, req);
