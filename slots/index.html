@@ -242,7 +242,7 @@ h3.nm, .nm { color: var(--rc); }
 .sum { padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
 .sum b { font-size: 18px; }
 /* owner 20 Nov: YOUR BOOKING + CONTINUE stay pinned to the bottom while picking */
-#pick .sum { position: sticky; bottom: -18px; z-index: 3; padding-bottom: calc(14px + env(safe-area-inset-bottom)); margin-bottom: -18px; background: var(--panel); border-top: 1px solid var(--line); box-shadow: 0 -12px 24px rgba(6,5,10,.55); }
+#pick .sum, #det .sum { position: sticky; bottom: -18px; z-index: 3; padding-bottom: calc(14px + env(safe-area-inset-bottom)); margin-bottom: -18px; background: var(--panel); border-top: 1px solid var(--line); box-shadow: 0 -12px 24px rgba(6,5,10,.55); }
 .sum > div { flex: 1; min-width: 0; }
 .sum .sumrm { font-weight: 600; font-size: 16px; } .sum .sumrm .ic { width: 14px; height: 14px; margin-right: 7px; vertical-align: -1px; }
 .sum .sumh .ic { width: 11px; height: 11px; margin-right: 7px; vertical-align: -1px; color: var(--mute); }
@@ -279,6 +279,7 @@ h3.nm, .nm { color: var(--rc); }
 .fl .fh { display: block; margin: 6px 0 4px; font-size: 13px; line-height: 1.4; color: var(--mute); text-transform: none; letter-spacing: 0; font-weight: 400; }
 .fl .req { color: #FF5C7A; margin-left: 3px; font-size: .9em; vertical-align: top; }
 .fl .tel #fPhone { flex: 1; min-width: 0; }
+.fl select { -webkit-appearance: none; appearance: none; border-radius: 0; padding-right: 36px; background: #06050a url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%23a79fbd' stroke-width='2'/%3E%3C/svg%3E") no-repeat right 14px center; }   /* owner 20 Nov: square like the other boxes */
 .fl input:focus, .fl select:focus { outline: none; border-color: var(--acc); }
 .err { color: #ff8a8a; }
 .cd { font-size: 26px; color: var(--acc); margin: 6px 0 16px; }
@@ -323,9 +324,9 @@ h3.nm, .nm { color: var(--rc); }
     </div>
     <div id="det" hidden>
       <div class="step"><h4><i data-ic="user"></i>3 · YOUR DETAILS</h4>
-        <label class="fl">Name<span class="req" aria-hidden="true">*</span><input id="fName" aria-required="true" autocomplete="name"></label>
-        <label class="fl">Mobile (WhatsApp)<span class="req" aria-hidden="true">*</span><span class="tel"><input id="fCc" type="tel" inputmode="tel" autocomplete="tel-country-code" value="+65" aria-label="Country code" maxlength="5"><input id="fPhone" type="tel" autocomplete="tel-national" inputmode="tel" placeholder="8123 4567" aria-label="Mobile number"></span><span class="fh">Overseas number? Change +65 to your country code. We may WhatsApp you on this number.</span></label>
-        <label class="fl">Email<span class="req" aria-hidden="true">*</span><input id="fEmail" aria-required="true" type="email" autocomplete="email"><span class="fh">Your confirmation and receipt go here.</span></label>
+        <label class="fl">Name<span class="req" aria-hidden="true">*</span><input id="fName" aria-required="true" autocomplete="name" placeholder="e.g. Alex Tan"></label>
+        <label class="fl">Mobile (WhatsApp)<span class="req" aria-hidden="true">*</span><span class="tel"><input id="fCc" type="tel" inputmode="tel" autocomplete="tel-country-code" value="+65" aria-label="Country code" maxlength="5"><input id="fPhone" type="tel" autocomplete="tel-national" inputmode="tel" placeholder="8123 4567" aria-label="Mobile number"></span><span class="fh">We’ll WhatsApp you here. Overseas? Change +65.</span></label>
+        <label class="fl">Email<span class="req" aria-hidden="true">*</span><input id="fEmail" aria-required="true" type="email" autocomplete="email" placeholder="you@email.com"><span class="fh">Your confirmation and receipt go here.</span></label>
         <label class="fl">Guests<span class="req" aria-hidden="true">*</span><select id="fPax"></select></label>
       </div>
       <div class="step celstep">
@@ -563,7 +564,7 @@ h3.nm, .nm { color: var(--rc); }
     var res = data, any = false;
     Object.keys(res.rooms).forEach(function (uid) { if (res.rooms[uid].list.length) any = true; });
     Array.prototype.forEach.call($('views').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === view)); });
-    $('tiers').innerHTML = '<span><i style="background:var(--eb)"></i>Early bird · 11am start, $35</span><span>' + (res.ph ? 'Public holiday · peak prices' : res.peak ? 'Peak day' : 'Off-peak day') + ' · 3–6 h sessions</span>';
+    $('tiers').innerHTML = '<span><i style="background:var(--eb)"></i>Early bird · 11am start, $35</span><span>' + (res.ph ? 'Public holiday · peak prices' : res.peak ? 'Peak day' : 'Off-peak day') + ' · 3–6 hour sessions</span>';
     if (!any) { $('board').innerHTML = noneMsg(); return; }
     $('board').innerHTML = view === 'time' ? byTime() : view === 'early' ? byEarliest() : byRoom();
     var sel = $('board').querySelector('.hours button[aria-pressed="true"]'); if (sel && sel.scrollIntoView) { try { sel.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (e) {} }
@@ -743,8 +744,8 @@ h3.nm, .nm { color: var(--rc); }
   /* details: remembered on this phone for next time */
   $('pGo').addEventListener('click', function () {
     var o = startObj();
-    $('dWhen').textContent = when(); $('dPrice').textContent = money(o.prices[cur.len]); $('dErr').textContent = '';
-    var max = ROOMS[cur.uid][3], h = ''; for (var i = 1; i <= max; i++) h += '<option>' + i + '</option>'; $('fPax').innerHTML = h; $('fPax').value = Math.min(2, max);
+    $('dWhen').innerHTML = '<span class="sumrm" style="color:' + ROOMS[cur.uid][1] + '">' + ic(CHARIC[cur.uid]) + ROOMS[cur.uid][0] + '’s room</span><br>' + when();   /* owner 20 Nov: room named here too */ $('dPrice').textContent = money(o.prices[cur.len]); $('dErr').textContent = '';
+    var max = ROOMS[cur.uid][3], h = ''; for (var i = 1; i <= max; i++) h += '<option value="' + i + '">' + i + (i === 1 ? ' guest' : ' guests') + (i === max ? ' (max)' : '') + '</option>'; $('fPax').innerHTML = h; $('fPax').value = Math.min(2, max);
     try { var me = JSON.parse(localStorage.getItem('r2.me') || '{}'); ['Name', 'Phone', 'Email'].forEach(function (k) { if (me[k] && !$('f' + k).value) $('f' + k).value = me[k]; }); if (me.Cc) $('fCc').value = me.Cc; } catch (e) {}
     step('det'); count('board_continue');
     count('board_len_' + cur.len); count(o.eb ? 'board_eb' : data.ph ? 'board_ph' : data.peak ? 'board_peak' : 'board_offpeak');
