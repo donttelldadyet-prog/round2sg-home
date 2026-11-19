@@ -30,6 +30,17 @@
   player, exactly as the PS4 does; every player is backed up as a member. **The tile tells the crew where each save is** ("It
   Takes Two: your save is on Karen – start it from her profile"). No charge per player; maybe a **$2 add-on per player for a
   custom PS4 name** (not built, owner said "maybe"). Page price line removed (engine live 6ddb43da54be, Light 14/4/0 after).
+- **11:20pm PS4 TILE v0.01 + Bella/Atlas on round2-ps4:**
+  - Build box: OpenOrbis `toolchain-llvm-18` + .NET Core 3.1 SDK (owner downloaded to his laptop's round2-tv folder, staged
+    here) + OpenSSL 1.1.1w built from source (/opt/ossl11; PkgTool.Core needs libssl 1.1). `. /opt/oo/env.sh; make` in
+    round2-tv-launcher `ps4/tile` (branch ps4-helper 41be6cb). fPKG `IV0000-RTWO00001_00-ROUND2MEMBERS000` → owner's
+    round2-tv folder as `Round2-tile-0.01.pkg`. Shows QR to book.round2.sg/m?room=<room> + live status; console id via
+    dlsym(libkernel, sceKernelGetOpenPsId). NOT yet tested on a PS4.
+  - Engine `/ps4/tile?id=` (live e96ef9aab3ee; one kvMany, 10 s memo; ASCII text). Light 13/5/0 after – the extra "look at"
+    = Kaeden's 7 not-installed-game restore notes, not the engine.
+  - Owner saved Multi-SSID **round2-ps4** (2.4 GHz, WPA2). Bella 192.168.120.2, Atlas 192.168.120.3 – a **separate subnet**:
+    Kaeden → `/_ddp.192.168.120.2` = **no answer** → PS4s on round2 can't wake Bella/Atlas; laptop on round2 can't FTP them.
+    Owner to choose: keep as a short test vs undo.
 - **Kaeden back to normal 9:43–9:55pm:** spares renamed User1–3 (ps4prof name), test member's 3 games cleaned out of User3,
   `/_restoreall` from day0: 35 games, 28 in, 7 = games no longer installed on Kaeden (CUSA00419, 02671, 05070, 06400, 09973,
   13795, 29291 – kept in the cloud). 247 s (a 32 MB save took 37 s). Verbose pop-ups + test flags still ON.

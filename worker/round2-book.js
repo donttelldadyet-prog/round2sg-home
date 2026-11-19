@@ -4903,6 +4903,26 @@ $('lo').onclick=out;
 if(T)api({act:'me'}).then(function(r){if(r.ok)show(r);else out()});
 </script></main></body></html>`;
 }
+/* 19 Nov 2026 11pm: the Round2 PS4 tile (fPKG RTWO00001, round2-tv-launcher ps4/tile) asks here every 8–20 s what its PS4 is
+   doing: GET /ps4/tile?id=<the PS4's id>. No key (the answer is only the room's name and plain status text). One storage call,
+   and the same answer is reused for 10 s per PS4 (in memory) so an idle tile can't eat the Durable Object budget.
+   Text is plain ASCII on purpose: the tile draws bytes, not UTF-8. */
+const TILE_MEMO = new Map();
+async function ps4Tile(env, u) {
+  const id = ps4Id(u.searchParams.get('id')), now = Date.now(); if (!id) return J({ error: 'no id' }, 400);
+  const m = TILE_MEMO.get(id); if (m && now - m.t < 10e3) return J(m.o);
+  const K = await book(env).kvMany(['ps4map', 'ps4:' + id], []), room = (K.ps4map || {})[id] || '', cl = (K['ps4:' + id] || {}).clean || {};
+  const o = { ok: true, room, url: room ? PUBLIC_BOOK + '/m?room=' + room : PUBLIC_BOOK + '/m', status: 'ready',
+    line: 'Members: log in on your phone and your saves load into this PS4.', line2: 'Not a member yet? Scan to join - your saves follow you to every Round2 room.' };
+  if (!room) { o.status = 'off'; o.line = 'This PS4 is not linked to a room yet - please ask staff.'; o.line2 = ''; }
+  else if (cl.state === 'running' || cl.state === 'paused') {
+    const n = `${cl.done || 0} of ${cl.total || 0} games`;
+    if (cl.kind === 'prep') { o.status = 'loading'; o.line = `Loading member saves: ${n}. Please don't start a game yet.`; o.line2 = 'This page updates by itself. It only takes a minute or two.'; }
+    else { o.status = 'reset'; o.line = `This room is being reset (${n}). Member saves load right after.`; o.line2 = 'Please don\'t start a game yet - it only takes a minute or two.'; }
+  }
+  TILE_MEMO.set(id, { t: now, o }); if (TILE_MEMO.size > 50) TILE_MEMO.delete(TILE_MEMO.keys().next().value);
+  return J(o);
+}
 const HANDLER = {
   /* THREE TIMERS (14 Nov, owner: "let's try 1" – split the one timer). Until today one 5-minute timer did everything in one
      run, and one run may make only 50 outside requests (free plan): at 10am the 1-hour reminders lost to the sweeps. Each
@@ -5161,6 +5181,7 @@ const HANDLER = {
       if (u.pathname === '/ps4/in' && req.method === 'POST') return await ps4In(env, req);
       if (u.pathname === '/ps4/resetok' && req.method === 'POST') return await ps4ResetOk(env, req);   /* 17 Nov: last check before a reset */   /* room PS4 check-ins (13 Nov) */
       if (u.pathname === '/ps4/games') return await ps4Games(env);
+      if (u.pathname === '/ps4/tile') return await ps4Tile(env, u);   /* 19 Nov: the Round2 PS4 tile's status */
       if (u.pathname === '/ps4/cmd' && req.method === 'POST') return await ps4Cmd(env, req);   /* helper: waiting command? (every minute) */
       if (u.pathname === '/ps4/done' && req.method === 'POST') return await ps4Done(env, req);
       if (u.pathname === '/ps4/app' && req.method === 'POST') return await ps4App(env, req);
