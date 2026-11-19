@@ -126,6 +126,7 @@ h3.nm, .nm { color: var(--rc); }
 .lbl span { color: var(--acc); margin-left: 8px; }
 .views button { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 10px 12px; background: transparent; color: var(--ink); border: 1px solid var(--line); cursor: pointer; }
 .views button[aria-pressed="true"] { background: var(--acc); color: var(--acc-ink); border-color: var(--acc); }
+@media (max-width: 900px) { .views button { flex: 1 1 auto; text-align: center; } }   /* owner 20 Nov: BROWSE BY buttons fill the row, text centred */
 /* the timeline: hour lines, labels every 2 h, free time in the tier colour, booked time striped */
 .track { height: 34px; border-radius: 3px; overflow: hidden;
   background: repeating-linear-gradient(135deg, rgba(244,241,251,.06) 0 6px, rgba(244,241,251,.02) 6px 12px); }
@@ -310,7 +311,17 @@ h3.nm, .nm { color: var(--rc); }
 @keyframes r2shake { 0%, 100% { transform: none; } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
 .fl input:focus, .fl select:focus { outline: none; border-color: var(--acc); }
 .err { color: #ff8a8a; }
-.cd { font-size: 26px; color: var(--acc); margin: 6px 0 16px; }
+.cd { font-size: 26px; color: var(--acc); margin: 6px 0 8px; }
+/* owner 20 Nov: pay step polish */
+#hWhat { color: var(--mute); } #hWhat .sumrm { font-weight: 600; font-size: 16px; } #hWhat .sumrm .ic { width: 14px; height: 14px; margin-right: 7px; vertical-align: -1px; } #hWhat .hamt { display: block; margin-top: 4px; font-size: 22px; color: var(--ink); }
+.cdbar { height: 4px; margin: 0 0 16px; background: var(--cell); overflow: hidden; } .cdbar i { display: block; height: 100%; width: 100%; background: var(--acc); transition: width .5s linear, background-color .3s; }
+#hold.late .cd { color: #ff5c7a; animation: r2blinkc 1s steps(2, start) infinite; } #hold.late .cdbar i { background: #ff5c7a; }
+@keyframes r2blinkc { to { opacity: .45; } }
+.cel.tc input { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; margin-top: 1px; border: 2px solid var(--line); background: #06050a; cursor: pointer; display: grid; place-content: center; transition: background-color .15s, border-color .15s; }
+.cel.tc input::before { content: ''; width: 12px; height: 12px; clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0, 43% 62%); background: var(--acc-ink); transform: scale(0); transition: transform .15s; }
+.cel.tc input:checked { background: var(--acc); border-color: var(--acc); } .cel.tc input:checked::before { transform: scale(1); }
+.cel.tc input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.paywith { display: flex; gap: 6px; margin-top: 14px; } .paywith span { padding: 4px 9px; border: 1px solid var(--line); font-size: 12px; color: var(--mute); }
 .wide { display: block; width: 100%; text-align: center; text-decoration: none; margin: 10px 0 0; box-sizing: border-box; }
 .banner { margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--acc); color: var(--ink); }
 .banner.ok { border-color: var(--free); }
@@ -379,13 +390,13 @@ h3.nm, .nm { color: var(--rc); }
       <div class="step"><h4><i data-ic="card"></i>4 · PAY</h4>
         <p class="hint" id="hWhat"></p>
         <p class="hint">We're holding this for you for</p>
-        <div class="cd px" id="hCd">10:00</div>
+        <div class="cd px" id="hCd">10:00</div><div class="cdbar" aria-hidden="true"><i id="hBar"></i></div>
         <label class="cel tc"><input type="checkbox" id="tTerms"> <span>I agree to the Round2 <span id="tTermsTxt">Terms &amp; Conditions and Privacy Policy</span>.</span></label>
         <label class="cel tc"><input type="checkbox" id="tCancel"> <span>I agree to the cancellation policy: <b>all bookings are non-cancellable and non-refundable.</b></span></label>
         <a class="go wide off" id="hPay" href="#" aria-disabled="true">PAY</a>
         <p class="hint" id="tNeed">Tick both boxes to pay.</p>
         <button class="x wide" id="hChange" type="button">CHANGE BOOKING</button>
-        <p class="hint">Card, PayNow or Apple Pay on the next page. If you go back or the timer runs out, the slot is released for someone else.</p>
+        <div class="paywith"><span>Card</span><span>PayNow</span><span>Apple Pay</span></div><p class="hint" style="margin-top:6px">Slot released if you go back or time runs out.</p>
       </div>
     </div>
   </div>
@@ -832,15 +843,17 @@ h3.nm, .nm { color: var(--rc); }
   $('tTerms').addEventListener('change', ticks); $('tCancel').addEventListener('change', ticks);
   function showHold(j) {
     $('tTerms').checked = false; $('tCancel').checked = false; ticks();
-    $('hWhat').innerHTML = '<b>' + esc(ROOMS[cur.uid][0]) + '</b> · ' + esc(when()) + '<br><b>' + money(j.total) + '</b>';
+    $('hWhat').innerHTML = '<span class="sumrm" style="color:' + ROOMS[cur.uid][1] + '">' + ic(CHARIC[cur.uid]) + ROOMS[cur.uid][0] + '’s room</span><br>' + esc(when()) + '<b class="hamt">' + money(j.total) + '</b>';   /* owner 20 Nov: same look as YOUR BOOKING */
     $('hPay').href = j.url; $('hPay').textContent = 'PAY ' + money(j.total);
     if (EMBED) $('hPay').setAttribute('target', '_blank');
     step('hold');
     var off = j.now ? j.now - Date.now() : 0;
-    clearInterval(timer);
+    clearInterval(timer); var full = 0; $('hold').classList.remove('late');
     timer = setInterval(function () {
       var s = Math.max(0, Math.round((j.holdUntil - (Date.now() + off)) / 1000));   /* the engine's clock, not the phone's (review 5 Nov) */
       $('hCd').textContent = Math.floor(s / 60) + ':' + ('0' + s % 60).slice(-2);
+      if (!full) full = Math.max(s, 600);   /* owner 20 Nov: bar drains with the hold, red in the last minute */
+      $('hBar').style.width = (s / full * 100) + '%'; $('hold').classList.toggle('late', s <= 60);
       if (!s) release('Your 10 minutes ran out, so the slot was released. Pick a time again.', 'timeout');
     }, 500);
   }
