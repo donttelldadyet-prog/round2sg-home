@@ -117,6 +117,11 @@
   I left off". Owner turned trophy pop-ups off by hand (setting stays through clean slates). Helper **1.1.96** (ps4-test,
   sha 76c54658…) on Kaeden; engine 47abf9c8b4cf (Light 13/5/0 after – same 5 Kaeden notes). Existing VS save is in slot p2
   (Aliff) → Player 2. NB for roll-out: the rooms' cloud batch is OFF – member uploads need it ON.
+- **1:31am owner:** trophy pop-ups switched off by hand on every Kaeden profile (stays through clean slates). He found PS menu
+  "Log Out" re-links the controller (PS4 hands it back) while our raw sceUserServiceLogout leaves it stuck. LATER (his OK):
+  test renaming a SIGNED-IN spare (never tried, only our own safety rule) – if it works the reset never signs anyone out;
+  else leave signed-in spares' names alone. Now his girlfriend takes over prompting: UI of the PS4 tile + member page, with
+  the avatar changer in mind – default pictures picked at the phone join step so loaded profiles look personal.
 - **1:30am helper 1.1.97 (ps4-test, sha 4bb56388…) on Kaeden:** ticked players fill Player 1.. in order (only Aliff ticked →
   Player 1), main → main; Load links main + every spare (spares nobody was loaded into → extra crew slots x<k>, so a +1's play
   never overwrites a crew player). Before it the owner's Load on 1.1.96 worked (Karen bozz / Aliff Bozz, 0 failed). Reset
