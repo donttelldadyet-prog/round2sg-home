@@ -142,6 +142,19 @@
   (clean kind prep or a queue) – anyone who signs in gets a PS4 message "Hang on <name> – saves are still loading (player k of n).
   Please don't start a game yet." (normal notification, not verbose-only).
   The broader ShellUI probe ("log everything") was NOT continued – stopped there; only the 4:26am list exists.
+- **9:27–9:33pm – owner: "if second player enters alone, then later first player comes … the loaded profile holds the latest saves …
+  waste of time to copy and delete … is it easier to rename" → "build yes". Helper 1.1.125 (test, ps4-test 775fdc2) on Kaeden 21:30.**
+  - Before: positions by tick order only → B (alone, Player 1) would get A loaded over it and B re-downloaded into Player 2 from the
+    cloud, which can be OLDER (the cloud batch doesn't run while a game is open; B's newest copy only went to the room backup).
+  - Now: a ticked player whose member tag is already on a profile STAYS there – nothing copied, removed or downloaded. Exception:
+    games another room uploaded after they were loaded here (index entry time > tag file time, and not this PS4's own cloud.txt) –
+    only those load (prep/only_<u>.txt filter in look_memload). New players take the lowest free spare. Nothing to load at all →
+    "memplay/ready … already on this PS4" at once.
+  - Tag files are no longer rewritten when unchanged (their time = when the player was loaded). An "x<k>" extra-slot link alone no
+    longer triggers a release.
+  - Also in 1.1.125: no auto-load of a new add-on while another add-on's heartbeat is fresh (the shell8+shell9 side-by-side issue).
+  - Owner restarted 21:18 → shell9 loaded alone 21:20:43 ✅. Light check 21:33: same 12/5/1 as before.
+  - Test: (1) B alone → Player 1. (2) then A + B → B stays Player 1 with no load, A goes to Player 2.
 - **9:10–9:15pm – owner "both done" → helper 1.1.124 (test, ps4-test 0e78800) + round2_shell9 (ps4-shell fd97cf0) on Kaeden
   (switch #1 since the 8:57 restart). OWNER RESTARTS KAEDEN, THEN TESTS.**
   - (A) Logout gap: helper `fg_thread` writes fg.txt within 0.25 s while a member load runs / just finished (2 s otherwise) and
