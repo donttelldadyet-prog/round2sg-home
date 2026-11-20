@@ -1152,35 +1152,11 @@ function open(t){last=t;document.body.appendChild(el);el.hidden=false;requestAni
 el.addEventListener('click',function(e){if(e.target===el||e.target.closest('.x'))close()});
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&!el.hidden)close()});
 document.addEventListener('click',function(e){var t=e.target.closest('.r2-stream');if(t){e.preventDefault();open(t)}});})();</script>
-<script>/* ARCADE ANIMATIONS (owner 20 Nov, picks 2·3·4·5): glitch headline, neon OPEN NOW, scanline tab switch, character lock-in. All off with Reduce Motion. */
+<script>/* NEON OPEN NOW (owner 20 Nov, kept from the animation picks): the header status glows like a neon sign and flickers now and then. Off with Reduce Motion. */
 (function(){if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-var css='.r2-glw{position:relative;display:inline-block}.r2-glw>.g1,.r2-glw>.g2{position:absolute;left:0;top:0;width:100%;pointer-events:none;opacity:0}'
-+'.r2-glw>.g1{color:#ff2fd0;animation:r2g1 5s infinite steps(1)}.r2-glw>.g2{color:#2ff3ff;animation:r2g2 5s infinite steps(1)}'
-+'@keyframes r2g1{0%,92%,100%{opacity:0;transform:none}93%{opacity:.85;transform:translate(-3px,1px);clip-path:inset(8% 0 58% 0)}95.5%{opacity:.85;transform:translate(3px,-1px);clip-path:inset(62% 0 8% 0)}97.5%{opacity:0}}'
-+'@keyframes r2g2{0%,92%,100%{opacity:0;transform:none}94%{opacity:.85;transform:translate(3px,0);clip-path:inset(38% 0 32% 0)}96.5%{opacity:.85;transform:translate(-2px,1px);clip-path:inset(4% 0 76% 0)}98%{opacity:0}}'
-+'.r2-neon{text-shadow:0 0 5px currentColor,0 0 12px currentColor;animation:r2neon 5s infinite}.r2-neon>span{box-shadow:0 0 6px currentColor,0 0 12px currentColor}'
-+'@keyframes r2neon{0%,17%,21%,24%,63%,67%,100%{opacity:1}19%,23%,65%{opacity:.35;text-shadow:none}}'
-+'.r2-sweep{position:fixed;z-index:2147482000;pointer-events:none;overflow:hidden}.r2-sweep i{position:absolute;left:0;right:0;height:38%;top:-40%;background:linear-gradient(transparent,rgba(242,194,27,.28) 45%,rgba(255,255,255,.5) 50%,rgba(242,194,27,.28) 55%,transparent);animation:r2sw .42s cubic-bezier(.4,0,.2,1) forwards}'
-+'@keyframes r2sw{to{top:110%}}'
-+'.r2-lockfx{position:fixed;z-index:2147482000;pointer-events:none}.r2-lockfx .fl{position:absolute;inset:0;background:#fff;mix-blend-mode:overlay;animation:r2lf .35s ease-out forwards}'
-+'.r2-lockfx .rg{position:absolute;inset:-4px;border:3px solid var(--c);animation:r2lr .55s ease-out forwards}'
-+'@keyframes r2lf{0%{opacity:.9}100%{opacity:0}}@keyframes r2lr{0%{opacity:1;transform:scale(.92)}100%{opacity:0;transform:scale(1.3)}}';
-var st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
-function stage(){return document.getElementById('r2-stage')}
-function deco(){var S=stage();if(!S)return;
- /* 2 glitch: headline "Your room. Your rules." */
- [].forEach.call(S.querySelectorAll('h1'),function(h){if(h.querySelector('.r2-glw')||!/your room/i.test(h.textContent))return;var html=h.innerHTML;h.innerHTML='<span class="r2-glw">'+html+'<span class="g1" aria-hidden="true" data-nosnippet>'+html+'</span><span class="g2" aria-hidden="true">'+html+'</span></span>'});
- /* 3 neon: OPEN NOW / OPENS 11:00 in the header */
- [].forEach.call(S.querySelectorAll('header span'),function(sp){if(sp.classList.contains('r2-neon'))return;if(/press start/i.test(sp.style.fontFamily)&&/OPEN|CLOSE/i.test(sp.textContent))sp.classList.add('r2-neon')})}
-var q=0;new MutationObserver(function(){if(q)return;q=1;requestAnimationFrame(function(){q=0;deco()})}).observe(document.documentElement,{subtree:true,childList:true,characterData:true});deco();
-document.addEventListener('click',function(e){var S=stage();if(!S)return;
- /* 4 scanline sweep when switching START / ROOMS / LOADOUT / HOW TO / FIND US */
- var nb=e.target.closest('nav[aria-label="Main menu"] button');
- if(nb&&S.contains(nb)&&nb.getAttribute('aria-pressed')!=='true'&&nb.getAttribute('aria-current')!=='true'){var r=S.getBoundingClientRect(),d=document.createElement('div');d.className='r2-sweep';d.style.cssText='left:'+r.left+'px;top:'+Math.max(r.top,0)+'px;width:'+r.width+'px;height:'+Math.min(r.height,innerHeight)+'px';d.innerHTML='<i></i>';document.body.appendChild(d);setTimeout(function(){d.remove()},480)}
- /* 5 character lock-in: flash + ring on the tapped room tile */
- var t=e.target.closest('.r2-tile');
- if(t&&S.contains(t)){var b=t.getBoundingClientRect(),f=document.createElement('div'),c=getComputedStyle(t).getPropertyValue('--r2-tc')||'#f4f1fb';f.className='r2-lockfx';f.style.cssText='left:'+b.left+'px;top:'+b.top+'px;width:'+b.width+'px;height:'+b.height+'px;--c:'+c.trim();f.innerHTML='<i class="fl"></i><i class="rg"></i>';document.body.appendChild(f);setTimeout(function(){f.remove()},600)}
-},true);})();</script>
+var st=document.createElement('style');st.textContent='.r2-neon{text-shadow:0 0 5px currentColor,0 0 12px currentColor;animation:r2neon 5s infinite}.r2-neon>span{box-shadow:0 0 6px currentColor,0 0 12px currentColor}@keyframes r2neon{0%,17%,21%,24%,63%,67%,100%{opacity:1}19%,23%,65%{opacity:.35;text-shadow:none}}';document.head.appendChild(st);
+function deco(){var S=document.getElementById('r2-stage');if(!S)return;[].forEach.call(S.querySelectorAll('header span'),function(sp){if(!sp.classList.contains('r2-neon')&&/press start/i.test(sp.style.fontFamily)&&/OPEN|CLOSE/i.test(sp.textContent))sp.classList.add('r2-neon')})}
+var q=0;new MutationObserver(function(){if(q)return;q=1;requestAnimationFrame(function(){q=0;deco()})}).observe(document.documentElement,{subtree:true,childList:true});deco();})();</script>
 <script>/* Room picker hint stops once they've tapped a room / filter, and comes back next time the library opens */
 (function(){var H=document.documentElement;
 document.addEventListener('click',function(e){if(e.target.closest('#r2-stage div[role="group"]>button'))H.classList.add('r2-picked')},true);
