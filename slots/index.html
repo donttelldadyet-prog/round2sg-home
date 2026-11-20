@@ -75,8 +75,8 @@ h1 { font-family: 'Press Start 2P', monospace; font-size: 20px; line-height: 1.4
 .picked { margin: 10px 0 0; padding: 10px 14px; border: 1px solid #5BE37D; background: rgba(91,227,125,.08); font-size: 15px; color: var(--mute); max-width: 420px; box-sizing: border-box; }
 .picked b { color: var(--ink); font-weight: 600; }
 .picked i { color: #5BE37D; font-style: normal; margin-right: 8px; }
-.dayhd #toToday { margin-left: auto; font: 8px 'Press Start 2P', monospace; letter-spacing: .06em; padding: 6px 8px; background: transparent; color: var(--acc); border: 1px solid var(--acc); cursor: pointer; white-space: nowrap; }
-.cal .ft button { font: 8px 'Press Start 2P', monospace; letter-spacing: .06em; padding: 7px 9px; background: transparent; color: var(--acc); border: 1px solid var(--acc); cursor: pointer; white-space: nowrap; }
+.dayhd #toToday { margin-left: auto; font: 9px 'Press Start 2P', monospace; letter-spacing: .06em; padding: 6px 8px; background: transparent; color: var(--acc); border: 1px solid var(--acc); cursor: pointer; white-space: nowrap; }
+.cal .ft button { font: 9px 'Press Start 2P', monospace; letter-spacing: .06em; padding: 7px 9px; background: transparent; color: var(--acc); border: 1px solid var(--acc); cursor: pointer; white-space: nowrap; }
 .tiers { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 12px 0 16px; font-size: 12px; color: var(--mute); }
 .tiers i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
 .group { margin: 18px 0 6px; font-size: 9px; color: var(--mute); }
@@ -108,7 +108,7 @@ h3.nm, .nm { color: var(--rc); }
 /* a room with nothing left on this date: a locked save slot (grey, faint stripes, padlock) so the free rooms stand out */
 .room.locked { grid-template-columns: 1fr auto; padding: 12px 16px; border-left-color: rgba(244,241,251,.25);
   background: repeating-linear-gradient(135deg, rgba(244,241,251,.04) 0 6px, transparent 6px 12px), var(--panel); }
-.room.locked .lock { display: flex; align-items: center; gap: 10px; font: 8px 'Press Start 2P', monospace; letter-spacing: .1em; line-height: 1.7; color: var(--mute); text-align: right; }
+.room.locked .lock { display: flex; align-items: center; gap: 10px; font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; line-height: 1.7; color: var(--mute); text-align: right; }
 .room.locked .lock svg { width: 16px; height: 16px; flex: none; }
 .full a { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 10px 14px; border: 1px solid var(--acc); color: var(--acc); text-decoration: none; margin-top: 2px; }
 .load { font-size: 9px; color: var(--acc); }
@@ -122,7 +122,7 @@ h3.nm, .nm { color: var(--rc); }
 .tier .room { margin: 12px 0; }
 /* views */
 .views { display: flex; gap: 6px; margin: 4px 0 6px; flex-wrap: wrap; }
-.lbl { font-size: 9px; color: var(--mute); margin: 0 0 8px; }
+.lbl { font-size: 10px; color: var(--mute); margin: 0 0 8px; }
 .lbl span { color: var(--acc); margin-left: 8px; }
 .views button { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 10px 12px; background: transparent; color: var(--ink); border: 1px solid var(--line); cursor: pointer; }
 .views button[aria-pressed="true"] { background: var(--acc); color: var(--acc-ink); border-color: var(--acc); }
@@ -140,7 +140,7 @@ h3.nm, .nm { color: var(--rc); }
 .ebchip::before { content: ''; width: 6px; height: 6px; background: var(--eb); transform: rotate(45deg); flex: none; }
 .ebchip b { font-weight: 600; }
 .ebnote { margin: 4px 0 10px; padding: 10px 12px; font-size: 13px; border: 1px solid var(--eb); background: rgba(102,199,255,.1); color: var(--ink); }
-.ebnote b, .ebtag { font: 8px 'Press Start 2P', monospace; letter-spacing: .08em; color: var(--eb); }
+.ebnote b, .ebtag { font: 9px 'Press Start 2P', monospace; letter-spacing: .08em; color: var(--eb); }
 .ebnote b { display: block; margin-bottom: 6px; }
 .ebtag { display: block; margin-bottom: 5px; }
 .row.ebrow { border-color: var(--eb); border-left-color: var(--rc); background: rgba(102,199,255,.07); }
@@ -182,7 +182,7 @@ h3.nm, .nm { color: var(--rc); }
 #ph .stage { position: relative; flex: none; height: var(--sh); overflow: hidden; }   /* photo keeps a landscape-ish shape like the homepage, never stretched tall */
 #ph .shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.04); transition: opacity .45s ease, transform .6s ease; }
 #ph .shot.on { opacity: 1; transform: scale(1); }
-#ph .tag { position: absolute; left: 16px; top: 18px; display: flex; align-items: center; gap: 8px; font: 8px 'Press Start 2P', monospace; letter-spacing: .12em; color: #f4f1fb; }
+#ph .tag { position: absolute; left: 16px; top: 18px; display: flex; align-items: center; gap: 8px; font: 9px 'Press Start 2P', monospace; letter-spacing: .12em; color: #f4f1fb; }
 #ph .tag span:first-child { padding: 6px 7px; background: var(--rc); color: var(--rci); }
 #ph .cls { position: absolute; right: 12px; top: 8px; width: 44px; height: 44px; border: 1px solid rgba(244,241,251,.4); background: rgba(11,9,20,.6); color: #f4f1fb; display: flex; align-items: center; justify-content: center; cursor: pointer; }
 #ph .arw { position: absolute; top: calc(var(--sh) / 2 - 26px); width: 44px; height: 52px; border: 1px solid rgba(244,241,251,.4); background: rgba(11,9,20,.55); color: #f4f1fb; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -197,7 +197,7 @@ h3.nm, .nm { color: var(--rc); }
 #ph .thumbs svg { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; }
 #ph .who { display: flex; align-items: center; gap: 14px; margin: 18px 0 12px; }
 #ph .who img { max-height: 56px; max-width: 140px; }
-#ph .who .ty { display: inline-block; font: 8px 'Press Start 2P', monospace; letter-spacing: .12em; padding: 5px 7px; background: var(--rc); color: var(--rci); margin-right: 8px; }
+#ph .who .ty { display: inline-block; font: 9px 'Press Start 2P', monospace; letter-spacing: .12em; padding: 5px 7px; background: var(--rc); color: var(--rci); margin-right: 8px; }
 #ph .spec { font: 400 15px 'Chakra Petch', sans-serif; color: #d6d0e3; margin: 0 0 4px; }
 #ph .spec b { color: #f4f1fb; font-weight: 600; }
 #ph .desc { font: 400 15px/1.5 'Chakra Petch', sans-serif; color: #b9b0cf; margin: 8px 0 18px; }
@@ -208,7 +208,7 @@ h3.nm, .nm { color: var(--rc); }
 #ph .dots i.on { background: var(--rc); }
 .pickb { font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 9px 12px; background: var(--acc); color: var(--acc-ink); border: 0; cursor: pointer; margin-top: 8px; }
 .step { padding: 14px 16px; border-bottom: 1px solid var(--line); }
-.step h4 { margin: 0 0 10px; font: 9px 'Press Start 2P', monospace; letter-spacing: .12em; color: var(--acc); }
+.step h4 { margin: 0 0 10px; font: 10px 'Press Start 2P', monospace; letter-spacing: .12em; color: var(--acc); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chips button { font: inherit; font-size: 14px; padding: 7px 11px; cursor: pointer; background: transparent; color: var(--ink); border: 1px solid var(--line); min-width: 74px; }
 .chips button small { display: block; font-size: 10px; color: var(--mute); text-transform: uppercase; letter-spacing: .06em; }
@@ -216,13 +216,13 @@ h3.nm, .nm { color: var(--rc); }
 /* owner 20 Nov: the Early bird start looks a little special - blue glow, $35 tag, a slow shine */
 #pTimes button.eb { overflow: visible; border-color: var(--eb); background: linear-gradient(160deg, rgba(102,199,255,.22), rgba(102,199,255,.06)); box-shadow: 0 0 14px rgba(102,199,255,.28), inset 0 0 0 1px rgba(102,199,255,.25); }
 #pTimes button.eb small { color: var(--eb); font-weight: 700; }
-#pTimes button.eb::after { content: '$35'; position: absolute; top: -9px; right: -6px; font: 7px 'Press Start 2P', monospace; letter-spacing: .06em; padding: 4px 5px; background: var(--eb); color: #0b2238; }
+#pTimes button.eb::after { content: '$35'; position: absolute; top: -9px; right: -6px; font: 8px 'Press Start 2P', monospace; letter-spacing: .06em; padding: 4px 5px; background: var(--eb); color: #0b2238; }
 #pTimes button.eb::before { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.22) 50%, transparent 65%) -150% 0 / 250% 100% no-repeat; animation: r2ebshine 3.6s ease-in-out infinite; }
 @keyframes r2ebshine { 0%, 55% { background-position: 150% 0; } 100% { background-position: -150% 0; } }
 @media (prefers-reduced-motion: reduce) { #pTimes button.eb::before { animation: none; } }
 #pTimes button.eb[aria-pressed="true"] { background: var(--acc); color: var(--acc-ink); border-color: var(--eb); }
 #pTimes button.eb[aria-pressed="true"] small { color: var(--acc-ink); opacity: .85; }
-#pTimes .tgrp { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 8px; margin: 6px 0 8px; font: 8px 'Press Start 2P', monospace; letter-spacing: .1em; color: var(--mute); }
+#pTimes .tgrp { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 8px; margin: 6px 0 8px; font: 9px 'Press Start 2P', monospace; letter-spacing: .1em; color: var(--mute); }
 #pTimes .tgrp:first-child { margin-top: 2px; }
 #pTimes .tgrp span { font: 12px 'Chakra Petch', sans-serif; letter-spacing: 0; opacity: .8; }
 #pTimes .tgrp:not(:first-child) { margin-top: 14px; }
@@ -238,7 +238,7 @@ h3.nm, .nm { color: var(--rc); }
 .chips button:disabled { opacity: .3; cursor: not-allowed; }
 /* longer stays cost less per hour: a "SAVE x%" flag on those lengths */
 .chips button { position: relative; }
-.chips button .save { position: absolute; top: -9px; right: -6px; font: 7px 'Press Start 2P', monospace; letter-spacing: .06em; padding: 4px 5px; background: #3DDC84; color: #0b0914; }
+.chips button .save { position: absolute; top: -9px; right: -6px; font: 8px 'Press Start 2P', monospace; letter-spacing: .06em; padding: 4px 5px; background: #3DDC84; color: #0b0914; }
 .saved { color: #3DDC84; font-size: 13px; margin-left: 8px; font-weight: 600; }
 .sum { padding: 14px 16px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
 .sum b { font-size: 18px; }
@@ -249,7 +249,7 @@ h3.nm, .nm { color: var(--rc); }
 .sum .sumh .ic { width: 11px; height: 11px; margin-right: 7px; vertical-align: -1px; color: var(--mute); }
 .sum .sumh { flex-basis: 100%; margin: 0 0 -4px; font: 9px 'Press Start 2P', monospace; letter-spacing: .12em; color: var(--acc); }
 .go { font: 10px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 13px 16px; background: var(--acc); color: var(--acc-ink); border: 0; cursor: pointer; }
-.go:disabled { opacity: .35; cursor: not-allowed; }
+.go:disabled { opacity: 1; background: var(--cell); color: var(--mute); box-shadow: inset 0 0 0 1px var(--line); cursor: not-allowed; }   /* review 20 Nov: readable when not ready yet */
 .go.off { opacity: .35; pointer-events: none; }
 .cel.tc { margin: 12px 0 0; font-size: 14px; }
 .cel.tc a { color: var(--acc); }
@@ -266,7 +266,7 @@ h3.nm, .nm { color: var(--rc); }
 /* the celebration box in the room's character colour, so it stands out */
 .celstep { margin: 12px 16px; padding: 14px 14px; border: 1px solid var(--acc); border-left-width: 4px; background: color-mix(in srgb, var(--acc) 12%, transparent); }
 .celstep .cel b { color: var(--acc); }
-.beta { display: inline-block; font: 7px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 3px 5px; margin: 0 4px 0 2px; border: 1px solid var(--acc); color: var(--acc); vertical-align: 2px; }
+.beta { display: inline-block; font: 8px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 3px 5px; margin: 0 4px 0 2px; border: 1px solid var(--acc); color: var(--acc); vertical-align: 2px; }
 .celstep .cel .ic { color: var(--acc); }
 .cel { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; }
 .cel input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--acc); flex: none; }
@@ -321,17 +321,42 @@ h3.nm, .nm { color: var(--rc); }
 .cel.tc input::before { content: ''; width: 12px; height: 12px; clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0, 43% 62%); background: var(--acc-ink); transform: scale(0); transition: transform .15s; }
 .cel.tc input:checked { background: var(--acc); border-color: var(--acc); } .cel.tc input:checked::before { transform: scale(1); }
 .cel.tc input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-.paywith { display: flex; gap: 6px; margin-top: 14px; } .paywith span { padding: 4px 9px; border: 1px solid var(--line); font-size: 12px; color: var(--mute); }
+.paywith { margin-top: 14px; line-height: 1.6; }
 .wide { display: block; width: 100%; text-align: center; text-decoration: none; margin: 10px 0 0; box-sizing: border-box; }
 .banner { margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--acc); color: var(--ink); }
 .banner.ok { border-color: var(--free); }
+
+/* ===== Design review fixes (20 Nov) ===== */
+/* 1 · every tap target at least 44px tall on phones */
+@media (max-width: 900px) {
+  .views button { min-height: 44px; }
+  .room .pickb, .room .photob { min-height: 44px; padding: 0 16px; }
+  .cal .mh button { width: 44px; height: 44px; }
+  .cal .g button { height: 44px; }
+  .sheet .x { min-height: 44px; padding: 0 12px; }
+  .ebchip { min-height: 36px; padding: 8px 0; }
+  label.cel.tc { min-height: 44px; align-items: center; padding: 6px 0; }
+  .hours button { min-height: 52px; }
+  .go { min-height: 48px; }
+}
+/* 2 · the main action on each room card is filled in the room's colour */
+.room .pickb, .room:hover .pickb { background: var(--rc); color: var(--ri, #0b0914); border-color: var(--rc); font-weight: 700; }
+.room .pickb:hover { filter: brightness(1.08); color: var(--ri, #0b0914); }
+.row .pickb, .row .pickb:hover { background: var(--rc); color: var(--ri, #0b0914); border-color: var(--rc); font-weight: 700; min-height: 44px; }
+/* 5 · free start times written on the bar */
+.track .seg { display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.track .seg b { font: 700 11px 'Chakra Petch', sans-serif; color: var(--ri, #0b0914); white-space: nowrap; letter-spacing: .02em; }
+/* 6 · fully booked rooms as slim rows; a full tier as one line */
+.room.locked { padding: 10px 16px; } .room.locked .ty { display: none; } .room.locked h3.nm { font-size: 15px; }
+.tierfull { display: flex; align-items: center; gap: 10px; margin: 12px 0; padding: 12px 16px; border: 1px dashed var(--line); color: var(--mute); font-size: 14px; }
+.tierfull svg { width: 14px; height: 14px; flex: none; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="px kick top">SAVE MENU · FREE SLOTS</div>
   <h1 class="top">WHAT'S FREE</h1>
-  <p class="sub intro">Pick a day, then look by room, by the time you'd like to start, or the earliest time. Coloured bars are times you can start; tap a room to choose your start and how long you'll stay.</p>
+  <p class="sub intro">Pick a day, then a room and a start time.</p>
   <div class="banner" id="banner" hidden></div>
   <div class="cols"><div class="colL">
   <div class="lbl px dayhd"><i data-ic="cal"></i>1 · PICK A DAY <button type="button" id="toToday" hidden>BACK TO TODAY</button></div>
@@ -396,7 +421,7 @@ h3.nm, .nm { color: var(--rc); }
         <a class="go wide off" id="hPay" href="#" aria-disabled="true">PAY</a>
         <p class="hint" id="tNeed">Tick both boxes to pay.</p>
         <button class="x wide" id="hChange" type="button">CHANGE BOOKING</button>
-        <div class="paywith"><span>Card</span><span>PayNow</span><span>Apple Pay</span></div><p class="hint" style="margin-top:6px">Slot released if you go back or time runs out.</p>
+        <p class="hint paywith">Card · PayNow · Apple Pay<br>Slot released if you go back or time runs out.</p>
       </div>
     </div>
   </div>
@@ -563,8 +588,11 @@ h3.nm, .nm { color: var(--rc); }
     var start = (new Date(Date.UTC(y, mo, 1)).getUTCDay() + 6) % 7, n = new Date(Date.UTC(y, mo + 1, 0)).getUTCDate();
     var h = '<div class="mh"><button type="button" data-step="-1" aria-label="Previous month"' + (calM <= first ? ' disabled' : '') + '>‹</button><b>' + MONTH[mo] + ' ' + y + '</b><button type="button" data-step="1" aria-label="Next month"' + (calM >= last ? ' disabled' : '') + '>›</button></div><div class="g">';
     ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].forEach(function (w) { h += '<div class="wd">' + w + '</div>'; });
-    for (var i = 0; i < start; i++) h += '<span></span>';
+    /* review 20 Nov: this month starts at the current week - no rows of greyed-out past days */
+    var skipRow = calM === ym(today) ? Math.floor((start + +today.slice(8) - 1) / 7) : 0;
+    if (!skipRow) for (var i = 0; i < start; i++) h += '<span></span>';
     for (var dd = 1; dd <= n; dd++) {
+      if (Math.floor((start + dd - 1) / 7) < skipRow) continue;
       var d = calM + '-' + ('0' + dd).slice(-2), wd = (start + dd - 1) % 7, past = d < today, peak = wd >= 4 || PH[d];
       h += '<button type="button" data-d="' + d + '" class="' + (peak ? 'pk' : '') + (d === today ? ' td' : '') + '" aria-pressed="' + (d === day) + '"' + (past ? ' disabled' : '') + ' aria-label="' + (d === today ? 'Today, ' : '') + dayLabel(d) + (PH[d] ? ', public holiday' : '') + '">' + dd + (d === today ? '<small>TODAY</small>' : '') + '</button>';
     }
@@ -604,7 +632,7 @@ h3.nm, .nm { color: var(--rc); }
     var res = data, any = false;
     Object.keys(res.rooms).forEach(function (uid) { if (res.rooms[uid].list.length) any = true; });
     Array.prototype.forEach.call($('views').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === view)); });
-    $('tiers').innerHTML = '<span><i style="background:var(--eb)"></i>Early bird · 11am start, $35</span><span>' + (res.ph ? 'Public holiday · peak prices' : res.peak ? 'Peak day' : 'Off-peak day') + ' · 3–6 hour sessions</span>';
+    $('tiers').innerHTML = '<span>3–6 hour sessions</span><span><i style="background:var(--eb)"></i>Early bird 11am · $35</span>';   /* review 20 Nov: one short line; peak days are already dotted on the calendar */
     if (!any) { $('board').innerHTML = noneMsg(); return; }
     $('board').innerHTML = view === 'time' ? byTime() : view === 'early' ? byEarliest() : byRoom();
     var sel = $('board').querySelector('.hours button[aria-pressed="true"]'); if (sel && sel.scrollIntoView) { try { sel.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (e) {} }
@@ -629,22 +657,25 @@ h3.nm, .nm { color: var(--rc); }
       g[1].forEach(function (uid) {
         var R = ROOMS[uid], info = res.rooms[uid] || { list: [], ranges: [], starts: {} }, segs = '';
         var day3 = info.list.filter(function (o) { return !o.eb; });
-        info.ranges.forEach(function (r) { if (r[2]) return; segs += '<span class="seg" style="left:' + pos(r[0]) + ';width:calc(' + (100 * (r[1] - r[0] + STEP) / span).toFixed(2) + '% - 1px)"></span>'; });
+        info.ranges.forEach(function (r) { if (r[2]) return; var w = 100 * (r[1] - r[0] + STEP) / span;   /* review 20 Nov: the free start times are written on the bar when it's wide enough */
+          segs += '<span class="seg" style="left:' + pos(r[0]) + ';width:calc(' + w.toFixed(2) + '% - 1px)">' + (w >= 20 ? '<b>' + (r[0] === r[1] ? clock(r[0]) : (function (a, z) { return a.slice(-2) === z.slice(-2) ? a.slice(0, -2) + '–' + z : a + '–' + z; })(clock(r[0]), clock(r[1]))) + '</b>' : '') + '</span>'; });
         var from = day3.length ? Math.min.apply(null, day3.map(function (o) { return o.price; })) : 0;
         /* the times are START times, not when the session ends: "starting anytime from 2:15pm to 8:15pm" */
         var rgs = info.ranges.filter(function (r) { return !r[2]; });
-        var txt = rgs.map(function (r) { return r[0] === r[1] ? clock(r[0]) : clock(r[0]) + ' to ' + clock(r[1]); }).join(', or ');
-        var lead = rgs.length === 1 && rgs[0][0] === rgs[0][1] ? 'Slot available starting at ' : 'Slots available starting anytime from ';
+        var txt = rgs.map(function (r) { return r[0] === r[1] ? clock(r[0]) : clock(r[0]) + ' – ' + clock(r[1]); }).join(', ');
+        var lead = 'Start ';   /* review 20 Nov: "Start 2:15pm – 5pm · from $99" */
         if (!info.list.length) {   /* nothing left for this room on this date: locked slot, no timeline */
           inner += '<div class="room locked" style="--rc:' + R[1] + '" aria-label="' + esc(R[0]) + ': fully booked for this date"><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty">' + R[2] + '</div></div>' +
             '<div class="lock"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M5 2h6v1h1v4h1v7H3V7h1V3h1zm1 2v3h4V4zM7 9v3h2V9z"/></svg><span>FULLY BOOKED</span></div></div>';
           return;
         }
-        inner += '<div class="room" style="--rc:' + R[1] + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': ' + (txt ? lead + txt : 'early bird')) + '"' : '') + '><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty">' + R[2] + '</div>' + ebChip(uid) + '</div><div>' +
+        inner += '<div class="room" style="--rc:' + R[1] + ';--ri:' + (uid == 10 || uid == 11 ? '#ffffff' : '#0b0914') + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': ' + (txt ? lead + txt : 'early bird')) + '"' : '') + '><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty">' + R[2] + '</div>' + ebChip(uid) + '</div><div>' +
           '<div class="track">' + lines + segs + '</div><div class="ticks">' + ticks + '</div>' +
           (day3.length ? '<div class="free">' + lead + esc(txt) + ' · from ' + money(from) + '</div><div class="btns"><button class="pickb" type="button" data-u="' + uid + '">Choose a time ›</button>' + photoBtn(uid) + '</div>'
             : info.list.length ? '<div class="free">Only the early bird is free</div><div class="btns">' + photoBtn(uid) + '</div>' : '<div class="free no">Fully booked</div>') + '</div></div>';
       });
+      /* review 20 Nov: a whole tier with nothing free folds into one line */
+      if (g[1].every(function (u) { return !(res.rooms[u] && res.rooms[u].list.length); })) inner = '<div class="tierfull"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M5 2h6v1h1v4h1v7H3V7h1V3h1zm1 2v3h4V4zM7 9v3h2V9z"/></svg>All fully booked on this day</div>';
       html += tierBox(g, inner);
     });
     return html;
@@ -665,7 +696,7 @@ h3.nm, .nm { color: var(--rc); }
       g[1].forEach(function (uid) {
         var list = hours[hourSel] && hours[hourSel][uid]; if (!list) return;
         var o = list[0], R = ROOMS[uid];
-        inner += '<div class="row" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty">' + R[2] + '</div></div>' +
+        inner += '<div class="row" style="--rc:' + R[1] + ';--ri:' + (uid == 10 || uid == 11 ? '#ffffff' : '#0b0914') + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty">' + R[2] + '</div></div>' +
           '<div class="when">' + list.map(function (x) { return clock(x.m); }).join(' · ') + '<small>' + (o.eb ? 'Early bird · ' : '') + 'from ' + money(o.prices[3]) + ' · up to ' + o.maxH + ' hours</small></div>' +
           '<button class="pickb" type="button" data-u="' + uid + '" data-m="' + o.m + '">Start at ' + clock(o.m) + ' ›</button></div>';
       });
@@ -683,7 +714,7 @@ h3.nm, .nm { color: var(--rc); }
     var top = ebs.length ? '<div class="ebnote"><b>EARLY BIRD AVAILABLE</b> 11am start · $35 for 3 hours · ' + ebs.join(', ') + '</div>' : '';
     return top + rows.map(function (r) {
       var uid = r[0], o = r[1], R = ROOMS[uid];
-      return '<div class="row' + (o.eb ? ' ebrow' : '') + '" style="--rc:' + R[1] + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty" style="color:' + R[1] + '">' + R[2] + '</div></div>' +
+      return '<div class="row' + (o.eb ? ' ebrow' : '') + '" style="--rc:' + R[1] + ';--ri:' + (uid == 10 || uid == 11 ? '#ffffff' : '#0b0914') + '" data-u="' + uid + '" data-m="' + o.m + '" role="button" tabindex="0"><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty" style="color:' + R[1] + '">' + R[2] + '</div></div>' +
         '<div class="when">' + (o.eb ? '<span class="ebtag">EARLY BIRD AVAILABLE</span>' : '') + clock(o.m) + '<small>' + money(o.prices[3]) + ' for 3 hours · up to ' + o.maxH + ' hours</small></div>' +
         '<button class="pickb" type="button" data-u="' + uid + '" data-m="' + o.m + '">Start at ' + clock(o.m) + ' ›</button></div>';
     }).join('');
