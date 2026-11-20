@@ -249,7 +249,7 @@ h3.nm, .nm { color: var(--rc); }
 .sum .sumh .ic { width: 11px; height: 11px; margin-right: 7px; vertical-align: -1px; color: var(--mute); }
 .sum .sumh { flex-basis: 100%; margin: 0 0 -4px; font: 9px 'Press Start 2P', monospace; letter-spacing: .12em; color: var(--acc); }
 .go { font: 10px 'Press Start 2P', monospace; letter-spacing: .1em; padding: 13px 16px; background: var(--acc); color: var(--acc-ink); border: 0; cursor: pointer; }
-.go:disabled { opacity: 1; background: var(--cell); color: var(--mute); box-shadow: inset 0 0 0 1px var(--line); cursor: not-allowed; }   /* review 20 Nov: readable when not ready yet */
+.go:disabled { opacity: .35; cursor: not-allowed; }
 .go.off { opacity: .35; pointer-events: none; }
 .cel.tc { margin: 12px 0 0; font-size: 14px; }
 .cel.tc a { color: var(--acc); }
@@ -347,17 +347,13 @@ h3.nm, .nm { color: var(--rc); }
 /* 5 · free start times written on the bar */
 .track .seg { display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .track .seg b { font: 700 11px 'Chakra Petch', sans-serif; color: var(--ri, #0b0914); white-space: nowrap; letter-spacing: .02em; }
-/* 6 · fully booked rooms as slim rows; a full tier as one line */
-.room.locked { padding: 10px 16px; } .room.locked .ty { display: none; } .room.locked h3.nm { font-size: 15px; }
-.tierfull { display: flex; align-items: center; gap: 10px; margin: 12px 0; padding: 12px 16px; border: 1px dashed var(--line); color: var(--mute); font-size: 14px; }
-.tierfull svg { width: 14px; height: 14px; flex: none; }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="px kick top">SAVE MENU · FREE SLOTS</div>
   <h1 class="top">WHAT'S FREE</h1>
-  <p class="sub intro">Pick a day, then a room and a start time.</p>
+  <p class="sub intro">Pick a day, then look by room, by the time you'd like to start, or the earliest time. Coloured bars are times you can start; tap a room to choose your start and how long you'll stay.</p>
   <div class="banner" id="banner" hidden></div>
   <div class="cols"><div class="colL">
   <div class="lbl px dayhd"><i data-ic="cal"></i>1 · PICK A DAY <button type="button" id="toToday" hidden>BACK TO TODAY</button></div>
@@ -633,7 +629,7 @@ h3.nm, .nm { color: var(--rc); }
     var res = data, any = false;
     Object.keys(res.rooms).forEach(function (uid) { if (res.rooms[uid].list.length) any = true; });
     Array.prototype.forEach.call($('views').querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-v') === view)); });
-    $('tiers').innerHTML = '<span>3–6 hour sessions</span><span><i style="background:var(--eb)"></i>Early bird 11am · $35</span>';   /* review 20 Nov: one short line; peak days are already dotted on the calendar */
+    $('tiers').innerHTML = '<span><i style="background:var(--eb)"></i>Early bird · 11am start, $35</span><span>' + (res.ph ? 'Public holiday · peak prices' : res.peak ? 'Peak day' : 'Off-peak day') + ' · 3–6 hour sessions</span>';
     if (!any) { $('board').innerHTML = noneMsg(); return; }
     $('board').innerHTML = view === 'time' ? byTime() : view === 'early' ? byEarliest() : byRoom();
     var sel = $('board').querySelector('.hours button[aria-pressed="true"]'); if (sel && sel.scrollIntoView) { try { sel.scrollIntoView({ block: 'nearest', inline: 'center' }); } catch (e) {} }
@@ -672,11 +668,9 @@ h3.nm, .nm { color: var(--rc); }
         }
         inner += '<div class="room" style="--rc:' + R[1] + ';--ri:' + (uid == 10 || uid == 11 ? '#ffffff' : '#0b0914') + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': ' + (txt ? lead + txt : 'early bird')) + '"' : '') + '><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty">' + R[2] + '</div>' + ebChip(uid) + '</div><div>' +
           '<div class="track">' + lines + segs + '</div><div class="ticks">' + ticks + '</div>' +
-          (day3.length ? '<div class="free">' + lead + esc(txt) + ' <span style="white-space:nowrap">· from ' + money(from) + '</span></div><div class="btns"><button class="pickb" type="button" data-u="' + uid + '">Choose a time ›</button>' + photoBtn(uid) + '</div>'
+          (day3.length ? '<div class="free">' + lead + esc(txt) + '<br><span style="opacity:.8">from ' + money(from) + '</span></div><div class="btns"><button class="pickb" type="button" data-u="' + uid + '">Choose a time ›</button>' + photoBtn(uid) + '</div>'
             : info.list.length ? '<div class="free">Only the early bird is free</div><div class="btns">' + photoBtn(uid) + '</div>' : '<div class="free no">Fully booked</div>') + '</div></div>';
       });
-      /* review 20 Nov: a whole tier with nothing free folds into one line */
-      if (g[1].every(function (u) { return !(res.rooms[u] && res.rooms[u].list.length); })) inner = '<div class="tierfull"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M5 2h6v1h1v4h1v7H3V7h1V3h1zm1 2v3h4V4zM7 9v3h2V9z"/></svg>All fully booked on this day</div>';
       html += tierBox(g, inner);
     });
     return html;
