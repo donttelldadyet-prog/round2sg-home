@@ -4273,6 +4273,7 @@ async function ps4PkgNext(env, hb, id, room, now) {
     else if (last.startsWith(j.jid + ' FAILED')) { j.state = 'failed'; j.why = last; j.end = now; changed = true; }
     else if (last.startsWith(j.jid) && j.state === 'sent') { j.state = 'running'; changed = true; }
     else if (j.state === 'sent' && now - (j.sentAt || 0) > 15 * 60e3) { j.state = 'failed'; j.why = 'the PS4 never started it'; j.end = now; changed = true; }
+    else if (j.state === 'running' && !last && !(rep.pkg && rep.pkg.on) && now - (j.sentAt || 0) > 10 * 60e3) { j.state = 'failed'; j.why = 'the PS4 restarted during it – check the PS4 or send it again'; j.end = now; changed = true; }   /* 21 Nov 2:35am: a restart left a finished job 'running' and blocked the queue */
     else if (j.state === 'running' && last && !last.startsWith(j.jid)) { j.state = 'failed'; j.why = 'stopped (the PS4 is on another download now)'; j.end = now; changed = true; }   /* the helper runs one download at a time */
     if (j.state === 'running' && last.startsWith(j.jid)) j.prog = last;
   }
