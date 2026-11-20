@@ -658,13 +658,13 @@ h3.nm, .nm { color: var(--rc); }
       g[1].forEach(function (uid) {
         var R = ROOMS[uid], info = res.rooms[uid] || { list: [], ranges: [], starts: {} }, segs = '';
         var day3 = info.list.filter(function (o) { return !o.eb; });
-        info.ranges.forEach(function (r) { if (r[2]) return; var w = 100 * (r[1] - r[0] + STEP) / span;   /* review 20 Nov: the free start times are written on the bar when it's wide enough */
-          segs += '<span class="seg" style="left:' + pos(r[0]) + ';width:calc(' + w.toFixed(2) + '% - 1px)">' + (w >= 20 ? '<b>' + (r[0] === r[1] ? clock(r[0]) : (function (a, z) { return a.slice(-2) === z.slice(-2) ? a.slice(0, -2) + '–' + z : a + '–' + z; })(clock(r[0]), clock(r[1]))) + '</b>' : '') + '</span>'; });
+        info.ranges.forEach(function (r) { if (r[2]) return; var w = 100 * (r[1] - r[0] + STEP) / span;   
+          segs += '<span class="seg" style="left:' + pos(r[0]) + ';width:calc(' + w.toFixed(2) + '% - 1px)">' + '' + '</span>'; });
         var from = day3.length ? Math.min.apply(null, day3.map(function (o) { return o.price; })) : 0;
         /* the times are START times, not when the session ends: "starting anytime from 2:15pm to 8:15pm" */
         var rgs = info.ranges.filter(function (r) { return !r[2]; });
-        var txt = rgs.map(function (r) { return r[0] === r[1] ? clock(r[0]) : clock(r[0]) + ' and ' + clock(r[1]); }).join(', or ');
-        var lead = rgs.length === 1 && rgs[0][0] === rgs[0][1] ? 'Pick a start time at ' : 'Pick a start time between ';   /* owner 20 Nov: "Pick a start time between 2:15pm and 5pm · from $99" */
+        var txt = rgs.map(function (r) { return r[0] === r[1] ? clock(r[0]) : clock(r[0]) + ' to ' + clock(r[1]); }).join(', or ');
+        var lead = rgs.length === 1 && rgs[0][0] === rgs[0][1] ? 'Pick a start time at ' : 'Pick a start time from ';   /* owner 20 Nov: "Pick a start time between 2:15pm and 5pm · from $99" */
         if (!info.list.length) {   /* nothing left for this room on this date: locked slot, no timeline */
           inner += '<div class="room locked" style="--rc:' + R[1] + '" aria-label="' + esc(R[0]) + ': fully booked for this date"><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty">' + R[2] + '</div></div>' +
             '<div class="lock"><svg viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true"><path fill="currentColor" d="M5 2h6v1h1v4h1v7H3V7h1V3h1zm1 2v3h4V4zM7 9v3h2V9z"/></svg><span>FULLY BOOKED</span></div></div>';
