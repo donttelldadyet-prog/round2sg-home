@@ -321,7 +321,8 @@ h3.nm, .nm { color: var(--rc); }
 .cel.tc input::before { content: ''; width: 12px; height: 12px; clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0, 43% 62%); background: var(--acc-ink); transform: scale(0); transition: transform .15s; }
 .cel.tc input:checked { background: var(--acc); border-color: var(--acc); } .cel.tc input:checked::before { transform: scale(1); }
 .cel.tc input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-.paywith { margin-top: 14px; line-height: 1.6; }
+.paywith { margin-top: 8px; line-height: 1.6; }
+.paylogos { display: flex; gap: 6px; margin-top: 16px; } .paylogos img { display: block; width: 40px; height: 25px; border-radius: 4px; box-shadow: 0 0 0 1px rgba(244,241,251,.18); }   /* owner's official payment marks */
 .wide { display: block; width: 100%; text-align: center; text-decoration: none; margin: 10px 0 0; box-sizing: border-box; }
 .banner { margin: 0 0 16px; padding: 12px 14px; border: 1px solid var(--acc); color: var(--ink); }
 .banner.ok { border-color: var(--free); }
@@ -421,7 +422,7 @@ h3.nm, .nm { color: var(--rc); }
         <a class="go wide off" id="hPay" href="#" aria-disabled="true">PAY</a>
         <p class="hint" id="tNeed">Tick both boxes to pay.</p>
         <button class="x wide" id="hChange" type="button">CHANGE BOOKING</button>
-        <p class="hint paywith">Card · PayNow · Apple Pay<br>Slot released if you go back or time runs out.</p>
+        <div class="paylogos" aria-label="Pay with Mastercard, PayNow, Apple Pay or Google Pay"><img src="img/pay-mastercard.png" alt="Mastercard" width="40" height="25"><img src="img/pay-paynow.png" alt="PayNow" width="40" height="25"><img src="img/pay-applepay.png" alt="Apple Pay" width="40" height="25"><img src="img/pay-gpay.png" alt="Google Pay" width="40" height="25"></div><p class="hint paywith">Slot released if you go back or time runs out.</p>
       </div>
     </div>
   </div>
