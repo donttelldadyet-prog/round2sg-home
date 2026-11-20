@@ -4265,7 +4265,7 @@ async function ps4PkgNext(env, hb, id, room, now) {
     const res = lk && lk.at >= (j.sentAt || 0) - 5e3 && lk.list ? lk.list : null;
     if (res && (res['pkgjob/refused'] || res['pkgjob/error'] || res['pkgrm/refused'] || res['pkgrm/error'])) {
       const why = String(res['pkgjob/refused'] || res['pkgjob/error'] || res['pkgrm/refused'] || res['pkgrm/error']).replace(/^- /, '');
-      if (/not safe now|another download/.test(why) && (j.tries || 0) < 5) { j.state = 'queued'; j.tries = (j.tries || 0) + 1; j.why = why; }
+      if (/not safe now|another download/.test(why) && (j.tries || 0) < 500) {   /* a game open / busy: keep waiting (tried again every 3 min) */ j.state = 'queued'; j.tries = (j.tries || 0) + 1; j.why = why; }
       else { j.state = 'failed'; j.why = why; j.end = now; }
       changed = true; continue; }
     if (j.op === 'rm' && res && res['pkgrm/result']) { j.state = 'done'; j.why = String(res['pkgrm/result']); j.end = now; changed = true; continue; }
