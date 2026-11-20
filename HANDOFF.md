@@ -142,6 +142,18 @@
   (clean kind prep or a queue) – anyone who signs in gets a PS4 message "Hang on <name> – saves are still loading (player k of n).
   Please don't start a game yet." (normal notification, not verbose-only).
   The broader ShellUI probe ("log everything") was NOT continued – stopped there; only the 4:26am list exists.
+- **11:50pm – owner: "is the ps4 system strong enough to survive guest facing use now" → NOT YET (verdict + test list given).**
+  Guest rooms run release 1.1.113/1.1.114 (Vale 1.1.61) – nothing from tonight is guest-facing. Blockers: add-on only ever ran on
+  13.50 (rooms 9.00/11.00 need their own test); many features shipped but not seen working (phone refusal, A+B stay-in-profile,
+  "newer in another room", menu detector/countdown, clean slate with real saves on a signed-in profile, patch/uninstall/queue end);
+  PKG: helper-signs-in-main path unproven, no pause when a guest is due, pop-ups would show to guests; 6-h PKG cut-off (fixed in
+  source for the next build: 45 min without progress); stale ps4fg if a room rolls back to a helper without fg_thread (enforce
+  only when fg.v matches – to do); first release build must be < 2 MB (rooms' old in-memory updater).
+  Logs read: shell11 22:30 clean slate (0 games, 1 s) locked → "picker PAUSED – check says 0" (pause didn't confirm) → logged
+  out → unlocked. Side timer 52 = ONE run at 17:11 (50 Firebase), latest run 14 – not recurring.
+  Tonight: Kaeden has had ~11 helper switches since the 21:18 restart (limit ~4–5) → no more updates while the Sims queue runs;
+  KAEDEN stays signed in; no clean slate / member-load tests (both end in LogoutAll – unknown if a download survives); restart
+  Kaeden in the morning. Sims: game 1375/10405 MB at 23:50 (~1.6 MB/s), 36 queued.
 - **10:49pm–11:35pm – PKG INSTALLER BUILT + FIRST INSTALLS (owner: "group individually as well", home-screen folders wanted,
   laptop stays on overnight with the external HD; "install all of the files from this folder, i want to play the sims").**
   - **Laptop: Round2 PKG server** (round2-tv-launcher tools/pkg-server; on the laptop C:\Users\saber\round2-tv\pkg-server, start
