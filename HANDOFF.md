@@ -142,6 +142,12 @@
   (clean kind prep or a queue) – anyone who signs in gets a PS4 message "Hang on <name> – saves are still loading (player k of n).
   Please don't start a game yet." (normal notification, not verbose-only).
   The broader ShellUI probe ("log everything") was NOT continued – stopped there; only the 4:26am list exists.
+- **21 Nov 12:49–1:26am – owner: "wake them and update them both".** Vale: woken by Kaeden (`/_wakerp.192.168.88.255…`, checked in
+  12:51) → Overcooked 2 left open → `/_close` → update **1.1.61 → 1.1.114** ✅ → `/_rest` ✅. Bella: can't be woken from round2
+  (round2-ps4, nobody awake there) → owner asked to press PS; Bella made ONE poll at 01:06:08 (no report) and was silent through
+  checks at 1:03, 1:11, 1:18, 1:26 → **still 1.1.113**, update when it's next on (it may have gone back to rest – Bella has auto
+  rest 300 s). Kaeden: Sims game installed; patch 1.95 downloading (4.3/14 GB at 1:26, ~3.6 MB/s) while the owner plays the
+  base game; DLC jobs wait while a game is open (owner asked; offered to allow DLC starts during play – no answer yet).
 - **21 Nov 12:27–12:33am – owner (out eating): "are the rest of the ps4s in rest mode, update if needed and rest them … what about
   bella's logs".** No guest in any room and none due tonight (gm insess, checked first). Max (1.1.114) `/_rest` ✅, Kai (1.1.114)
   `/_rest` ✅, Scarlett: Overcooked 2 left open by the 10:30pm guests → `/_close` ✅ → update 1.1.113 → **1.1.114** ✅ → `/_rest` ✅.
