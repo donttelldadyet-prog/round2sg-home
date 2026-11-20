@@ -5192,7 +5192,7 @@ async function widgetApi(env, u) {
     if (now - D.t > 25 * 60e3) health.push({ lv: 1, t: 'Money/health copy ' + Math.round((now - D.t) / 60e3) + ' min old' });
   }
   if (age > 25) health.push({ lv: 1, t: 'Board copy ' + age + ' min old' });
-  for (const r of rooms) if (r.tv && r.tv.quiet && r.st !== 'closed') health.push({ lv: r.st === 'in' ? 2 : 1, t: r.r + ' TV not reporting' });
+  for (const x of warn) if (/TV quiet/.test(x)) health.push({ lv: 1, t: x });   /* only rooms with guests in or due within 45 min (an idle room's TV is often just off) */
   const lv = health.reduce((a, x) => Math.max(a, x.lv), 0);
   return J({ ok: true, now, night: W.night, counts, rooms, warn, events: events.slice(0, 16), tomorrow,
     money: D ? Object.assign({ t: D.t }, D.money) : null, health: { lv, list: health.sort((a, b) => b.lv - a.lv).slice(0, 6), sb: D ? D.sb : null, toSort: D ? D.nHuman : 0 },

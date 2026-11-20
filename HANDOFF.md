@@ -309,10 +309,10 @@
   a separate normal SSID (NOT the guest network – isolation would break PS4-to-PS4 wake), 2.4 GHz only, WPA2, visible name.
   Saving blips all Wi-Fi ~10–60 s (mesh + Tapo cameras 1–2 min) → scheduled 10:35pm after Vale (reminder set). Never LAN.
 
-> ## 20 Nov 2026, ~8:25am – widgets: MONEY, TOMORROW, HEALTH LIGHT, LOCK-SCREEN COUNTDOWN (live sha fcc436558c65, 27 bindings, 3 timers)
+> ## 20 Nov 2026, ~8:25am – widgets: MONEY, TOMORROW, HEALTH LIGHT, LOCK-SCREEN COUNTDOWN (live sha ba770ff14696, 27 bindings, 3 timers)
 > - **Live at 8:07am was bb4183f6f062 = my 2ccdc79b96d1 + the other chat's member-tile changes (`roomout`, `memplay.until/out/fin`,
->   `ps4busy:<id>`) – STILL NOT IN GIT.** My change went on by exact string anchors (live → 28dbab07cb0e → fcc436558c65). Git main
->   = my parts only. Whoever commits the PS4/member work: rebase onto this commit; the next deploy starts from live fcc436558c65.
+>   `ps4busy:<id>`) – STILL NOT IN GIT.** My change went on by exact string anchors (live → 28dbab07cb0e → fcc436558c65 → ba770ff14696 (health: TV quiet only for rooms with guests in or due)). Git main
+>   = my parts only. Whoever commits the PS4/member work: rebase onto this commit; the next deploy starts from live ba770ff14696.
 > - Note: `GET …/workers/scripts/round2-book/content/v2` now answers 404 "no versions" – read live with the plain
 >   `GET …/workers/scripts/round2-book` (multipart; text after the first blank line, up to the last `\r\n--`).
 > - `widgetDay` (side timer, minute %10 = 1): ONE kvMany of `alog`, `human`, `cronNet`, `sbn:<day>` → kv `wday` {money: bookings made
