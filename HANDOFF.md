@@ -142,6 +142,15 @@
   (clean kind prep or a queue) – anyone who signs in gets a PS4 message "Hang on <name> – saves are still loading (player k of n).
   Please don't start a game yet." (normal notification, not verbose-only).
   The broader ShellUI probe ("log everything") was NOT continued – stopped there; only the 4:26am list exists.
+- **10:14–10:20pm – owner: "can the clean slate also follow the logout logic … we can logout controllers to go into ps button,
+  implement". His 22:12 control-centre clean slate ran the OLD way: reset_go signed spares out with sceUserServiceLogout ("1 signed
+  out") – the one that can leave a controller stuck – and no lock. Now helper 1.1.129 (ps4-test f7f51b9) + round2_shell10 (ps4-shell
+  7b64a66), on Kaeden 22:16; shell10 auto-loaded 22:17:08 (no restart).**
+  - Reset start: helper writes /data/round2/shell-logout-now → add-on runs LogoutAll(13) and answers .done (helper waits ≤8 s,
+    else falls back to the old spare sign-out, logged). During reset/clean/purge runs: PS + Share locked, picker paused (same as
+    member loads); at the end: everyone logged out the menu's way, then unlock → PS-button screen.
+  - **Correction:** shell8 did NOT run next to shell9 – shell8's log: "21:11:15 stopped - a newer add-on is running" (it stops
+    itself when shell.gen changes). The 1.1.125 guard was unneeded and is removed in 1.1.129, so add-on updates need no restart.
 - **10:02–10:10pm – owner: "how to workaround" the 1-minute wait for "open the tile" → "ok go". ENGINE DEPLOYED 22:06 (commit
   88321b1; live hash before = repo 0076449 886e57b4…, after d22eb172… = repo; 27 bindings; 3 timers) + helper 1.1.128 (ps4-test
   df860ef) on Kaeden 22:07.**
