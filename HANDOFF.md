@@ -142,6 +142,23 @@
   (clean kind prep or a queue) – anyone who signs in gets a PS4 message "Hang on <name> – saves are still loading (player k of n).
   Please don't start a game yet." (normal notification, not verbose-only).
   The broader ShellUI probe ("log everything") was NOT continued – stopped there; only the 4:26am list exists.
+- **10:38–10:47pm – detector timing + PKG project STEP 1. Helper 1.1.131 (ps4-test ae83249) on Kaeden 22:41.**
+  - Owner: "the detector starts about 7 mins after a time ends right?" – yes: ps4resetAuto = {on, after 7, rooms [max]} → reset
+    time = guest end + 7 min; the engine starts the (silent) countdown 5 min before (guest end + 2 min); at the reset time it
+    still waits until 2 min without presses (game detector + menu detector) → earliest clean slate = guest end + 7 min.
+    Automatic reset is ON FOR MAX ONLY (Max is on release 1.1.114: game detector only, no menu detector, old sign-out).
+  - Owner's PKG spec (10:38pm): safety checks (guest inside etc.) → if nobody signed in (after a clean slate = PS-button screen)
+    sign the MAIN profile in ("main profile is constant on all"); read PKGs from a chosen folder or drive (he backs PKGs up to an
+    external HDD); drag a game PKG into the queue → ask whether to add its patch + DLCs found in that folder; uninstall; jobs to
+    GROUPS (Netflix tier games / Deluxe = Netflix + more / VIP = all – ROOMS tiers: netflix Vale Kaeden Scarlett, deluxe Kai
+    Bella Atlas, vip Max); read installed games and bring every room to the same version.
+  - STEP 1 built: `/_pkgprep` (refuses with an app open, clean/save job, member load or countdown; the engine already refuses any
+    PS4 job with a session now or within 15 min) → if nobody is signed in, sceUserServiceLogin(main) → `/_pkgdone` = if we signed
+    in, the add-on logs everyone out (shell-logout-now). Kaeden 22:42:24: **main signed in 0.2 s, but foreground user = none
+    (ffffffff), still none 2 min later** – the installer may need a foreground user → test in step 3 (or the add-on's
+    SetForegroundUser, unproven). 22:45 `/_pkgdone` → logged out by the add-on ✅.
+  - Next: step 2 laptop side (folder/drive server + PKG header reader + queue page with patch/DLC prompt + groups), step 3 helper
+    install via BGFT from the laptop URL (progress, pause), step 4 uninstall, step 5 version sync from the installed list.
 - **10:25–10:30pm – owner: "why is this needed [log-out at the start] … a forced clean slate should show popup that clean slate will
   run, but for the automatic cleanslate, the detector should be the trigger, no key triggers on the menu or game > close game if
   game running and satisfy 2 min trigger, show popup, 2, then 3. then the member saves are loaded if applicable".
