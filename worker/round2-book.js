@@ -2716,7 +2716,7 @@ async function gm(env, req) {
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await mvApi(env, hb, f, new URL(req.url).origin)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
-  if (/^ps4(list|map|discs|names|clean|update|look|lookres|rel|prof|saves|dns|dnsget|wake|wakekey|reset|resetauto)$|^pkg(send|list|cancel)$/.test(act)) {   /* staff: control centre › PS4s (13 Nov; reset + resetauto 17 Nov) */
+  if (/^ps4(list|map|discs|names|clean|update|look|lookres|rel|prof|saves|dns|dnsget|wake|wakekey|reset|resetauto)$|^pkg(send|list|cancel|lap)$/.test(act)) {   /* staff: control centre › PS4s (13 Nov; reset + resetauto 17 Nov) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await ps4Gm(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
@@ -4603,11 +4603,17 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
       rooms: f.rooms === undefined ? (Array.isArray(old.rooms) ? old.rooms : []) : String(f.rooms).split(',').map((x) => x.trim().toLowerCase()).filter((x) => Object.values(GM_ROOM).includes(x)) };   /* 18 Nov: rooms "max,kai" = only those; "" = all */
     await hb.kvSet('ps4resetAuto', v); return { ok: true, auto: v };
   }
+  if (act === 'pkglap') {   /* the laptop's Round2 PKG server (1.1+): its address, link code and PKG list – on change, else every 10 min. ONE write. */
+    const d = String(f.data || ''); if (d.length > 120000) return { error: 'list too big' };
+    let o; try { o = JSON.parse(d); } catch (e) { return { error: 'bad list' }; }
+    if (!o || !Array.isArray(o.pkgs) || !/^[a-z0-9]{16,48}$/.test(String(o.token || ''))) return { error: 'bad list' };
+    await hb.kvSet('pkglap', Object.assign(o, { t: Date.now(), active: +f.active || 0, servedMB: +f.servedMB || 0 })); return { ok: true };
+  }
   if (act === 'pkgsend' || act === 'pkglist' || act === 'pkgcancel') {   /* 20 Nov: PKG installs (see ps4PkgNext) */
     const map = (await hb.kvGet('ps4map')) || {}, byRoom = {}; for (const i in map) byRoom[map[i]] = i;
     const ids = Object.values(byRoom), now = Date.now();
-    const K = await hb.kvMany(ids.map((i) => 'pkgq:' + i), []);
-    if (act === 'pkglist') return { ok: true, now, rooms: Object.fromEntries(Object.entries(byRoom).map(([r, i]) => [r, K['pkgq:' + i] || []])) };
+    const K = await hb.kvMany(ids.map((i) => 'pkgq:' + i).concat(act === 'pkglist' ? ['pkglap'] : []), []);
+    if (act === 'pkglist') return { ok: true, now, lap: K.pkglap || null, rooms: Object.fromEntries(Object.entries(byRoom).map(([r, i]) => [r, K['pkgq:' + i] || []])) };
     const by = String(f.by || 'staff').slice(0, 40), W = {};
     if (act === 'pkgcancel') {
       const i = byRoom[String(f.room || '')], q = i ? (K['pkgq:' + i] || []) : [], j = q.find((x) => x.jid === f.jid); if (!j) return { error: 'No such job.' };
