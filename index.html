@@ -1143,18 +1143,18 @@ var q=0;new MutationObserver(function(){if(q)return;q=1;requestAnimationFrame(fu
 +'#r2-st table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:14px}#r2-st th,#r2-st td{padding:11px 4px;text-align:center;border-bottom:1px solid rgba(244,241,251,.09)}'
 +'#r2-st thead th{vertical-align:top;padding-bottom:10px;border-bottom:2px solid var(--t)}#r2-st thead th b{display:block;font:9px/1.5 "Press Start 2P",monospace;letter-spacing:.06em;color:var(--t)}#r2-st thead th small{display:block;margin-top:4px;font-size:11px;font-weight:600;line-height:1.35}'
 +'#r2-st tbody th{text-align:left;font-weight:600;color:#d6d0e3;padding-left:2px}#r2-st col.f{width:31%}'
-+'#r2-st td.y{color:#5BE37D;font-size:17px;font-weight:700}#r2-st td.n{color:#5d5870;font-size:16px}#r2-st td.t{font-size:12.5px;font-weight:700;color:#f4f1fb;line-height:1.3}';
++'#r2-st td.y{color:#5BE37D;font-size:17px;font-weight:700}#r2-st td.n{color:#5d5870;font-size:16px}#r2-st td.t{font-size:12.5px;font-weight:700;color:#f4f1fb;line-height:1.3}#r2-st sup{font-size:11px;color:#F2C21B;margin-left:1px}#r2-st p.ft{margin:12px 2px 0;font-size:13px;color:#a79fbd}';
 var st=document.createElement('style');st.textContent=CSS;document.head.appendChild(st);
 function c(n,col){return '<span style="color:'+col+'">'+n+'</span>'}
-var Y='<td class="y" aria-label="Yes">✓</td>',N='<td class="n" aria-label="No">–</td>';function T(x){return '<td class="t">'+x+'</td>'}
-var rows=[['Console',T('PS4'),T('PS4 Pro'),T('PS4 Pro')],['Netflix',Y,Y,Y],['Prime Video',Y,Y,Y],['HBO Max',N,Y,Y],['Audio',T('Standard'),T('Enhanced'),T('Home Theatre')],['Racing Sim',N,N,Y]];
+var Y='<td class="y" aria-label="Yes">✓</td>',O='<td class="y" aria-label="Yes, sign in with your own account">✓<sup>*</sup></td>',N='<td class="n" aria-label="No">–</td>';function T(x){return '<td class="t">'+x+'</td>'}
+var rows=[['Console',T('PS4'),T('PS4 Pro'),T('PS4 Pro')],['Netflix',Y,Y,Y],['Prime Video',Y,Y,Y],['HBO Max',N,Y,Y],['Disney+',O,O,O],['Apple TV',O,O,O],['Audio',T('Standard'),T('Enhanced'),T('Home Theatre')],['Racing Sim',N,N,Y]];
 var el=document.createElement('div');el.id='r2-st';el.hidden=true;el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','What each room type has');
 el.innerHTML='<div class="bx"><button type="button" class="x" aria-label="Close">✕</button><h3>STREAMING</h3><p class="s">What’s In Each Room</p>'
 +'<table><colgroup><col class="f"><col><col><col></colgroup><thead><tr><th></th>'
 +'<th style="--t:#FF5A6E"><b>NETFLIX</b><small>'+c('Vale','#E8436A')+'<br>'+c('Kaeden','#4DB848')+'<br>'+c('Scarlett','#F2C21B')+'</small></th>'
 +'<th style="--t:#B48CFF"><b>DELUXE</b><small>'+c('Kai','#24B49A')+'<br>'+c('Bella','#7A5BE0')+'<br>'+c('Atlas','#E9E7EF')+'</small></th>'
 +'<th style="--t:#E0402F"><b>VIP</b><small>'+c('Maximillion','#E0402F')+'</small></th></tr></thead><tbody>'
-+rows.map(function(r){return '<tr><th scope="row">'+r[0]+'</th>'+r.slice(1).join('')+'</tr>'}).join('')+'</tbody></table></div>';
++rows.map(function(r){return '<tr><th scope="row">'+r[0]+'</th>'+r.slice(1).join('')+'</tr>'}).join('')+'</tbody></table><p class="ft"><sup>*</sup> Bring your own account: just sign in on the TV and enjoy.</p></div>';
 var last=null;function close(){el.classList.remove('on');setTimeout(function(){el.hidden=true},200);if(last)try{last.focus()}catch(e){}}
 function open(t){last=t;document.body.appendChild(el);el.hidden=false;requestAnimationFrame(function(){el.classList.add('on')});el.querySelector('.x').focus()}
 el.addEventListener('click',function(e){if(e.target===el||e.target.closest('.x'))close()});
