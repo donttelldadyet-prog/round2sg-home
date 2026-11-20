@@ -4411,6 +4411,9 @@ async function ps4Alive(env, req) {
   if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
   let r = {}; try { r = JSON.parse(await req.text()); } catch (e) {}
   const id = ps4Id(r.id); if (id.length < 16) return J({ error: 'no console id' }, 400);
+  /* helper 1.1.128 (owner 20 Nov 10:02pm): the Round2 tile opened or closed – sent only on the change, so a phone's Load can be
+     refused at once when the tile isn't open (was: up to a minute until the helper looked). ONE Durable Object call. */
+  if (r.tile === 0 || r.tile === 1) { await book(env).kvMany([], [['ps4poll:' + id, Date.now()], ['ps4fg:' + id, { on: r.tile, at: Date.now(), v: String(r.v || '').slice(0, 12) }]]); return J({ ok: true }); }
   const now = Date.now(), busy = { at: now, step: String(r.busy || '').replace(/[^\w .:/-]/g, '').slice(0, 40), stepS: +r.stepS || 0, loopS: +r.loopS || 0, v: String(r.v || '').slice(0, 12) };
   await book(env).kvMany([], [['ps4poll:' + id, now], ['ps4busy:' + id, busy]]);
   return J({ ok: true, now });
@@ -4886,10 +4889,12 @@ async function memApi(env, req) {
     if (!p) return J({ error: 'Tick at least one player.' });
     const map = (await hb.kvGet('ps4map')) || {}, id = Object.keys(map).find((i) => map[i] === room);
     if (!id) return J({ error: 'This room’s PS4 isn’t set up for members yet – please ask staff.' });
-    const K = await hb.kvMany(['ps4poll:' + id, 'ps4cmd:' + id, 'tiletok:' + id], []), c0 = K['ps4cmd:' + id], tk = K['tiletok:' + id];
+    const K = await hb.kvMany(['ps4poll:' + id, 'ps4cmd:' + id, 'tiletok:' + id, 'ps4fg:' + id], []), c0 = K['ps4cmd:' + id], tk = K['tiletok:' + id], fg = K['ps4fg:' + id];
     /* 20 Nov 2:55am (owner): the QR's code only works for the session it was shown in – a guest who scanned and went home can't load */
     if (!tk || !f.k || String(f.k) !== tk.k || now >= tk.until) return J({ error: 'This code has run out. Scan the code on the room’s TV again to load.', rescan: true });
     if (now - (K['ps4poll:' + id] || 0) > 3 * 60e3) return J({ error: 'The PS4 in this room isn’t answering – is it switched on?' });
+    /* helper 1.1.128+ says when the Round2 tile opens/closes (ps4fg); older helpers never do, so no record = no check */
+    if (fg && fg.on === 0) return J({ error: 'Open the Round2 tile on the TV first, then press Load again.', tile: false });
     if (c0 && (c0.state === 'sent' || c0.state === 'taken') && now - c0.at < 2 * 60e3) return J({ error: 'The PS4 is busy for a moment – try again in a minute.', busy: true });
     const names = ps.filter((x) => x.slot !== 'main').map((x) => x.shown).join(' + ') || m.crew, c = { cid: 'l' + now.toString(36), do: 'look', p: `/_memplay.${m.id}.` + ps.map((x) => x.slot + '.' + x.shown.replace(/ /g, '_')).join('.'), at: now, by: 'member ' + m.id, state: 'sent', nobusy: true };
     await hb.kvMany([], [['ps4cmd:' + id, c], ['memplay:' + id, { name: names, cid: c.cid, at: now, until: tk.until, mid: m.id }]]);   /* until (owner 20 Nov 8:01am): the tile keeps showing this member for the whole session */
