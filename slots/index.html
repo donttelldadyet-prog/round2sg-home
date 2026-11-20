@@ -348,7 +348,7 @@ h3.nm, .nm { color: var(--rc); }
 .track .seg { display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .track .seg b { font: 700 11px 'Chakra Petch', sans-serif; color: var(--ri, #0b0914); white-space: nowrap; letter-spacing: .02em; }
 /* 6 · fully booked rooms as slim rows; a full tier as one line */
-.room.locked { padding: 10px 16px; } .room.locked .ty { display: none; } .room.locked h3.nm { font-size: 15px; }
+.room.locked { padding: 10px 16px; }   /* owner: keep the room type (NETFLIX ROOM) on fully booked rooms */
 .tierfull { display: flex; align-items: center; gap: 10px; margin: 12px 0; padding: 12px 16px; border: 1px dashed var(--line); color: var(--mute); font-size: 14px; }
 .tierfull svg { width: 14px; height: 14px; flex: none; }
 </style>
