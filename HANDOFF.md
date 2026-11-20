@@ -142,6 +142,13 @@
   (clean kind prep or a queue) – anyone who signs in gets a PS4 message "Hang on <name> – saves are still loading (player k of n).
   Please don't start a game yet." (normal notification, not verbose-only).
   The broader ShellUI probe ("log everything") was NOT continued – stopped there; only the 4:26am list exists.
+- **21 Nov 12:27–12:33am – owner (out eating): "are the rest of the ps4s in rest mode, update if needed and rest them … what about
+  bella's logs".** No guest in any room and none due tonight (gm insess, checked first). Max (1.1.114) `/_rest` ✅, Kai (1.1.114)
+  `/_rest` ✅, Scarlett: Overcooked 2 left open by the 10:30pm guests → `/_close` ✅ → update 1.1.113 → **1.1.114** ✅ → `/_rest` ✅.
+  Already asleep: Atlas (1.1.114, since 11:15pm), Bella (1.1.113, rested by Claude 7:20pm after the wake test), Vale (1.1.61, since
+  12:04am – NOT woken: owner may sleep there; update Vale + Bella in the morning). Kaeden stays on for the Sims queue.
+  Bella's logs (last report before its 7:20pm rest): helper 1.1.113 since 4:40pm, hourly "helper running" to 6:30pm, woke from rest
+  fine at 6:13am and 10:30am, 4 short network drops (each back within 8–71 s), no crash/stuck lines.
 - **11:50pm – owner: "is the ps4 system strong enough to survive guest facing use now" → NOT YET (verdict + test list given).**
   Guest rooms run release 1.1.113/1.1.114 (Vale 1.1.61) – nothing from tonight is guest-facing. Blockers: add-on only ever ran on
   13.50 (rooms 9.00/11.00 need their own test); many features shipped but not seen working (phone refusal, A+B stay-in-profile,
