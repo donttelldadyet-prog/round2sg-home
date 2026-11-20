@@ -5116,7 +5116,7 @@ async function widgetSnap(env, hb) {
   let ms = null;
   try { const L = await hb.gmGet('__LIST__'), raw = L && L.link && L.link.raw;
     if (raw) ms = (JSON.parse(raw).links || []).filter((x) => x.data && x.data.status === 'approved' && +x.data.at > Date.now() - 20 * 60e3 && +x.data.at < d0 + 30 * 3600e3)
-      .map((x) => ({ r: String(x.data.room || ''), at: +x.data.at, k: String(x.data.kind || (/^R2/.test(x.key) ? 'auto' : 'guest')), ti: String(x.data.title || '').slice(0, 40), tv: x.data.onTv === 'yes' ? 1 : 0 }))
+      .map((x) => ({ r: String(x.data.room || ''), at: +x.data.at, k: String(x.data.kind || (/^R2/.test(x.key) ? 'auto' : 'guest')), ti: String(x.data.title || '').slice(0, 40), tv: x.data.onTv === 'yes' ? 1 : 0, id: String(x.data.id || ''), ak: x.data.ack !== false ? 1 : 0 }))
       .sort((a, b) => a.at - b.at).slice(0, 60); } catch (e) {}
   const prev = ms ? null : await hb.kvGet('wsum');
   await hb.kvSet('wsum', { t: Date.now(), night: t, d0, ss, ms: ms || (prev && prev.ms) || [] });
@@ -5146,7 +5146,7 @@ async function widgetDay(env, hb) {
 async function widgetApi(env, u) {
   const k = String(u.searchParams.get('k') || '');
   if (k.length < 16) return J({ error: 'no key' }, 403);
-  const o = await book(env).kvMany(['wkey', 'wsum', 'wtv', 'wps4', 'wday'], []);
+  const o = await book(env).kvMany(['wkey', 'wsum', 'wtv', 'wps4', 'wday', 'acks'], []);
   if (!o.wkey || o.wkey !== k) return J({ error: 'wrong key' }, 403);
   const now = Date.now(), W = o.wsum || { ss: [] }; W.ss = (W.ss || []).sort((a, b) => a.s - b.s); const d0 = W.d0 || 0, d1 = d0 + 86400e3, tv = (o.wtv && o.wtv.r) || {};
   const rooms = [], warn = [];
@@ -5161,8 +5161,9 @@ async function widgetApi(env, u) {
     const h0 = tv[GM_ROOM[u0]], p0 = ((o.wps4 && o.wps4.r) || {})[GM_ROOM[u0]];
     if (h0 && h0.t) r.tv = { app: wApp(h0), off: /suspend|standby|off/i.test(h0.pw || ''), at: h0.fa || 0, quiet: now - h0.t > 20 * 60e3 };
     if (p0 && p0.t) r.ps4 = { on: now - p0.t < 12 * 60e3, g: p0.g || '' };
-    const M = ((W.ms) || []).filter((m) => m.r === GM_ROOM[u0] && m.at > now - 60e3).slice(0, 3);
-    if (M.length) r.msgs = M.map((m) => ({ at: m.at, k: m.k, ti: m.ti, tv: m.tv }));
+    /* (20 Nov, owner: "turn a different colour when acknowledged") – the last 15 min too, with the TV's OK (acks, from msgAck) */
+    const AK = o.acks || {}, M = ((W.ms) || []).filter((m) => m.r === GM_ROOM[u0] && m.at > now - 15 * 60e3).slice(0, 5);
+    if (M.length) r.msgs = M.map((m) => ({ at: m.at, k: m.k, ti: m.ti, tv: m.tv, ok: m.id && AK[m.id] ? AK[m.id].t : 0, ak: m.ak === 0 ? 0 : 1 }));
     /* turnover: from this guest's end (+15 min cleaning) to the next start */
     const prev = cur || cl; if (prev && nx) r.gap = Math.round((nx.s - prev.e) / 60e3);
     rooms.push(r);

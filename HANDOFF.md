@@ -312,7 +312,7 @@
 > ## 20 Nov 2026, ~8:25am – widgets: MONEY, TOMORROW, HEALTH LIGHT, LOCK-SCREEN COUNTDOWN (live sha ba770ff14696, 27 bindings, 3 timers)
 > - **Live at 8:07am was bb4183f6f062 = my 2ccdc79b96d1 + the other chat's member-tile changes (`roomout`, `memplay.until/out/fin`,
 >   `ps4busy:<id>`) – STILL NOT IN GIT.** My change went on by exact string anchors (live → 28dbab07cb0e → fcc436558c65 → ba770ff14696 (health: TV quiet only for rooms with guests in or due)). Git main
->   = my parts only. Whoever commits the PS4/member work: rebase onto this commit; the next deploy starts from live ba770ff14696.
+>   = my parts only. Whoever commits the PS4/member work: rebase onto this commit; the next deploy starts from live 9c1e65baf864 (see below).
 > - Note: `GET …/workers/scripts/round2-book/content/v2` now answers 404 "no versions" – read live with the plain
 >   `GET …/workers/scripts/round2-book` (multipart; text after the first blank line, up to the last `\r\n--`).
 > - `widgetDay` (side timer, minute %10 = 1): ONE kvMany of `alog`, `human`, `cronNet`, `sbn:<day>` → kv `wday` {money: bookings made
@@ -320,6 +320,9 @@
 >   run, SimplyBook count}. No SimplyBook or outside requests. `/w` adds `money`, `health` {lv 0 green / 1 orange / 2 red, list}
 >   and `tomorrow` {over = nobody in/cleaning and nothing more before 7am – late-night bookings count as tonight; n, first, rooms,
 >   last, list}. Diag: `diag:req` [{action:'widget'}] → what the phone gets.
+> - 8:30am (live 9c1e65baf864): wsum.ms keeps each message's `id` + `ak` (needs an OK); `/w` reads `acks` in the same kvMany and gives
+>   each room's messages from 15 min back with `ok` (time of the TV's OK) – widget splits AUTO (wrapup/timeup) from SCHEDULED, coloured
+>   coming / on TV waiting for OK / OK'd. Next deploy starts from live 9c1e65baf864.
 > - Widget script: parameters `money`, `health`, `tomorrow`, `count`, `rooms`; header health dot on every home widget; board
 >   switches to TOMORROW by itself once tonight is over; round lock widget = live countdown to the next room out (old one = `rooms`).
 
