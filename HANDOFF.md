@@ -142,6 +142,13 @@
   (clean kind prep or a queue) – anyone who signs in gets a PS4 message "Hang on <name> – saves are still loading (player k of n).
   Please don't start a game yet." (normal notification, not verbose-only).
   The broader ShellUI probe ("log everything") was NOT continued – stopped there; only the 4:26am list exists.
+- **10:02–10:10pm – owner: "how to workaround" the 1-minute wait for "open the tile" → "ok go". ENGINE DEPLOYED 22:06 (commit
+  88321b1; live hash before = repo 0076449 886e57b4…, after d22eb172… = repo; 27 bindings; 3 timers) + helper 1.1.128 (ps4-test
+  df860ef) on Kaeden 22:07.**
+  - Helper `fg_thread` posts `/ps4/alive {id, v, tile: 0|1}` only when the tile opens/closes (retry every 10 s) → engine writes
+    `ps4fg:<id>` {on, at, v} (ONE DO call). Member `play` reads it in the same kvMany as before (no extra call): tile closed →
+    phone shows at once "Open the Round2 tile on the TV first, then press Load again." No record (older helpers) = no check.
+  - The helper's own check (1.1.127) stays as a second guard. Light check after: 13 ✅ · 4 ⚠️ · 1 ❌ (side timer 52, known).
 - **9:56–10:05pm – owner: "is there a handshake between phone and whether the ps4 tile is on" → "ok". Helper 1.1.127 (ps4-test 816b57a)
   on Kaeden 22:03.** Before: Load only checked the QR code (this session), PS4 answered in 3 min, PS4 not busy. Now the helper
   refuses a NEW load unless the Round2 tile is the running app (`running_title` = RTWO00001): TV pop-up "<name>: open the Round2
