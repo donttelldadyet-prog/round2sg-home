@@ -2828,6 +2828,12 @@ async function gm(env, req) {
     if (!k || f.reset === '1') { k = [...crypto.getRandomValues(new Uint8Array(18))].map((x) => 'abcdefghjkmnpqrstuvwxyz23456789'[x % 31]).join(''); await hb.kvSet('wkey', k); }
     return gmJ({ ok: true, key: k, url: WIDGET_URL });
   }
+  if (act === 'msglog') {   /* staff, read-only (20 Nov): an Android TV's own message log – the last 40 events (big/small banner, OK, Home,
+     cut-off), written by the TV app (1.0.287+) to /r2/<key>/<room>/msgLog. One room, one outside request. */
+    if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
+    const room = String(f.room || '').toLowerCase(); if (!['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max'].includes(room) || !env.TV_KEY) return gmJ({ error: 'Pick a room.' });
+    return gmJ({ ok: true, room, log: await fetch(FB_BASE + env.TV_KEY + '/' + room + '/msgLog.json').then((r) => r.json()).catch(() => null) });
+  }
   if (act === 'tvmsgs') {   /* staff, read-only (4 Nov): each room's message on the TV, when it first showed, and the last OK */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     if (!env.TV_KEY) return gmJ({ error: 'no TV key' });
@@ -3488,7 +3494,7 @@ async function pushRetry(env, hb0) {
 /* a read-only staff question left in the engine's KV (HOLDS › diag:req, JSON form fields) is answered within 5 minutes into
    diag:res – for when the browser link to the owner's computer is down (6 Nov). Only reading actions; only someone with
    Cloudflare access to this account can write the KV. */
-const DIAG_OK = ['mirror', 'cronnet', 'noise', 'paxof', 'tvmsgs', 'alerts', 'pushsubs', 'tvlog', 'guestlook', 'list', 'auto', 'insess', 'holdsday', 'acks', 'latelist', 'paytimes', 'prinfo', 'queue', 'links', 'ps4list', 'widget'];   /* ps4list (16 Nov): each PS4's last check-in, read only · widget (20 Nov): what the phone widgets get */
+const DIAG_OK = ['mirror', 'cronnet', 'noise', 'paxof', 'tvmsgs', 'alerts', 'pushsubs', 'tvlog', 'guestlook', 'list', 'auto', 'insess', 'holdsday', 'acks', 'latelist', 'paytimes', 'prinfo', 'queue', 'links', 'ps4list', 'widget', 'msglog'];   /* ps4list (16 Nov): each PS4's last check-in, read only · widget (20 Nov): what the phone widgets get */
 async function diagReq(env) {
   if (!env.HOLDS) return;
   const q = await env.HOLDS.get('diag:req', 'json').catch(() => null); if (!q) return;

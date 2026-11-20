@@ -309,6 +309,15 @@
   a separate normal SSID (NOT the guest network – isolation would break PS4-to-PS4 wake), 2.4 GHz only, WPA2, visible name.
   Saving blips all Wi-Fi ~10–60 s (mesh + Tapo cameras 1–2 min) → scheduled 10:35pm after Vale (reminder set). Never LAN.
 
+> ## 20 Nov 2026, ~5:25pm – Max "That's a wrap!" (live sha 152f1ec4298b, 27 bindings, 3 timers)
+> - Records (tvmsgs): 5-min reminder w5mwlpir6p OK'd 1:58:56pm; wrap qr2f7673c-1120101826 shown 1:59:59pm, never OK'd, cut-off 2:15.
+>   Owner: wrap showed as the small banner on the PS4 input; Home took him to the menu with no big banner. Cause (code): Sony
+>   never pauses the menu for HDMI, so Home = onNewIntent and FoodAlerts.menuInFront (onResume only) never swapped the banner.
+>   Fix in TV app 1.0.287 (round2-tv-launcher): onNewIntent with Home → menuInFront("home"); plus the TV's own msgLog.
+> - Engine: new staff/diag action `msglog` (room) reads /r2/<key>/<room>/msgLog (one outside request). Note: diag `insess`
+>   together with `tvmsgs` hit "Too many subrequests" – ask for them in separate diag runs.
+> - Next deploy starts from live 152f1ec4298b.
+
 > ## 20 Nov 2026, ~8:25am – widgets: MONEY, TOMORROW, HEALTH LIGHT, LOCK-SCREEN COUNTDOWN (live sha ba770ff14696, 27 bindings, 3 timers)
 > - **Live at 8:07am was bb4183f6f062 = my 2ccdc79b96d1 + the other chat's member-tile changes (`roomout`, `memplay.until/out/fin`,
 >   `ps4busy:<id>`) – STILL NOT IN GIT.** My change went on by exact string anchors (live → 28dbab07cb0e → fcc436558c65 → ba770ff14696 (health: TV quiet only for rooms with guests in or due)). Git main
@@ -322,7 +331,7 @@
 >   last, list}. Diag: `diag:req` [{action:'widget'}] → what the phone gets.
 > - 8:30am (live 9c1e65baf864): wsum.ms keeps each message's `id` + `ak` (needs an OK); `/w` reads `acks` in the same kvMany and gives
 >   each room's messages from 15 min back with `ok` (time of the TV's OK) – widget splits AUTO (wrapup/timeup) from SCHEDULED, coloured
->   coming / on TV waiting for OK / OK'd. Next deploy starts from live 9c1e65baf864.
+>   coming / on TV waiting for OK / OK'd. Next deploy starts from live 152f1ec4298b (see above).
 > - Widget script: parameters `money`, `health`, `tomorrow`, `count`, `rooms`; header health dot on every home widget; board
 >   switches to TOMORROW by itself once tonight is over; round lock widget = live countdown to the next room out (old one = `rooms`).
 
