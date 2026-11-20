@@ -142,6 +142,15 @@
   (clean kind prep or a queue) – anyone who signs in gets a PS4 message "Hang on <name> – saves are still loading (player k of n).
   Please don't start a game yet." (normal notification, not verbose-only).
   The broader ShellUI probe ("log everything") was NOT continued – stopped there; only the 4:26am list exists.
+- **21 Nov 2:00am – owner: "where is karen bozz gta progress, did a new save replace her progress in the cloud?"** Logs read:
+  1:11–1:13am 3-player load (Main, Karen, Aliff) on Kaeden ALL FAILED – "bundle: no memory for a piece", memory.dat downloads cut
+  at ~8 MB of 32 MB → each game "taken back so the game starts clean (the member's cloud save is untouched)". So Karen got an
+  EMPTY GTA on Kaeden. Cause: Kaeden's helper is out of memory (11+ switches since the 9:18pm restart, hours of uptime, BGFT
+  download running) → **restart Kaeden** before loading again. Cloud (members/m7xbafbe3/p1/CUSA00419, Karen = p1): story saves
+  SAVEDATASGTA50000/SBGTA50000 + SAVEDATAPROFILE = 20 Nov 3:45–3:46am (her play that night), untouched since; sce_sdmemory +
+  sce_bu_sce_sdmemory newest = 20 Nov 7:08pm (origin not provable – older 2:00am + 3:46am copies kept, roll back if her progress
+  looks wrong). ⚠️ Bug to check: the 10:12pm staff clean slate uploaded a GTA save (SAVEDATAPROFILE/SGTA/SBGTA/sce_sdmemory,
+  10:13pm) into ALIFF's folder p2 – a profile holding Karen's GTA was tagged p2 (Karen's p1 not touched).
 - **21 Nov 12:49–1:26am – owner: "wake them and update them both".** Vale: woken by Kaeden (`/_wakerp.192.168.88.255…`, checked in
   12:51) → Overcooked 2 left open → `/_close` → update **1.1.61 → 1.1.114** ✅ → `/_rest` ✅. Bella: can't be woken from round2
   (round2-ps4, nobody awake there) → owner asked to press PS; Bella made ONE poll at 01:06:08 (no report) and was silent through
