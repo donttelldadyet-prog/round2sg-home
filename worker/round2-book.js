@@ -2716,7 +2716,7 @@ async function gm(env, req) {
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await mvApi(env, hb, f, new URL(req.url).origin)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
-  if (/^ps4(list|map|discs|names|clean|update|look|lookres|rel|prof|saves|dns|dnsget|wake|wakekey|reset|resetauto)$/.test(act)) {   /* staff: control centre › PS4s (13 Nov; reset + resetauto 17 Nov) */
+  if (/^ps4(list|map|discs|names|clean|update|look|lookres|rel|prof|saves|dns|dnsget|wake|wakekey|reset|resetauto)$|^pkg(send|list|cancel)$/.test(act)) {   /* staff: control centre › PS4s (13 Nov; reset + resetauto 17 Nov) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await ps4Gm(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
@@ -4248,6 +4248,53 @@ async function ps4ResetOk(env, req) {
   if (busy) return hold('room in use until ' + clock12(busy.guestEnd) + (x && busy.guestEnd > x.end ? ' (extended)' : ''));
   return J({ ok: true });
 }
+/* ===== PKG INSTALLS (owner 20 Nov 10:38pm: games / patches / DLC from a folder or the external HD on his laptop, to single rooms
+   or tiers, uninstall, same version everywhere). The laptop runs "Round2 PKG server" (round2-tv-launcher tools/pkg-server); the
+   control centre (PS4 games page, on that laptop) reads its list and queues jobs here: kv pkgq:<ps4 id> = [{ jid, op install|rm,
+   spec (the helper's look path), title, name, cat gd|gp|ac, tid, ver, mb, state queued|sent|running|done|failed, at, by, rest }].
+   The PS4's own minute poll (ps4Cmd) hands out ONE job at a time – only with the room free for the next 60 min (ps4Busy) and at
+   most every 3 min per PS4 (that check reads the calendar). No extra Durable Object call per poll: pkgq + ps4look are in the
+   poll's one snapshot. When a PS4's queue is through: /_pkgdone (the add-on logs the main profile out), then /_rest if asked. */
+const PKG_GAP = 60;
+async function ps4PkgNext(env, hb, id, room, now) {
+  const q = (await hb.kvGet('pkgq:' + id)) || []; if (!q.length) return null;
+  const rep = (await hb.kvGet('ps4:' + id)) || {}, lk = await hb.kvGet('ps4look:' + id), last = String((rep.pkg && rep.pkg.last) || '');
+  let changed = false;
+  for (const j of q) {
+    if (j.state !== 'sent' && j.state !== 'running') continue;
+    const res = lk && lk.at >= (j.sentAt || 0) - 5e3 && lk.list ? lk.list : null;
+    if (res && (res['pkgjob/refused'] || res['pkgjob/error'] || res['pkgrm/refused'] || res['pkgrm/error'])) {
+      const why = String(res['pkgjob/refused'] || res['pkgjob/error'] || res['pkgrm/refused'] || res['pkgrm/error']).replace(/^- /, '');
+      if (/not safe now|another download/.test(why) && (j.tries || 0) < 5) { j.state = 'queued'; j.tries = (j.tries || 0) + 1; j.why = why; }
+      else { j.state = 'failed'; j.why = why; j.end = now; }
+      changed = true; continue; }
+    if (j.op === 'rm' && res && res['pkgrm/result']) { j.state = 'done'; j.why = String(res['pkgrm/result']); j.end = now; changed = true; continue; }
+    if (last.startsWith(j.jid + ' finished')) { j.state = 'done'; j.why = last; j.end = now; changed = true; }
+    else if (last.startsWith(j.jid + ' FAILED')) { j.state = 'failed'; j.why = last; j.end = now; changed = true; }
+    else if (last.startsWith(j.jid) && j.state === 'sent') { j.state = 'running'; changed = true; }
+    else if (j.state === 'sent' && now - (j.sentAt || 0) > 15 * 60e3) { j.state = 'failed'; j.why = 'the PS4 never started it'; j.end = now; changed = true; }
+    if (j.state === 'running' && last.startsWith(j.jid)) j.prog = last;
+  }
+  const keep = q.filter((j) => !(j.end && now - j.end > 2 * 86400e3));
+  const save = async () => { if (changed || keep.length !== q.length) await hb.kvSet('pkgq:' + id, keep); };
+  if (keep.some((j) => j.state === 'sent' || j.state === 'running')) { await save(); return null; }
+  const next = keep.find((j) => j.state === 'queued');
+  const mk = (p, by) => { const c = { cid: 'k' + now.toString(36), do: 'look', p, at: now, takenAt: now, by, state: 'taken' }; return c; };
+  if (!next) {   /* queue through: log the main profile out (if the helper signed it in), then rest if asked */
+    const fin = keep.filter((j) => j.end && !j.closed);
+    if (!fin.length) { await save(); return null; }
+    const rest = fin.some((j) => j.rest) && !keep.some((j) => j.restSent);
+    let c;
+    if (!keep.some((j) => j.doneSent)) { c = mk('/_pkgdone', 'auto: PKG queue finished'); keep.forEach((j) => { if (j.end) j.doneSent = 1; }); }
+    else if (rest) { c = mk('/_rest', 'auto: PKG queue finished - rest'); keep.forEach((j) => { if (j.end) j.restSent = 1; }); }
+    else { keep.forEach((j) => { if (j.end) j.closed = 1; }); }
+    changed = true; await save(); if (c) await hb.kvSet('ps4cmd:' + id, c); return c;
+  }
+  if (Math.floor(now / 60e3) % 3) { await save(); return null; }
+  const busy = await ps4Busy(env, room, PKG_GAP); if (busy) { if (next.why !== busy) { next.why = 'waiting: ' + busy; changed = true; } await save(); return null; }
+  next.state = 'sent'; next.sentAt = now; next.why = ''; keep.forEach((j) => { delete j.doneSent; delete j.restSent; delete j.closed; }); changed = true; await save();
+  const c = mk(next.spec, 'auto: PKG ' + (next.op === 'rm' ? 'uninstall ' : '') + String(next.title || next.name || '').slice(0, 30)); await hb.kvSet('ps4cmd:' + id, c); return c;
+}
 async function ps4Busy(env, room, gap = PS4_GAP) {
   const unit = +(Object.keys(GM_ROOM).find((u) => GM_ROOM[u] === room) || 0), now = Date.now();
   if (!unit) return null;
@@ -4377,7 +4424,7 @@ async function ps4Cmd(env, req) {   /* the helper, every minute: anything for me
   let r = {}; try { r = JSON.parse(await req.text()); } catch (e) {}
   const id = ps4Id(r.id); if (id.length < 16) return J({ error: 'no console id' }, 400);
   const now = Date.now();
-  const { h: hb } = await hbSnap(book(env), ['ps4cmd:' + id, 'ps4map', 'ps4auto', 'ps4:' + id, 'ps4rel', 'ps4wakeRun', 'ps4wake', 'ps4autoTry:' + id, 'ps4autoChk:' + id, 'ps4resetAuto', 'ps4resetPlan', 'ps4resetLog', 'ps4resetChk:' + id, 'ps4awake'], [['ps4poll:' + id, now]]);
+  const { h: hb } = await hbSnap(book(env), ['ps4cmd:' + id, 'ps4map', 'ps4auto', 'ps4:' + id, 'ps4rel', 'ps4wakeRun', 'ps4wake', 'ps4autoTry:' + id, 'ps4autoChk:' + id, 'ps4resetAuto', 'ps4resetPlan', 'ps4resetLog', 'ps4resetChk:' + id, 'ps4awake', 'pkgq:' + id, 'ps4look:' + id], [['ps4poll:' + id, now]]);
   const c = await hb.kvGet('ps4cmd:' + id);
   /* "aw" = seconds this PS4 should stay awake (helper 1.1.68+; older ignore it; 0 = its own power-save rules). Overlapping
      windows chain (back-to-back bookings), so follow them to the furthest end. */
@@ -4392,6 +4439,8 @@ async function ps4Cmd(env, req) {   /* the helper, every minute: anything for me
     const idle = room0 && !(c && c.state === 'taken' && now - c.takenAt < 15 * 60e3);
     const rs = idle ? await ps4ResetDue(env, hb, id, room0, now).catch(() => null) : null;   /* 17 Nov: the reset after a session */
     if (rs) return Jaw({ ok: true, now, cmd: ps4Out(rs) });
+    const pk = idle ? await ps4PkgNext(env, hb, id, room0, now).catch(() => null) : null;   /* 20 Nov: PKG installs from the owner's laptop */
+    if (pk) return Jaw({ ok: true, now, cmd: ps4Out(pk) });
     const w = idle ? await ps4MorningWake(env, hb, id, room0, now).catch(() => null) : null;
     if (w) return Jaw({ ok: true, now, cmd: ps4Out(w) });
     const a = idle ? await ps4AutoUpdate(env, hb, id, room0).catch(() => null) : null;
@@ -4553,6 +4602,34 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
     const v = { on: f.on === undefined ? !!old.on : f.on === '1' || f.on === true, from: f.from === undefined ? +old.from || 0 : +f.from || 0, after: Math.min(30, Math.max(2, +f.after || +old.after || 10)), only: f.only === undefined ? old.only || '' : f.only === 'eb' ? 'eb' : '', at: Date.now(), by: String(f.by || 'control centre').slice(0, 40),
       rooms: f.rooms === undefined ? (Array.isArray(old.rooms) ? old.rooms : []) : String(f.rooms).split(',').map((x) => x.trim().toLowerCase()).filter((x) => Object.values(GM_ROOM).includes(x)) };   /* 18 Nov: rooms "max,kai" = only those; "" = all */
     await hb.kvSet('ps4resetAuto', v); return { ok: true, auto: v };
+  }
+  if (act === 'pkgsend' || act === 'pkglist' || act === 'pkgcancel') {   /* 20 Nov: PKG installs (see ps4PkgNext) */
+    const map = (await hb.kvGet('ps4map')) || {}, byRoom = {}; for (const i in map) byRoom[map[i]] = i;
+    const ids = Object.values(byRoom), now = Date.now();
+    const K = await hb.kvMany(ids.map((i) => 'pkgq:' + i), []);
+    if (act === 'pkglist') return { ok: true, now, rooms: Object.fromEntries(Object.entries(byRoom).map(([r, i]) => [r, K['pkgq:' + i] || []])) };
+    const by = String(f.by || 'staff').slice(0, 40), W = {};
+    if (act === 'pkgcancel') {
+      const i = byRoom[String(f.room || '')], q = i ? (K['pkgq:' + i] || []) : [], j = q.find((x) => x.jid === f.jid); if (!j) return { error: 'No such job.' };
+      if (j.state === 'queued') q.splice(q.indexOf(j), 1);
+      else if (j.state === 'sent' || j.state === 'running') { j.state = 'failed'; j.why = 'cancelled by ' + by; j.end = now; await hb.kvSet('ps4cmd:' + i, { cid: 'k' + now.toString(36), do: 'look', p: '/_pkgstop', at: now, by, state: 'sent', nobusy: true }); }
+      else q.splice(q.indexOf(j), 1);
+      await hb.kvSet('pkgq:' + i, q); return { ok: true };
+    }
+    let items = []; try { items = JSON.parse(f.items || '[]'); } catch (e) {} if (!Array.isArray(items)) items = []; items = items.slice(0, 400); let n = 0; const restAfter = f.rest === '1' || f.rest === 'true';
+    for (const it of items) {
+      const i = byRoom[String(it.room || '')]; if (!i) continue; const q = W['pkgq:' + i] || (W['pkgq:' + i] = (K['pkgq:' + i] || []).slice());
+      if (q.length > 300) continue;
+      const jid = 'p' + now.toString(36).slice(-5) + (n++).toString(36) + Math.random().toString(36).slice(2, 4);
+      let spec;
+      if (it.op === 'rm') { const tid = String(it.tid || '').toUpperCase(); if (!/^[A-Z]{4}\d{5}$/.test(tid)) continue; spec = '/_pkgrm.' + tid + '.' + (it.cat === 'gp' ? 'gp' : 'gd'); }
+      else { const ip = String(it.ip || ''), cid = String(it.cid || '');
+        if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip) || !/^[a-z0-9]{16,48}$/.test(String(it.code || '')) || !/^[a-f0-9]{16}$/.test(String(it.fid || '')) || !/^(gd|gp|ac)$/.test(String(it.cat || '')) || !/^[A-Z0-9_-]{10,40}$/.test(cid)) continue;
+        spec = '/_pkgjob.' + jid + '.' + ip.replace(/\./g, '-') + '.' + (+it.port || 8890) + '.' + it.code + '.' + it.fid + '.' + it.cat + '.' + cid + '.' + Math.max(1, Math.round(+it.mb || 1)); }
+      q.push({ jid, op: it.op === 'rm' ? 'rm' : 'install', spec, title: String(it.title || '').slice(0, 60), name: String(it.name || '').slice(0, 80), cat: String(it.cat || ''), tid: String(it.tid || '').slice(0, 9), ver: String(it.ver || '').slice(0, 8), mb: +it.mb || 0, state: 'queued', at: now, by, rest: restAfter });
+    }
+    const w = Object.entries(W); if (!w.length) return { error: 'Nothing to send (check the rooms and files).' };
+    await hb.kvMany([], w); return { ok: true, queued: n, rooms: w.length };
   }
   if (act === 'ps4look') {   /* read-only folder listing from the PS4 (helper 1.0.5+): what the Capture Gallery keeps, etc. */
     const id = ps4Id(f.id), now = Date.now();
