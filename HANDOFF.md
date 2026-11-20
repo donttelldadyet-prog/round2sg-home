@@ -142,6 +142,34 @@
   (clean kind prep or a queue) – anyone who signs in gets a PS4 message "Hang on <name> – saves are still loading (player k of n).
   Please don't start a game yet." (normal notification, not verbose-only).
   The broader ShellUI probe ("log everything") was NOT continued – stopped there; only the 4:26am list exists.
+- **10:49pm–11:35pm – PKG INSTALLER BUILT + FIRST INSTALLS (owner: "group individually as well", home-screen folders wanted,
+  laptop stays on overnight with the external HD; "install all of the files from this folder, i want to play the sims").**
+  - **Laptop: Round2 PKG server** (round2-tv-launcher tools/pkg-server; on the laptop C:\Users\saber\round2-tv\pkg-server, start
+    with "Start Round2 PKG server.bat"). PowerShell + inline C# (C# 5, compiled/tested here with /opt/dotnet csc). Folders in
+    pkg-folders.txt (owner: D:\ = external HD), link code pkg-token.txt (kept across restarts), staff code pkg-staff.txt.
+    Reads every PKG (param.sfo: title, CATEGORY gd/gp/ac, APP_VER, SYSTEM_VER), stable file id = SHA1(path)[0:16], serves
+    /f/<code>/<id>/x.pkg with Range (multi-threaded), /j/<code>/<id>.json = reference package (1.2), API only from the laptop,
+    keeps the laptop awake while downloading, pushes its list to the engine (gm pkglap) on change / every 10 min. Laptop IP
+    192.168.88.19 (Wi-Fi). **v1.2 running 23:28.**
+  - **Engine** (deployed 22:58 9ceb32b1, 23:03 8202d949, 23:19 e0015f02, 23:31 9d95b216 – each by patching the live script, hash
+    checked before/after, 27 bindings, 3 timers): kv pkgq:<ps4> queue, staff pkgsend/pkglist/pkgcancel/pkglap; the PS4's minute
+    poll hands out one job at a time (room free 60 min, every 3 min), /_pkgdone + optional /_rest when the queue is through.
+  - **Control centre › TVs › PS4 games** (main 2d380a5+): laptop list (via the engine), drop a game → offer its patch + DLC from
+    that folder, rooms + tier buttons, firmware/other-Wi-Fi warnings, uninstall, queue with cancel, each room's version.
+    System check step "PS4 games queue" (light).
+  - **Helper 1.1.132–1.1.135** (Kaeden): /_pkgjob (pkgprep checks + main sign-in if nobody), progress in the report ("pkg"),
+    /_pkgstop, /_pkgrm, /_pkgunreg, power tick while downloading. Register findings (log everything):
+    ByStorageEx with an http PKG link → 0x8099006a (typed and untyped); debug register with the PKG link → DLC OK (Perfect Patio
+    101 MB installed 23:14–23:16), game accepted then failed err 0x80990085, a retry with the failed task still listed →
+    0x80990086. **flatz's way (contentUrl = JSON reference package, sceBgftServiceDownloadRegisterTask for games/DLC, debug for
+    patches) → the Sims 4 game started 23:29 (task 324)** – 3 connections, ~1.3 MB/s over the Wi-Fi (10.4 GB ≈ 2.2 h).
+  - **1.1.134: helper ELF stripped (2.1 → 1.96 MB)** – the old in-memory update download cut at ~2 MB in a long-running helper
+    (23:08, twice); updates now stream to a file. NOTE for the release merge: rooms on 1.1.114 can only take < 2 MB builds.
+  - **Mistake + fix:** the 23:05 test signed the main profile in and didn't sign it out when the job failed → owner's controller
+    couldn't reach the profile picker (23:11). /_pkgdone fixed it; 1.1.134+ signs out again after a failed job.
+  - Sims 4 for Kaeden: game = manual test4 (task 324), then 36 queued in the engine (patch 1.95 first, then 35 DLC). Owner freed
+    space (Kaeden 190 GB free). Staff code copied into the laptop server by Claude (not shown in chat).
+  - To do: home-screen folders (app.db, read-only probe first), Atlas/Bella can't reach the laptop, speed.
 - **10:38–10:47pm – detector timing + PKG project STEP 1. Helper 1.1.131 (ps4-test ae83249) on Kaeden 22:41.**
   - Owner: "the detector starts about 7 mins after a time ends right?" – yes: ps4resetAuto = {on, after 7, rooms [max]} → reset
     time = guest end + 7 min; the engine starts the (silent) countdown 5 min before (guest end + 2 min); at the reset time it
