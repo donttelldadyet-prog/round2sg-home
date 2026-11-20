@@ -309,6 +309,17 @@
   a separate normal SSID (NOT the guest network – isolation would break PS4-to-PS4 wake), 2.4 GHz only, WPA2, visible name.
   Saving blips all Wi-Fi ~10–60 s (mesh + Tapo cameras 1–2 min) → scheduled 10:35pm after Vale (reminder set). Never LAN.
 
+> ## 20 Nov 2026, ~5:50pm – reanne moved Bella → Max got NO wrap messages (live sha 90e5e4f7cbdb, 27 bindings, 3 timers)
+> - Records: reanne b3286 now Max 2:15–5:15pm. Her Auto messages R29E16D8 (10-min) / R2DB051A (wrap) were MOVED to Max 5:05/5:15
+>   and CANCELLED in the same minute (1:30pm). Cause: on a SimplyBook change the engine ran autoRun and msgOrphans AT THE SAME
+>   TIME (two ctx.waitUntil; the 10-min cron did the same with two go()). The orphan sweep read the queue while the codes still
+>   said Bella 4:20/4:30, found no Bella session ending 4:30 any more, and cancelled them – after autoRun had moved them to Max.
+>   autoRun then saw its rows "already right" (same code/time/room) and never noticed the cancel.
+> - Fix: msgOrphans skips Auto's own codes (autoRun owns them: moves/cancels with the session), and both places run autoRun
+>   THEN msgOrphans. autoRun also logs (autoLast.problems) any own message still to come that's no longer in the TV queue
+>   (not re-made: staff may have cancelled it on purpose).
+> - Next deploy starts from live 90e5e4f7cbdb.
+
 > ## 20 Nov 2026, ~5:25pm – Max "That's a wrap!" (live sha 152f1ec4298b, 27 bindings, 3 timers)
 > - Records (tvmsgs): 5-min reminder w5mwlpir6p OK'd 1:58:56pm; wrap qr2f7673c-1120101826 shown 1:59:59pm, never OK'd, cut-off 2:15.
 >   Owner: wrap showed as the small banner on the PS4 input; Home took him to the menu with no big banner. Cause (code): Sony
@@ -316,7 +327,7 @@
 >   Fix in TV app 1.0.287 (round2-tv-launcher): onNewIntent with Home → menuInFront("home"); plus the TV's own msgLog.
 > - Engine: new staff/diag action `msglog` (room) reads /r2/<key>/<room>/msgLog (one outside request). Note: diag `insess`
 >   together with `tvmsgs` hit "Too many subrequests" – ask for them in separate diag runs.
-> - Next deploy starts from live 152f1ec4298b.
+> - (superseded: next deploy starts from live 90e5e4f7cbdb, see above)
 
 > ## 20 Nov 2026, ~8:25am – widgets: MONEY, TOMORROW, HEALTH LIGHT, LOCK-SCREEN COUNTDOWN (live sha ba770ff14696, 27 bindings, 3 timers)
 > - **Live at 8:07am was bb4183f6f062 = my 2ccdc79b96d1 + the other chat's member-tile changes (`roomout`, `memplay.until/out/fin`,

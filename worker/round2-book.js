@@ -1595,6 +1595,9 @@ async function autoRun2(env, hb, mode, why) {
     if (byHand.length && !mine.length) { log.adopted++; continue; }
     for (const kind of ['wrapup', 'timeup']) {
       const at = kind === 'wrapup' ? S.guestEnd - 10 * 60e3 : S.guestEnd, r = mine.find((x) => x.kind === kind);
+      /* (owner, 20 Nov: reanne moved Bella → Max, no wrap in Max) its message was cancelled behind its back: still to come but no
+         longer in the TV queue. Not made again (staff may have cancelled it on purpose) – logged so the Auto page shows it. */
+      if (r && r.code && r.at > now + 60e3 && !q.some((m) => m.code === r.code) && !log.problems.some((x) => x.indexOf(r.code) >= 0)) log.problems.push(S.room + ' ' + kind + ': ' + r.code + ' was cancelled outside Auto (not on the TV)');
       if (r && r.code && r.at === at && r.room === S.room) continue;
       if (r && (r.code ? r.at <= now : r.sent === 1) ) continue;   /* already on the TV */
       if (at <= now) continue;
@@ -1925,8 +1928,11 @@ async function latelist(env, hb) {
 async function msgOrphans(env, why, dry) {
   if (!env.GM_STAFF) return { off: true };
   const hb = book(env), now = Date.now(), want = [];
+  /* (20 Nov) the Auto end messages' own ones are left to autoRun – it moves them with their session (room or time) and cancels
+     them when the session goes. Both running at once on a SimplyBook move cancelled reanne's moved wrap in Max. */
+  const autoOwn = new Set((await hb.autoAll()).filter((r) => r.code).map((r) => r.code));
   for (const m of await hb.qList()) {
-    if (!/^R2/.test(m.code) || m.at <= now + 60e3 || m.at > now + 24 * 3600e3) continue;
+    if (!/^R2/.test(m.code) || autoOwn.has(m.code) || m.at <= now + 60e3 || m.at > now + 24 * 3600e3) continue;
     const d = await hb.msgGet(m.code);
     if (!d || d.status !== 'approved' || !['wrapup', 'timeup'].includes(d.kind) || now - (+d.created || 0) < 15 * 60e3) continue;
     want.push({ code: m.code, room: m.room, kind: d.kind, at: m.at, end: d.kind === 'wrapup' ? m.at + 10 * 60e3 : m.at });
@@ -5288,7 +5294,7 @@ const HANDLER = {
       go((async () => { const na = await hb.kvGet('noiseAgain'); if (na && na.at && Date.now() >= na.at) { await hb.kvSet('noiseAgain', null); await noiseSync(env, na.days || [], 'recheck'); } })().catch(() => null));
       go((async () => { const ag = await hb.kvGet('autoAgain'); if (ag && Date.now() >= ag) { await hb.kvSet('autoAgain', 0); if (!ten) await autoRun(env, 'recheck'); } })());
       if (ten) {
-        go(autoRun(env, 'cron')); go(msgOrphans(env, 'cron')); go(waitWarn(env)); go(holdSweep(env));
+        go((async () => { await autoRun(env, 'cron').catch(() => null); await msgOrphans(env, 'cron'); })());   /* one after the other (20 Nov) */ go(waitWarn(env)); go(holdSweep(env));
         go(ps4ResetRun(env).catch(() => null));   /* 17 Nov: PS4 reset after each guest session (same calendar read; kv ps4resetAuto) */
         { const t = sgDay(Date.now() - SHADOW_TILL * 60e3); go(noiseSync(env, [t, addDays(t, 1)], 'cron')); }   /* noise rule: tonight + tomorrow */
         go(widgetSnap(env, hb).catch(() => null));   /* phone widgets (20 Nov): a copy of the same two reads – no extra requests */
@@ -5510,8 +5516,9 @@ const HANDLER = {
         if (bid) ctx.waitUntil(paidLengthCheck(env, bid, type).catch(() => null));   /* an online booking cut shorter than paid */
         if (bid) ctx.waitUntil(noiseOnSb(env, bid, type).catch((e) => console.log('[noise] ' + String(e.message || e).slice(0, 160))));   /* noise rule: Max/Atlas 4+ → Bella, Bella 4 → Atlas */
         ctx.waitUntil(book(env).kvSet('autoAgain', Date.now() + 2 * 60e3).catch(() => null));   /* look again in ~2–5 min (a quick second edit) */
-        ctx.waitUntil(autoRun(env, 'simplybook ' + type).catch(() => null));   /* auto end messages follow straight away */
-        ctx.waitUntil(msgOrphans(env, 'simplybook ' + type).catch(() => null));   /* a cancelled booking's wrap-up messages go */
+        /* auto end messages follow straight away, THEN a cancelled booking's other wrap-up messages go – never at the same time
+           (20 Nov: reanne moved Bella → Max; the sweep cancelled the wrap the auto run had just moved to Max) */
+        ctx.waitUntil((async () => { await autoRun(env, 'simplybook ' + type).catch(() => null); await msgOrphans(env, 'simplybook ' + type).catch(() => null); })());
         await book(env).gmDrop('__LIST__').catch(() => null);
         return J({ ok: true });
       }
