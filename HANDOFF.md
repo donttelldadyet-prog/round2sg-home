@@ -142,6 +142,411 @@
   (clean kind prep or a queue) – anyone who signs in gets a PS4 message "Hang on <name> – saves are still loading (player k of n).
   Please don't start a game yet." (normal notification, not verbose-only).
   The broader ShellUI probe ("log everything") was NOT continued – stopped there; only the 4:26am list exists.
+- **9:10–9:15pm – owner "both done" → helper 1.1.124 (test, ps4-test 0e78800) + round2_shell9 (ps4-shell fd97cf0) on Kaeden
+  (switch #1 since the 8:57 restart). OWNER RESTARTS KAEDEN, THEN TESTS.**
+  - (A) Logout gap: helper `fg_thread` writes fg.txt within 0.25 s while a member load runs / just finished (2 s otherwise) and
+    shows the pop-up the moment the tile is gone. shell9 checks every 0.1 s and logs out at once (no 2-s wait), then unlocks.
+  - (B) Switch profile (owner 9:03pm): before the ticked players load, every room profile NOT taking one is released – its games
+    get the normal clean slate (internal copy → cloud of the member it belonged to, then removed; never PS Vue), then spares are
+    renamed "Player k", pictures reset, owner_ tags removed; a cloud batch runs; then the ticked players load as before. Main is
+    released (games only, keeps its name) when "main" isn't ticked. Clean profiles are skipped (no time lost).
+    Code: look_memplay "release" block → clean run kind `switch` (todo) → clean finish → `switch_resume` (release_names, cloud_step,
+    re-run the saved spec from /data/round2/memplay-after; `.done` marks the second pass). MEMQ holds a placeholder line meanwhile
+    so the engine/tile stay on "loading".
+  - ⚠️ Found: the helper loaded shell9 at 21:11:14 NEXT TO the still-running shell8 (shell_alive only knows its own add-on name),
+    so both run until the restart. Menu fine ("running (alive)"). To fix in the next helper: don't auto-load a new add-on while
+    another one's heartbeat is fresh – wait for the next PS4 start.
+  - Light check 21:13: 12 ✅ · 5 ⚠️ · 1 ❌ – the same as before (side timer 52 requests, SimplyBook 6,120 today, Kaeden TV 16 days),
+    nothing from this change.
+  - Test plan: (1) load Aliff only → Player 1 = Aliff, any other spare back to "Player 2/3…", no second Aliff; logout right as the
+    tile closes. (2) load 2 players, then 1 → the second one's profile is cleaned + renamed.
+- **8:57–9:10pm – Kaeden restarted (owner) → 1.1.123 + shell8 + tile 0.10; Aliff-only test: LOAD 26 s ✅ (20:59:57→21:00:23, was 81 s).**
+  - shell8: lock 20:59:57–21:00:31 ✅; "after the load: tile closed (2 s)" → logout 21:00:28. Owner: tile closed "after 1 pulse"
+    (too soon), then he could move in the menu ~4 s, then input froze and the logout came.
+  - Cause 1: the engine shows "Ready" for a moment BEFORE prep starts (memplay/loading result in, clean state still "done" from the
+    last run) → tile 0.10 started its ending early. **Tile 0.11** (ps4-tile 6d285a8): the end only counts after the tile saw a bar
+    with games (or "Ready" held 10 s for a nothing-to-load case); back to loading cancels the card. Installed via `/_tile.now`
+    (task 320) – no helper switch.
+  - Cause 2: shell8 waits 2 s for the pop-up + fg.txt is written every 2 s → up to ~4 s on the home screen with users still in.
+    Next add-on: log out the moment the tile is gone (pop-up after); helper: fast fg while waiting. Needs a helper switch → restart.
+  - **Owner 9:03pm – profile slots: "loading only aliff replaced karen bozz with aliff bozz, and there is another aliff bozz in
+    player 2 slot … its considered a switch profile, sometimes guest may want to do it too, so load their profiles and clean slate
+    the rest."** Today: look_memplay puts the k-th ticked player into Player k (spares by id), the others keep their old name/saves
+    (linked as x<k>). To build: the profiles NOT loaded in this batch get a clean slate (their saves copied to the cloud of the member
+    they were linked to, then removed; renamed "Player k"; picture reset; link removed) before/while the ticked ones load.
+- **8:47–8:55pm – owner OK'd the deferred backup; why the tile didn't close; Kaeden → 1.1.123 (switch #5 – RESTART NEXT).**
+  - Owner: "is it because the load in is not starting from a clean slate?" – yes: Kaeden's profiles still held GTA V / VS saves from
+    earlier tests, so the pre-load backup ran (it only runs when the profile has that game's save) and GTA's sce_bu_ part clashed.
+  - shell7 log (/_tail round2_shell7.txt): load 20:36:22–20:39:03 locked ✅, then "tile still open after 40 s" → logout 20:39:46.
+    Cause: Main + Karen failed, engine ended in "Sorry" (status off + title) and tile 0.08 only closed on "done".
+  - **Helper 1.1.123 test** (ps4-test f74a3b2): pre-load backup → /data/round2/defer/<u>-<t>-<time>/<part> (local only during the
+    load) → `defer_tick` sends it to the cloud (same keys as before: <console>/<u>/<t>/_game/<time>/…, manifest, game.txt) when no
+    member batch runs, every 20 s, then deletes it. SHELL_ADDON round2_shell8; pop-up/logout wait 20 s (was 40).
+  - **round2_shell8** (ps4-shell c2193c2): waits max 20 s for the tile. **Tile 0.10** (ps4-tile 80534e8): closes after a "Sorry"
+    ending too. Kaeden 1.1.123 ✅; `/_tile.now` → "installer start 0x80990001" (BGFT busy? task 316 from 0.08 still there?) – tile
+    stays 0.08; the helper retries 2 min after the restart.
+- **8:36–8:50pm – owner's 3-player load test (Main, Karen bozz = GTA V; Aliff Bozz = Vampire Survivors): >2 min, "what happened
+  to our optimisations". Logs (/_tail save.log):**
+  - Main + Karen: GTA V "making 16c45cc6/7 CUSA00419 sce_bu_sce_sdmemory failed: part already exists" → failed (10 s, 29 s).
+  - Aliff: game backup BEFORE the load = 33.7 MB uploaded in 37 s (20:37:45→20:38:22); restore 39 s because the 6-piece bundle
+    failed "bundle download -1 no memory" → one piece at a time (download 36 s). Gaps of 6–17 s between players.
+  - Reports took ~4 s each on Kaeden (disk+folders 2.2 s, games list 1.4 s) and a member load reports every 4 s.
+  - **Fixes:** 1.1.121 (ps4-test 0492fc4): sv_getm_net bundles go through a file (r2tls_fetch_file) – no 8 MB buffer; reports during
+    a member batch (memqn) reuse the disk scan (≤2 min old) and skip the games list. 1.1.122 (ps4-test acb1e1c): "part already
+    exists" = use it (NOT marked made, so a rollback never deletes it). Kaeden on 1.1.122 (switch #4 since 8:25pm – restart before more).
+  - **Tile 0.09** (ps4-tile 9e1c0f5): logo breathes always (sinks into the background and back, room colour, wide shine), faster
+    while loading; bar creeps inside each game; Ready 1.5 s + instructions 6 s. Not installed yet (tile open on Kaeden).
+  - **Open question for the owner:** the safety backup before a load uploads the profile's old save to the cloud first (37 s for
+    33 MB). Proposed: keep that backup on the PS4 during the load and send it to the cloud right after (quiet time).
+- **8:26–8:35pm – Kaeden restarted (owner) → 1.1.119 → shell7 auto-loaded 20:26:54 ✅ → tile 0.08 download FAILED "size 4193707,
+  expected 6619136" (×3) → helper 1.1.120 test (ps4-test 1c975ef): `r2tls_fetch_file` streams the body into a file (cause: the reply
+  buffer doubles 4 MB→8 MB and that realloc failed on the PS4; r2tls_fetch also needs 2× memory) – tile uses it → **tile 0.08
+  installed 20:33:48 (task 316)** ✅. Kaeden switches since the 8:25pm restart: 2. Restart's start line proved the minute
+  breadcrumb: "the run before was last in: 20/11 20:23:43 wait (alive; step since 20:23:42)". Power notes after a restart: all 0.
+  **For the PKG project: never download big files into memory – r2tls_fetch_file or BGFT from a URL.**
+- **8:22pm – owner: "continue blocking controllers? then after logout".** shell7 (ps4-shell, rebuilt, still never loaded) keeps
+  the PS + Share lock from the load start until right AFTER LogoutAll, then unlocks (combo still unlocks in the wait). With the
+  tile open nobody can leave it for a game; without the tile the wait is only the 2-s pop-up gap.
+- **8:20pm – owner: if a game was opened before the logout, "just close" it.** shell7 (ps4-shell, rebuilt same name – never loaded
+  anywhere) now logs out anyway (logs "a game was opened … it closes now"); helper 1.1.119 (rebuilt, not installed anywhere) shows
+  the pop-up in every case. Why it's safe: a member load never writes saves while a game is open (clean slate/prep pauses: "a game
+  is open"), so nothing clashes; the window is only the ~15 s between "Ready" and the logout.
+- **8:05–8:10pm – BUILT (owner: animation before/after Ready with the Round2 logo, instructions for the controllers, log out
+  right after the tile closes, + the 2 suggestions):**
+  - **Tile 0.08** (ps4-tile a583504; only PS4s with tile-on = Kaeden; helper installs it itself within 30 min, never while the tile
+    is open): logo pulses in the room colour with a white shine while loading; after a load IT WATCHED: 3 s ready burst (rings +
+    green logo) → 9 s "What happens next" (closes by itself · TV shows "Press PS button" · press PS · pick your profile · more
+    players each press their own PS) with a countdown → closes itself (sceSystemServiceLoadExec("exit")). Opened later (to switch
+    players) it never closes by itself. Polls every 3 s while loading.
+  - **round2_shell7** (ps4-shell d3f8e83): after a load waits until /data/round2/fg.txt isn't the tile (max 40 s), 2 s for the pop-up,
+    then LogoutAll – or NOT if a game is open (logged).
+  - **Helper 1.1.119 test** (ps4-test 38d4553): writes fg.txt (what's in front) on change, every 2 s; after a member batch shows the
+    pop-up "Saves loaded! Press the PS button and pick your profile." once the tile is gone (none if a game is open); auto-loads shell7.
+  - Waiting: Kaeden restart (4 switches since 3:15pm) → ps4update test 1.1.119 → member load test with the tile open.
+  - Note for the PKG project: the helper ALREADY installs packages with the PS4's own installer (BGFT) – the tile (1.1.87,
+    TILE_PKG /data/pkg, remove-then-install on 0x80990088). Reuse that code.
+- **7:55–8:02pm – owner decisions on the tile + logout.** Owner on screen after the 7:47 load: ended on "Press PS button" ✅; didn't
+  see the tile / PS-button lock (not sure). **Tile (RTWO00001, ps4/tile) never closes itself** (polls 20 s, 8 s while loading).
+  Owner 8:02pm: **ADD option 1 – the tile shows "Ready" a few seconds, then closes itself, before the logout; NO idle close** ("new
+  guests might take 10 mins to figure out the ui and take time to customise… leave it open"). Plan (next Kaeden update, after the
+  restart): tile 0.08 polls every 3 s while loading and exits ~5 s after showing Ready; add-on waits ~15 s (not 8) before LogoutAll.
+  Also proposed, owner hasn't answered: a TV pop-up just before the logout ("Saves loaded – press PS and pick your profile") and
+  skip the logout if a game is open in that window (helper tells the add-on).
+- **7:43–7:50pm – REAL MEMBER LOAD on Kaeden with round2_shell6: ✅.** 7:43:52 "member load started" → PS + Share LOCKED, picker pause
+  called (check says 0); 7:47:07 load done (prep 1/1, 0 fails) → UNLOCKED; 7:47:16 LogoutAll(13) "logged everyone out". Owner asked
+  to confirm on screen (PS button dead during load? ended on the picker? tile said Ready first?). Picker "paused" check reads 0
+  whenever nobody is logged in / during a load – watch whether the picker ever pops up during a load.
+  Light check after: same as before (13 · 4 · 1 failed = the 5:11pm side-timer 52 still inside its 24-h window). systems.json item
+  "PS4 menu add-on" → test.
+- **7:41pm – IDEA TO IMPLEMENT (owner: "keep this idea to implement"): one button detector from both add-ons.** round2_input (inside
+  the game, per title – Max SF6) sees in-game presses; round2_shell (inside the menu) sees home screen / menu presses live. Combine
+  them for the end-of-session countdown ("nobody touched a controller for 2 min" anywhere). First test: does round2_shell still see
+  presses while a game is open? Needs a "watch while a game is open" switch = one helper change → after the Kaeden restart.
+- **7:30–7:38pm – BUTTONS SOLVED (round2_shell6, helper 1.1.118 test, ps4-shell 6b557ab / ps4-test 483d61d; Kaeden switch #4
+  since the 3:15pm restart – next helper change only after a restart).**
+  - Test #2 (7:30, shell5): m_curGeneralButtons IS live (d-pad, square). Test #3 (7:36, shell6, owner pressed in order):
+    **L2 0x1000 · R2 0x2000 · L3 0x4000 · R3 0x8000 · L1 0x400 · R1 0x800 · X 0x20080 · O 0x10040 · triangle 0x20 · square 0x10**
+    (d-pad: left 0x1, up 0x2, right 0x4, down 0x8). So the combo constant was right; **0xf000 seen = "(unlock combo held)"**, but held
+    < 1 s, so no early unlock. m_curButtons (Orbis SystemButtons) read 0 the whole time – not useful.
+  - Self-test #3: lock ✅, unlock ✅, LogoutAll ✅ 7:37:20. Picker pause check said 0 when NOBODY was logged in (said 1 at 7:27 with
+    users in) – the pause may only show while someone is logged in; watch in the member-load test.
+  - Helper 1.1.118 `/_shtest` now waits for THIS run's end (7:30 run "finished" at once on old lines).
+- **7:22–7:30pm – padprobe1 OK, round2_shell5 auto-load OK, self-test: lock/pause/log-out ✅, buttons 0x0 the whole time ❓.**
+  - padprobe1 (owner "go" 7:22): no crash. **m_padInfo = List<PadInfo> (objects): _items PadInfo[32], _size 24** – shell3 failed only
+    because it refused > 8 entries. PadInfo fields: config (static PadConfig[]), m_port int, m_readTime long, m_curInfo
+    (Orbis.Input.ControllerInfo), m_curButtons (Orbis.Input.SystemButtons), m_curGeneralButtons (Core.Input.GamePadButtons),
+    m_buttonState List<ButtonState>. PadManager: static <Instance>k__BackingField, static LockTypeChangedAction, m_padInfo,
+    m_lockType. sceKernelDlsym check said MISSING even for proven functions (the Mono module wasn't found by name) → useless; don't rely.
+  - **round2_shell5** (ps4-shell c2f8ca0) = shell4 minus the 5 imports, reads up to 32 entries; **helper 1.1.117 test** (ps4-test
+    a170fb9): auto-loads round2_shell5, ONE try per helper run. Kaeden → 1.1.117 7:25pm; shell5 started 7:25:41 by itself: "pad list:
+    24 entries (24 filled)", buttons 0x0, WATCH. **No crash.**
+  - `/_shtest` 7:27:45–7:28:49: lock ✅, picker paused (check 1) ✅, unlock + picker back ✅, LogoutAll(13) ✅ 7:28:46. Buttons logged
+    0x0 for all 60 s, no combo – asked the owner whether he pressed (if yes: m_curGeneralButtons isn't live → probe m_curButtons /
+    m_buttonState / m_readTime next, read-only).
+- **7:09–7:20pm – Kaeden menu CRASH (round2_shell4) + Atlas wake test #1 FAILED.**
+  - Kaeden → 1.1.115 test 7:09:15 ("power notes at start: power_history 0, shutdown_status 0, standby_start 0" after a full restart
+    at 3:15pm); auto-load 7:09:59 "56032 bytes, call 0, result 0x0, not alive after 15 s" → **owner 7:10pm: menu crash.** No
+    round2_shell4.txt / .step at all (`/_probeup.round2_shell4`: "no such file") = it died before its first log line. Prime suspect:
+    the 5 Mono imports never used in the menu before (mono_class_get_rank, _get_element_class, _is_valuetype,
+    mono_array_element_size, mono_field_get_offset) – shell3 (proven 8:09am) had none of them. **My mistake: skipped "read-only
+    probe first" for new imports.** Rule from now: a menu add-on imports ONLY Mono functions proven by an earlier run; anything new
+    is looked up with sceKernelDlsym first.
+  - Kaeden → **1.1.116 test** (ps4-test f5609dd = release code, R2_SHELL=0, no auto-load) at ~7:13pm so it can't load shell4 again.
+    (First 1.1.116 push 4c0e29b had a bad version string from shell quoting – replaced 2 min later, never installed.)
+  - **round2_padprobe1** (ps4-shell 20757cc, source ps4/plugin/round2_padprobe): read-only; only proven imports + sceKernelDlsym
+    check of the 5; describes m_padInfo (class chain, fields, size) by names. Waiting for owner "go" (menu back, no game, controller on).
+  - **Atlas long-sleep wake #1 (rested 6:08:35pm, same network round2-ps4, sender Bella): NOT woken.** 7:16pm broadcast
+    `/_wakerp.192.168.120.255.357299b3` (status probe to .255 "send failed -3", WAKEUP sent 3×) and 7:19pm direct to
+    192.168.120.4: "before: no answer in 4 s · WAKEUP 3× · after 25 s: no answer". So after ~68 min of rest Atlas is deaf even
+    on its own network → the 2.4 GHz rest problem is not the subnet. Atlas left asleep (owner can press PS). Bella `/_keepawake.0`
+    + `/_rest` 7:20pm. Next to learn: the sleep time at which it goes deaf (3 min worked before; try 10 / 20 min).
+- **7:00pm Light check (before the Kaeden add-on test): 13 passed · 4 to look at · 1 FAILED.** ❌ side timer hit 52 outside requests at
+  5:11pm (Firebase rtdb 50 + SimplyBook 2; 2 SimplyBook fetches refused – "gm insess"). Not from today's PS4 work (no engine change
+  since 7:44am); a one-off TV-side burst on a busy evening – look into which side job makes 50 Firebase calls. ⚠️ SimplyBook 5,043
+  today (biggest: /day getAvailableTimeIntervals 1,232 = booking page traffic) → no Full check today.
+- **6:45–7:00pm – PLAN (owner): remote PKG install/uninstall from a folder on his laptop (laptop-dmvou7pp, Windows; connected folder
+  C:\Users\saber\round2-tv → e.g. round2-tv\pkgs).** Games, updates/patches and backports. Owner chose the laptop-folder method
+  (not Cloudflare). Design: a small script shares the folder on the shop Wi-Fi only + tells the engine its address and file list;
+  control centre: pick file + rooms; helper uses the PS4's own download manager (flatz ps4_remote_pkg_installer installer.c:
+  sceBgftDownloadRegisterTask for games, sceBgftDebugDownloadRegisterPkg for patches; Pause/Resume/Unregister/GetProgress;
+  sceAppInstUtilAppUnInstall/…Pat/…Addcont) = streams straight into place, no double space. Register needs a FOREGROUND USER →
+  owner 6:58pm: helper logs the main profile in (quiet time) if nobody is, pauses the download when a guest session is near, logs
+  everyone out the menu's way (add-on LogoutAll 13), resumes after. Atlas/Bella (round2-ps4) can't reach the laptop – later.
+  Show each room's firmware (9.00 Max/Kai/Atlas, 11.00 Bella/Scarlett/Vale, 13.50 Kaeden) for backports. Games sheet:
+  https://claude.ai/artifact/P3A3h2aWS1Qo8kwjWr76er (Skul = two editions CUSA27428 vs CUSA27430). Order: Kaeden add-on test first.
+- **6:41–6:50pm – SPLIT (owner: "split to get logs faster and diagnose, once test bench is flawless we can merge").**
+  One source, two builds (`R2DEF=-DR2_SHELL=1 sh build.sh` = test): **release 1.1.114** (ps4-release 9bf5caa) = minute breadcrumb +
+  power notes only – engine sees it (ps4rel 6:42pm), rooms take it in quiet time; **test 1.1.115** (ps4-test 4c72e24) = 1.1.114 +
+  menu add-on auto-load + `/_shtest` – Kaeden only, with the owner there. Merge into release once Kaeden is flawless.
+- **6:33–6:45pm – Kai back (owner restart + jailbreak 6:33pm); breadcrumb gap found on EVERY PS4, fixed in 1.1.114.**
+  - Kai's last trace before 3:25pm: Overcooked 2 started 3:20, profile order 3:21, check-in 3:25:14, then nothing (no stop line,
+    no netfail) → most likely a full switch-off by the guest; PS4 later on without jailbreak (DDP "200 Ok" 6:11pm, helper silent).
+  - **"the run before was last in" was stale on every PS4** (Kai 06:25, Atlas 06:42, Bella 10:39 – hours before they stopped):
+    since 1.1.71 where.txt is only written for steps over 10 s or on a clean exit, never for a switch-off. Not a Kai-only fault.
+  - **1.1.114 (ps4-test 98a587f, source on ps4-helper)** now also: where.txt every minute ("<time> <step> (alive; step since …)")
+    and at every start a slow.log line "power notes at start: power_history, shutdown_status, standby_start" (registry, read-only)
+    – compare over known events to tell switch-off vs crash vs power cut. Rolls out with the add-on after the Kaeden test.
+- **6:05–6:15pm – long-sleep wake test (owner: "remote on atlas and bella… test a long sleep wake"), Kai helper silent.**
+  - Atlas + Bella both on 1.1.113, no netfail since 2pm, no booking tonight. **Bella = sender** (`/_keepawake.600` 6:07pm, to ~4:07am);
+    **Atlas `/_rest` 6:08:35pm.** First same-subnet (round2-ps4) long-sleep test: earlier "Atlas didn't wake" tries (16 Nov on round2
+    after ~28 min; 19 Nov 11:57pm from Vale) were from round2 = other subnet → not valid for round2-ps4. Tries: 7:10pm (1 h), then
+    3 h, then longer (send_later). Wake = look on Bella `/_wakerp.192.168.120.255.357299b3`.
+  - **Kai: helper silent since 3:25:14pm** (game CUSA55613 open, guests 3–6pm) but Scarlett `/_ddp.192.168.88.18` 6:11pm = "200 Ok"
+    = PS4 AWAKE on Wi-Fi → helper died/froze, not the network. Owner asked to restart + jailbreak before Kai's 8:15pm guests; read
+    "the run before was last in" on start.
+  - Updates (owner 6:09pm "update the ps4s"): all on 1.1.113 except **Vale 1.1.61** (guests 5–8pm and 8:15–11:15pm) – asked owner.
+  - **Owner: remind him later** of: (1) moving the look of the member page /m, booking confirmation /done and View your booking
+    /find + /b/ from the engine to GitHub (gf's Claude can then edit them; build on a hidden test address, switch on a quiet
+    morning after a full check); (2) HDMI Device Link off on Atlas + Bella (decide); (3) Kaeden menu add-on test (prepped below).
+- **3:16–3:30pm – Kaeden restarted (owner), menu add-on test PREPPED, not run (owner eating; add-on loads only with him there).**
+  - Light check before: 14 passed · 4 known (watchdog old lines, Kaeden TV quiet, Atlas TV app 1.0.286, Vale clean slate) · 0 failed.
+  - shell3's 8:09am log (R2 lib/probe/round2_shell3-73378b38…txt): pads 1/1/1 found but buttons 0xffffffff → m_padInfo isn't a List<>.
+  - **round2_shell4 4.00** (ps4-shell 3ce2e32; source 9f48a00): array/list × object/struct read, one-time pad description, self-test
+    only on request (shell-selftest), every button change logged in it, shell.alive heartbeat.
+  - **Helper 1.1.114** (ps4-test 41b5a51; source on ps4-helper): `shell_auto` loads round2_shell4 at every PS4 start (skips: shell-off,
+    game open, 5 min after wake, add-on alive; ≤3 tries 10 min apart, save.log); `/_shtest`. NOT sent to Kaeden yet (switches since
+    the 3:15pm restart: 0).
+  - systems.json (main 586722d): new item "PS4 menu add-on…" = build. Docs: ps4-shellui.md "Add-on runs and versions".
+  - Kaeden 2:43–2:47pm (before the restart): 7 failed connects during a member cloud upload (CUSA00419, Karen bozz), path check all
+    ok, back after 186 s – first fails on Kaeden in a while; watch.
+  - **Test when the owner is back:** (1) ps4update Kaeden → 1.1.114 (test); watch save.log for "menu add-on round2_shell4 auto-load
+    (try 1 of 3): … running (alive)" and the pad-list line in round2_shell4.txt (/_probeup.round2_shell4) – controller ON;
+    (2) `/_shtest` with a controller on: owner presses a few buttons, then holds L2+R2+L3+R3 → expect "buttons: 0x…" lines +
+    "unlock combo … held 1 s", then log-out → profile picker; (3) a real member load from Kaeden's tile (lock during, log-out 8 s
+    after "Ready"); (4) Light check after; systems.json → test if all good.
+- **11:12am MONITORING (owner: "kai atlas and max has guests now monitor network drops") – read-only, nothing sent to these PS4s.**
+  Baseline 11:13: Kai 1.1.111 (5 GHz ch36, 96%, 192.168.88.18; woke 10:24 after ~2.8 h, 1 connect fail back in 62 s);
+  **Atlas 1.1.111 on round2-ps4 ch6 82% – NEW address 192.168.120.4 (was .3)**, woke (staff) after the 6:41 rest, last fail
+  06:40; Max 1.1.113 (5 GHz ch36, 94%, .88.23; woke 10:26 after ~2.7 h; slow.log "stuck 807 s in 'read'" in the same second as
+  "woke from rest" = rest time counted, 1.1.113 label fix not on the old run). Kai/Atlas not auto-updated yet (guests/bookings =
+  quiet-time rule holds them). Checks every 20 min via send_later.
+  **Result 11:12–2:10pm: 9 checks, 0 network fails, 0 slow steps, no busy, check-ins always < 60 s** while guests played
+  (signal Max 94–100%, Kai 92–98%, Atlas 82–98%). At ~2pm sessions ended: Max closed F1 24; Kai auto-updated to 1.1.113
+  at 14:03 (quiet time, as designed); **Atlas last checked in 1:59:51pm and was silent at 2:10 with no fail logged** –
+  most likely rested/turned off at session end (not confirmed). Check Atlas's next start-up line in slow.log to tell rest from drop.
+  **Confirmed 2:50pm (owner turned Atlas on ~2:30): REST, not a drop.** Same helper run (pid 74) survived; slow.log "guard took
+  1761 s (running clock 16 s)" + "woke from rest after about 1743 s"; no netfail. **Atlas quirk: its PS4 clock runs ~8 min 17 s
+  fast** (psClock 14:01:05 in the report the engine got at 13:52:48; 14:45:45 vs 2:37:28) – Atlas log stamps are PS4 time, so
+  subtract ~8 min. Real times: last check-in 1:59:51 → rest ~2:00:30 → woke ~2:29:30 → auto-update to 1.1.113 at ~2:37 (quiet time).
+  "run before was last in: 06:42:39 read" = old stale 1.1.111 label, ignore.
+  **Cause (owner 2:52pm): the guest turned the TV off, and the TV sent "rest" to the PS4 over HDMI (HDMI Device Link / CEC).**
+  So a TV switch-off = PS4 rest on Atlas. On 2.4 GHz rooms (Atlas/Bella) remote wake after a long rest fails – keep in mind.
+- **8:01–8:12am (owner: "do all calls of 1-4 then do the self test"; decision 4 = log everyone out after a load "definitely";
+  decisions 1-3 on the shelf; tile reopen must not reset to login – "account for both phone and ps4 tile")**
+  - **round2_shell3** (ps4-shell 9d226e8): log everyone out (LogoutAll 13) **8 s after every member load – default ON** (off only
+    with /data/round2/shell-nologout); self-test ends with the same log-out.
+  - **Engine bb4183f6f062ba38** (27 bindings incl. SAVES, 3 timers): `memplay` keeps `until` (= the QR's session end) + `mid` → the tile
+    shows the member ("Ready, <name>!" / "Signed in for this session. Switch players or log out of this room on your phone.") for the
+    WHOLE session, not 20 min; the finished result is stored with it (`mp.fin`) because later look jobs replace ps4look; new member
+    act **`roomout`** (QR code check like play) → `mp.out` → tile shows the code again; phone page: **"Log out of <ROOM>"** button in the
+    play card; tile line2 "One moment – this PS4 is finishing a job…" while ps4busy is < 75 s old (helper 1.1.112+).
+    Phone login itself already persisted (localStorage r2.mem, 180-day token) – unchanged.
+  - **DEPLOY CLASH x2 with the other session (phone widgets):** they deployed 7:16, 7:19?, 7:31am; I merged twice by rebuilding
+    their version from per-line hashes and adding my hunks (live was a8be97f → mine 09acc25; then 2ccdc79 (their wApp/TV messages/
+    wps4) → mine bb4183f). Cloudflare's read-back lagged ~1 min after the PUT (looked like it failed – it hadn't).
+    **Other session: worker/round2-book.js in this folder = live bb4183f. Pull/merge before deploying.**
+  - **Self-test on Kaeden 8:09:50–8:10:54 (owner present):** add-on found all calls (suspend/resume/is-suspended/LogoutAll/Locker/
+    PadManager); PS+Share LOCKED + picker PAUSED (menu confirms 1) for 60 s → unlocked + picker back (0) → **LogoutAll(13) accepted
+    8:10:51** → WATCH mode (locks during member loads, log-out after). No crash.
+    **Problem:** controller buttons read as -1 (`held_buttons` fails: PadManager.Instance m_padInfo list read) → the L2+R2+L3+R3
+    unlock combo does NOT work yet; the 10-min limit still releases. Next: read-only check of PadManager/PadInfo fields to fix.
+    **Owner 8:16am: right after the log-out the screen said "Press the PS button" = the profile picker (controller was switched off)
+    – "acceptable outcome"; it must happen after the tile has loaded everything and closes, so guests log in.** Auto-login did NOT
+    skip the picker. Buttons read -1 most likely because no controller was connected (m_padInfo empty/null → held_buttons returns -1).
+    Next (no owner needed for the code): held_buttons should report 0 = "no controller" vs -1 = real failure, and log the list type
+    + size; re-test the L2+R2+L3+R3 combo with a controller ON (owner holds it when told).
+  - **Shelf (owner): decisions 1-3** – profile→member link ends with the session; automatic clean slate in every room; keep older
+    cloud versions per game. Written to project doc claude/ideas-on-the-shelf.md.
+- **7:32–7:50am (owner: "make every job write its own name, push the update to every room with verbose off as usual, turn off the
+  detector for that one game in max, update kaeden one more time")**
+  - **Helper 1.1.113**: look paths label themselves "job <path>", plus "job clean-up / helper update / profile / blocker settings";
+    tls_go puts the caller's label back after every request ("after network" if it was a network step). Kaeden → 1.1.113 = its
+    **5th switch since the 4:20am restart – next helper change needs Kaeden restarted first (owner will).** Test: `/_klog.40`×3 →
+    engine busy {step "job /_klog.40", loopS 109} ✅.
+  - Side finding: a busy record from 1.1.112 at ~7:26am said step "wait", loopS 169 – the minute loop itself took ~3 min once
+    (30 × 2 s waits + guard work), just before the switch. To watch in slow.log; if the loop is often that slow, check-ins every 3 min
+    trip the engine's 3-min "isn't answering" limit.
+  - **RELEASE: ps4-release = 1.1.113** (dd0d916; boot elf + round2_input unchanged). Engine `ps4rel` = 1.1.113, auto ON,
+    PS4_AUTO_HOLD_ABOVE '' → every room gets it by itself in quiet time (awake, report < 20 min old, no booking within 60 min,
+    not playing). Verbose/tile stay off on rooms (per-PS4 flag files only Kaeden has). Vale (1.1.61) included when it wakes.
+  - **Max:** woken remotely from Kaeden (broadcast, asleep ~27 min, 5 GHz) ✅ → Update now 1.1.113 ✅ → `/_inplug.off` (detector OFF,
+    removed from plugins.ini – was ON for SF6 CUSA31498 only) ✅ → `/_inplug.pop.off` (test pop-ups were still ON) ✅ → `/_rest` ✅.
+  - **round2_shell2** (ps4-shell 7125212; source ps4/plugin/round2_shell): = shell1 + finds the loaded app.exe via
+    mono_assembly_foreach (as the sweep did) instead of opening a path + "calling: X" breadcrumb before every menu call (button reads
+    excepted). NOT RUN YET – needs the owner at Kaeden, home screen, no game: `/_shmod.round2_shell2` → 60-s self-test (picker paused +
+    PS/Share locked, L2+R2+L3+R3 1 s unlocks) → log R2 lib/probe/round2_shell2-<console>.txt. shell1 never ran (superseded).
+  - **Member page facts (checked, for the owner's questions):** login is kept on the phone (localStorage r2.mem, token valid
+    180 days) – reopening the page on the same phone/browser shows the member logged in, with a Log out button; only a different
+    browser (QR opened inside another app) or Log out asks again. **Overwrite risk found:** the profile→member link
+    (/data/round2/prep/owner_<profile>.txt) has NO end time – it stays until cleared or a clean slate. Automatic clean slate after
+    a session is ON for Max only, so in other rooms the next booking's guests could play on a linked profile and their progress
+    would go to the previous member's folder at the next clean slate. Decisions pending (owner): link ends with the session /
+    auto clean slate everywhere / keep older versions in the cloud.
+- **7:12–7:25am "ALWAYS ANSWERS" FIX BUILT + PROVEN ON KAEDEN (owner "yes let's do both": rest Max + build it).** Max `/_rest` OK.
+  - **Engine** `/ps4/alive` + `ps4busy:<id>` + `busy` field in `ps4list` (ONE Durable Object write per call; helpers send it only
+    while busy, ≤1/min). **Deploy note:** live had changed under me – the other session deployed at 7:16am (phone widgets: `/w`,
+    `widgetkey`, `widgetSnap`, `wtv` copy in the side timer; removed the 17 Nov one-off `oneoffMid`). I rebuilt their version
+    locally from per-line hashes (exact match a8be97f1003ea68a), added my 4 hunks on top → **live 09acc25d02fa2421**, 27 bindings
+    incl. r2_bucket, 3 timers. Local worker/round2-book.js = live. Light check 15/3/0. **Other session: pull before your next deploy.**
+  - **Helper 1.1.112** (ps4-test; Kaeden – 4th switch since the 4:20am restart, ~1 left today): `alive_thread` – when the loop hasn't
+    reached its check-in for 90 s, it POSTs /ps4/alive {busy step, stepS, loopS} with `r2tls_request_quiet` (new in tls/r2tls.c:
+    leaves the loop's step label, the watchdog's socket, the TLS session and timings alone), max once a minute; slow.log notes
+    "busy N s in 'X' - check-in thread told the engine" / "free again". Rest gaps reset it (not "busy").
+  - **Test 7:22–7:25am:** look job `/_klog.40` ×3 (read-only, ~120 s). Loop took it 7:22:47; at 7:24:36 the engine got
+    busy {step "read", loopS 109} and Kaeden's poll time refreshed – before the fix it would have looked OFF for 2 min.
+  - **Finding:** during the log job the step label said **"read"** – it keeps the last network step while a job runs. So the
+    "stuck ~600 s in 'read'" lines (Kaeden 20 Nov 04:04–05:22, Bella 19 Nov 13:32) were most likely LONG JOBS, not network hangs.
+    Next (needs a helper switch – Kaeden is at 4, so next start): label every look job / clean / upload step (r2_where("job: …"))
+    so slow.log and the busy field name the real work. Then roll 1.1.112+ to the rooms with the owner's OK.
+- **7:04–7:12am SWEEP: MAX (9.00) DONE** – owner restarted Max + jailbreak (7:04, fresh switch count). Helper 1.1.99 → **1.1.111**
+  ("switched to 1.1.111 (own program)"). `/_pwrreg`: rest 1, stay connected 1, turn on from network 1, USB 2, Remote Play 1,
+  auto-download 0, **auto rest 300/300** (like Bella), controller off 1800, power_history 1, **band setting 0** (on 5 GHz ch 36).
+  `round2_sweep2` no crash; identical to Kai/Atlas (only assembly load order). **Sweep complete: Kaeden, Bella, Kai, Atlas, Scarlett,
+  Max (Vale skipped by owner).** Light check after unchanged.
+  - **Correction to the band lead:** Max has band SETTING 0 yet sits on 5 GHz and woke after 4.8 h. So the setting value isn't the
+    point – the band IN USE is: 5 GHz (Kai setting 1, Max setting 0) wake; 2.4 GHz (Bella 2, Atlas 2) don't. 0 = automatic (or no
+    choice on the original model: Kaeden, Scarlett). Bella/Atlas are pinned to 2.4 (setting 2) and round2-ps4 is 2.4-only anyway.
+- **Owner idea 7:06am (verified in code): the helper is one loop.** Only the watchdog and pop-up threads run beside it; check-ins
+  (`/ps4/cmd` polls), the 15-min report, every look job, uploads, save copies, clean slate and wake jobs run in that same loop. While a
+  job runs (e.g. wake job sleeps 25 s, add-on waits ≤30 s, cloud/save uploads, a 10-min network wait) the PS4 can't check in or pick
+  up commands → looks "dropped". Proposed fix (not built): a separate check-in thread so a busy helper still answers, + a label on
+  every long step so slow.log names what was busy.
+- **ps4debug-NG (owner link):** debugger payload (TCP 744 command server + kernel module, attach/breakpoints/memory, 5.05–13.52,
+  13.x not yet validated on hardware per its author; a client on a PC on the shop LAN). Not adopted: no PC on the LAN, extra kernel
+  module, and our own logs answer today's questions. Keep in mind for a crash we can't explain from logs.
+- **6:41–7:00am Atlas rested, Scarlett swept, Max woken remotely (owner: "rest atlas, turn on scarlett … then max, skip vale").**
+  - Atlas `/_rest` OK. **Scarlett (11.00, CUH-1006A)** pressed on by the owner (no PS4 awake to send a wake). On check-in the engine's
+    morning-wake job (`ps4MorningWake`, 7:00–11:15 window? it fired 6:44) used Scarlett as sender (broadcast `_wakerp` type R).
+    Helper 1.1.68 → **1.1.111** (no switch since start). `/_pwrreg`: rest 1, stay connected 1, turn on from network 1, USB 2,
+    Remote Play 1, auto rest 0/0, controller off 1800, power_history 0, **band setting 0** (original model, no 5 GHz – like Kaeden).
+    `round2_sweep2`: no crash; file **byte-for-byte identical to Bella's** (both 11.00). Then `/_rest` OK.
+  - **Remote wake test: Scarlett (2.4 GHz) → Max (5 GHz, asleep since 2:03am = ~4.8 h): WORKED.** Engine `ps4wake` picked Scarlett as
+    sender, broadcast wake 192.168.88.255 type R ×3 at ~6:49; Max's own log: "06:50:31 woke from rest after about 17200 s". A direct
+    wake to 192.168.88.23 a minute later found it already "200 Ok". → fits the pattern: 5 GHz PS4s hear a wake after hours asleep.
+  - **Max update REFUSED by its own helper:** "waits for the next PS4 restart (5 switches since it started - more can freeze it)".
+    Max sweep + `/_pwrreg` need a PS4 restart + jailbreak first (owner decision). Max stays on 1.1.99.
+  - **MY MISREAD (6:41am) – Kaeden was never down:** `ps4list` `t`/`ago` = the last FULL report, which an idle helper sends every
+    15 min (`REPORT_EVERY 15`); the quiet check-ins are `poll` (ms). Kaeden 6:37:14 → 6:52:20 = exactly 15 min; its slow.log has no
+    stuck/woke entry, where.txt last 06:02. **Use `poll` for "is it on".** (Kaeden DDP check from Scarlett 6:47: "200 Ok".)
+  - Real but separate: Kaeden's slow.log shows "stuck ~600 s in 'read'" 5 times 20 Nov 04:04–05:22 (around the helper switches /
+    restart), Bella once 19 Nov 13:32 – the watchdog didn't cut a connection (no "cut" line) → the step label may be stale ("read"
+    left set while non-network work runs). To look at later; not today's silence.
+- **6:31am Kai rested remotely** (`/_rest`, owner's ask): "going to rest mode in ~3 s", last check-in 6:31:25, then quiet = asleep.
+- **6:32–6:40am SWEEP: ATLAS (9.00) DONE** (owner turned it on). Helper 1.1.68 → **1.1.111** (first update call returned no command –
+  resent, worked; no switch since its PS4 start 19/11 23:21; Light check after unchanged). Wake 06:40 (its clock): 1 connect fail,
+  back in 8 s. `round2_sweep2` finished, no crash, R2 `saves/lib/probe/round2_sweep2-521ea9ca….txt` – **identical to Kai's**
+  (only the assembly load order differs).
+  - **Atlas settings (`/_pwrreg`):** rest 1, stay connected 1, turn on from network 1, USB power 2, Remote Play 1, auto-download 0,
+    auto rest 0/0, controller off 600 s, power_history 1, **Wi-Fi band setting 2** – same as Bella.
+  - **Pattern now: band setting 2 = Bella + Atlas (on 2.4 GHz, deaf in long rest); 1 = Kai (5 GHz, wakes fine).** Everything else
+    that matters for wake is identical on all four PS4s checked.
+  - **Atlas quirk:** its own clock runs ~8 min ahead (boot.log says 06:40 at real 06:32). Round2 code uses the engine's clock, so
+    harmless for us; noted in case a PS4-side time ever matters (measured 441 s ahead at 6:41).
+  - Light check after Atlas: 14 pass / 4 look / 0 fail – the extra one is NOT the helper: Atlas's TV came online with TV app
+    android 1.0.286, which doesn't report "what's on screen" (needs a TV app update; old issue, visible only while that TV is on).
+- **6:24–6:32am SWEEP: KAI (9.00) DONE** (owner: "update to the same as bella and run … make sure all the calls are constant
+  because 9.00 is far from 13.50"). Helper 1.1.68 → **1.1.111** (no switch since its PS4 start; Light check after 15/3/0).
+  `round2_sweep2` finished, no crash, 2.34 MB, R2 `saves/lib/probe/round2_sweep2-f6ed105a….txt` (1149 classes, 2815 registry
+  constants, 2255 system functions).
+  - **9.00 vs 13.50, call by call:** IDENTICAL – wake triggers, power states, SystemStateMgrWrapper (all functions), WakeOnRemotePlayMode,
+    MainOnStandbyMode, standby reasons, LockType, LoginMgrUtil Suspend/Resume/IsSuspendedLoginScreen + LogoutAll(LogoutMethodType),
+    PadInternal.Locker(LockType,LockType), PadManager.get_Instance, m_padInfo, m_curGeneralButtons, LogoutMethodType 0–16 (13.50 adds
+    one more value after 16: adult-to-child). Registry: 28 differences, NONE power/network/Remote Play (13.50 adds safe_mode_action,
+    feature_flag, IME_ukrainian, fake_partner_subs_mode, UNLICENSED_PAD, devenv keys; 9.00 has NP_jwt_access_token). System functions:
+    power/rest/wake identical; only on 13.50: scePadGetCounterfeitState, LoginMgrProxy notify/delegator extras, Spartacus/Kratos.
+    → **all three firmwares (9.00, 11.00, 13.50) use the same calls for rest, wake, log-out and controller lock.** (Still: test the
+    add-on on each PS4 before trusting it – owner rule.)
+  - **Kai settings (`/_pwrreg`):** rest mode 1, stay connected 1, turn on from network 1, USB power 2, Remote Play 1, auto-download 0,
+    auto rest 0/0 (never, like Kaeden), controller off 600 s, power_history 1, **Wi-Fi band setting 1**.
+  - **LEAD for the wake problem:** Wi-Fi band setting – Kai 1 (on ch 36 = 5 GHz, wakes fine), Bella 2 (on ch 6 = 2.4 GHz, doesn't wake
+    after long rest), Kaeden 0 (CUH-1000A has no 5 GHz). Reading (unconfirmed): 0 auto / 1 = 5 GHz / 2 = 2.4 GHz. Matches the 18–19 Nov
+    fact "5 GHz PS4s answer in rest, 2.4 GHz ones go deaf". Atlas next to confirm (expected 2).
+- **6:16–6:22am SWEEP: BELLA (11.00) DONE** (owner "ok update"). Helper 1.1.77 → **1.1.111** (ps4-test; 1st switch since her
+  PS4 start 18/11 03:01; Light check after 15/3/0 unchanged). GoldHEN proc-info OK. `round2_sweep2` finished, no crash, 2.36 MB,
+  R2 `saves/lib/probe/round2_sweep2-8ce76694b2a3ca26cd1ba13f23d218ed.txt`.
+  - **11.00 vs 13.50 menu: practically the same.** All 2839 registry numbers identical; wake triggers identical (Remote Play 100,
+    NP push 102); power states identical; WakeOnRemotePlayMode + MainOnStandbyMode identical; system functions 2263 each, only 3
+    differ (party/PS Plus, not power). Differences: 100 lines only on Kaeden / 35 only on Bella – party/quick-menu, "adult to child
+    conversion" log-out scene (13.50 only), `LoginMgrUtil.SilentLogout` static signature listed only on 13.50. Everything the
+    log-out/lock add-on uses (SuspendLoginScreen, ResumeLoginScreen, LogoutAll, LogoutFromPsImposeMenuV400, PadInternal.Locker,
+    PadManager.get_Instance, m_padInfo, m_curGeneralButtons) exists on 11.00 too.
+  - **Bella's settings (`/_pwrreg`) vs Kaeden:** rest mode 1/1, stay connected 1/1, turn on from network 1/1, USB power 2/2,
+    Remote Play 1/1, auto-download 0/0 – SAME. Different: auto rest "media" 300 and "other" 300 (Kaeden 0 = never; 300 likely =
+    minutes = 5 h, the PS4's own "rest after 5 hours idle" option – unconfirmed), controller off 1800 s (Kaeden 600), Wi-Fi band
+    setting 2 (Kaeden 0; likely "2.4 GHz only" on this Pro – unconfirmed), power_history 1 (Kaeden 0).
+    → The wake settings are NOT what differs. Next comparison: Kai (wakes fine) and Atlas.
+  - **Bella quirk (her boot.log):** 19 Nov 13:21:37 "hourly: helper NOT running" – the helper had stopped by itself; first restart
+    "sent 0 of 2440264 bytes", second at 13:22:02 worked. That is just before problem A (no internet 13:35–15:48). To look into:
+    why the helper stopped (helper-stopped.txt / slow.log on Bella). slow.log: "19/11 13:32:23 watchdog: stuck 610 s in 'read'"
+    = the helper hung ~10 min waiting on a network read during problem A (a symptom of the outage, not proof of its cause).
+    Rest wake 20/11 06:13 after ~14,084 s asleep: 1 connect fail, back in 8 s (normal).
+- **6:01–6:10am SWEEP ON KAEDEN DONE (owner "ready" 6:01am, home screen, no game).**
+  - `round2_sweep1` ran with NO crash (breadcrumb "finished"), but my own 1.8 MB cap cut it inside app.exe, and helper 1.1.110
+    uploaded only 1 MB. → **helper 1.1.111** (ps4-test, Kaeden – 3rd switch since the 4:20am restart; Light check before/after
+    15 pass / 3 old warnings / 0 fail): add-on results up to 4 MB, `/_probeup.<name>` (re-upload result + .step without reloading),
+    `/_pwrreg` (read-only rest/wake/Wi-Fi registry values). → **`round2_sweep2`** (same probe, 3.8 MB cap) = THE sweep add-on
+    for every PS4. Kaeden: complete, 2.36 MB, R2 `saves/lib/probe/round2_sweep2-73378b38….txt` (1164 classes, 3163 methods,
+    114 enums, 2839 registry constants, 2267 system functions).
+  - **Findings (Kaeden 13.50 – confirm on each PS4 from its own sweep file):**
+    - Menu wake triggers (`SystemStateMgrWrapper.TriggerCode`): only REMOTE_PLAY 100 (= our LAN wake, DDP) and
+      REMOTE_PLAY_NP_PUSH 102 (wake through Sony's servers – blocked here by our DNS 127.0.0.1). **No timer / alarm wake in the
+      menu.** So "no remote wake at all" isn't possible from the menu; the only other self-wake is ShellCore's "main on standby"
+      (half-awake in rest for downloads / auto-update / event schedule, started by the low-power chip "EAP") – not probed (native).
+    - `AppMain.WakeOnRemotePlayMode` (Start, StartTimer, ExtendShutdownTimer): a PS4 woken by Remote Play/DDP starts a shutdown
+      timer and goes BACK to rest if no Remote Play connects (standby reason 14 "RemotePlayConnectTimeout"). To check in logs: do
+      our woken PS4s fall asleep again a few minutes after a wake unless someone/the helper is active?
+    - States: INVALID 0, INITIALIZING 10, SHUTDOWN_ON_GOING 100, POWER_SAVING 200, SUSPEND_ON_GOING 300, MAIN_ON_STANDBY 500,
+      WORKING 1000. Standby reasons 0–18 (power button, menus, power-save timer, Remote Play, PS App, HDMI-CEC …).
+    - Registry numbers (Sce.Vsh.Registry): SYSTEM_POWER_ charge 0x2820100, signin 0x2820200 ("stay connected to the internet"),
+      remote 0x2820300 ("turn on PS4 from network"), suspend_to_ram 0x2820800 (rest mode), standby_start 0x2820900, power_history
+      0x2820b00, spwakeup 0x2820c00; NET_WIFI_freq_band 0x141e0500; REMOTEPLAY_rp_enable 0x41810000; SYSTEM_eapfunction 0x2070000.
+    - **Kaeden values (`/_pwrreg`)**: rest mode 1, stay connected 1, turn on from network 1, USB power 2, controller off 600 s,
+      auto-download 0 (all), Wi-Fi band 0, Wi-Fi device 1, DHCP (ip_config 0), Remote Play enabled 1, standby enabled 1.
+  - **Sweep per room (next):** helper → 1.1.111 (owner OK each), `/_shmod.round2_sweep2`, `/_pwrreg`, compare with Kaeden.
+    Bella/Atlas vs Kai is the key comparison (Kai wakes fine, Bella/Atlas don't after long rest).
+- **5:50am CRASH – round2_pwrprobe1 crashed Kaeden's system menu (CE-36329-3, owner photo).** Helper survived (same process 70,
+  jailbreak kept). The add-on's file stopped after "## ASSEMBLY System.IO.Compression" (first assembly). Cause: it read Mono's
+  metadata "Constant" table as 3 columns – Mono's has 4 (type, padding, parent, value) and Mono ABORTS the program on a column-count
+  mismatch in mono_metadata_decode_row. Second suspect (also removed): setting up the methods of every class.
+  pwrprobe1 removed from ps4-shell (can't be loaded again).
+  **round2_sweep1** (ps4/plugin/round2_sweep, ps4-shell) replaces it = the ONE read-only menu probe for the sweep (rest mode, wake,
+  network-in-rest, timers, Remote Play + log-in/out, users, controllers, PS button). Guards: each table's column count is read from
+  Mono's own table header and must match before any row is read (else that part is skipped + logged); method names come from the
+  metadata (no class set-up); a breadcrumb file /data/round2/round2_sweep1.step names the step about to run → after any crash we
+  know exactly where. Waits for owner "ready" (Kaeden back on the home screen, no game).
+  **Owner rule (5:49am): exploratory work = log everything; probe EVERY PS4 (not one per firmware) in a one-time sweep, owner
+  turns each on one by one and says which; note each room's quirks.** Only READ-ONLY things go in the sweep; the log-out/lock
+  add-on (round2_shell1) acts, so it stays Kaeden-only until the sweep results say it's safe per firmware.
+- **5:45am REST/WAKE PROBE BUILT (owner 5:35am: "probe for the network wake and sleep function so that we don't have to use
+  remote wake anymore … find out if it works differently for 13.50, 9.00 and 11.00"):** add-on **round2_pwrprobe1** (source
+  ps4/plugin/round2_pwrprobe on ps4-helper; .prx on ps4-shell 1952121). READ-ONLY, no class started: lists every SceShellUI
+  class/method/enum about rest mode, wake, power, network-in-rest, timers/alarms, Remote Play; every constant from the metadata
+  (registry assembly in full); and EVERY system function the menu calls (P/Invoke table, matches marked *). Output
+  lib/probe/round2_pwrprobe1-<console>.txt. Same file on each firmware → diff 13.50 / 9.00 / 11.00.
+  Found while preparing: the menu's assemblies on disk are encrypted (.dll.sprx), so offline reading isn't possible – the probe
+  must run inside the menu on each firmware. Rooms need helper 1.1.110+ for /_shmod (all are older: Vale 1.1.61, Scarlett/Kai/
+  Atlas 1.1.68, Bella 1.1.77, Max 1.1.99) → owner OK + room awake + owner watching. NOT run yet: waits for owner "ready" (Kaeden,
+  home screen, no game). Run: `ps4look paths:'/_shmod.round2_pwrprobe1', nobusy:1`.
 - **5:40am DOCS (owner: "add everything you found to accessible logs … redo on 9.00 and 11.00, rebuild per firmware"):**
   round2-tv-launcher **docs/ps4-shellui.md** (main + ps4-helper; project doc claude/ps4-shellui.md) = how code gets into the menu,
   every function/enum found on Kaeden 13.50, the add-on, and the per-firmware redo checklist (9.00 = Max, Kai, Atlas; 11.00 =

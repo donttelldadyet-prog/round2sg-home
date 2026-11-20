@@ -4403,6 +4403,18 @@ async function ps4Cmd(env, req) {   /* the helper, every minute: anything for me
   c.state = 'taken'; c.takenAt = now; await hb.kvSet('ps4cmd:' + id, c);
   return Jaw({ ok: true, now, cmd: ps4Out(c) });
 }
+/* 1.1.112 (owner 20 Nov 7:06am: "does the helper get busy … and get stuck hence unable to respond to network calls or reach the
+   engine?" – yes: the helper is one loop). While the loop is busy for 90+ s (a job, an upload, a long wait), its separate check-in
+   thread says so here, at most once a minute: the PS4 counts as ON (ps4poll) and the list shows what it is busy with (ps4busy).
+   ONE Durable Object call (writes only). Commands still wait for the loop. */
+async function ps4Alive(env, req) {
+  if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
+  let r = {}; try { r = JSON.parse(await req.text()); } catch (e) {}
+  const id = ps4Id(r.id); if (id.length < 16) return J({ error: 'no console id' }, 400);
+  const now = Date.now(), busy = { at: now, step: String(r.busy || '').replace(/[^\w .:/-]/g, '').slice(0, 40), stepS: +r.stepS || 0, loopS: +r.loopS || 0, v: String(r.v || '').slice(0, 12) };
+  await book(env).kvMany([], [['ps4poll:' + id, now], ['ps4busy:' + id, busy]]);
+  return J({ ok: true, now });
+}
 async function ps4Done(env, req) {   /* the helper: how the command went */
   if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
   let r = {}; try { r = JSON.parse(await req.text()); } catch (e) { return J({ error: 'bad json' }, 400); }
@@ -4651,9 +4663,9 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
   /* ps4list (16 Nov: g=1 also returns each PS4's games with version v / patch pv – the save system needs the same version in every room) */
   /* 17 Nov: ONE Durable Object call for all of it (was ~4 per PS4 + 9) – see hbSnap */
   const ids = (await hb.kvGet('ps4ids')) || [], now = Date.now(), list = [], night = sgDay(now - SHADOW_TILL * 60e3);
-  const K = await hb.kvMany(['ps4map', 'ps4wake', 'ps4wakeRun', 'ps4auto', 'ps4play:' + night, 'ps4discs', 'ps4names', 'ps4resetAuto', 'ps4resetLog', 'ps4resetPlan', ...ids.flatMap((id) => ['ps4:' + id, 'ps4poll:' + id, 'ps4cmd:' + id])], []);
+  const K = await hb.kvMany(['ps4map', 'ps4wake', 'ps4wakeRun', 'ps4auto', 'ps4play:' + night, 'ps4discs', 'ps4names', 'ps4resetAuto', 'ps4resetLog', 'ps4resetPlan', ...ids.flatMap((id) => ['ps4:' + id, 'ps4poll:' + id, 'ps4cmd:' + id, 'ps4busy:' + id])], []);   /* ps4busy: 1.1.112 */
   const map = K.ps4map || {}, wakeK = K.ps4wake || {};
-  for (const id of ids) { const r = K['ps4:' + id]; if (r) list.push(Object.assign({}, r, { room: map[id] || null, poll: K['ps4poll:' + id] || 0, cmd: K['ps4cmd:' + id] || null, runName: r.running ? (((r.games || []).find((g) => g && g.id === r.running) || {}).t || '') : '', wake: !!wakeK[id], games: f.g === '1' ? (r.games || []) : undefined, nGames: (r.games || []).length, ago: Math.round((now - r.t) / 60e3) })); }
+  for (const id of ids) { const r = K['ps4:' + id]; if (r) list.push(Object.assign({}, r, { room: map[id] || null, poll: K['ps4poll:' + id] || 0, cmd: K['ps4cmd:' + id] || null, busy: K['ps4busy:' + id] || null, runName: r.running ? (((r.games || []).find((g) => g && g.id === r.running) || {}).t || '') : '', wake: !!wakeK[id], games: f.g === '1' ? (r.games || []) : undefined, nGames: (r.games || []).length, ago: Math.round((now - r.t) / 60e3) })); }
   const rel = await ps4Latest(env).catch(() => null);
   return { ok: true, now, list, latest: rel ? rel.v : null, selfUp: PS4_SELFUP, wakeRun: K.ps4wakeRun || null, auto: K.ps4auto !== false, map, played: K['ps4play:' + night] || {}, discs: K.ps4discs || [], names: K.ps4names || {}, resetAuto: K.ps4resetAuto || null, resetLog: K.ps4resetLog || [], resetPlan: (K.ps4resetPlan || []).filter((x) => x.at > now - 40 * 60e3) };
 }
@@ -4880,8 +4892,16 @@ async function memApi(env, req) {
     if (now - (K['ps4poll:' + id] || 0) > 3 * 60e3) return J({ error: 'The PS4 in this room isn’t answering – is it switched on?' });
     if (c0 && (c0.state === 'sent' || c0.state === 'taken') && now - c0.at < 2 * 60e3) return J({ error: 'The PS4 is busy for a moment – try again in a minute.', busy: true });
     const names = ps.filter((x) => x.slot !== 'main').map((x) => x.shown).join(' + ') || m.crew, c = { cid: 'l' + now.toString(36), do: 'look', p: `/_memplay.${m.id}.` + ps.map((x) => x.slot + '.' + x.shown.replace(/ /g, '_')).join('.'), at: now, by: 'member ' + m.id, state: 'sent', nobusy: true };
-    await hb.kvMany([], [['ps4cmd:' + id, c], ['memplay:' + id, { name: names, cid: c.cid, at: now }]]);
+    await hb.kvMany([], [['ps4cmd:' + id, c], ['memplay:' + id, { name: names, cid: c.cid, at: now, until: tk.until, mid: m.id }]]);   /* until (owner 20 Nov 8:01am): the tile keeps showing this member for the whole session */
     return J({ ok: true, sent: true, name: names, room });
+  }
+  if (act === 'roomout') {   /* owner 20 Nov 8:01am: "a button to logout manually" – this member is done in this room; the tile shows the code again */
+    const room = String(f.room || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12), map = (await hb.kvGet('ps4map')) || {}, id = Object.keys(map).find((i) => map[i] === room);
+    if (!id) return J({ error: 'Unknown room.' });
+    const K = await hb.kvMany(['tiletok:' + id, 'memplay:' + id], []), tk = K['tiletok:' + id], mp = K['memplay:' + id];
+    if (!tk || !f.k || String(f.k) !== tk.k || now >= tk.until) return J({ error: 'This code has run out – nothing to log out of.', rescan: true });
+    if (mp && !mp.out) { mp.out = now; await hb.kvSet('memplay:' + id, mp); }
+    TILE_MEMO.delete(id); return J({ ok: true, room });
   }
   if (act === 'pin') {
     if ((await memMac(env, 'pin|' + m.salt + '|' + String(f.old || ''))) !== m.pin) return J({ error: 'Your current PIN is wrong.' });
@@ -4983,8 +5003,8 @@ $('pls').innerHTML=M.players.map(function(p){sel[p.slot]=p.av||p.pic;return '<di
 var ROOM=new URLSearchParams(location.search).get('room')||'',KEY=new URLSearchParams(location.search).get('k')||'';
 function play(){if(!ROOM||!M){$('playc').hidden=true;return}$('playc').hidden=false;$('playh').textContent='Play on '+ROOM.toUpperCase()+' now';
 if(!KEY){$('playb').innerHTML='<p class="fine">To load your saves, open the Round2 tile on this room’s PS4 and scan its code.</p>';return}
-$('playb').innerHTML=[{slot:'main',shown:ROOM.toUpperCase()+' (main profile)',pic:-1}].concat(M.players).map(function(p){return '<label style="display:flex;gap:12px;align-items:center;font-size:18px;color:#f4f1fb;margin:10px 0"><input type="checkbox" data-tick="'+p.slot+'" checked style="width:26px;height:26px"> <span class="av" style="width:36px;height:36px;font-size:20px;border-width:1px">'+(p.slot==='main'?'🏠':face(p))+'</span> '+esc(p.shown)+'</label>'}).join('')+'<button data-go="1">Load ticked profiles</button><p class="fine">Everything played in this room – the main profile and Player 1-4 – is saved to your crew after the session.</p>'}
-$('playb').onclick=function(e){var b=e.target.closest('[data-go]');if(!b)return;var e5=$('e5');e5.className='err';e5.textContent='';var sl=[].map.call(document.querySelectorAll('[data-tick]:checked'),function(x){return x.dataset.tick});if(!sl.length){e5.textContent='Tick at least one player.';return}b.disabled=true;
+$('playb').innerHTML=[{slot:'main',shown:ROOM.toUpperCase()+' (main profile)',pic:-1}].concat(M.players).map(function(p){return '<label style="display:flex;gap:12px;align-items:center;font-size:18px;color:#f4f1fb;margin:10px 0"><input type="checkbox" data-tick="'+p.slot+'" checked style="width:26px;height:26px"> <span class="av" style="width:36px;height:36px;font-size:20px;border-width:1px">'+(p.slot==='main'?'🏠':face(p))+'</span> '+esc(p.shown)+'</label>'}).join('')+'<button data-go="1">Load ticked profiles</button><p class="fine">Everything played in this room – the main profile and Player 1-4 – is saved to your crew after the session.</p><button class="ghost" data-rout="1">Log out of '+esc(ROOM.toUpperCase())+'</button>'}
+$('playb').onclick=function(e){if(e.target.closest('[data-rout]')){var e6=$('e5');e6.className='err';api({act:'roomout',room:ROOM,k:KEY}).then(function(r){if(r.error){e6.textContent=r.error;return}e6.className='err ok';e6.textContent='Logged out of '+ROOM.toUpperCase()+'. The TV shows the code again for the next members.'});return}var b=e.target.closest('[data-go]');if(!b)return;var e5=$('e5');e5.className='err';e5.textContent='';var sl=[].map.call(document.querySelectorAll('[data-tick]:checked'),function(x){return x.dataset.tick});if(!sl.length){e5.textContent='Tick at least one player.';return}b.disabled=true;
 api({act:'play',room:ROOM,slots:sl,k:KEY}).then(function(r){b.disabled=false;if(r.error){e5.textContent=r.error;if(r.out)out();return}e5.className='err ok';e5.textContent='Sent! Watch the TV – the profile for '+r.name+' will be ready in a moment.'})};
 $('pls').onclick=function(e){var c=e.target.closest('[data-s]');if(!c)return;var s=c.dataset.s,er=c.querySelector('.err');
 var a=e.target.closest('[data-a]');if(a){sel[s]=a.dataset.a;[].forEach.call(c.querySelectorAll('.pics [data-a]'),function(x){x.className=x.dataset.a===sel[s]?'sel':''});c.querySelector('.av').innerHTML='<img src="'+avu(sel[s])+'" alt="">';return}
@@ -5021,7 +5041,7 @@ function tileTokUntil(aw, room, now) { const W = ((aw || {})[room] || []).filter
 async function ps4Tile(env, u) {
   const id = ps4Id(u.searchParams.get('id')), now = Date.now(); if (!id) return J({ error: 'no id' }, 400);
   const m = TILE_MEMO.get(id); if (m && now - m.t < 10e3) return J(m.o);
-  const K = await book(env).kvMany(['ps4map', 'ps4:' + id, 'memplay:' + id, 'ps4look:' + id, 'tiletok:' + id, 'ps4awake'], []), room = (K.ps4map || {})[id] || '', cl = (K['ps4:' + id] || {}).clean || {};
+  const K = await book(env).kvMany(['ps4map', 'ps4:' + id, 'memplay:' + id, 'ps4look:' + id, 'tiletok:' + id, 'ps4awake', 'ps4busy:' + id], []), room = (K.ps4map || {})[id] || '', cl = (K['ps4:' + id] || {}).clean || {};
   let tk = K['tiletok:' + id];
   if (room && (!tk || !tk.k || now >= tk.until || tk.room !== room)) { tk = { k: memB64(crypto.getRandomValues(new Uint8Array(9))).replace(/[^A-Za-z0-9]/g, '').slice(0, 8), at: now, until: tileTokUntil(K.ps4awake, room, now), room }; await book(env).kvSet('tiletok:' + id, tk); }
   const o = { ok: true, room, url: room ? PUBLIC_BOOK + '/m?room=' + room + '&k=' + tk.k : PUBLIC_BOOK + '/m', status: 'ready',
@@ -5033,7 +5053,10 @@ async function ps4Tile(env, u) {
     else { o.status = 'reset'; o.line = `This room is being reset (${n}). Member saves load right after.`; o.line2 = 'Please don\'t start a game yet - it only takes a minute or two.'; }
   }
   const mp = K['memplay:' + id], lk = K['ps4look:' + id];   /* 20 Nov: a member pressed Load on their phone (helper 1.1.90 /_memplay) */
-  if (room && mp && now - mp.at < 20 * 60e3) {
+  /* owner 20 Nov 8:01am ("reopening the round2 member app would not reset to the log in page"): a member who pressed Load is shown
+     for the whole session (the QR code's window), not just 20 min – until they log out of the room on their phone */
+  if (room && mp && !mp.out && now < Math.max(mp.at + 20 * 60e3, mp.until || 0)) {
+    if (mp.fin) Object.assign(o, mp.fin); else {
     const res = lk && lk.at >= mp.at - 5e3 && lk.list ? lk.list : null, nm = mp.name, prep = cl.kind === 'prep' && (cl.state === 'running' || cl.state === 'paused');
     /* 20 Nov 3:05am (owner: it said "all done" between players – ready only when EVERY ticked player is loaded): helper 1.1.101
        reports memq {left, of, now} while players wait in the queue */
@@ -5045,7 +5068,14 @@ async function ps4Tile(env, u) {
       o.line = `Your saves are back on the profiles you ticked - pick up where you left off.`; o.line2 = `The ${R} profile and Player 1-4 all save to your crew after the session. PS button > switch user to change profile.`; void onMain; void first; }
     else if (res['memplay/waits']) { o.status = 'reset'; o.title = 'Please wait'; o.line = `The room is being reset first. Press Load for ${nm} on your phone again in a minute.`; o.line2 = ''; }
     else if (res['memplay/refused'] || res['memplay/error']) { o.status = 'off'; o.title = 'Sorry, ' + nm; o.line = String(res['memplay/refused'] || res['memplay/error']).replace(/^- /, ''); o.line2 = 'Please ask staff.'; }
+    /* the result is kept with the session (later look jobs replace ps4look), so a reopened tile still says Ready / Sorry */
+    if (res && !prep && !more && (o.status === 'done' || (o.status === 'off' && o.title))) { mp.fin = { status: o.status, title: o.title, line: o.line, line2: o.line2 };
+      if (o.status === 'done') o.line2 = mp.fin.line2 = 'Signed in for this session. Switch players or log out of this room on your phone.';
+      await book(env).kvSet('memplay:' + id, mp); }
+    }
   }
+  /* helper 1.1.112+: the PS4 is busy with a job (its check-in thread said so in the last 75 s) – say so instead of looking stuck */
+  { const bz = K['ps4busy:' + id]; if (room && bz && now - bz.at < 75e3 && o.status === 'ready') o.line2 = 'One moment – this PS4 is finishing a job. Loading works again in a minute.'; }
   /* 20 Nov 2:40am (owner: the tile themed like the member page + loading bars for guests): room colour + name, and the counts
      for the tile's progress bar (strings – the tile reads "key":"value" only) */
   { const R = MEM_ROOMS[room === 'max' ? 'maximillion' : room]; if (R) { o.color = R[1].slice(1); o.rname = R[0]; } }
@@ -5491,6 +5521,7 @@ const HANDLER = {
       if (u.pathname === '/ps4/tilepkg' && req.method === 'POST') return await ps4TilePkg(env, req);
       if (u.pathname === '/ps4/prx') return await ps4Prx(env, req, u);   /* helper 1.1.109: Round2 system-menu add-ons */   /* helper 1.1.87: the tile .pkg */
       if (u.pathname === '/ps4/cmd' && req.method === 'POST') return await ps4Cmd(env, req);   /* helper: waiting command? (every minute) */
+      if (u.pathname === '/ps4/alive' && req.method === 'POST') return await ps4Alive(env, req);   /* helper 1.1.112: on, but busy (only while busy, ≤1/min) */
       if (u.pathname === '/ps4/done' && req.method === 'POST') return await ps4Done(env, req);
       if (u.pathname === '/ps4/app' && req.method === 'POST') return await ps4App(env, req);
       if (u.pathname === '/ps4/plugin' && req.method === 'POST') return await ps4Plugin(env, req);

@@ -22,3 +22,7 @@
 - **Durable Object calls are capped: 100,000 a day on the free plan** (resets 8am SGT; over it the engine's bookings/payments
   error). Every `hb.*` call from the worker is one. Read several keys with ONE `hb.kvMany` / `hbSnap` (17 Nov), never a kvGet
   per key in a loop or per poll. HANDOFF "DURABLE OBJECT CALLS".
+- **Exploratory PS4 work (owner, 20 Nov 2026): log everything** – every probe result, crash and each room's PS4 quirks go into
+  HANDOFF + docs (ps4-shellui.md / ps4-network-and-wake.md). Probe ALL PS4s in a one-time sweep (owner turns each on), never one
+  per firmware by assumption. Menu add-ons: read-only probe first, guarded so they cannot abort the menu (round2_pwrprobe1 crashed
+  Kaeden 20 Nov 5:50am), with a breadcrumb file per step.
