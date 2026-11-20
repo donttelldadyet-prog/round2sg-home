@@ -2838,7 +2838,9 @@ async function gm(env, req) {
      cut-off), written by the TV app (1.0.287+) to /r2/<key>/<room>/msgLog. One room, one outside request. */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     const room = String(f.room || '').toLowerCase(); if (!['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max'].includes(room) || !env.TV_KEY) return gmJ({ error: 'Pick a room.' });
-    return gmJ({ ok: true, room, log: await fetch(FB_BASE + env.TV_KEY + '/' + room + '/msgLog.json').then((r) => r.json()).catch(() => null) });
+    const get = (n) => fetch(FB_BASE + env.TV_KEY + '/' + room + '/' + n + '.json').then((r) => r.json()).catch(() => null);
+    const [log, helper] = await Promise.all([get('msgLog'), get('helper')]);   /* + the TV's check-in (version, what's on screen, why the app last stopped) */
+    return gmJ({ ok: true, room, log, helper });
   }
   if (act === 'tvmsgs') {   /* staff, read-only (4 Nov): each room's message on the TV, when it first showed, and the last OK */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
