@@ -142,6 +142,11 @@
   (clean kind prep or a queue) – anyone who signs in gets a PS4 message "Hang on <name> – saves are still loading (player k of n).
   Please don't start a game yet." (normal notification, not verbose-only).
   The broader ShellUI probe ("log everything") was NOT continued – stopped there; only the 4:26am list exists.
+- **9:56–10:05pm – owner: "is there a handshake between phone and whether the ps4 tile is on" → "ok". Helper 1.1.127 (ps4-test 816b57a)
+  on Kaeden 22:03.** Before: Load only checked the QR code (this session), PS4 answered in 3 min, PS4 not busy. Now the helper
+  refuses a NEW load unless the Round2 tile is the running app (`running_title` = RTWO00001): TV pop-up "<name>: open the Round2
+  tile first, then press Load on your phone again" + result memplay/refused. Phone still only says "Sent! Watch the TV" – showing
+  the refusal on the phone needs an engine poll (not built; engine deploy). Owner's 21:55 Karen load on 1.1.126: 12 s ✅.
 - **9:34–9:45pm – Aliff-alone test on 1.1.125: owner "the tile closed without disconnecting controller or bringing to press ps
   button screen". Logs (save.log + round2_shell9.txt):** 21:34:57 lock ✅ → release of main + Player 3 (3 games, 66 MB copied +
   removed, 21:34–35) → **cloud batch before the load 111 s** → 21:37:04 Aliff kept ("already on profile 16c45cc7 with the newest
