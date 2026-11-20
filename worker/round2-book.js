@@ -4273,6 +4273,7 @@ async function ps4PkgNext(env, hb, id, room, now) {
     else if (last.startsWith(j.jid + ' FAILED')) { j.state = 'failed'; j.why = last; j.end = now; changed = true; }
     else if (last.startsWith(j.jid) && j.state === 'sent') { j.state = 'running'; changed = true; }
     else if (j.state === 'sent' && now - (j.sentAt || 0) > 15 * 60e3) { j.state = 'failed'; j.why = 'the PS4 never started it'; j.end = now; changed = true; }
+    else if (j.state === 'running' && last && !last.startsWith(j.jid)) { j.state = 'failed'; j.why = 'stopped (the PS4 is on another download now)'; j.end = now; changed = true; }   /* the helper runs one download at a time */
     if (j.state === 'running' && last.startsWith(j.jid)) j.prog = last;
   }
   const keep = q.filter((j) => !(j.end && now - j.end > 2 * 86400e3));
