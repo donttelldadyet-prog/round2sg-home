@@ -318,7 +318,7 @@
 > - Fix: msgOrphans skips Auto's own codes (autoRun owns them: moves/cancels with the session), and both places run autoRun
 >   THEN msgOrphans. autoRun also logs (autoLast.problems) any own message still to come that's no longer in the TV queue
 >   (not re-made: staff may have cancelled it on purpose).
-> - Next deploy starts from live 90e5e4f7cbdb.
+> - Next deploy starts from live 886e57b4541f (msglog now also returns helper.json).
 
 > ## 20 Nov 2026, ~5:25pm – Max "That's a wrap!" (live sha 152f1ec4298b, 27 bindings, 3 timers)
 > - Records (tvmsgs): 5-min reminder w5mwlpir6p OK'd 1:58:56pm; wrap qr2f7673c-1120101826 shown 1:59:59pm, never OK'd, cut-off 2:15.
