@@ -142,6 +142,17 @@
   (clean kind prep or a queue) – anyone who signs in gets a PS4 message "Hang on <name> – saves are still loading (player k of n).
   Please don't start a game yet." (normal notification, not verbose-only).
   The broader ShellUI probe ("log everything") was NOT continued – stopped there; only the 4:26am list exists.
+- **10:25–10:30pm – owner: "why is this needed [log-out at the start] … a forced clean slate should show popup that clean slate will
+  run, but for the automatic cleanslate, the detector should be the trigger, no key triggers on the menu or game > close game if
+  game running and satisfy 2 min trigger, show popup, 2, then 3. then the member saves are loaded if applicable".
+  Helper 1.1.130 (ps4-test d4e37cd) + round2_shell11 (ps4-shell 6c206e9) on Kaeden 22:27 (shell11 live, no restart).**
+  - reset_go with the add-on: NO sign-out at the start (the shell-logout-now request is no longer sent); order = close game (if
+    any) → pop-up "Round2: clean slate starting …" → lock + picker paused (add-on sees the run) → clean → LogoutAll at the end →
+    unlock. Without the add-on (release rooms): unchanged (spares signed out the old way).
+  - Automatic countdown: the reset already waits for 2 min without presses after the reset time (in-game detector round2_input).
+    NEW menu half: shell11 writes /data/round2/input/menu_last on any button change while the countdown is armed (input/arm);
+    the helper counts it as a press. In the menu (no game) with the add-on alive the detector now counts as "known".
+  - Open: "then the member saves are loaded if applicable" – asked the owner what triggers it (next booking is a member?).
 - **10:14–10:20pm – owner: "can the clean slate also follow the logout logic … we can logout controllers to go into ps button,
   implement". His 22:12 control-centre clean slate ran the OLD way: reset_go signed spares out with sceUserServiceLogout ("1 signed
   out") – the one that can leave a controller stuck – and no lock. Now helper 1.1.129 (ps4-test f7f51b9) + round2_shell10 (ps4-shell
