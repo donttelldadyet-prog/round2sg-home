@@ -351,6 +351,14 @@ h3.nm, .nm { color: var(--rc); }
 .room.locked { padding: 10px 16px; }   /* owner: keep the room type (NETFLIX ROOM) on fully booked rooms */
 .tierfull { display: flex; align-items: center; gap: 10px; margin: 12px 0; padding: 12px 16px; border: 1px dashed var(--line); color: var(--mute); font-size: 14px; }
 .tierfull svg { width: 14px; height: 14px; flex: none; }
+
+/* small phones (owner 20 Nov): BROWSE BY stays one row, PICK A DAY + BACK TO TODAY don't crowd */
+@media (max-width: 420px) {
+  .views { flex-wrap: nowrap; gap: 4px; }
+  .views button { flex: 1 1 auto; min-width: 0; padding: 10px 4px; font-size: 8px; letter-spacing: .02em; white-space: nowrap; }
+  .dayhd #toToday { font-size: 8px; letter-spacing: .02em; padding: 6px 6px; }
+}
+@media (max-width: 360px) { .views button { font-size: 7px; letter-spacing: 0; padding: 10px 3px; } }
 </style>
 </head>
 <body>
