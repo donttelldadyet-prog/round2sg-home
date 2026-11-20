@@ -1147,14 +1147,14 @@ var q=0;new MutationObserver(function(){if(q)return;q=1;requestAnimationFrame(fu
 var st=document.createElement('style');st.textContent=CSS;document.head.appendChild(st);
 function c(n,col){return '<span style="color:'+col+'">'+n+'</span>'}
 var Y='<td class="y" aria-label="Yes">✓</td>',O='<td class="y" aria-label="Yes, sign in with your own account">✓<sup>*</sup></td>',N='<td class="n" aria-label="No">–</td>';function T(x){return '<td class="t">'+x+'</td>'}
-var rows=[['Console',T('PS4'),T('PS4 Pro'),T('PS4 Pro')],['Netflix',Y,Y,Y],['Prime Video',Y,Y,Y],['HBO Max',N,Y,Y],['Disney+',O,O,O],['Apple TV',O,O,O],['Audio',T('Standard'),T('Enhanced'),T('Home Theatre')],['Racing Sim',N,N,Y]];
+var rows=[['Console',T('PS4'),T('PS4 Pro'),T('PS4 Pro')],['Netflix',Y,Y,Y],['Prime Video',Y,Y,Y],['HBO Max',N,Y,Y],['Other apps<sup>*</sup>',Y,Y,Y],['Audio',T('Standard'),T('Enhanced'),T('Home Theatre')],['Racing Sim',N,N,Y]];
 var el=document.createElement('div');el.id='r2-st';el.hidden=true;el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','What each room type has');
 el.innerHTML='<div class="bx"><button type="button" class="x" aria-label="Close">✕</button><h3>STREAMING</h3><p class="s">What’s In Each Room</p>'
 +'<table><colgroup><col class="f"><col><col><col></colgroup><thead><tr><th></th>'
 +'<th style="--t:#FF5A6E"><b>NETFLIX</b><small>'+c('Vale','#E8436A')+'<br>'+c('Kaeden','#4DB848')+'<br>'+c('Scarlett','#F2C21B')+'</small></th>'
 +'<th style="--t:#B48CFF"><b>DELUXE</b><small>'+c('Kai','#24B49A')+'<br>'+c('Bella','#7A5BE0')+'<br>'+c('Atlas','#E9E7EF')+'</small></th>'
 +'<th style="--t:#E0402F"><b>VIP</b><small>'+c('Maximillion','#E0402F')+'</small></th></tr></thead><tbody>'
-+rows.map(function(r){return '<tr><th scope="row">'+r[0]+'</th>'+r.slice(1).join('')+'</tr>'}).join('')+'</tbody></table><p class="ft"><sup>*</sup> Just sign in with your own account on the TV.</p></div>';
++rows.map(function(r){return '<tr><th scope="row">'+r[0]+'</th>'+r.slice(1).join('')+'</tr>'}).join('')+'</tbody></table><p class="ft"><sup>*</sup> Disney+, Apple TV, iQIYI and more: just sign in with your own account on the TV.</p></div>';
 var last=null;function close(){el.classList.remove('on');setTimeout(function(){el.hidden=true},200);if(last)try{last.focus()}catch(e){}}
 function open(t){last=t;document.body.appendChild(el);el.hidden=false;requestAnimationFrame(function(){el.classList.add('on')});el.querySelector('.x').focus()}
 el.addEventListener('click',function(e){if(e.target===el||e.target.closest('.x'))close()});
