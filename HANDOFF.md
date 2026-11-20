@@ -142,6 +142,25 @@
   (clean kind prep or a queue) – anyone who signs in gets a PS4 message "Hang on <name> – saves are still loading (player k of n).
   Please don't start a game yet." (normal notification, not verbose-only).
   The broader ShellUI probe ("log everything") was NOT continued – stopped there; only the 4:26am list exists.
+- **21 Nov 2:22–2:35am – owner: "clean slate kaeden now and restore karen's progressed gta save to her folder" + "prepare to probe why
+  clean slates and logout don't use the shell UI's function instead of the raw logout – it blocks the controller".**
+  - Found: **2:00:58–2:01:05 the cloud batch REPLACED Karen's p1 GTA SAVEDATAPROFILE + sce_sdmemory + sce_bu_sce_sdmemory** with the
+    copies from profile 16c45cc7 after the failed 1:12am load (GTA had been left empty → fresh files). Story slots (SGTA/SBGTA,
+    "Father/Son (5.5%)") were not touched. EVERY stored GTA story copy (p1 3:46am, p2 10:13pm, room backups 7:44pm + 8:36pm) reads
+    "Father/Son (5.5%)" (param.sfo) – no further progress exists anywhere in the storage.
+  - **Engine memidxset** (deployed, eb51d327, 27 bindings, 3 timers): point one index part at a stored version, old index kept as
+    index.bak.<ms>. Karen p1 restored to the pre-incident state: SAVEDATAPROFILE 3:45:05am, sce_sdmemory 7:08:01pm,
+    sce_bu 7:08:08pm (20 Nov) – 3 backups index.bak.1795199453975/…455165/…456075. 2:31am her load used them: 0 failed ✅.
+  - **Kaeden cloud batch switched OFF** (`/_cloud.off`, 0 waiting) because of a real bug: manifests hold only names + sizes, and
+    the "unchanged / already in the member's folder" checks compare those → a fixed-size save (GTA, most games) with NEW progress is
+    judged unchanged and never uploaded; different content with the same sizes can also be mistaken. Fix = content hash in the
+    manifest (next helper). Until then Kaeden keeps saves only in its internal copies.
+  - Clean slate 2:24am (owner): 2 games, 3 parts copied+removed, OK. Add-on log: lock 2:24:03 → LogoutAll 2:24:08 (menu's own) →
+    picker already un-paused 3 s later → our ResumeLoginScreen anyway → unlock. **No raw sign-out in this run** ("0 spare(s) signed
+    out", "profiles: nobody signed out"). Owner then restarted Kaeden (2:27:42). Raw sceUserServiceLogout still exists in
+    reset_profiles (signed-in spares before renaming) and the profile-switch release → helper 1.1.136 (built, NOT sent) routes both
+    through the add-on (menu_logout). Add-on round2_shell12 (built, NOT sent): resume the picker only if still paused + 30-s trace
+    after every log-out (picker paused?, buttons) so a stuck controller leaves evidence.
 - **21 Nov 2:00am – owner: "where is karen bozz gta progress, did a new save replace her progress in the cloud?"** Logs read:
   1:11–1:13am 3-player load (Main, Karen, Aliff) on Kaeden ALL FAILED – "bundle: no memory for a piece", memory.dat downloads cut
   at ~8 MB of 32 MB → each game "taken back so the game starts clean (the member's cloud save is untouched)". So Karen got an
