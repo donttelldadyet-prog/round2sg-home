@@ -151,15 +151,23 @@
   - **Engine memidxset** (deployed, eb51d327, 27 bindings, 3 timers): point one index part at a stored version, old index kept as
     index.bak.<ms>. Karen p1 restored to the pre-incident state: SAVEDATAPROFILE 3:45:05am, sce_sdmemory 7:08:01pm,
     sce_bu 7:08:08pm (20 Nov) – 3 backups index.bak.1795199453975/…455165/…456075. 2:31am her load used them: 0 failed ✅.
-  - **Kaeden cloud batch switched OFF** (`/_cloud.off`, 0 waiting) because of a real bug: manifests hold only names + sizes, and
-    the "unchanged / already in the member's folder" checks compare those → a fixed-size save (GTA, most games) with NEW progress is
-    judged unchanged and never uploaded; different content with the same sizes can also be mistaken. Fix = content hash in the
-    manifest (next helper). Until then Kaeden keeps saves only in its internal copies.
+  - ~~Cloud batch "dedupe bug"~~ **WRONG – corrected 2:38am:** the CLOUD manifest holds names + sizes only, but the checks compare
+    the LOCAL prep manifest, which carries a SHA-256 per file (lc_walk "%s\t%llu\t%s") → content-based, no bug. Kaeden cloud batch
+    was OFF 2:33–2:37am, back ON (0 waiting). Real cause of the 2:01am overwrite: a FAILED load leaves the member-tagged profile with
+    an empty game; if the guest then starts that game, the fresh save uploads over the member's newer one. STILL OPEN – fix: after a
+    failed load, untag that game (or the profile) so nothing from it goes to the member's folder.
+  - Sims queue: patch 1.95 DONE; Luxury Party Stuff finished 2:04am but stayed "running" after the 2:15 restart (helper's report
+    lost) and blocked the queue → cancelled by hand; engine b6cdc5bf: a running job with no report from the PS4 for 10 min →
+    failed "the PS4 restarted during it" (no longer blocks).
   - Clean slate 2:24am (owner): 2 games, 3 parts copied+removed, OK. Add-on log: lock 2:24:03 → LogoutAll 2:24:08 (menu's own) →
     picker already un-paused 3 s later → our ResumeLoginScreen anyway → unlock. **No raw sign-out in this run** ("0 spare(s) signed
-    out", "profiles: nobody signed out"). Owner then restarted Kaeden (2:27:42). Raw sceUserServiceLogout still exists in
-    reset_profiles (signed-in spares before renaming) and the profile-switch release → helper 1.1.136 (built, NOT sent) routes both
-    through the add-on (menu_logout). Add-on round2_shell12 (built, NOT sent): resume the picker only if still paused + 30-s trace
+    out" is only the START count). **Correction (advisor):** a raw sign-out most likely DID happen – clean DONE 2:24:07, next profile
+    line 2:24:10 (= reset_profiles' sleep(3) after sceUserServiceLogout on a signed-in spare, Karen was playing), while the add-on's
+    LogoutAll ran 2:24:07–08: the run's state is "done" BEFORE reset_profiles, so both hit the same profile at once. Owner then
+    restarted Kaeden (2:27:42). Raw sceUserServiceLogout still exists in
+    reset_profiles (signed-in spares before renaming) and the profile-switch release → helper 1.1.136 (built, NOT sent): with the
+    add-on, reset_profiles WAITS up to 12 s for the add-on's own log-out and never signs out raw (every raw call logged); the
+    switch release asks the add-on (menu_logout). Add-on round2_shell12 (built, NOT sent): resume the picker only if still paused + 30-s trace
     after every log-out (picker paused?, buttons) so a stuck controller leaves evidence.
 - **21 Nov 2:00am – owner: "where is karen bozz gta progress, did a new save replace her progress in the cloud?"** Logs read:
   1:11–1:13am 3-player load (Main, Karen, Aliff) on Kaeden ALL FAILED – "bundle: no memory for a piece", memory.dat downloads cut
