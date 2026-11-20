@@ -2716,7 +2716,7 @@ async function gm(env, req) {
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await mvApi(env, hb, f, new URL(req.url).origin)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
-  if (/^ps4(list|map|discs|names|clean|update|look|lookres|rel|prof|saves|dns|dnsget|wake|wakekey|reset|resetauto)$|^pkg(send|list|cancel|lap)$/.test(act)) {   /* staff: control centre › PS4s (13 Nov; reset + resetauto 17 Nov) */
+  if (/^ps4(list|map|discs|names|clean|update|look|lookres|rel|prof|saves|dns|dnsget|wake|wakekey|reset|resetauto)$|^pkg(send|list|cancel|lap)$|^memidxset$/.test(act)) {   /* staff: control centre › PS4s (13 Nov; reset + resetauto 17 Nov) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await ps4Gm(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
@@ -4651,6 +4651,19 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
     for (let i = 0; i < 10; i++) { const L = await env.SAVES.list({ prefix: pre, cursor: cur, limit: 1000 }); for (const o of L.objects) { tot += o.size; if (out.length < 300) out.push([o.key.slice(6), o.size]); } if (!L.truncated) break; cur = L.cursor; }
     const man = String(f.m || '') ? await env.SAVES.get('saves/' + String(f.m).replace(/\.\./g, '')) : null;
     return { ok: true, n: out.length, bytes: tot, list: out, manifest: man ? (await man.text()).slice(0, 8000) : undefined };
+  }
+  if (act === 'memidxset') {   /* staff (owner 21 Nov 2:22am "restore karen's gta save to her folder"): point ONE part of a member's
+     cloud index back at a version that is already stored (members/<id>/<slot>/<game>/<part>/<time>). The old index is kept as
+     index.bak.<time> first. Nothing is uploaded or deleted. */
+    if (!env.SAVES) return { error: 'no storage' };
+    const tag = String(f.tag || ''), t = String(f.t || ''), nm = String(f.nm || ''), base = String(f.base || '');
+    if (!/^[a-z0-9-]{3,31}\/[a-z0-9]{1,15}$/.test(tag) || !/^[A-Z]{4}\d{5}$/.test(t) || !/^[\w-]{1,63}$/.test(nm) || base.indexOf('members/' + tag + '/' + t + '/' + nm + '/') !== 0 || !/\/\d{9,11}$/.test(base)) return { error: 'bad details' };
+    if (!(await env.SAVES.head('saves/' + base + '/manifest.txt'))) return { error: 'that version is not in the storage' };
+    const key = 'saves/members/' + tag + '/index.txt', cur = await env.SAVES.get(key), old = cur ? await cur.text() : '';
+    await env.SAVES.put(key.replace('index.txt', 'index.bak.' + Date.now()), old);
+    const lines = old.split('\n').filter((l) => l && !(l.split(' ')[0] === t && l.split(' ')[1] === nm));
+    lines.push(t + ' ' + nm + ' ' + base + ' -'); await env.SAVES.put(key, lines.join('\n') + '\n');
+    return { ok: true, was: (old.split('\n').find((l) => l.split(' ')[0] === t && l.split(' ')[1] === nm) || '').split(' ')[2] || null, now: base };
   }
   if (act === 'ps4rel') return { ok: true, rel: await ps4Latest(env, true), err: await hb.kvGet('ps4relErr') };   /* staff: which helper version is out (fresh look) */
   if (act === 'ps4prof') {   /* profile write test (helper 1.1.0+, owner 13 Nov: spare profiles only): op name|acct|unacct, u = user id hex */
