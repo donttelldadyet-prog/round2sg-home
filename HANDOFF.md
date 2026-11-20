@@ -142,6 +142,17 @@
   (clean kind prep or a queue) – anyone who signs in gets a PS4 message "Hang on <name> – saves are still loading (player k of n).
   Please don't start a game yet." (normal notification, not verbose-only).
   The broader ShellUI probe ("log everything") was NOT continued – stopped there; only the 4:26am list exists.
+- **9:34–9:45pm – Aliff-alone test on 1.1.125: owner "the tile closed without disconnecting controller or bringing to press ps
+  button screen". Logs (save.log + round2_shell9.txt):** 21:34:57 lock ✅ → release of main + Player 3 (3 games, 66 MB copied +
+  removed, 21:34–35) → **cloud batch before the load 111 s** → 21:37:04 Aliff kept ("already on profile 16c45cc7 with the newest
+  saves") → 21:37:05 LogoutAll ✅ → 21:37:08 unlock. The owner wrote at 21:36 – the tile had closed during the 111-s wait.
+  - Cause: the engine said "Ready" too early. The release run is kind "switch" (not "prep"), the queue placeholder was removed
+    before the cloud batch, and the first report with the queue came after the "releasing" result.
+  - Owner 9:38pm: "the tile closing should be the trigger, maybe code this into the ps4 tile instead of a sensor in the helper?"
+    Answer: the logout already waits for the tile to be gone; the tile closed early because it was told "Ready". Fixed at the source.
+  - **Helper 1.1.126 (ps4-test f2efe3c) on Kaeden 21:44:** report sent BEFORE the release result and every 4 s during it; queue
+    placeholder kept until the load starts; the 111-s cloud batch before the load dropped (released saves go up in the normal
+    cloud batch later). No engine change.
 - **9:27–9:33pm – owner: "if second player enters alone, then later first player comes … the loaded profile holds the latest saves …
   waste of time to copy and delete … is it easier to rename" → "build yes". Helper 1.1.125 (test, ps4-test 775fdc2) on Kaeden 21:30.**
   - Before: positions by tick order only → B (alone, Player 1) would get A loaded over it and B re-downloaded into Player 2 from the
