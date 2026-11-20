@@ -1135,26 +1135,26 @@ function mount(el){el.setAttribute('data-r2c','on');var i=-1,tm=null,tk=[],typin
  show(0)}
 function scan(){document.querySelectorAll('[data-r2c=""]').forEach(mount)}
 var q=0;new MutationObserver(function(){if(q)return;q=1;requestAnimationFrame(function(){q=0;scan()})}).observe(document.documentElement,{subtree:true,childList:true});scan();})();</script>
-<script>/* LOADOUT · Streaming tile (owner 20 Nov, option A): opens a sheet with what each room type has – tier cards, room names in their colours, feature chips (upgrades highlighted) */
+<script>/* LOADOUT · Streaming tile (owner 20 Nov, option A): opens a sheet comparing the three room types side by side (✓ / – grid) */
 (function(){var CSS='#r2-st{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:flex-end;justify-content:center;background:rgba(6,5,10,.72);opacity:0;transition:opacity .2s}#r2-st.on{opacity:1}#r2-st[hidden]{display:none}'
-+'#r2-st .bx{position:relative;width:100%;max-width:520px;max-height:88vh;overflow:auto;background:#110e1a;border-top:3px solid #F2C21B;padding:22px 18px calc(22px + env(safe-area-inset-bottom));color:#f4f1fb;font-family:"Chakra Petch",system-ui,sans-serif;transform:translateY(24px);transition:transform .25s cubic-bezier(.2,.8,.2,1)}#r2-st.on .bx{transform:none}'
++'#r2-st .bx{position:relative;width:100%;max-width:520px;max-height:88vh;overflow:auto;background:#110e1a;border-top:3px solid #F2C21B;padding:22px 16px calc(22px + env(safe-area-inset-bottom));color:#f4f1fb;font-family:"Chakra Petch",system-ui,sans-serif;transform:translateY(24px);transition:transform .25s cubic-bezier(.2,.8,.2,1)}#r2-st.on .bx{transform:none}'
 +'#r2-st h3{margin:0 56px 4px 0;font:13px/1.4 "Press Start 2P",monospace;letter-spacing:.12em;color:#F2C21B}#r2-st p.s{margin:0 56px 16px 0;color:#a79fbd;font-size:14px}'
 +'#r2-st .x{position:absolute;right:14px;top:14px;width:44px;height:44px;border:1px solid rgba(244,241,251,.3);background:transparent;color:#f4f1fb;font-size:16px;cursor:pointer}'
-+'#r2-st .tr{position:relative;margin-top:10px;padding:14px 14px 14px 16px;background:rgba(244,241,251,.04);border:1px solid rgba(244,241,251,.1);border-left:3px solid var(--t)}'
-+'#r2-st .tr .hd{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px}'
-+'#r2-st .tr .nm{font:10px/1.4 "Press Start 2P",monospace;letter-spacing:.1em;color:var(--t)}#r2-st .tr .rm{font-size:13px;font-weight:600}'
-+'#r2-st .ch{display:flex;flex-wrap:wrap;gap:6px}#r2-st .ch span{padding:5px 9px;font-size:13px;font-weight:600;background:rgba(244,241,251,.07);border:1px solid rgba(244,241,251,.14);color:#e9e5f3}'
-+'#r2-st .ch span.up{background:color-mix(in srgb,var(--t) 22%,transparent);border-color:color-mix(in srgb,var(--t) 60%,transparent);color:#fff}'
-+'#r2-st .lg{margin-top:12px;font-size:12px;color:#8d87a0}#r2-st .lg i{display:inline-block;width:10px;height:10px;margin-right:6px;vertical-align:-1px;background:rgba(244,241,251,.25);border:1px solid rgba(244,241,251,.5)}';
++'#r2-st table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:14px}#r2-st th,#r2-st td{padding:11px 4px;text-align:center;border-bottom:1px solid rgba(244,241,251,.09)}'
++'#r2-st thead th{vertical-align:top;padding-bottom:10px;border-bottom:2px solid var(--t)}#r2-st thead th b{display:block;font:9px/1.5 "Press Start 2P",monospace;letter-spacing:.06em;color:var(--t)}#r2-st thead th small{display:block;margin-top:4px;font-size:11px;font-weight:600;line-height:1.35}'
++'#r2-st tbody th{text-align:left;font-weight:600;color:#d6d0e3;padding-left:2px}#r2-st col.f{width:31%}'
++'#r2-st td.y{color:#5BE37D;font-size:17px;font-weight:700}#r2-st td.n{color:#5d5870;font-size:16px}#r2-st td.t{font-size:12.5px;font-weight:700;color:#f4f1fb;line-height:1.3}';
 var st=document.createElement('style');st.textContent=CSS;document.head.appendChild(st);
-function nm(n,c){return '<span style="color:'+c+'">'+n+'</span>'}
-function tier(t,col,rooms,chips){return '<div class="tr" style="--t:'+col+'"><div class="hd"><span class="nm">'+t+'</span><span class="rm">'+rooms+'</span></div><div class="ch">'+chips.map(function(c){return c.charAt(0)==='+'?'<span class="up">'+c.slice(1)+'</span>':'<span>'+c+'</span>'}).join('')+'</div></div>'}
-var el=document.createElement('div');el.id='r2-st';el.hidden=true;el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','Streaming and extras in each room');
-el.innerHTML='<div class="bx"><button type="button" class="x" aria-label="Close">✕</button><h3>STREAMING</h3><p class="s">What’s On The Big Screen In Each Room</p>'
-+tier('NETFLIX ROOMS','#FF5A6E',nm('Vale','#E8436A')+' · '+nm('Kaeden','#4DB848')+' · '+nm('Scarlett','#F2C21B'),['PS4','Netflix','Prime Video'])
-+tier('DELUXE ROOMS','#B48CFF',nm('Kai','#24B49A')+' · '+nm('Bella','#7A5BE0')+' · '+nm('Atlas','#E9E7EF'),['+PS4 Pro','Netflix','Prime Video','+HBO Max','+Enhanced Audio'])
-+tier('VIP ROOM','#E0402F',nm('Maximillion','#E0402F'),['+PS4 Pro','Netflix','Prime Video','+HBO Max','+Home Theatre Audio','+Racing Sim'])
-+'<div class="lg"><i style="background:rgba(180,140,255,.25);border-color:rgba(180,140,255,.6)"></i>Upgrades Over The Netflix Rooms</div></div>';
+function c(n,col){return '<span style="color:'+col+'">'+n+'</span>'}
+var Y='<td class="y" aria-label="Yes">✓</td>',N='<td class="n" aria-label="No">–</td>';function T(x){return '<td class="t">'+x+'</td>'}
+var rows=[['Console',T('PS4'),T('PS4 Pro'),T('PS4 Pro')],['Netflix',Y,Y,Y],['Prime Video',Y,Y,Y],['HBO Max',N,Y,Y],['Audio',T('Standard'),T('Enhanced'),T('Home Theatre')],['Racing Sim',N,N,Y]];
+var el=document.createElement('div');el.id='r2-st';el.hidden=true;el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','What each room type has');
+el.innerHTML='<div class="bx"><button type="button" class="x" aria-label="Close">✕</button><h3>STREAMING</h3><p class="s">What’s In Each Room</p>'
++'<table><colgroup><col class="f"><col><col><col></colgroup><thead><tr><th></th>'
++'<th style="--t:#FF5A6E"><b>NETFLIX</b><small>'+c('Vale','#E8436A')+'<br>'+c('Kaeden','#4DB848')+'<br>'+c('Scarlett','#F2C21B')+'</small></th>'
++'<th style="--t:#B48CFF"><b>DELUXE</b><small>'+c('Kai','#24B49A')+'<br>'+c('Bella','#7A5BE0')+'<br>'+c('Atlas','#E9E7EF')+'</small></th>'
++'<th style="--t:#E0402F"><b>VIP</b><small>'+c('Maximillion','#E0402F')+'</small></th></tr></thead><tbody>'
++rows.map(function(r){return '<tr><th scope="row">'+r[0]+'</th>'+r.slice(1).join('')+'</tr>'}).join('')+'</tbody></table></div>';
 var last=null;function close(){el.classList.remove('on');setTimeout(function(){el.hidden=true},200);if(last)try{last.focus()}catch(e){}}
 function open(t){last=t;document.body.appendChild(el);el.hidden=false;requestAnimationFrame(function(){el.classList.add('on')});el.querySelector('.x').focus()}
 el.addEventListener('click',function(e){if(e.target===el||e.target.closest('.x'))close()});
