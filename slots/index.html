@@ -672,7 +672,7 @@ h3.nm, .nm { color: var(--rc); }
         }
         inner += '<div class="room" style="--rc:' + R[1] + ';--ri:' + (uid == 10 || uid == 11 ? '#ffffff' : '#0b0914') + '"' + (info.list.length ? ' data-u="' + uid + '" role="button" tabindex="0" aria-label="' + esc(R[0] + ': ' + (txt ? lead + txt : 'early bird')) + '"' : '') + '><div><h3 class="nm">' + ic(CHARIC[uid]) + R[0] + '</h3><div class="ty">' + R[2] + '</div>' + ebChip(uid) + '</div><div>' +
           '<div class="track">' + lines + segs + '</div><div class="ticks">' + ticks + '</div>' +
-          (day3.length ? '<div class="free">' + lead + esc(txt) + '<br><span style="opacity:.8">from ' + money(from) + '</span></div><div class="btns"><button class="pickb" type="button" data-u="' + uid + '">Choose a time ›</button>' + photoBtn(uid) + '</div>'
+          (day3.length ? '<div class="free">' + lead + esc(txt) + '<br><span style="opacity:.85;text-transform:uppercase;letter-spacing:.06em;font-size:12px">from ' + money(from) + '</span></div><div class="btns"><button class="pickb" type="button" data-u="' + uid + '">Choose a time ›</button>' + photoBtn(uid) + '</div>'
             : info.list.length ? '<div class="free">Only the early bird is free</div><div class="btns">' + photoBtn(uid) + '</div>' : '<div class="free no">Fully booked</div>') + '</div></div>';
       });
       /* review 20 Nov: a whole tier with nothing free folds into one line */
