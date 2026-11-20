@@ -3488,7 +3488,7 @@ async function pushRetry(env, hb0) {
 /* a read-only staff question left in the engine's KV (HOLDS › diag:req, JSON form fields) is answered within 5 minutes into
    diag:res – for when the browser link to the owner's computer is down (6 Nov). Only reading actions; only someone with
    Cloudflare access to this account can write the KV. */
-const DIAG_OK = ['mirror', 'cronnet', 'noise', 'paxof', 'tvmsgs', 'alerts', 'pushsubs', 'tvlog', 'guestlook', 'list', 'auto', 'insess', 'holdsday', 'acks', 'latelist', 'paytimes', 'prinfo', 'queue', 'links', 'ps4list'];   /* ps4list (16 Nov): each PS4's last check-in, read only */
+const DIAG_OK = ['mirror', 'cronnet', 'noise', 'paxof', 'tvmsgs', 'alerts', 'pushsubs', 'tvlog', 'guestlook', 'list', 'auto', 'insess', 'holdsday', 'acks', 'latelist', 'paytimes', 'prinfo', 'queue', 'links', 'ps4list', 'widget'];   /* ps4list (16 Nov): each PS4's last check-in, read only · widget (20 Nov): what the phone widgets get */
 async function diagReq(env) {
   if (!env.HOLDS) return;
   const q = await env.HOLDS.get('diag:req', 'json').catch(() => null); if (!q) return;
@@ -3496,6 +3496,7 @@ async function diagReq(env) {
   const reqs = Array.isArray(q) ? q.slice(0, 5) : [q], out = [];
   for (const f of reqs) {
     if (!DIAG_OK.includes(String(f.action))) { out.push({ q: f, error: 'not a reading action' }); continue; }
+    if (f.action === 'widget') { const k = await book(env).kvGet('wkey'); const r = k ? await widgetApi(env, new URL(WIDGET_URL + '?k=' + k)) : null; out.push({ q: f, r: r ? await r.json() : { error: 'no widget key yet' } }); continue; }
     if (f.action === 'mirror') { if (f.do !== 'adopt') f.do = 'status'; delete f.fix; delete f.bid; }   /* the twin-block log, or the check the System check runs – never on/off/run/fix */
     if (f.action !== 'noise') delete f.sync;   /* read only – except bringing the noise blocks up to date, which the timer does anyway */
     const r = await gm(env, new Request('https://engine/gm', { method: 'POST', body: new URLSearchParams(Object.assign({}, f, { staff: env.GM_STAFF })) }));
@@ -5120,10 +5121,32 @@ async function widgetSnap(env, hb) {
   const prev = ms ? null : await hb.kvGet('wsum');
   await hb.kvSet('wsum', { t: Date.now(), night: t, d0, ss, ms: ms || (prev && prev.ms) || [] });
 }
+/* today's bookings and money (from the "New booking" alerts the phones already get – each says paid / NOT PAID / price) and
+   the health light's inputs. Shop day: from 7am. Runs in the side timer every 10 min (kv wday). */
+async function widgetDay(env, hb) {
+  const now = Date.now(), t = sgDay(now - SHADOW_TILL * 60e3), d0 = sgMs0(t + ' 00:00') + SHADOW_TILL * 60e3, cal = sgDay(now);
+  const o = await hb.kvMany(['alog', 'human', 'cronNet', 'sbn:' + cal], []);
+  const seen = new Set(), made = [], gone = new Set();
+  for (const x of o.alog || []) {   /* newest first */
+    const c = x.ctx || {}; if (x.kind !== 'booking' || c.type !== 'booking' || c.preview || x.t < d0 || !c.bid) continue;
+    if (c.change === 'cancel') { gone.add(c.bid); continue; }
+    if (c.change !== 'create' && c.change !== 'new') continue;
+    if (seen.has(c.bid)) continue; seen.add(c.bid);
+    const m = String(c.money || ''), v = +((m.match(/S\$([\d.]+)/) || [])[1] || 0);
+    made.push({ bid: c.bid, t: x.t, r: String(c.room || '').replace(/^Maximillion$/, 'Max'), s: +c.s || 0, h: +c.hours || 0, n: String(c.name || '').slice(0, 18), v, p: /\bpaid\b/.test(m) && !/NOT PAID/.test(m) ? 1 : /NOT PAID/.test(m) ? -1 : 0 });
+  }
+  const live = made.filter((x) => !gone.has(String(x.bid)));
+  const money = { n: live.length, cx: gone.size, paid: 0, unpaid: 0, nUnpaid: 0, list: 0, last: live[0] || null };
+  for (const x of live) { if (x.p === 1) money.paid += x.v; else if (x.p === -1) { money.unpaid += x.v; money.nUnpaid++; } else money.list += x.v; }
+  const human = (o.human || []).filter((x) => !x.sorted && x.t > now - 3 * 86400e3);
+  const lanes = {}; for (const k of ['now', 'side', 'sweep']) { const L = ((o.cronNet || {}).lanes || {})[k]; lanes[k] = L && L.last ? L.last.t : 0; }
+  await hb.kvSet('wday', { t: now, day: t, money, human: human.slice(0, 5).map((x) => ({ t: x.t, ti: String(x.title || '').slice(0, 60) })), nHuman: human.length, lanes, sb: +o['sbn:' + cal] || 0 });
+  return { n: live.length };
+}
 async function widgetApi(env, u) {
   const k = String(u.searchParams.get('k') || '');
   if (k.length < 16) return J({ error: 'no key' }, 403);
-  const o = await book(env).kvMany(['wkey', 'wsum', 'wtv', 'wps4'], []);
+  const o = await book(env).kvMany(['wkey', 'wsum', 'wtv', 'wps4', 'wday'], []);
   if (!o.wkey || o.wkey !== k) return J({ error: 'wrong key' }, 403);
   const now = Date.now(), W = o.wsum || { ss: [] }; W.ss = (W.ss || []).sort((a, b) => a.s - b.s); const d0 = W.d0 || 0, d1 = d0 + 86400e3, tv = (o.wtv && o.wtv.r) || {};
   const rooms = [], warn = [];
@@ -5155,7 +5178,24 @@ async function widgetApi(env, u) {
   const events = [];
   for (const x of W.ss) { if (x.s > now && x.s < d1) events.push({ r: ROOMS[x.u][0], at: x.s, t: 'in', n: x.n }); if (x.e > now && x.s < d1) events.push({ r: ROOMS[x.u][0], at: x.e, t: 'out', n: x.n }); }
   events.sort((a, b) => a.at - b.at);
-  return J({ ok: true, now, night: W.night, counts, rooms, warn, events: events.slice(0, 16),
+  /* (4) tomorrow – once tonight is over: nobody in or cleaning and nothing more to come before 7am (late-night bookings
+     count as tonight, so this waits for the last of them) */
+  const busy = W.ss.some((x) => x.c > now && x.s < d1), T = W.ss.filter((x) => x.s >= d1 && x.s < d1 + 86400e3);
+  const tomorrow = { over: !busy, n: T.length, first: T[0] ? { r: ROOMS[T[0].u][0], at: T[0].s, n: T[0].n } : null,
+    rooms: [...new Set(T.map((x) => ROOMS[x.u][0]))], last: T.length ? Math.max(...T.map((x) => x.e)) : 0, list: T.slice(0, 10).map((x) => ({ r: ROOMS[x.u][0], at: x.s, e: x.e, n: x.n })) };
+  /* (3) money today and (5) the health light */
+  const D = o.wday && o.wday.day === W.night ? o.wday : null, health = [];
+  if (D) {
+    if (D.sb > 9000) health.push({ lv: 2, t: 'SimplyBook ' + D.sb + ' requests today (stop ~10,000)' }); else if (D.sb > 5000) health.push({ lv: 1, t: 'SimplyBook ' + D.sb + ' requests today (over 5,000)' });
+    for (const k of ['now', 'side', 'sweep']) if (D.lanes && D.lanes[k] && now - D.lanes[k] > (k === 'sweep' ? 30 : 15) * 60e3) health.push({ lv: 2, t: 'Timer "' + k + '" quiet ' + Math.round((now - D.lanes[k]) / 60e3) + ' min' });
+    for (const x of D.human || []) health.push({ lv: 2, t: x.ti });
+    if (now - D.t > 25 * 60e3) health.push({ lv: 1, t: 'Money/health copy ' + Math.round((now - D.t) / 60e3) + ' min old' });
+  }
+  if (age > 25) health.push({ lv: 1, t: 'Board copy ' + age + ' min old' });
+  for (const r of rooms) if (r.tv && r.tv.quiet && r.st !== 'closed') health.push({ lv: r.st === 'in' ? 2 : 1, t: r.r + ' TV not reporting' });
+  const lv = health.reduce((a, x) => Math.max(a, x.lv), 0);
+  return J({ ok: true, now, night: W.night, counts, rooms, warn, events: events.slice(0, 16), tomorrow,
+    money: D ? Object.assign({ t: D.t }, D.money) : null, health: { lv, list: health.sort((a, b) => b.lv - a.lv).slice(0, 6), sb: D ? D.sb : null, toSort: D ? D.nHuman : 0 },
     nextStart: nextStart && { r: ROOMS[nextStart.u][0], at: nextStart.s, n: nextStart.n }, nextEnd: ends && { r: ROOMS[ends.u][0], at: ends.e, n: ends.n }, age });
 }
 const HANDLER = {
@@ -5190,6 +5230,9 @@ const HANDLER = {
       if (env.TV_KEY && mm % 10 === 1) { const R7 = ['vale', 'kaeden', 'scarlett', 'bella', 'kai', 'atlas', 'max'];   /* phone widgets: each TV's last check-in (20 Nov) */
         go(Promise.all(R7.map((r) => fetch(FB_BASE + env.TV_KEY + '/' + r + '/helper.json').then((x) => x.json()).catch(() => null)))
           .then((H) => hb.kvSet('wtv', { t: Date.now(), r: Object.fromEntries(R7.map((r, i) => [r, H[i] ? { t: +H[i].t || 0, pw: H[i].pw || '', tv: H[i].tv || '', f: String(H[i].front || '').slice(0, 60), fa: +H[i].frontAt || 0 } : null])) })).catch(() => null)); }
+      /* phone widgets: today's bookings and money, and the health light (owner, 20 Nov: "add 3, 4, 5, 6") – one storage read
+         of what the engine already keeps (the alert log, "needs a human", timer records, SimplyBook count), one write */
+      if (mm % 10 === 1) go(widgetDay(env, hb).catch(() => null));
       /* phone widgets: each PS4's game right now (20 Nov) – two storage calls, no outside requests */
       go((async () => { const m = (await hb.kvGet('ps4map')) || {}, ids = Object.keys(m); if (!ids.length) return;
         const P = await hb.kvMany(ids.map((id) => 'ps4:' + id), []), r = {};
