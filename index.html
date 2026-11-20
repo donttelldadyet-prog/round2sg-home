@@ -1147,7 +1147,7 @@ var q=0;new MutationObserver(function(){if(q)return;q=1;requestAnimationFrame(fu
 var st=document.createElement('style');st.textContent=CSS;document.head.appendChild(st);
 function c(n,col){return '<span style="color:'+col+'">'+n+'</span>'}
 var Y='<td class="y" aria-label="Yes">✓</td>',O='<td class="y" aria-label="Yes, sign in with your own account">✓<sup>*</sup></td>',N='<td class="n" aria-label="No">–</td>';function T(x){return '<td class="t">'+x+'</td>'}
-var rows=[['Console',T('PS4'),T('PS4 Pro'),T('PS4 Pro')],['Netflix',Y,Y,Y],['Prime Video',Y,Y,Y],['HBO Max',N,Y,Y],['Other apps<sup>*</sup>',Y,Y,Y],['Audio',T('Standard'),T('Enhanced'),T('Home Theatre')],['Racing Sim',N,N,Y]];
+var rows=[['Console',T('PS4'),T('PS4 Pro'),T('PS4 Pro')],['Netflix',Y,Y,Y],['Prime Video',Y,Y,Y],['HBO Max',N,Y,Y],['Other Apps<sup>*</sup>',Y,Y,Y],['Audio',T('Standard'),T('Enhanced'),T('Home Theatre')],['Racing Sim',N,N,Y]];
 var el=document.createElement('div');el.id='r2-st';el.hidden=true;el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','What each room type has');
 el.innerHTML='<div class="bx"><button type="button" class="x" aria-label="Close">✕</button><h3>STREAMING</h3><p class="s">What’s In Each Room</p>'
 +'<table><colgroup><col class="f"><col><col><col></colgroup><thead><tr><th></th>'
