@@ -279,6 +279,14 @@
     rename sends a del of the old name first), Take off the PS4s, Delete from this list; plan saved in kv pkgfold (Halloween/
     Kaeden entered). Light check after: same old items.
   - 18:36 owner: Halloween folder shows on all profiles after re-login ✅. "PKG server UI – both, same look":
+    **Helper 1.1.147 on Kaeden (19:56, owner OK 19:50)** – owner: "why doesn't the patch follow immediately". Cause: the engine
+    only learns a PKG job finished from the helper's FULL report (every 15 min, REPORT_EVERY) or the report after a look job, and
+    hands out the next job on minutes divisible by 3. Patapon 3 game finished 19:42:43 on the PS4, engine saw it 19:52 (my look).
+    Fix: pkg_tick sets g_pkg_rep when a download finishes/fails; the main loop then reports straight away ("pkg: told Round2
+    straight away"). Next job now 1-3 min after the last. Other rooms get it with the next helper release. Patapon 3 game 01.00 +
+    patch 01.03 installed on Kaeden (patch OK 19:52). Light check after: 16 passed · 4 to look at · 0 failed.
+    Note: don't restart/update a helper while a PKG job is "running" in the engine – after a restart pkg_last is empty and the
+    engine marks the job "failed – the PS4 restarted during it" after 10 min (that's what happened to Get Famous at 11:51).
     **Control centre PS4 games rebuilt (7deb5e2, 21 Nov 19:35)** – owner: "the ui is horrible", picked **Room first**. Tabs inside
     the page: **Rooms** (room chips with on/off dot + game count; room header FW / games / GB free; each game row shows ✓ /
     "update x" / "not on laptop" / ⏳ queued; tap a row → Update · Remove patch · Remove game · Cancel queued job; "+ Add games" =
