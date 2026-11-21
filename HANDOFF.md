@@ -222,6 +222,13 @@
     BUS/ILL/FPE logged with fault address, code offset from on_crash, thread (main/fg/other), last step. build.sh keeps
     out/round2d.sym.elf (unstripped) – copy kept in /home/claude/symbols/round2d-1.1.140.sym.elf; map with
     `nm` (address of on_crash + offset).
+  - **13:56 owner restarted Kaeden** (helper started twice 13:56:06/13:56:33 – 2nd "it had stopped", no signal logged). After it MK11
+    works on main AND Test Member (no replays) → the 13:39 helper crash left the PS4 stuck; replays not needed to start MK11.
+    BUT owner 14:02: on Test Member "Local fight" asked "first time – tutorial?". test-member MK11PSET versions: 19 Nov 20:14/20:32/
+    20:57 (originals), 21 Nov 13:21 (resend), 13:40 (written during the crash session), 13:44; index now points at 1795239882
+    (13:44) and lists ONLY MK11GSET + MK11PSET (the replay rows are gone from the index). Next: memidxset MK11PSET → 1795093062
+    (19 Nov original) and reload to see if the prompt came from the crash-session rewrite.
+    **14:04 Kaeden → helper 1.1.140** (switch #1 since the 13:56 restart).
   - Light check 11:23 (before): 15 passed, 3 to look at, 2 failed – both OLD: side timer 52 outside requests in one run; "PS4 games
     queue: bad file link NOT refused" = engine pkgsend counts n++ (jid) before validation and writes W back unchanged → answers
     {ok, queued:1} though nothing is queued (checked: nothing queued). Fix next engine deploy: count only pushed jobs, error if 0.
