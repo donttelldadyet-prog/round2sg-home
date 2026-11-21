@@ -187,6 +187,9 @@
     into profile 0.3–0.5 s; Sims 1.2–1.3 s. Command pickup without the tile open was ~55–60 s (PS4 polls slowly when the tile is
     closed); with the tile open it's seconds. Karen's profile now holds her saves (cloud versions 1795117573/…577/1795202258/…264/…268).
     TODO: clean slate should delete the leftover sce_bu row too (1.1.138 copes with it anyway).
+  - 12:49 PKG server 1.3 confirmed running (pkglap v 1.3, owner restarted it before lunch). Get Together re-queued (pxhyxu02z),
+    sent 12:51:58, running; the server page (built-in browser can open http://localhost:8890/ on the laptop) showed "Sending now:
+    Kaeden · Get Together · 192 MB of 1.67 GB · 11% · 1.4 MB/s", sent 192 MB (unique bytes) ✅.
   - Light check 11:23 (before): 15 passed, 3 to look at, 2 failed – both OLD: side timer 52 outside requests in one run; "PS4 games
     queue: bad file link NOT refused" = engine pkgsend counts n++ (jid) before validation and writes W back unchanged → answers
     {ok, queued:1} though nothing is queued (checked: nothing queued). Fix next engine deploy: count only pushed jobs, error if 0.
