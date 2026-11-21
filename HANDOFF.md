@@ -211,6 +211,17 @@
     z lists sent OK 13:29/13:30. Light check before/after: same 15/3/2 (old failures).
     Karen's/Aliff's saves NOT converted (no /_resend on real members). Get Famous shows "failed – PS4 restarted" in the engine but
     the helper log says FINISHED 11:47:44 (engine marked it failed at the 11:51 switch before the finish report) – it's installed.
+  - **13:40–13:47 MK11 problem (owner testing on Kaeden):** Test Member → MK11 **CE-34878-0** (game crash) after ~1 min (it wrote
+    MK11PSET first; the changed save went to test-member's cloud folder 13:40:37). Then on the MAIN profile MK11 **froze on launch
+    with music**. Helper log: **1.1.139 "stopped by signal 11" at 13:39:04** as MK11 started (starter relaunched it 13:39:09;
+    stale step label "job helper update since 11:03:58" = the crash was in code that sets no label – a side thread or the loop).
+    Fingerprints of every loaded file matched, so zero-skip didn't change the data. Open: was it the missing MK11 replays or the
+    helper crash leaving ScePartyDaemon (shared payload host, games use it) stuck? Owner asked to restart Kaeden fully, then MK11
+    on main → then Test Member.
+    **Helper 1.1.140** (ps4-test 0bf005d0…, NOT on Kaeden yet – install right after the restart, before the MK11 test): SIGSEGV/
+    BUS/ILL/FPE logged with fault address, code offset from on_crash, thread (main/fg/other), last step. build.sh keeps
+    out/round2d.sym.elf (unstripped) – copy kept in /home/claude/symbols/round2d-1.1.140.sym.elf; map with
+    `nm` (address of on_crash + offset).
   - Light check 11:23 (before): 15 passed, 3 to look at, 2 failed – both OLD: side timer 52 outside requests in one run; "PS4 games
     queue: bad file link NOT refused" = engine pkgsend counts n++ (jid) before validation and writes W back unchanged → answers
     {ok, queued:1} though nothing is queued (checked: nothing queued). Fix next engine deploy: count only pushed jobs, error if 0.
