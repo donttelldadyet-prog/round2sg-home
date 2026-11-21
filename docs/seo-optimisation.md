@@ -128,4 +128,4 @@ Round2's edge (use in Business Profile, socials and pitches): personal messages 
 - Brand searches strong: "round 2" 1,041 clicks (pos 2.6), "round 2 haji lane" 303 (pos 1.3), "round2" 439.
 - Generic searches weak: "private room singapore" pos 13, "private movie room singapore" pos 18, "netflix room singapore" pos 7.5, "bugis private room" pos 7.
 - Google Business Profile link brought 312 clicks.
-- Rich Results Test 21 Nov 2026 4:18pm: 4 valid items (2 Local business – ours plus one Wix adds itself; 2 Organization); non-critical warnings only.
+- Rich Results Test 21 Nov 2026 4:18pm: 4 valid items (2 Local business – ours plus, most likely, one Wix adds from its Business Info – not confirmed; 2 Organization); non-critical warnings only.
