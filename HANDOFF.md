@@ -279,6 +279,10 @@
     rename sends a del of the old name first), Take off the PS4s, Delete from this list; plan saved in kv pkgfold (Halloween/
     Kaeden entered). Light check after: same old items.
   - 18:36 owner: Halloween folder shows on all profiles after re-login ✅. "PKG server UI – both, same look":
+    **PKG server 1.5** (21 Nov 19:15, copied to the laptop, needs a server restart): owner said the browser kept showing a cached
+    copy. Now the page opens in its own app window (Edge --app, else Chrome; own profile in %LOCALAPPDATA%\Round2PKG\window,
+    new ?t= address each time, small disk cache) instead of a browser tab. "Open Round2 PKG window.bat" (= ps1 -WindowOnly)
+    reopens it. The page reloads itself when the server comes back after a restart. Server already sent Cache-Control: no-store.
     **PKG server 1.4** (laptop, restarted by owner 18:42): page from pkg-page.html (Round2 look): Sending now bars, Finished list,
     Activity (last log lines, /api/live every 2 s), Folders, files per game; pushes `dl` to the engine with the list (control
     centre "Installing now"). Laptop pushes had stopped at 15:14 (window closed / laptop asleep) – fine again 18:52.
