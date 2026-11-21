@@ -171,6 +171,22 @@
     clean slate (reset staff) on 1.1.137: OK · 7 games, 0 failed, 16 removed, 16 copied 71 MB · "spares signed out by the menu
     add-on", no RAW sign-out logged ✅ (shell12 stayed loaded across the helper switch). Light check after = same as before.
     Next: owner restarts the PKG server window (1.3) → re-queue Get Together; owner loads Karen bozz's GTA for timing.
+  - **12:07 owner's load of Karen (1.1.137): GTA FAILED** "make part sce_bu_sce_sdmemory: save list row not added (rc 0, 1->2)" –
+    the save list kept a row for GTA's sce_bu backup part after the clean slate (deleting sce_sdmemory removes the sce_bu FILES too
+    – "5 files removed" – but the sce_bu ROW stays; seen again 12:38: "game now has 1 [sce_bu_sce_sdmemory]"). The "could not be
+    made" exit also left 4 EMPTY GTA parts. Sims ok 1.3 s. noup guard was set ✅.
+  - **Helper 1.1.138** (ps4-test, Kaeden 12:09, switch #3 since the 2:27am restart): sv_db_add replaces a stale row (only called
+    when the part's image+key don't exist; log "had a row but no files - old row replaced"); the "part(s) could not be made" exit
+    takes back the parts it made (like a failed restore).
+  - **12:32–12:40 automated tests (owner out eating, asked "automate these tests"), via staff /_memload.16c45cc7.m7xbafbe3.p1.Karen_bozz
+    (the phone's /_memplay needs the tile in front, so not used):**
+    1. over the failed state (4 empty parts): backup of what was there 1 s, stale row replaced, 5 GTA parts + Sims in – 7 s, 0 failed.
+    2. over the full profile: sce_bu "already on the disk – using it" – 7 s, 0 failed.
+    3. clean slate (2 s, add-on sign-out, 5 parts removed, sce_bu row left again) → fresh load: stale row replaced – 8 s, 0 failed.
+    Per game: GTA 4.0–5.1 s = cloud download 2.5–2.7 s (prefetch 3.7 MB in 2 bundle requests ≈ 1.4 MB/s) + making parts 0–1.9 s +
+    into profile 0.3–0.5 s; Sims 1.2–1.3 s. Command pickup without the tile open was ~55–60 s (PS4 polls slowly when the tile is
+    closed); with the tile open it's seconds. Karen's profile now holds her saves (cloud versions 1795117573/…577/1795202258/…264/…268).
+    TODO: clean slate should delete the leftover sce_bu row too (1.1.138 copes with it anyway).
   - Light check 11:23 (before): 15 passed, 3 to look at, 2 failed – both OLD: side timer 52 outside requests in one run; "PS4 games
     queue: bad file link NOT refused" = engine pkgsend counts n++ (jid) before validation and writes W back unchanged → answers
     {ok, queued:1} though nothing is queued (checked: nothing queued). Fix next engine deploy: count only pushed jobs, error if 0.
