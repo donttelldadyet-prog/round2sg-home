@@ -142,6 +142,13 @@
   (clean kind prep or a queue) – anyone who signs in gets a PS4 message "Hang on <name> – saves are still loading (player k of n).
   Please don't start a game yet." (normal notification, not verbose-only).
   The broader ShellUI probe ("log everything") was NOT continued – stopped there; only the 4:26am list exists.
+- **21 Nov 10:56–11:05am – owner asked what "Clean up" (PS4 downloads) does now: it deletes every /user/download/<title> except PS
+  Vue → would have killed the running Sims DLC download. Fix in 1.1.136: keeps the folder of a running PKG job (pkg-job). Owner:
+  "send 1.1.136 now" → helper 1.1.136 (ps4-test 1ec4d23) + round2_shell12 (ps4-shell 6603c55) on Kaeden 11:03; shell12 auto-loaded
+  11:04:29 ✅. Covers manual + automatic clean slates (same reset_go/reset_profiles) – Kaeden only (add-on), NOT tested yet.
+  Sims at 11:05: 32 DLC done, 3 left. Owner asked why the 1:12am save didn't load → helper out of memory (in-memory downloads of
+  32 MB memory.dat files cut at ~8 MB in a helper with 11 updates + hours of uptime + BGFT). Fixes offered: stream save downloads
+  to a file (like the tile/helper update) + after a failed load untag that game so a fresh save can't overwrite the member's.
 - **21 Nov 2:22–2:35am – owner: "clean slate kaeden now and restore karen's progressed gta save to her folder" + "prepare to probe why
   clean slates and logout don't use the shell UI's function instead of the raw logout – it blocks the controller".**
   - Found: **2:00:58–2:01:05 the cloud batch REPLACED Karen's p1 GTA SAVEDATAPROFILE + sce_sdmemory + sce_bu_sce_sdmemory** with the
