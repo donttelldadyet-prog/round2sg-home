@@ -229,6 +229,14 @@
     (13:44) and lists ONLY MK11GSET + MK11PSET (the replay rows are gone from the index). Next: memidxset MK11PSET → 1795093062
     (19 Nov original) and reload to see if the prompt came from the crash-session rewrite.
     **14:04 Kaeden → helper 1.1.140** (switch #1 since the 13:56 restart).
+  - **14:51 owner: "isn't own-program already implemented? did you roll back?"** – YES it is (since 17 Nov, auto-promote at the
+    first report, 13.50 included since 1.1.83); my "not built" claim was WRONG, nothing rolled back. Kaeden's real state:
+    own-spawn.log **13:56:31 selfown: copy is program 71 … 13:56:46 the copy is gone** → own copy died within 15 s after the
+    restart → Kaeden runs SHARED (own:0 pid 45); the 14:04 update was shared→shared (sleeper). promote-try marker = 1 try/hour.
+    The 13:39 signal 11 was very likely the own copy too. Next (after owner's MK11 test): `/_selfown` on 1.1.140 and read
+    helper-stopped.txt for the CRASH line (map offset with /home/claude/symbols/round2d-1.1.140.sym.elf).
+    14:52 memidxset test-member MK11PSET → 1795093062 (19 Nov original; was 1795240995) + reload 7 s, 3 games OK; owner to
+    check Local Fight on Test Member.
   - Light check 11:23 (before): 15 passed, 3 to look at, 2 failed – both OLD: side timer 52 outside requests in one run; "PS4 games
     queue: bad file link NOT refused" = engine pkgsend counts n++ (jid) before validation and writes W back unchanged → answers
     {ok, queued:1} though nothing is queued (checked: nothing queued). Fix next engine deploy: count only pushed jobs, error if 0.
