@@ -25,16 +25,18 @@ Goal: more people find Round2 on Google, Google Maps, AI answers (ChatGPT, Googl
 
 | # | Direction | Status | Visible to visitors? |
 |---|---|---|---|
-| 1 | Business details code (structured data) on the homepage – draft below | **Approved in principle – next** | No |
+| 1 | Business details code (structured data) on the homepage – draft below | **DONE 21 Nov 2026** (published to the homepage only, via Wix SEO API; hours 11am–11pm confirmed by owner) | No |
 | 2 | Review QR on the TV "That's a wrap" screen → Google review | Suggested – owner considering | Only on room TVs |
 | 3 | Google Business Profile: photos per room, weekly posts, rooms + prices as products/services, booking link | Suggested | No (Google Maps only) |
 | 4 | Make the game homescreen itself readable by Google (serve it as round2.sg's real page, not in a frame; per-room addresses with their own titles) | Suggested – owner to discuss with co-owner; biggest win, biggest change (site edited in code, not the Wix editor) | No change in look |
 | 5 | Features & listings: TheSmartLocal "private rooms in Singapore" list (updated 20 Oct 2026 – Round2 missing), Time Out, Little Steps, Vulcan Post; Tagvenue, Venuerific | Suggested | No |
 | 6 | Video / social search: TikTok, Instagram Reels, Lemon8 – TV messages, racing sim, room reveals, tagged Haji Lane / Bugis, linking round2.sg | Suggested | No |
 | 7 | Blog at round2.sg/blog – only if styled in the Round2 look (dark, pixel); drafts exist in the Claude doc "Round2 SEO content – first drafts" | On hold | Only at /blog |
-| 8 | Google Search Console: submit sitemap, watch which searches show Round2 | Suggested | No |
+| 8 | Google Search Console: submit sitemap, watch which searches show Round2 | **Already done** (connected + verified Aug 2025, sitemap read daily, 0 errors; homepage re-indexing requested 21 Nov 2026) | No |
 | 9 | Tidy: old duplicate homepage `/blank-4-3` (menu "home" link points there) → point menu at round2.sg | Suggested | Menu link only |
 | 10 | Image alt text on Wix images (honest descriptions: "Vale private movie room at Round2, Haji Lane") | Suggested | No |
+| 11 | Real search descriptions on /ps4gamelist, /boardgames, /cardgames (were the generic default) | **DONE 21 Nov 2026** | No |
+| 12 | Duplicates still listed by Google: old homepage /blank-4-3 (own title), /r2tnc (old T&C, generic), /blog-1 (second blog page, generic) – owner to decide: hide from Google or redirect | Suggested | No |
 
 Rejected / don't redo: text sections on room pages; SEO landing pages; hiding text; keyword lists in code.
 
@@ -58,7 +60,7 @@ Measured on the owner's computer, 31 Oct 2026:
   room address, QR code and booking flow → switch on a quiet morning; switching back takes minutes.
 - Status: owner and co-owner thinking about it.
 
-## 1 · Business details code – draft (check every fact with the owner before publishing)
+## 1 · Business details code – PUBLISHED 21 Nov 2026 (live version differs from the draft below: Deluxe "up to 4–5 people", "Board games and card games", no room names, no "public holidays")
 Where: Wix editor › homepage ("NEW HOME PAGE – MAIN") › Page settings › Advanced SEO › Structured data markup › add, paste, Publish.
 Keywords appear only as real descriptions (private movie room, gaming room, Bugis, Haji Lane, dates, birthdays).
 Prices = the booking engine's `PRICES` (worker/round2-book.js) on 31 Oct 2026 – update both together.
@@ -121,3 +123,8 @@ After publishing, test the live homepage with Google's Rich Results Test.
 
 Round2's edge (use in Business Profile, socials and pitches): personal messages on the room TV, racing simulator,
 7 themed character rooms, Haji Lane location, Early Bird from S$35.
+
+## Search Console snapshot (15 Aug – 19 Nov 2026, read 21 Nov)
+- Brand searches strong: "round 2" 1,041 clicks (pos 2.6), "round 2 haji lane" 303 (pos 1.3), "round2" 439.
+- Generic searches weak: "private room singapore" pos 13, "private movie room singapore" pos 18, "netflix room singapore" pos 7.5, "bugis private room" pos 7.
+- Google Business Profile link brought 312 clicks.
