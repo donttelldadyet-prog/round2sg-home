@@ -280,7 +280,7 @@
     Kaeden entered). Light check after: same old items.
   - 18:36 owner: Halloween folder shows on all profiles after re-login ✅. "PKG server UI – both, same look":
     **22 Nov 00:05 – tile profile cards (owner 23:54: "screen should showcase all of the profiles … greyed out … becomes colour …
-    Player 1 transforms into the member's profile … a static page seems hesitating")** – BUILT, NOT YET ON KAEDEN (needs owner OK):
+    Player 1 transforms into the member's profile … a static page seems hesitating")** – ON KAEDEN 00:31 (owner restarted it 00:28; helper 1.1.148 own switch 00:30, tile 0.12 via /_tile.now task 366):
     helper 1.1.148 (ps4-test 'test helper 1.1.148', sha fd1bf800…) keeps a load board g_mb_* (0 main, 1-4 spares in id order =
     Player 1-4; st u nothing to do · c being cleared · w waits for member · l loading · d loaded · f some failed; cur name, new
     name, member) – set in look_memplay (release pass + second pass), memplay_one, prep DONE; sent as report "board"
