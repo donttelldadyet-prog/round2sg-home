@@ -279,6 +279,11 @@
     rename sends a del of the old name first), Take off the PS4s, Delete from this list; plan saved in kv pkgfold (Halloween/
     Kaeden entered). Light check after: same old items.
   - 18:36 owner: Halloween folder shows on all profiles after re-login ✅. "PKG server UI – both, same look":
+    **22 Nov 01:14 – Kaeden clean slate for the owner's full-download speed test:** reset staff OK · 7 games, 16 parts removed,
+    16 copied (71 MB), member tags cleared (5 profiles). Owner also asked to "delete the saves in the hdd queued to the cloud":
+    the queue was empty before (waiting 0); the clean slate queued its 16 copies. Member loads never use the HDD copies (always
+    from the cloud), so instead of deleting (no command for it; would need a 4th helper switch) the CLOUD BATCH IS SWITCHED OFF
+    (/_cloud.off 01:14) so nothing uploads during the test. **Switch it back on after the test: /_cloud.on.**
     **22 Nov 00:58 – helper 1.1.150 on Kaeden (owner 00:53 "do for kaeden first"; 3rd own switch since the 00:28 restart – guard
     is 5, so restart Kaeden before the 2nd next one): SLIM RE-UPLOAD.** Owner asked to "learn" empty space per game; answer: no
     per-game rule needed – zero-skip already checks every 1 MB piece of every upload. Gap = saves uploaded BEFORE zero-skip stay
