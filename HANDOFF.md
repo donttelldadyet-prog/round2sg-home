@@ -309,6 +309,18 @@ phones) in this file or in design files.
     rename sends a del of the old name first), Take off the PS4s, Delete from this list; plan saved in kv pkgfold (Halloween/
     Kaeden entered). Light check after: same old items.
   - 18:36 owner: Halloween folder shows on all profiles after re-login ✅. "PKG server UI – both, same look":
+    **22 Nov 01:45 – DESIGN FILES for the design team (owner 01:30: "she already has access … put it there … make important rules
+    in the handoff clear for her claude"):** round2sg-home `design/` = rooms.json (7 rooms: name, colour, ink, art) + member.css
+    (the member page's look, 3 KB, was inline in memPage) + README.md. Engine (deployed 01:40, hash 30402fb8…, 27 bindings,
+    3 timers): designGet() reads raw.githubusercontent …/round2sg-home/<branch>/design/<file> (5 min cache main, 15 s preview),
+    memDesign() checks member.css (no </, <script, @import, javascript:, ≤ 60 KB) and rooms.json (#rrggbb only, known rooms) –
+    anything wrong = built-in MEM_CSS / MEM_ROOMS. /m?design=<branch> previews a branch. ps4Tile colours also come from
+    rooms.json. "READ FIRST" rules box at the top of this file + first bullet in CLAUDE.md. System check step "Design files"
+    (light-safe). Light check before 16/4/0, after 17/4/0. Next (phase 2): tile wording/timings from design/ (tile 0.14).
+    Also tonight: Kaeden speed test 01:18 – 3 players 7 games 88 s; Vampire Survivors save 32 MB of which 31 MB empty → slim
+    copies queued for Main + Aliff (cloud batch was off during the test; /_cloud.on sent 01:2x). Helper 1.1.151 (tile first on the
+    home screen, app.db lastAccessIndex bump after each load/clean slate, /_fold.pin) built + on ps4-test, NOT installed yet
+    (owner was in The Sims).
     **22 Nov 01:14 – Kaeden clean slate for the owner's full-download speed test:** reset staff OK · 7 games, 16 parts removed,
     16 copied (71 MB), member tags cleared (5 profiles). Owner also asked to "delete the saves in the hdd queued to the cloud":
     the queue was empty before (waiting 0); the clean slate queued its 16 copies. Member loads never use the HDD copies (always
