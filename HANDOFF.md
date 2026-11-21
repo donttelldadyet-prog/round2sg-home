@@ -237,6 +237,11 @@
     helper-stopped.txt for the CRASH line (map offset with /home/claude/symbols/round2d-1.1.140.sym.elf).
     14:52 memidxset test-member MK11PSET → 1795093062 (19 Nov original; was 1795240995) + reload 7 s, 3 games OK; owner to
     check Local Fight on Test Member.
+  - 14:58 owner: MK11 still "first time" with the 19 Nov original PSET → that save was fresh from the start; **replays left out =
+    fine**. own-spawn.log: 13:15 own copy 359 (1.1.139) ran until the 13:39 signal 11 (a real crash in the OWN copy);
+    13:56:31 own copy 71 "gone" in 15 s with NO signal line = race: the shared helper let go of the lock, the starter launched
+    another shared helper 13:56:33 first, the copy stepped aside (not a crash). 15:00 `/_selfown` on 1.1.140 → **own=1 pid 158**
+    (spawn 2 since the 13:56 restart). Asked owner to repeat 13:39 (Test Member, MK11 ×3 + another game) to catch the crash.
   - Light check 11:23 (before): 15 passed, 3 to look at, 2 failed – both OLD: side timer 52 outside requests in one run; "PS4 games
     queue: bad file link NOT refused" = engine pkgsend counts n++ (jid) before validation and writes W back unchanged → answers
     {ok, queued:1} though nothing is queued (checked: nothing queued). Fix next engine deploy: count only pushed jobs, error if 0.
