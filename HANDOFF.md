@@ -190,6 +190,27 @@
   - 12:49 PKG server 1.3 confirmed running (pkglap v 1.3, owner restarted it before lunch). Get Together re-queued (pxhyxu02z),
     sent 12:51:58, running; the server page (built-in browser can open http://localhost:8890/ on the laptop) showed "Sending now:
     Kaeden · Get Together · 192 MB of 1.67 GB · 11% · 1.4 MB/s", sent 192 MB (unique bytes) ✅.
+  - **13:02 owner: "don't assume the 32 MB moves 2 MB, implement 1 and 2, test on Kaeden: clean slate → download, and an overwrite".**
+    **Helper 1.1.139** (ps4-test 8ffd4b1c…, Kaeden 13:15 = switch #4 since the 2:27am restart → RESTART before the next helper update):
+    1. empty (all-zero) 1 MB pieces aren't sent: manifest column 5 `z<list>` (ranges), restore writes zeros itself, SHA-256 of the
+       whole file still checked; never for sce_sys/; deferred backups skip the same pieces (defer_up_dir reads the part manifest).
+       **OFF unless `/_zeroskip.on`** (flag /data/round2/zeroskip-on) – helpers < 1.1.139 can't load such saves ("piece missing").
+       **Kaeden: ON.** Saves uploaded from Kaeden with it can only be loaded in rooms on 1.1.139+.
+    2. replays/highlights (MK11 RecentRecording*, MvC Infinite Replay, F1 24 highlights*/ghosts) never in member saves: member load
+       leaves them out of the index list; copies/cloud batch send them to the room backup only.
+    Also: `/_resend.<user>.<game>` (send each part once more even if unchanged; marker PREPD/<u>/<t>/resend.txt lists parts done),
+    make-part reads the whole manifest (was cut at 16 KB), backup log shows empty KB.
+    **Tests with test-member/main (MK11 12 parts incl. 10 replays, It Takes Two, Cuphead 8 MB) into 16c45cc9:**
+    | | MK11 | It Takes Two | Cuphead | total |
+    |---|---|---|---|---|
+    | A before (1.1.138, clean profile) 13:12 | 12.1 s (dl 5.7, making 4.5) | 1.3 s | 6.0 s (dl 5.2) | 19 s |
+    | C after clean slate (1.1.139) 13:25 | 3.8 s (2 parts, 10 replays left out) | 1.5 s | 2.7 s (dl 1.6) | 8 s |
+    | D overwrite (1.1.139) 13:28 | 3.7 s | 0.8 s | 2.7 s (dl 1.4) | 7 s |
+    Upload (cloud batch after /_resend + clean slate 13:19): Cuphead 8 MB → **7,168 KB empty not sent** (1 MB sent, 3.3 s);
+    MK11PSET 4.3 MB → 1,024 KB empty; replays → room backup path; restore wrote the zeros + fingerprint OK. Deferred backups with
+    z lists sent OK 13:29/13:30. Light check before/after: same 15/3/2 (old failures).
+    Karen's/Aliff's saves NOT converted (no /_resend on real members). Get Famous shows "failed – PS4 restarted" in the engine but
+    the helper log says FINISHED 11:47:44 (engine marked it failed at the 11:51 switch before the finish report) – it's installed.
   - Light check 11:23 (before): 15 passed, 3 to look at, 2 failed – both OLD: side timer 52 outside requests in one run; "PS4 games
     queue: bad file link NOT refused" = engine pkgsend counts n++ (jid) before validation and writes W back unchanged → answers
     {ok, queued:1} though nothing is queued (checked: nothing queued). Fix next engine deploy: count only pushed jobs, error if 0.
