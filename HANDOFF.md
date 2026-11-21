@@ -167,6 +167,10 @@
     X of Y (%) - MB/s - about N left - k connections", "<room> finished <file>: size in T (MB/s average)", "stopped at X% – nothing
     asked for 10 min". "sent" = unique bytes. Room names from pkg-rooms.txt (IPs from ps4list 21 Nov: vale .11, max .23, scarlett
     .4, kai .18, kaeden .5, atlas 192.168.120.3, bella 192.168.120.2 – DHCP may move them). Page: "Sending now" table, refresh 5 s.
+  - **11:51 Kaeden → 1.1.137** (Get Famous FINISHED 11:47:44, 2565 MB at 3.7 MB/s, user 16c45cc7 = Karen; queue empty). 11:54 owner's
+    clean slate (reset staff) on 1.1.137: OK · 7 games, 0 failed, 16 removed, 16 copied 71 MB · "spares signed out by the menu
+    add-on", no RAW sign-out logged ✅ (shell12 stayed loaded across the helper switch). Light check after = same as before.
+    Next: owner restarts the PKG server window (1.3) → re-queue Get Together; owner loads Karen bozz's GTA for timing.
   - Light check 11:23 (before): 15 passed, 3 to look at, 2 failed – both OLD: side timer 52 outside requests in one run; "PS4 games
     queue: bad file link NOT refused" = engine pkgsend counts n++ (jid) before validation and writes W back unchanged → answers
     {ok, queued:1} though nothing is queued (checked: nothing queued). Fix next engine deploy: count only pushed jobs, error if 0.
