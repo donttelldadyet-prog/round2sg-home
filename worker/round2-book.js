@@ -5189,18 +5189,25 @@ async function ps4Tile(env, u) {
   if (room && mp && !mp.out && now < Math.max(mp.at + 20 * 60e3, mp.until || 0)) {
     if (mp.fin) Object.assign(o, mp.fin); else {
     const res = lk && lk.at >= mp.at - 5e3 && lk.list ? lk.list : null, nm = mp.name, prep = cl.kind === 'prep' && (cl.state === 'running' || cl.state === 'paused');
+    /* 21 Nov 10:40pm (owner: Karen bozz from a clean slate – the tile never showed "What happens next" and stayed open): with other
+       profiles to release first (helper 1.1.124 "switch") the helper answers "memplay/loading … releasing" at once while a SWITCH
+       clean slate runs – not "prep" – so this said Ready straight away and kept it (mp.fin); the tile never saw "loading" and never
+       ran its ending. Now: any running clean slate = loading; Ready only from a report sent AFTER the Load answer that says the
+       member prep is done; and at least 25 s of "loading" after Load, so the tile (asks every 20 s while idle) always sees it. */
+    const clBusy = cl.state === 'running' || cl.state === 'paused', repT = (K['ps4:' + id] || {}).t || 0;
+    const prepDone = cl.kind === 'prep' && cl.state === 'done' && !!lk && repT > lk.at, young = now - mp.at < 25e3 && !(res && (res['memplay/refused'] || res['memplay/error'] || res['memplay/waits']));
     /* 20 Nov 3:05am (owner: it said "all done" between players – ready only when EVERY ticked player is loaded): helper 1.1.101
        reports memq {left, of, now} while players wait in the queue */
     const mq = (K['ps4:' + id] || {}).memq, more = !!(mq && +mq.left > 0), who = mq && mq.now ? mq.now : nm;
     if (mq && +mq.of > 1) { o.pk = String(Math.max(1, +mq.of - (+mq.left || 0))); o.pn = String(+mq.of); o.pnow = String(who).slice(0, 24); }
-    if (!res || prep || more) { o.status = 'loading'; o.title = 'Hi ' + nm + '!'; o.line = prep ? `Loading ${who}'s saves${o.pn ? ` (player ${o.pk} of ${o.pn})` : ''}: ${cl.done || 0} of ${cl.total || 0} games. Please don't start a game yet.` : more ? `Getting ${who}'s profile ready${o.pn ? ` (player ${o.pk} of ${o.pn})` : ''}...` : `Getting a profile ready for ${nm}...`; o.line2 = 'Please don\'t start a game yet - this screen updates by itself.'; }
-    else if (res['memplay/loading'] && cl.kind === 'prep' && cl.state === 'done' && cl.fails > 0) { o.status = 'off'; o.title = 'Sorry, ' + nm; o.line = `${cl.fails} of ${cl.total} games could not be loaded. Your saves are safe on your Round2 account.`; o.line2 = 'Please ask staff - they can load them again.'; }   /* 20 Nov 12:50am: the tile said Ready although Vampire Survivors failed */
+    if (!res || prep || clBusy || more || young || (res['memplay/loading'] && !prepDone)) { o.status = 'loading'; o.title = 'Hi ' + nm + '!'; o.line = prep ? `Loading ${who}'s saves${o.pn ? ` (player ${o.pk} of ${o.pn})` : ''}: ${cl.done || 0} of ${cl.total || 0} games. Please don't start a game yet.` : more ? `Getting ${who}'s profile ready${o.pn ? ` (player ${o.pk} of ${o.pn})` : ''}...` : `Getting a profile ready for ${nm}...`; o.line2 = 'Please don\'t start a game yet - this screen updates by itself.'; }
+    else if (res['memplay/loading'] && prepDone && cl.fails > 0) { o.status = 'off'; o.title = 'Sorry, ' + nm; o.line = `${cl.fails} of ${cl.total} games could not be loaded. Your saves are safe on your Round2 account.`; o.line2 = 'Please ask staff - they can load them again.'; }   /* 20 Nov 12:50am: the tile said Ready although Vampire Survivors failed */
     else if (res['memplay/loading'] || res['memplay/ready']) { o.status = 'done'; o.title = 'Ready, ' + nm + '!'; const onMain = /^main /.test(String(res['memplay/loading'] || res['memplay/ready'])), first = nm.split(' + ')[0], R = room.toUpperCase();   /* helper 1.1.95: the first ticked player goes into the main profile */
       o.line = `Your saves are back on the profiles you ticked - pick up where you left off.`; o.line2 = `The ${R} profile and Player 1-4 all save to your crew after the session. PS button > switch user to change profile.`; void onMain; void first; }
     else if (res['memplay/waits']) { o.status = 'reset'; o.title = 'Please wait'; o.line = `The room is being reset first. Press Load for ${nm} on your phone again in a minute.`; o.line2 = ''; }
     else if (res['memplay/refused'] || res['memplay/error']) { o.status = 'off'; o.title = 'Sorry, ' + nm; o.line = String(res['memplay/refused'] || res['memplay/error']).replace(/^- /, ''); o.line2 = 'Please ask staff.'; }
     /* the result is kept with the session (later look jobs replace ps4look), so a reopened tile still says Ready / Sorry */
-    if (res && !prep && !more && (o.status === 'done' || (o.status === 'off' && o.title))) { mp.fin = { status: o.status, title: o.title, line: o.line, line2: o.line2 };
+    if (res && !prep && !clBusy && !more && !young && (o.status === 'done' || (o.status === 'off' && o.title))) { mp.fin = { status: o.status, title: o.title, line: o.line, line2: o.line2 };
       if (o.status === 'done') o.line2 = mp.fin.line2 = 'Signed in for this session. Switch players or log out of this room on your phone.';
       await book(env).kvSet('memplay:' + id, mp); }
     }

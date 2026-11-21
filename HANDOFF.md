@@ -279,6 +279,16 @@
     rename sends a del of the old name first), Take off the PS4s, Delete from this list; plan saved in kv pkgfold (Halloween/
     Kaeden entered). Light check after: same old items.
   - 18:36 owner: Halloween folder shows on all profiles after re-login ✅. "PKG server UI – both, same look":
+    **Engine: tile never ran its ending after a "switch" load (deployed 22:45, hash e745023f…, 27 bindings, 3 timers)** – owner
+    22:30: Karen bozz loaded from a clean slate fine (GTA + Sims, 8 s), but "What happens next" never showed and the tile stayed
+    open (logs: add-on "tile still open after 20 s" → logged everyone out anyway; log-out doesn't close apps). Cause (ps4Tile):
+    with other profiles to release first the helper answers "memplay/loading … releasing N other profile(s)" at once while a
+    kind=switch clean slate runs → `prep` was false → status "done" at once and cached in mp.fin → the tile never saw "loading"
+    (tile 0.11 needs seen_loading). Fix: any running clean slate = loading; "done"/"Sorry" only when a report NEWER than the Load
+    answer (ps4:<id>.t > ps4look.at) says kind=prep state=done (helper reports at once when a prep ends); at least 25 s of
+    "loading" after Load (not for refused/error/waits) so the tile – 20 s polls while idle – always sees it. To test with the
+    owner: phone Load on Kaeden with other profiles in use → tile should show the bar, then "What happens next", then close.
+    Light check before 15/5/0, after 15/5/0.
     **Helper 1.1.147 on Kaeden (19:56, owner OK 19:50)** – owner: "why doesn't the patch follow immediately". Cause: the engine
     only learns a PKG job finished from the helper's FULL report (every 15 min, REPORT_EVERY) or the report after a look job, and
     hands out the next job on minutes divisible by 3. Patapon 3 game finished 19:42:43 on the PS4, engine saw it 19:52 (my look).
