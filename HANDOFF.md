@@ -261,6 +261,11 @@
       Broforce row parentFolderId 000000001, positionInFolder 1. Project doc claude/ps4-home-folders.md. Next: rename test
       (owner present, app.db backup first) – Kaeden has **5 helper starts since its 13:56 restart → restart before the next
       helper update**. Kaeden now 1.1.143 own.
+  - 15:37 owner restarted Kaeden (helper 1.1.143 own pid 66). **Helper 1.1.144** (ps4-test 01b29104…, 1,995,112 B): `/_fold.list`
+    (read-only on the live app.db → folders.txt), `/_fold.ren.<user>.<9-digit id>.<Name_with_underscores>` (app.db copied to
+    /data/round2/db/app-<t>.db, then ONE row in one transaction, refused with a game open), `/_fold.undo` (newest backup back).
+    15:42 rename test: Test Member folder 000000001 "Folder" → **"Round2 test"** (list confirms the change in app.db). Owner checks
+    whether the home screen shows it (live / after profile switch / after restart). Owner 15:39 confirmed: folders are per profile.
   - Light check 11:23 (before): 15 passed, 3 to look at, 2 failed – both OLD: side timer 52 outside requests in one run; "PS4 games
     queue: bad file link NOT refused" = engine pkgsend counts n++ (jid) before validation and writes W back unchanged → answers
     {ok, queued:1} though nothing is queued (checked: nothing queued). Fix next engine deploy: count only pushed jobs, error if 0.
