@@ -279,6 +279,14 @@
     rename sends a del of the old name first), Take off the PS4s, Delete from this list; plan saved in kv pkgfold (Halloween/
     Kaeden entered). Light check after: same old items.
   - 18:36 owner: Halloween folder shows on all profiles after re-login ✅. "PKG server UI – both, same look":
+    **Control centre PS4 games rebuilt (7deb5e2, 21 Nov 19:35)** – owner: "the ui is horrible", picked **Room first**. Tabs inside
+    the page: **Rooms** (room chips with on/off dot + game count; room header FW / games / GB free; each game row shows ✓ /
+    "update x" / "not on laptop" / ⏳ queued; tap a row → Update · Remove patch · Remove game · Cancel queued job; "+ Add games" =
+    laptop games not on that room, FW-too-new greyed, optional all DLC, "Also install on" other rooms; "Update N" = all newer
+    patches), **Games** (laptop library cards with 7 room pills ok/older/needed; tap → game file, patch, DLC, Belongs in tier/own
+    rooms, Install where missing/older, Remove from ticked rooms), **Queue** (one short line per job, ids stripped, 5 finished
+    shown + Show all), **Folders** (same as before, card look). Gone: wide tables, Pick bar, Send card, drag-drop box, "pick single
+    files". Tested with Playwright + mocked engine at 390 px wide: no script errors, sends the right pkgsend items.
     **PKG server 1.5** (21 Nov 19:15, copied to the laptop, needs a server restart): owner said the browser kept showing a cached
     copy. Now the page opens in its own app window (Edge --app, else Chrome; own profile in %LOCALAPPDATA%\Round2PKG\window,
     new ?t= address each time, small disk cache) instead of a browser tab. "Open Round2 PKG window.bat" (= ps1 -WindowOnly)
