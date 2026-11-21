@@ -278,6 +278,14 @@
     from every PS4's games + laptop), rooms (tier / own), Send to its rooms (ps4look `/_fold.set` per PS4 with helper ≥ 1.1.145,
     rename sends a del of the old name first), Take off the PS4s, Delete from this list; plan saved in kv pkgfold (Halloween/
     Kaeden entered). Light check after: same old items.
+  - 18:36 owner: Halloween folder shows on all profiles after re-login ✅. "PKG server UI – both, same look":
+    **PKG server 1.4** (laptop, restarted by owner 18:42): page from pkg-page.html (Round2 look): Sending now bars, Finished list,
+    Activity (last log lines, /api/live every 2 s), Folders, files per game; pushes `dl` to the engine with the list (control
+    centre "Installing now"). Laptop pushes had stopped at 15:14 (window closed / laptop asleep) – fine again 18:52.
+    **Control centre 9ddc9fb + 81d8a09:** jump buttons, status chips, Installing now bars; owner 18:48 "can't select individual
+    games to send to individual or grouped PS4s" → **Pick** checkbox per game (chosen game + patch + DLC if ticked) + a bar at
+    the bottom (tier buttons, room ticks, Install / Uninstall / Clear, shows the result). Laptop now 40 files: Sims + Patapon 3
+    (CUSA41279, FW 11.50).
   - Light check 11:23 (before): 15 passed, 3 to look at, 2 failed – both OLD: side timer 52 outside requests in one run; "PS4 games
     queue: bad file link NOT refused" = engine pkgsend counts n++ (jid) before validation and writes W back unchanged → answers
     {ok, queued:1} though nothing is queued (checked: nothing queued). Fix next engine deploy: count only pushed jobs, error if 0.
