@@ -129,3 +129,4 @@ Round2's edge (use in Business Profile, socials and pitches): personal messages 
 - Generic searches weak: "private room singapore" pos 13, "private movie room singapore" pos 18, "netflix room singapore" pos 7.5, "bugis private room" pos 7.
 - Google Business Profile link brought 312 clicks.
 - Rich Results Test 21 Nov 2026 4:18pm: 4 valid items (2 Local business – ours plus, most likely, one Wix adds from its Business Info – not confirmed; 2 Organization); non-critical warnings only.
+- 21 Nov 2026: new Google titles (search titles only, pages unchanged): /ps4gamelist "PS4 Game List | Round2 Private Gaming Rooms, Haji Lane"; /boardgames "Board Games | Round2 Private Rooms, Haji Lane"; /cardgames "Card Games for Dates & Groups | Round2, Haji Lane"; /blog "Blog | Round2 Private Movie & Gaming Rooms"; /round2xmaddpizza "Order MADD Pizza to Your Room | Round2 Singapore"; /aboutus "About Round2 | Private Movie & Gaming Rooms, Haji Lane".
