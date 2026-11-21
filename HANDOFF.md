@@ -279,6 +279,18 @@
     rename sends a del of the old name first), Take off the PS4s, Delete from this list; plan saved in kv pkgfold (Halloween/
     Kaeden entered). Light check after: same old items.
   - 18:36 owner: Halloween folder shows on all profiles after re-login ✅. "PKG server UI – both, same look":
+    **22 Nov 00:05 – tile profile cards (owner 23:54: "screen should showcase all of the profiles … greyed out … becomes colour …
+    Player 1 transforms into the member's profile … a static page seems hesitating")** – BUILT, NOT YET ON KAEDEN (needs owner OK):
+    helper 1.1.148 (ps4-test 'test helper 1.1.148', sha fd1bf800…) keeps a load board g_mb_* (0 main, 1-4 spares in id order =
+    Player 1-4; st u nothing to do · c being cleared · w waits for member · l loading · d loaded · f some failed; cur name, new
+    name, member) – set in look_memplay (release pass + second pass), memplay_one, prep DONE; sent as report "board"
+    ("st~cur~new~who|…") while memqn exists + 3 min. Engine (deployed 00:03, hash 4ff7ff28…, 27 bindings, 3 timers) passes it to
+    /ps4/tile as "board" (not kept in mp.fin – a reopened tile shows the QR). Tile 0.12 (ps4-tile 6f4f93c): during a load the
+    QR card is replaced by 5 profile cards – grey; the one being cleared/loaded pulses (shine sweep + ring + dots); each lights
+    in the room colour IN ORDER (0.45 s apart, burst ring + check mark draws itself); a Player card slides into the member's
+    name. Old helpers send no board → QR as before. Desktop simulation of the drawing checked (/home/claude/tilesim).
+    **Control centre clean slate** (fd1667a): short intro (details folded), delay list 2-15 min (Max is on 7 – the old list
+    5/10/12 showed blank), "Rooms: Max only", one short line per run (3 newest + older folded), problems folded.
     **Engine: tile never ran its ending after a "switch" load (deployed 22:45, hash e745023f…, 27 bindings, 3 timers)** – owner
     22:30: Karen bozz loaded from a clean slate fine (GTA + Sims, 8 s), but "What happens next" never showed and the tile stayed
     open (logs: add-on "tile still open after 20 s" → logged everyone out anyway; log-out doesn't close apps). Cause (ps4Tile):

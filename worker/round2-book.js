@@ -5206,6 +5206,10 @@ async function ps4Tile(env, u) {
       o.line = `Your saves are back on the profiles you ticked - pick up where you left off.`; o.line2 = `The ${R} profile and Player 1-4 all save to your crew after the session. PS button > switch user to change profile.`; void onMain; void first; }
     else if (res['memplay/waits']) { o.status = 'reset'; o.title = 'Please wait'; o.line = `The room is being reset first. Press Load for ${nm} on your phone again in a minute.`; o.line2 = ''; }
     else if (res['memplay/refused'] || res['memplay/error']) { o.status = 'off'; o.title = 'Sorry, ' + nm; o.line = String(res['memplay/refused'] || res['memplay/error']).replace(/^- /, ''); o.line2 = 'Please ask staff.'; }
+    /* 22 Nov 12am (owner: profile cards on the tile while loading): helper 1.1.148 reports the load board – each room profile and
+       what the load does to it – during a member load and 3 min after; tile 0.12 draws it. Not kept in mp.fin (a reopened tile
+       shows the QR again for switching players). */
+    { const bd = (K['ps4:' + id] || {}).board; if (bd && (o.status === 'loading' || o.status === 'done' || (o.status === 'off' && o.title))) o.board = String(bd).slice(0, 600); }
     /* the result is kept with the session (later look jobs replace ps4look), so a reopened tile still says Ready / Sorry */
     if (res && !prep && !clBusy && !more && !young && (o.status === 'done' || (o.status === 'off' && o.title))) { mp.fin = { status: o.status, title: o.title, line: o.line, line2: o.line2 };
       if (o.status === 'done') o.line2 = mp.fin.line2 = 'Signed in for this session. Switch players or log out of this room on your phone.';
