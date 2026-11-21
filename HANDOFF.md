@@ -242,6 +242,25 @@
     13:56:31 own copy 71 "gone" in 15 s with NO signal line = race: the shared helper let go of the lock, the starter launched
     another shared helper 13:56:33 first, the copy stepped aside (not a crash). 15:00 `/_selfown` on 1.1.140 → **own=1 pid 158**
     (spawn 2 since the 13:56 restart). Asked owner to repeat 13:39 (Test Member, MK11 ×3 + another game) to catch the crash.
+  - **15:07 owner: PKG page – folders, pick main game + patch, which games go to which rooms, uninstall per PS4, see what's
+    really on the PS4s; "nothing crashes after your tests".** Folders = **PS4 home-screen folders he can name/rename** (asked).
+    - **Engine pkgcat / pkgcatset** (deployed b793902a…, 27 bindings, 3 timers; before b6cdc5bf): kv 'pkgcat' = per title
+      {tier netflix|deluxe|vip | rooms[], patch, nopatch, title}; also returned by pkglist (`cat`). pkgsend now counts only
+      valid jobs and answers "Nothing valid to send" (the System check step passes again).
+    - **Control centre** (main 4bd8030 + check step): per game main-game select (if several), patch select (or "No patch",
+      saved), "with all DLC", rooms select (Netflix/Deluxe/VIP/My own rooms…, saved), room cells need/extra, "Install in
+      its rooms" + "Install every game in its rooms" (main game where missing, chosen patch where missing/older, DLC if
+      ticked; skips other-Wi-Fi rooms and FW-too-new files with a note); **On the PS4s** card = every game each PS4 reports
+      (also ones not on the laptop), tick a room's version → Uninstall the ticked games / Remove only their patches (Vue,
+      Round2 tile, Apollo, LAPY hidden; GT Sport on Max shown 🏠 without a box). Redraws only when data changed.
+      ⚠️ My first push (9388975) cut a big chunk of the page (wrong anchor – the first `function drawList()` was another
+      module's): "PS4 is not defined", page broken ~5 min (15:13–15:18), reverted b10988b, redone 4bd8030.
+    - **Home-folder probe** (helper 1.1.141 `/_appdb` read-only copy; 1.1.142 appdb-short.txt; 1.1.143 `/_head<line>.<file>|n`):
+      folders are per profile in app.db `tbl_appbrowse_<user decimal>`; the owner's folder (on Test Member 16c45cc9 = table
+      0381967561) = row titleId 000000001, titleName "Folder", folderType 1, folderInfo {"titleId":"CUSA03887","index":0};
+      Broforce row parentFolderId 000000001, positionInFolder 1. Project doc claude/ps4-home-folders.md. Next: rename test
+      (owner present, app.db backup first) – Kaeden has **5 helper starts since its 13:56 restart → restart before the next
+      helper update**. Kaeden now 1.1.143 own.
   - Light check 11:23 (before): 15 passed, 3 to look at, 2 failed – both OLD: side timer 52 outside requests in one run; "PS4 games
     queue: bad file link NOT refused" = engine pkgsend counts n++ (jid) before validation and writes W back unchanged → answers
     {ok, queued:1} though nothing is queued (checked: nothing queued). Fix next engine deploy: count only pushed jobs, error if 0.
