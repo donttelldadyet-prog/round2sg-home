@@ -1,5 +1,9 @@
 # Round2 – notes for Claude
 
+- **Two kinds of work happen in this repo – read the "READ FIRST" box at the top of `HANDOFF.md`.** DESIGN work (the admin/
+  design team, looks only) stays inside `design/` on its own branch with a pull request – never `worker/`, never deploys.
+  FUNCTION work follows every rule below and leaves `design/` files to the design team.
+
 - **Run the System check before and after any change** (control centre at staff.round2.sg › Tests & systems › System
   check; code: round2-tv-launcher `manager/index.html`, `SysCheck`). Add a step for every new feature that touches another
   part. Why and how: round2-tv-launcher `docs/system-check.md`. This is the owner's standing rule.

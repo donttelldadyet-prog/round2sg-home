@@ -1,3 +1,33 @@
+# Round2 HANDOFF – shared by the owner, the admin/design team and every Claude session
+
+## READ FIRST – rules for everyone (owner, design, every Claude)
+**Who uses this file:** the owner and his Claude sessions (engine, PS4s, control centre, website), and the admin/design
+team (the owner's girlfriend) and her Claude for the look of things. Newest notes are lower down, by date; this box is the
+standing rules. Keep it short; add a rule here only when the owner asks for one.
+
+**If you are working on DESIGN (looks, colours, wording, layout):**
+1. Work only in **`design/`** of this repo (round2sg-home), and only on your **own branch**; open a pull request into `main`.
+   `design/README.md` says which file changes what and how to preview a branch on your phone
+   (`book.round2.sg/m?room=kaeden&design=<branch>`). A push to `main` is live for guests within ~5 minutes.
+2. **Never edit** `worker/` (the live booking engine – bookings, payments, PS4s), `slots/`, `email/`, `menu/`, `move/`,
+   `CLAUDE.md`, or the long dated notes below. The homepage (`index.html`) is the website – design changes there are fine
+   as before, but don't change its booking links or scripts.
+3. Never deploy anything to Cloudflare and never run the "Full check" – that's the owner's side.
+4. Keep the class / id names and the `var(--ac)` / `var(--ink)` room colours – the page's functions rely on them.
+5. Tell the owner in plain words what you changed and send him the preview link before asking him to merge.
+
+**If you are working on FUNCTIONS (engine, PS4 helper, control centre):**
+- Everything in `CLAUDE.md` applies (System check before/after, deploy rules, one clock, Kaeden test bench, etc.).
+- The look lives in `design/` now: don't put new colours/wording for guest screens in code if a design file can hold it,
+  and never overwrite `design/` files – they belong to the design team. If code needs a new design value, add it with the
+  current value as default and say so here.
+- Merge, never overwrite: other sessions (and the design team) push to this repo too – pull first.
+
+**For everyone:** plain words to the owner (he doesn't read code), Singapore time, and no booking/guest data (names,
+phones) in this file or in design files.
+
+---
+
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
 
 ## ⭐ 19 Nov 2026, 10:10pm – MEMBER LOGIN PART 1 LIVE + Kaeden back to normal + Bella/Atlas Wi-Fi plan

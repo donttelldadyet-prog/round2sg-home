@@ -5064,14 +5064,32 @@ const MEM_ROOMS = {
   kai: ['Kai', '#24B49A', '#0b0914', 'a46627_2c836d63bbdd4332a4a67233df2fb631~mv2.webp'], atlas: ['Atlas', '#E9E7EF', '#0b0914', 'a46627_633e94e1767940b7a6297c4e597d25c3~mv2.webp'],
   maximillion: ['Maximillion', '#E0402F', '#ffffff', 'a46627_fb0c6ed29fdb4c74b8a4ce1a5c99050c~mv2.webp']
 };
-function memPage(u) {
-  const room = String(u.searchParams.get('room') || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12);
-  const R = MEM_ROOMS[room === 'max' ? 'maximillion' : room] || null, ac = R ? R[1] : '#f5c400', ink = R ? R[2] : '#06050a';
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Round2 members</title>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
-<meta name="theme-color" content="#06050a"><style>:root{--ac:${ac};--ink:${ink}}*{box-sizing:border-box}
+/* 22 Nov 1:30am (owner: "export the design element of the ps4 as well as the phone app to github, so that my gf who is in design
+   and ui … can edit design safely, since functions are all on engine"): the member page's LOOK and every room's name / colour /
+   character come from round2sg-home design/ (member.css, rooms.json) – read here, kept 5 min (15 s for a preview branch), checked,
+   and the built-in copy below is used whenever a file is missing or wrong. Preview a branch: book.round2.sg/m?room=kaeden&design=<branch>. */
+const DESIGN_RAW = 'https://raw.githubusercontent.com/donttelldadyet-prog/round2sg-home/', DESIGN_C = new Map();
+async function designGet(name, branch) {
+  const br = /^[a-z0-9][a-z0-9-]{0,39}$/.test(branch || '') ? branch : 'main', k = br + '/' + name, now = Date.now(), c = DESIGN_C.get(k);
+  if (c && now - c.t < (br === 'main' ? 300e3 : 15e3)) return c.v;
+  let v = null; try { const r = await fetch(DESIGN_RAW + br + '/design/' + name + '?t=' + Math.floor(now / 60e3), { headers: { 'User-Agent': 'round2-book' } }); if (r.ok) v = await r.text(); } catch (e) { v = null; }
+  if (v !== null && v.length > 100000) v = null;
+  const keep = v === null && c ? c.v : v; DESIGN_C.set(k, { t: now, v: keep }); if (DESIGN_C.size > 40) DESIGN_C.delete(DESIGN_C.keys().next().value); return keep;
+}
+async function designRooms(br) {   /* {room: [name, colour, ink, art]} – only known rooms, only valid #rrggbb colours */
+  try { const j = JSON.parse((await designGet('rooms.json', br)) || ''), o = {};
+    for (const [k, r] of Object.entries((j && j.rooms) || {})) if (MEM_ROOMS[k] && r && /^#[0-9a-fA-F]{6}$/.test(r.colour || '') && /^#[0-9a-fA-F]{6}$/.test(r.ink || ''))
+      o[k] = [String(r.name || MEM_ROOMS[k][0]).replace(/[<>"&]/g, '').slice(0, 20), r.colour, r.ink, /^[\w~.-]{5,120}$/.test(r.art || '') ? r.art : MEM_ROOMS[k][3]];
+    return o; } catch (e) { return {}; }
+}
+async function memDesign(u) {
+  const br = u.searchParams.get('design') || 'main'; let css = await designGet('member.css', br);
+  if (css && (/<\/|<script|@import|javascript:/i.test(css) || css.length > 60000)) css = null;   /* a style file only – nothing that could break out of <style> */
+  return { css, rooms: await designRooms(br) };
+}
+const MEM_CSS = `*{box-sizing:border-box}
 body{margin:0;background:radial-gradient(120% 60% at 85% -10%,color-mix(in srgb,var(--ac) 28%,transparent),transparent 62%),#06050a;background-attachment:fixed;color:#f4f1fb;font:16px/1.5 'Chakra Petch',system-ui,sans-serif;min-height:100vh}
-.hero{position:relative;min-height:${R ? 250 : 150}px;margin:0 0 6px;overflow:visible}.hero .logo{height:30px;display:block;margin:0 0 18px}
+.hero{position:relative;min-height:var(--hero-h);margin:0 0 6px;overflow:visible}.hero .logo{height:30px;display:block;margin:0 0 18px}
 .hero .char{position:absolute;right:-18px;top:-8px;height:290px;pointer-events:none;-webkit-mask-image:linear-gradient(to bottom,#000 55%,transparent 98%),linear-gradient(to left,#000 60%,transparent);mask-image:linear-gradient(to bottom,#000 55%,transparent 98%);-webkit-mask-composite:source-in;mask-composite:intersect;filter:drop-shadow(0 0 28px color-mix(in srgb,var(--ac) 45%,transparent))}
 .hero .room{font-family:'Press Start 2P',monospace;font-size:30px;line-height:1.15;color:var(--ac);text-shadow:0 0 18px color-mix(in srgb,var(--ac) 60%,transparent);margin:6px 0 10px;position:relative}
 .hero .tag{position:relative;max-width:58%;font-size:14px;color:#cfc8e3}.hero .kick,.hero h1{position:relative}
@@ -5088,7 +5106,13 @@ button.ghost{background:transparent;color:#f4f1fb;border:1px solid rgba(244,241,
 .pics{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:6px}.pics div{font-size:26px;text-align:center;padding:8px 0;border:2px solid transparent;background:#14111f;cursor:pointer}
 .pics div.sel{border-color:var(--ac)}.pics div img{width:100%;display:block;aspect-ratio:1}.pics div:has(img){padding:0}.pics .more{font-size:13px;display:flex;align-items:center;justify-content:center;color:var(--ac)}.av img{width:100%;height:100%;display:block}.pl{display:flex;gap:12px;align-items:center;justify-content:space-between}.who{display:flex;gap:12px;align-items:center}
 .av{font-size:30px;width:52px;height:52px;flex:none;display:flex;align-items:center;justify-content:center;background:#14111f;border:2px solid var(--ac)}
-.badge{display:inline-block;font-size:9px;padding:4px 6px;background:var(--ac);color:var(--ink);margin-left:6px;vertical-align:middle}[hidden]{display:none!important}</style></head><body><main>
+.badge{display:inline-block;font-size:9px;padding:4px 6px;background:var(--ac);color:var(--ink);margin-left:6px;vertical-align:middle}[hidden]{display:none!important}`;
+function memPage(u, D) {
+  const room = String(u.searchParams.get('room') || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12);
+  const RM = Object.assign({}, MEM_ROOMS, (D && D.rooms) || {}), R = RM[room === 'max' ? 'maximillion' : room] || null, ac = R ? R[1] : '#f5c400', ink = R ? R[2] : '#06050a';
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Round2 members</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#06050a"><style>:root{--ac:${ac};--ink:${ink};--hero-h:${R ? 250 : 150}px}${D && D.css ? D.css : MEM_CSS}</style></head><body><main>
 <header class="hero"><img class="logo" src="${MEM_LOGO}" alt="Round2">${R ? `<img class="char" src="${MEM_WIX + R[3]}" alt="">` : ''}
 <div class="kick px">ROUND2 MEMBERS</div>${R ? `<div class="room">${R[0].toUpperCase()}</div><div class="tag">Join or log in – your crew’s saves, names and pictures load onto this room’s PS4.</div>` : '<h1>Your Round2<br>game crew</h1>'}</header><div class="bar"></div>
 <section id="out"><div class="tabs"><button id="tJ" class="on">Join</button><button id="tL" class="ghost">Log in</button></div>
@@ -5220,7 +5244,7 @@ async function ps4Tile(env, u) {
   { const bz = K['ps4busy:' + id]; if (room && bz && now - bz.at < 75e3 && o.status === 'ready') o.line2 = 'One moment – this PS4 is finishing a job. Loading works again in a minute.'; }
   /* 20 Nov 2:40am (owner: the tile themed like the member page + loading bars for guests): room colour + name, and the counts
      for the tile's progress bar (strings – the tile reads "key":"value" only) */
-  { const R = MEM_ROOMS[room === 'max' ? 'maximillion' : room]; if (R) { o.color = R[1].slice(1); o.rname = R[0]; } }
+  { const R = Object.assign({}, MEM_ROOMS, await designRooms('main'))[room === 'max' ? 'maximillion' : room]; if (R) { o.color = R[1].slice(1); o.rname = R[0]; } }   /* 22 Nov: colours from design/rooms.json */
   if (o.status === 'loading' || o.status === 'reset') { const busy = cl.state === 'running' || cl.state === 'paused'; o.done = String(busy ? cl.done || 0 : 0); o.total = String(busy ? cl.total || 0 : 0); }
   TILE_MEMO.set(id, { t: now, o }); if (TILE_MEMO.size > 50) TILE_MEMO.delete(TILE_MEMO.keys().next().value);
   return J(o);
@@ -5650,7 +5674,7 @@ const HANDLER = {
         }
         return Response.redirect('https://cue.round2.sg/' + tv.code, 302);
       }
-      if (u.pathname === '/m' || u.pathname === '/m/') return H(memPage(u));   /* 19 Nov: member join / log in (phone + PIN) */
+      if (u.pathname === '/m' || u.pathname === '/m/') return H(memPage(u, await memDesign(u)));   /* 19 Nov: member join / log in (phone + PIN) */
       if (u.pathname === '/m/api' && req.method === 'POST') return await memApi(env, req);
       if (u.pathname === '/ps4/tileart') return await ps4TileArt(env, u);   /* 20 Nov: the tile's room character */
       if (u.pathname === '/m/av/list') { const L = await memAvIndex(env); return new Response(JSON.stringify(L), { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=600' } }); }   /* 20 Nov: Lapy's avatars */

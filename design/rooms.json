@@ -1,0 +1,47 @@
+{
+  "_help": "Each room: name (shown on the phone page and the PS4 tile), colour (the room's accent, #rrggbb), ink (text colour ON the accent, #rrggbb), art (the character picture's file name on static.wixstatic.com/media). Only these 7 rooms are read. A wrong value is ignored and the old one is kept.",
+  "rooms": {
+    "vale": {
+      "name": "Vale",
+      "colour": "#E8436A",
+      "ink": "#0b0914",
+      "art": "a46627_a583d7ac9f5e425c8770261a9f4a5dde~mv2.webp"
+    },
+    "kaeden": {
+      "name": "Kaeden",
+      "colour": "#4DB848",
+      "ink": "#0b0914",
+      "art": "a46627_047b973fc70140b9935452a5eee426db~mv2.webp"
+    },
+    "scarlett": {
+      "name": "Scarlett",
+      "colour": "#F2C21B",
+      "ink": "#0b0914",
+      "art": "a46627_feafbe9bf95d4bffbea8855d66d0a63c~mv2.webp"
+    },
+    "bella": {
+      "name": "Bella",
+      "colour": "#7A5BE0",
+      "ink": "#ffffff",
+      "art": "a46627_a61b016ed61045f28c2dba9b6146e9d4~mv2.webp"
+    },
+    "kai": {
+      "name": "Kai",
+      "colour": "#24B49A",
+      "ink": "#0b0914",
+      "art": "a46627_2c836d63bbdd4332a4a67233df2fb631~mv2.webp"
+    },
+    "atlas": {
+      "name": "Atlas",
+      "colour": "#E9E7EF",
+      "ink": "#0b0914",
+      "art": "a46627_633e94e1767940b7a6297c4e597d25c3~mv2.webp"
+    },
+    "maximillion": {
+      "name": "Maximillion",
+      "colour": "#E0402F",
+      "ink": "#ffffff",
+      "art": "a46627_fb0c6ed29fdb4c74b8a4ce1a5c99050c~mv2.webp"
+    }
+  }
+}
