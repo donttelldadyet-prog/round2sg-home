@@ -36,7 +36,7 @@ Goal: more people find Round2 on Google, Google Maps, AI answers (ChatGPT, Googl
 | 9 | Tidy: old duplicate homepage `/blank-4-3` (menu "home" link points there) → point menu at round2.sg | Suggested | Menu link only |
 | 10 | Image alt text on Wix images (honest descriptions: "Vale private movie room at Round2, Haji Lane") | Suggested | No |
 | 11 | Real search descriptions on /ps4gamelist, /boardgames, /cardgames (were the generic default) | **DONE 21 Nov 2026** | No |
-| 12 | Duplicates still listed by Google: old homepage /blank-4-3 (own title), /r2tnc (old T&C, generic), /blog-1 (second blog page, generic) – owner to decide: hide from Google or redirect | Suggested | No |
+| 12 | Duplicates hidden from Google: old homepage /blank-4-3, /r2tnc (old T&C), /blog-1 (second blog page) | **DONE 21 Nov 2026**: all three set to noindex (pages still work for visitors; menu link to /blank-4-3 unaffected) | No |
 
 Rejected / don't redo: text sections on room pages; SEO landing pages; hiding text; keyword lists in code.
 
@@ -128,3 +128,4 @@ Round2's edge (use in Business Profile, socials and pitches): personal messages 
 - Brand searches strong: "round 2" 1,041 clicks (pos 2.6), "round 2 haji lane" 303 (pos 1.3), "round2" 439.
 - Generic searches weak: "private room singapore" pos 13, "private movie room singapore" pos 18, "netflix room singapore" pos 7.5, "bugis private room" pos 7.
 - Google Business Profile link brought 312 clicks.
+- Rich Results Test 21 Nov 2026 4:18pm: 4 valid items (2 Local business – ours plus one Wix adds itself; 2 Organization); non-critical warnings only.
