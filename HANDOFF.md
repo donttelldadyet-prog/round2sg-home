@@ -279,6 +279,14 @@
     rename sends a del of the old name first), Take off the PS4s, Delete from this list; plan saved in kv pkgfold (Halloween/
     Kaeden entered). Light check after: same old items.
   - 18:36 owner: Halloween folder shows on all profiles after re-login ✅. "PKG server UI – both, same look":
+    **22 Nov 00:58 – helper 1.1.150 on Kaeden (owner 00:53 "do for kaeden first"; 3rd own switch since the 00:28 restart – guard
+    is 5, so restart Kaeden before the 2nd next one): SLIM RE-UPLOAD.** Owner asked to "learn" empty space per game; answer: no
+    per-game rule needed – zero-skip already checks every 1 MB piece of every upload. Gap = saves uploaded BEFORE zero-skip stay
+    full size. Now: after each member load, parts of 2 MB+ whose cloud manifest has no z-list go to prep/slim.txt; slim_tick (main
+    loop, 1 a minute, only with zeroskip-on, no load/clean/backup running) scans the INTERNAL copy (= what was just loaded, not
+    the live save) for empty pieces; 1 MB+ empty → that part is marked in resend.txt and queued (pending m=<member>) so the cloud
+    batch re-sends it slim to the member's folder + index. Logs "slim: …". Other rooms: zero-skip stays off until they have the
+    new helper (old helpers can't load slim saves). Vampire Survivors gets slimmed after its next load on Kaeden.
     **22 Nov 00:45 – owner's test 00:34 (KAEDEN main + Karen + Aliff) → fixes, Kaeden on helper 1.1.149 + tile 0.13:**
     - KAEDEN slow: Vampire Survivors (CUSA47783) sce_sdmemory = 32 MB, download 38.8 s (Aliff's copy of the same game: 16 s).
       Uploaded before zero-skip, so all 32 MB come down. Next: /_resend that game's saves so empty pieces are skipped.
