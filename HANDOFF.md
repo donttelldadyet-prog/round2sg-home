@@ -266,6 +266,18 @@
     /data/round2/db/app-<t>.db, then ONE row in one transaction, refused with a game open), `/_fold.undo` (newest backup back).
     15:42 rename test: Test Member folder 000000001 "Folder" → **"Round2 test"** (list confirms the change in app.db). Owner checks
     whether the home screen shows it (live / after profile switch / after restart). Owner 15:39 confirmed: folders are per profile.
+  - **18:20 owner: switching profiles showed the renamed folder → a clean slate will too; folders are for event games (Halloween).**
+    **Helper 1.1.145/1.1.146** (ps4-test 42161ecf…, Kaeden 18:26, spawn 4 since the 15:37 restart): `/_fold.set.<Name>.<tid-tid-…>`
+    = that folder on EVERY profile (new row = copy of an existing folder row with id/name/folderInfo replaced; games moved in,
+    order kept; a profile with none of the games gets no folder), `/_fold.del.<Name>`. 1.1.145 failed all 5 profiles: the
+    INSERT (~2 KB: 57 columns twice) was cut by a 1.6 KB buffer → fixed 1.1.146 (6 KB) + the SQLite reason is logged before
+    ROLLBACK. 18:28 "Halloween" (Vampire Survivors, Cuphead, Minecraft Dungeons) on all 5 profiles: 15 game places ✅ (app.db
+    backups /data/round2/db/app-<t>.db). Owner to check it shows + a game starts from it.
+    **Engine pkgfold/pkgfoldset** (deployed f59011c4…, 27 bindings – a settings read right after the PUT said 0, re-read = 27;
+    3 timers) + folders in pkglist. **Control centre a1f4d8a:** "Home-screen folders" card – name, games (chips + add list
+    from every PS4's games + laptop), rooms (tier / own), Send to its rooms (ps4look `/_fold.set` per PS4 with helper ≥ 1.1.145,
+    rename sends a del of the old name first), Take off the PS4s, Delete from this list; plan saved in kv pkgfold (Halloween/
+    Kaeden entered). Light check after: same old items.
   - Light check 11:23 (before): 15 passed, 3 to look at, 2 failed – both OLD: side timer 52 outside requests in one run; "PS4 games
     queue: bad file link NOT refused" = engine pkgsend counts n++ (jid) before validation and writes W back unchanged → answers
     {ok, queued:1} though nothing is queued (checked: nothing queued). Fix next engine deploy: count only pushed jobs, error if 0.
