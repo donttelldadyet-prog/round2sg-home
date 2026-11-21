@@ -279,6 +279,19 @@
     rename sends a del of the old name first), Take off the PS4s, Delete from this list; plan saved in kv pkgfold (Halloween/
     Kaeden entered). Light check after: same old items.
   - 18:36 owner: Halloween folder shows on all profiles after re-login ✅. "PKG server UI – both, same look":
+    **22 Nov 00:45 – owner's test 00:34 (KAEDEN main + Karen + Aliff) → fixes, Kaeden on helper 1.1.149 + tile 0.13:**
+    - KAEDEN slow: Vampire Survivors (CUSA47783) sce_sdmemory = 32 MB, download 38.8 s (Aliff's copy of the same game: 16 s).
+      Uploaded before zero-skip, so all 32 MB come down. Next: /_resend that game's saves so empty pieces are skipped.
+    - Cards vanished during Aliff + "Saves loaded!" pop-up at 00:36:20 mid-load: memplay_next removes the LAST waiting player
+      from memq, then the next line saw no memq = "batch over" (memqn gone, g_after_load set) – bug since 1.1.101. Fixed in
+      1.1.149 (more_q read before memplay_next). The menu add-on was fine (logged out at 00:36:59 after the real end; tile closed
+      by itself, 15 s).
+    - Owner: "the ps4 tile should be listening to the helper": helper 1.1.149 writes /data/round2/tile-live.txt (t, state
+      l/d/i, board, prog done total) on each change + every 3 s during a load (fg_thread); tile 0.13 reads it 4×/s and it wins
+      over the engine while fresh (< 30 s): state, board, own wording ("Loading X's saves (player k of n)", "All set!").
+    - Bar = whole load: (profiles ready + share of the current one) / profiles ticked, label "k of n profiles ready – %".
+      Also found: the bar's `shown` was reset to 0 EVERY frame (0.08-0.12), so it never passed ~6 %. Fixed.
+    - The QR's breathing frame was drawn over the cards ("box cuts into the cards") – off while cards show.
     **22 Nov 00:05 – tile profile cards (owner 23:54: "screen should showcase all of the profiles … greyed out … becomes colour …
     Player 1 transforms into the member's profile … a static page seems hesitating")** – ON KAEDEN 00:31 (owner restarted it 00:28; helper 1.1.148 own switch 00:30, tile 0.12 via /_tile.now task 366):
     helper 1.1.148 (ps4-test 'test helper 1.1.148', sha fd1bf800…) keeps a load board g_mb_* (0 main, 1-4 spares in id order =
