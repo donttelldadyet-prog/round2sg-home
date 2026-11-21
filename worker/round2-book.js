@@ -2716,7 +2716,7 @@ async function gm(env, req) {
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await mvApi(env, hb, f, new URL(req.url).origin)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
-  if (/^ps4(list|map|discs|names|clean|update|look|lookres|rel|prof|saves|dns|dnsget|wake|wakekey|reset|resetauto)$|^pkg(send|list|cancel|lap)$|^memidxset$/.test(act)) {   /* staff: control centre › PS4s (13 Nov; reset + resetauto 17 Nov) */
+  if (/^ps4(list|map|discs|names|clean|update|look|lookres|rel|prof|saves|dns|dnsget|wake|wakekey|reset|resetauto)$|^pkg(send|list|cancel|lap|cat|catset)$|^memidxset$/.test(act)) {   /* staff: control centre › PS4s (13 Nov; reset + resetauto 17 Nov) */
     if (!env.GM_STAFF || f.staff !== env.GM_STAFF) return gmJ({ error: 'Wrong staff code.' });
     try { return gmJ(await ps4Gm(env, hb, f)); } catch (e) { return gmJ({ error: String(e.message || e).slice(0, 200) }); }
   }
@@ -4611,11 +4611,26 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
     if (!o || !Array.isArray(o.pkgs) || !/^[a-z0-9]{16,48}$/.test(String(o.token || ''))) return { error: 'bad list' };
     await hb.kvSet('pkglap', Object.assign(o, { t: Date.now(), active: +f.active || 0, servedMB: +f.servedMB || 0 })); return { ok: true };
   }
+  if (act === 'pkgcat' || act === 'pkgcatset') {   /* 21 Nov 3:07pm (owner: "select which games are to be pushed to which room"): per game
+     (title id) the tier (netflix = all rooms, deluxe = kai bella atlas max, vip = max) or its own rooms, and the patch version to use.
+     One kv key 'pkgcat'; the control centre PS4 games page reads it with pkglist. set = JSON { <tid>: {tier, rooms, patch, title} | null } */
+    const cur = (await hb.kvGet('pkgcat')) || {};
+    if (act === 'pkgcat') return { ok: true, cat: cur };
+    let ch = {}; try { ch = JSON.parse(f.set || '{}'); } catch (e) {} if (!ch || typeof ch !== 'object') ch = {}; let n = 0;
+    for (const [tid, v] of Object.entries(ch).slice(0, 300)) {
+      if (!/^[A-Z]{4}\d{5}$/.test(tid)) continue; n++;
+      if (!v) { delete cur[tid]; continue; }
+      cur[tid] = { tier: ['netflix', 'deluxe', 'vip'].includes(v.tier) ? v.tier : '', rooms: (Array.isArray(v.rooms) ? v.rooms : []).map(String).filter((r) => /^[a-z]{2,12}$/.test(r)).slice(0, 12),
+        patch: String(v.patch || '').replace(/[^0-9.]/g, '').slice(0, 8), nopatch: !!v.nopatch, title: String(v.title || '').slice(0, 60), by: String(f.by || 'staff').slice(0, 40), at: Date.now() };
+    }
+    if (!n) return { error: 'Nothing to save.' };
+    await hb.kvSet('pkgcat', cur); return { ok: true, saved: n, cat: cur };
+  }
   if (act === 'pkgsend' || act === 'pkglist' || act === 'pkgcancel') {   /* 20 Nov: PKG installs (see ps4PkgNext) */
     const map = (await hb.kvGet('ps4map')) || {}, byRoom = {}; for (const i in map) byRoom[map[i]] = i;
     const ids = Object.values(byRoom), now = Date.now();
-    const K = await hb.kvMany(ids.map((i) => 'pkgq:' + i).concat(act === 'pkglist' ? ['pkglap'] : []), []);
-    if (act === 'pkglist') return { ok: true, now, lap: K.pkglap || null, rooms: Object.fromEntries(Object.entries(byRoom).map(([r, i]) => [r, K['pkgq:' + i] || []])) };
+    const K = await hb.kvMany(ids.map((i) => 'pkgq:' + i).concat(act === 'pkglist' ? ['pkglap', 'pkgcat'] : []), []);
+    if (act === 'pkglist') return { ok: true, now, lap: K.pkglap || null, cat: K.pkgcat || {}, rooms: Object.fromEntries(Object.entries(byRoom).map(([r, i]) => [r, K['pkgq:' + i] || []])) };
     const by = String(f.by || 'staff').slice(0, 40), W = {};
     if (act === 'pkgcancel') {
       const i = byRoom[String(f.room || '')], q = i ? (K['pkgq:' + i] || []) : [], j = q.find((x) => x.jid === f.jid); if (!j) return { error: 'No such job.' };
@@ -4624,7 +4639,7 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
       else q.splice(q.indexOf(j), 1);
       await hb.kvSet('pkgq:' + i, q); return { ok: true };
     }
-    let items = []; try { items = JSON.parse(f.items || '[]'); } catch (e) {} if (!Array.isArray(items)) items = []; items = items.slice(0, 400); let n = 0; const restAfter = f.rest === '1' || f.rest === 'true';
+    let items = []; try { items = JSON.parse(f.items || '[]'); } catch (e) {} if (!Array.isArray(items)) items = []; items = items.slice(0, 400); let n = 0, pushed = 0; const restAfter = f.rest === '1' || f.rest === 'true';
     for (const it of items) {
       const i = byRoom[String(it.room || '')]; if (!i) continue; const q = W['pkgq:' + i] || (W['pkgq:' + i] = (K['pkgq:' + i] || []).slice());
       if (q.length > 300) continue;
@@ -4634,10 +4649,11 @@ async function ps4Gm(env, hb, f) {   /* staff (control centre): ps4list · ps4ma
       else { const ip = String(it.ip || ''), cid = String(it.cid || '');
         if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip) || !/^[a-z0-9]{16,48}$/.test(String(it.code || '')) || !/^[a-f0-9]{16}$/.test(String(it.fid || '')) || !/^(gd|gp|ac)$/.test(String(it.cat || '')) || !/^[A-Z0-9_-]{10,40}$/.test(cid)) continue;
         spec = '/_pkgjob.' + jid + '.' + ip.replace(/\./g, '-') + '.' + (+it.port || 8890) + '.' + it.code + '.' + it.fid + '.' + it.cat + '.' + cid + '.' + Math.max(1, Math.round(+it.mb || 1)); }
-      q.push({ jid, op: it.op === 'rm' ? 'rm' : 'install', spec, title: String(it.title || '').slice(0, 60), name: String(it.name || '').slice(0, 80), cat: String(it.cat || ''), tid: String(it.tid || '').slice(0, 9), ver: String(it.ver || '').slice(0, 8), mb: +it.mb || 0, state: 'queued', at: now, by, rest: restAfter });
+      pushed++; q.push({ jid, op: it.op === 'rm' ? 'rm' : 'install', spec, title: String(it.title || '').slice(0, 60), name: String(it.name || '').slice(0, 80), cat: String(it.cat || ''), tid: String(it.tid || '').slice(0, 9), ver: String(it.ver || '').slice(0, 8), mb: +it.mb || 0, state: 'queued', at: now, by, rest: restAfter });
     }
     const w = Object.entries(W); if (!w.length) return { error: 'Nothing to send (check the rooms and files).' };
-    await hb.kvMany([], w); return { ok: true, queued: n, rooms: w.length };
+    if (!pushed) return { error: 'Nothing valid to send (check the rooms and files).' };   /* 21 Nov: n counted bad items too */
+    await hb.kvMany([], w); return { ok: true, queued: pushed, rooms: w.length };
   }
   if (act === 'ps4look') {   /* read-only folder listing from the PS4 (helper 1.0.5+): what the Capture Gallery keeps, etc. */
     const id = ps4Id(f.id), now = Date.now();
