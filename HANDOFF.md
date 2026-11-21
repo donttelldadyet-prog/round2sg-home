@@ -142,6 +142,34 @@
   (clean kind prep or a queue) – anyone who signs in gets a PS4 message "Hang on <name> – saves are still loading (player k of n).
   Please don't start a game yet." (normal notification, not verbose-only).
   The broader ShellUI probe ("log everything") was NOT continued – stopped there; only the 4:26am list exists.
+- **21 Nov 11:10–11:35am – owner: "build [1.1.137]; does it need a restart; does going straight into a file have checks; does it add
+  delays (load times didn't improve); the PKG server window doesn't show useful info and the size counter is wrong".**
+  - **Helper 1.1.137** (ps4-test beca510→latest, source a44f9b8+, NOT on Kaeden yet – waits for the Sims DLC queue to empty; helper
+    switch kills a running PKG job: Get Together failed "the PS4 restarted during it" at the 11:03 switch to 1.1.136 → re-queue it):
+    - save downloads go straight into the prep files: `sv_getm_fd` (bundle file → each piece written to its file through sv_buf),
+      `sv_get_fd` (one-by-one fallback, r2tls_fetch_file into the open file, a failed try is cut back with ftruncate). No 1 MB
+      mallocs per piece any more (the 1:12am "bundle: no memory for a piece"). A failed big-file bundle is truncated back too.
+    - **checks:** before 1.1.137 a restore checked file SIZE only. Now the cloud manifest gets a 4th column SHA-256 (sv_up_dir +
+      cloud batch); a restore re-reads each prep file and compares (log "N file(s) fingerprint-checked in X s"). Only saves
+      uploaded from 1.1.137 on have it – Karen's current GTA still gets the size check only. Old helpers read the 4th column fine
+      (atoi_safe stops at the tab; checked 1.1.114 f795ee2 look_srest + pf_game).
+    - **no member upload after a failed/cut-off load:** memload_game writes prep/noup_<u>_<t> just before it changes the profile
+      (after the pre-load backup) and removes it only on success. sv_local_copy: a member-tagged copy of a game with noup → room
+      backup only (log "NOT for member … isn't their save"). Cleared by: success, clean slate (with owner_ tags), release_names,
+      /_memtag to a DIFFERENT member. NOT cleared by a sticky/kept re-tag (kept_newer could otherwise upload the fresh save).
+      Side effect (tell guests/owner): anything played in that game after a failed load stays in the room backup.
+    - save.log rolls at 256 KB into save-old.log (was 64 KB into save.log.old, which /_tail refuses) – the 1:12am and 2:31am
+      timing lines were already gone, so the load-time question can't be answered from them; test after the switch.
+    - pkg_tick gives up only after 45 min without progress (source-only change from earlier, now built).
+  - **PKG server 1.3** (tools/pkg-server, copied to the laptop C:\Users\saber\round2-tv\pkg-server, needs the window restarted
+    – only when no PKG job is running): per (PS4, file) transfer with merged byte ranges (the PS4 uses several connections and
+    re-asks parts, so 1.2's socket-byte count over-counted); lines: "<room> started <file> (size)", every 30 s "<room> - <file>:
+    X of Y (%) - MB/s - about N left - k connections", "<room> finished <file>: size in T (MB/s average)", "stopped at X% – nothing
+    asked for 10 min". "sent" = unique bytes. Room names from pkg-rooms.txt (IPs from ps4list 21 Nov: vale .11, max .23, scarlett
+    .4, kai .18, kaeden .5, atlas 192.168.120.3, bella 192.168.120.2 – DHCP may move them). Page: "Sending now" table, refresh 5 s.
+  - Light check 11:23 (before): 15 passed, 3 to look at, 2 failed – both OLD: side timer 52 outside requests in one run; "PS4 games
+    queue: bad file link NOT refused" = engine pkgsend counts n++ (jid) before validation and writes W back unchanged → answers
+    {ok, queued:1} though nothing is queued (checked: nothing queued). Fix next engine deploy: count only pushed jobs, error if 0.
 - **21 Nov 10:56–11:05am – owner asked what "Clean up" (PS4 downloads) does now: it deletes every /user/download/<title> except PS
   Vue → would have killed the running Sims DLC download. Fix in 1.1.136: keeps the folder of a running PKG job (pkg-job). Owner:
   "send 1.1.136 now" → helper 1.1.136 (ps4-test 1ec4d23) + round2_shell12 (ps4-shell 6603c55) on Kaeden 11:03; shell12 auto-loaded
