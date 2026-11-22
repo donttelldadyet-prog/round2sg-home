@@ -10,8 +10,12 @@ standing rules. Keep it short; add a rule here only when the owner asks for one.
    `design/README.md` says which file changes what and how to preview a branch on your phone
    (`book.round2.sg/m?room=kaeden&design=<branch>`). A push to `main` is live for guests within ~5 minutes.
 2. **Never edit** `worker/` (the live booking engine – bookings, payments, PS4s), `slots/`, `email/`, `menu/`, `move/`,
-   `CLAUDE.md`, or the long dated notes below. The homepage (`index.html`) is the website – design changes there are fine
-   as before, but don't change its booking links or scripts.
+   `CLAUDE.md`, or the long dated notes below.
+   **Exception – the homepage is the design team's (owner, 22 Nov 2026):** `index.html` (round2.sg's game-homescreen page) can
+   be edited freely – look, wording, layout, sections, pictures – and published **straight to `main`, no pull request and no
+   owner approval needed** (live within ~5 minutes). Pull first, check it on a phone after, and keep the booking buttons
+   working (they must still open the booking page). Rules 1 and 5 (own branch, pull request, ask before merge) are for
+   `design/` only, not the homepage.
 3. Never deploy anything to Cloudflare and never run the "Full check" – that's the owner's side.
 4. Keep the class / id names and the `var(--ac)` / `var(--ink)` room colours – the page's functions rely on them.
 5. Tell the owner in plain words what you changed and send him the preview link before asking him to merge.
