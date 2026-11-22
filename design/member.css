@@ -1,146 +1,143 @@
 /* Round2 member page (book.round2.sg/m) – the look only. Edited by design; read by the booking engine. See design/README.md.
    Colours: var(--ac) = the room colour, var(--ink) = text on it, var(--hero-h) = header height (both set by the engine).
-   22 Nov 2026 "save console": the logged-in page is one connected screen built around moving saves –
-   1) the transfer panel first (room glow, a switch per player, one big Load button that streams while it sends),
-   2) the crew as ONE surface below (crew name, players as rows with a swipe strip of pictures, add a player, PIN) with
-   hairline dividers instead of separate boxes, 3) a quiet footer. Round2 signature: Press Start 2P titles, the segmented
-   LV bar, the room colour. Everything else modern: soft radius, depth, glow. Logo = the page's own Round2 logo. */
-:root{--bg:#07060c;--s1:#100d1a;--s2:#161223;--line:rgba(244,241,251,.09);--edge:rgba(244,241,251,.42);--txt:#f4f1fb;--mut:#aaa2c0;--r:20px;--r2:14px}
+   22 Nov 2026 v3 "player select" – the same language as the TV home screen (round2-tv-launcher web/) and round2.sg:
+   a game menu. Sharp edges; big spaced capitals in Chakra Petch; tiny Press Start 2P labels; the chosen item is a slanted
+   bar in the room colour with a ▶ (Join/Log in, each player to load); panels like the TV's info panel; a hairline with a
+   diamond between sections; the main button has round2.sg's slanted BOOK shape. Logo = the page's own Round2 logo. */
+:root{--acT:color-mix(in srgb,var(--ac) 72%,#fff);--void:#06050a;--panel:rgba(12,10,21,.92);--txt:#f4f1fb;--mute:#b9b0cf;--dim:rgba(244,241,251,.62);--rule:rgba(244,241,251,.45);--hair:rgba(244,241,251,.12);
+  --slant:polygon(0 0,100% 0,calc(100% - 14px) 100%,0 100%)}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{margin:0;color:var(--txt);font:16px/1.5 'Chakra Petch',system-ui,sans-serif;min-height:100vh;
-  background:radial-gradient(120% 60% at 100% -10%,color-mix(in srgb,var(--ac) 34%,transparent),transparent 62%),
-             radial-gradient(90% 50% at -20% 110%,color-mix(in srgb,var(--ac) 12%,transparent),transparent 70%),var(--bg);background-attachment:fixed}
-main{max-width:460px;margin:0 auto;padding:22px 16px 56px;overflow-x:clip}   /* the character art may hang off the edge, never scrolls sideways */
-.px{font-family:'Press Start 2P',monospace;letter-spacing:.06em}
+body{margin:0;color:var(--txt);font:16px/1.5 'Chakra Petch','Segoe UI',Roboto,sans-serif;min-height:100vh;background-attachment:fixed;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 1px,transparent 1px 3px),
+             radial-gradient(70% 45% at 70% 18%,color-mix(in srgb,var(--ac) 26%,transparent),transparent 70%),var(--void)}
+main{max-width:480px;margin:0 auto;padding:24px 20px 56px;overflow-x:clip}
+.px{font-family:'Press Start 2P',monospace;letter-spacing:.14em}
 
-/* ---------- header: the real logo, ROUND2 MEMBERS, the room as a title screen ---------- */
-.hero{position:relative;min-height:var(--hero-h);margin:0 0 4px;overflow:visible}
-.hero .logo{height:32px;width:auto;display:block;margin:0 0 22px}
-.hero .char{position:absolute;right:-22px;top:-12px;height:300px;pointer-events:none;
-  -webkit-mask-image:linear-gradient(to bottom,#000 58%,transparent 97%);mask-image:linear-gradient(to bottom,#000 58%,transparent 97%);
-  filter:drop-shadow(0 0 34px color-mix(in srgb,var(--ac) 45%,transparent))}
-.kick{position:relative;font-size:10px;color:var(--mut)}
-.hero .room{position:relative;font-family:'Press Start 2P',monospace;font-size:clamp(26px,8.4vw,36px);line-height:1.1;color:var(--ac);margin:10px 0 14px;
-  text-shadow:3px 3px 0 color-mix(in srgb,var(--ac) 35%,#06050a),0 0 28px color-mix(in srgb,var(--ac) 45%,transparent);word-break:break-word;max-width:72%}
-.hero .tag{position:relative;max-width:56%;font-size:15px;line-height:1.45;color:#d9d2ea}
-h1{position:relative;font-family:'Press Start 2P',monospace;font-size:18px;line-height:1.55;margin:10px 0 18px;text-shadow:3px 3px 0 rgba(0,0,0,.6)}
-/* the LV bar */
-.bar{height:8px;margin:0 0 24px;background:repeating-linear-gradient(90deg,var(--ac) 0 14px,transparent 14px 18px);
-  -webkit-mask-image:linear-gradient(90deg,#000 55%,rgba(0,0,0,.15));mask-image:linear-gradient(90deg,#000 55%,rgba(0,0,0,.15))}
+/* ---------- header: logo, eyebrow, the room as a big menu word ---------- */
+.hero{position:relative;min-height:var(--hero-h);margin:0;overflow:visible}
+.hero .logo{height:30px;width:auto;display:block;margin:0 0 30px;position:relative;z-index:1}
+.hero .char{position:absolute;right:-26px;top:-6px;height:300px;pointer-events:none;opacity:.92;
+  -webkit-mask-image:linear-gradient(to bottom,#000 55%,transparent 96%);mask-image:linear-gradient(to bottom,#000 55%,transparent 96%);
+  filter:drop-shadow(0 0 40px color-mix(in srgb,var(--ac) 40%,transparent))}
+.kick{position:relative;font-size:10px;color:var(--acT);letter-spacing:.18em}
+.hero .room{position:relative;font:700 clamp(38px,12.5vw,56px)/.95 'Chakra Petch',sans-serif;letter-spacing:.02em;text-transform:uppercase;color:var(--txt);
+  margin:12px 0 14px;text-shadow:0 2px 30px rgba(0,0,0,.6);word-break:break-word}
+.hero .tag{position:relative;max-width:62%;font-size:16px;line-height:1.5;color:var(--mute)}
+h1{position:relative;font:700 clamp(34px,10vw,46px)/1 'Chakra Petch',sans-serif;text-transform:uppercase;letter-spacing:.02em;margin:12px 0 16px}
+/* section rule with a diamond (the TV's MAIN MENU divider) */
+.bar{position:relative;height:1px;margin:8px 0 26px;background:linear-gradient(90deg,var(--rule),var(--rule) 46%,transparent 46%,transparent 54%,var(--rule) 54%,transparent)}
+.bar::after{content:"";position:absolute;left:50%;top:-6px;width:11px;height:11px;margin-left:-6px;border:1.5px solid var(--txt);transform:rotate(45deg);background:var(--void)}
 
 /* ---------- shared parts ---------- */
-.card{position:relative;background:var(--s1);padding:20px 18px;margin:0 0 14px;border-radius:var(--r);border:1px solid var(--line)}
-.card>b:first-child,#playh{display:block;font-family:'Press Start 2P',monospace;font-size:11px;line-height:1.6;letter-spacing:.04em;font-weight:400;
-  color:color-mix(in srgb,var(--ac) 70%,#fff);margin:0 0 6px}
-label{display:block;font-size:14px;color:var(--mut);margin:14px 0 6px}
-input{width:100%;padding:13px 14px;background:var(--bg);color:var(--txt);font:500 18px 'Chakra Petch',sans-serif;
-  border:1px solid var(--edge);border-radius:12px;transition:border-color .15s,background .15s}   /* edge .42 = 3.5:1 on the surface */
+.card{position:relative;background:var(--panel);border:1px solid var(--hair);padding:22px 20px;margin:0 0 16px}
+.card>b:first-child{display:block;font:400 10px/1.6 'Press Start 2P',monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--acT);margin:0 0 4px}
+label{display:block;font-size:14px;color:var(--mute);margin:16px 0 7px}
+input{width:100%;padding:14px 14px;background:rgba(6,5,10,.8);color:var(--txt);font:500 18px 'Chakra Petch',sans-serif;border:1px solid var(--rule);border-radius:0;
+  transition:border-color .15s,box-shadow .15s}
 input::placeholder{color:#8a83a0}
-input:focus{outline:0;border-color:var(--ac);background:color-mix(in srgb,var(--ac) 9%,var(--bg));box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 30%,transparent)}
-button{display:block;width:100%;margin-top:16px;padding:15px 14px;border:0;border-radius:var(--r2);cursor:pointer;
-  background:var(--ac);color:var(--ink);font:700 16px 'Chakra Petch',sans-serif;letter-spacing:.01em;
-  box-shadow:0 10px 26px -12px color-mix(in srgb,var(--ac) 80%,transparent),inset 0 1px 0 rgba(255,255,255,.25);transition:transform .08s,filter .15s}
-button:active{transform:translateY(1px) scale(.99)}
-button:focus-visible{outline:3px solid var(--txt);outline-offset:3px}
-button:disabled{opacity:.6;cursor:wait}
-button.ghost{background:rgba(244,241,251,.05);color:var(--txt);font:600 15px 'Chakra Petch',sans-serif;border:1px solid rgba(244,241,251,.28);box-shadow:none;padding:13px 14px}
-button.ghost:active{background:rgba(244,241,251,.1)}
-button.on{background:var(--txt);color:#06050a}
-button.sm{width:auto;padding:7px 12px;margin:0;font:600 13px 'Chakra Petch',sans-serif;border-radius:10px}
-.err{color:#ff8a8a;min-height:0;margin:8px 0 0;font-size:14px}.err:empty{margin:0}
+input:focus{outline:0;border-color:var(--ac);box-shadow:inset 4px 0 0 var(--ac)}
+button{position:relative;display:block;width:100%;margin-top:18px;padding:16px 18px;border:0;border-radius:0;cursor:pointer;text-align:left;
+  background:var(--ac);color:var(--ink);font:700 17px 'Chakra Petch',sans-serif;letter-spacing:.12em;text-transform:uppercase;clip-path:var(--slant);transition:filter .15s,transform .08s}
+button::before{content:"\25B6";font-size:.7em;margin-right:12px;vertical-align:.12em}
+button:active{transform:translateX(2px)}
+button:focus-visible{outline:0;box-shadow:inset 0 0 0 3px var(--ink),inset 0 0 0 5px var(--ac)}
+button:disabled{cursor:wait}
+button.ghost{background:transparent;color:var(--txt);clip-path:none;border:1px solid var(--rule);font-size:15px;padding:14px 16px;text-align:center}
+button.ghost::before{content:none}
+button.ghost:focus-visible{box-shadow:none;outline:2px solid var(--txt);outline-offset:2px}
+button.ghost:active{background:rgba(244,241,251,.06);transform:none}
+button.on{background:var(--txt);color:var(--void)}
+button.sm{width:auto;margin:0;padding:6px 2px;border:0;font:400 9px/1.6 'Press Start 2P',monospace;letter-spacing:.14em;color:var(--dim)}
+button.sm:hover{color:var(--txt)}
+.err{color:#ff8a8a;margin:10px 0 0;font-size:14px}.err:empty{margin:0}
 .ok{color:#7dffa8}
-.fine{font-size:14px;line-height:1.5;color:var(--mut)}
-.badge{display:inline-block;font-family:'Press Start 2P',monospace;font-size:9px;padding:5px 8px;border-radius:999px;background:var(--ac);color:var(--ink);margin-left:8px;vertical-align:middle}
-.av{font-size:28px;width:52px;height:52px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:16px;overflow:hidden;
-  background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--ac) 45%,#1d1830),#120e1d);box-shadow:0 0 0 2px var(--ac),0 6px 18px -8px var(--ac)}
+.fine{font-size:14px;line-height:1.55;color:var(--mute)}
+.badge{display:inline-block;font:400 9px/1 'Press Start 2P',monospace;letter-spacing:.14em;padding:5px 8px;background:var(--ac);color:var(--ink);margin-left:10px;vertical-align:middle}
+.av{font-size:26px;width:52px;height:52px;flex:none;display:flex;align-items:center;justify-content:center;overflow:hidden;
+  background:color-mix(in srgb,var(--ac) 22%,#110e1c);border:2px solid var(--ac)}
 .av img{width:100%;height:100%;display:block}
 
-/* ---------- logged out: Join / Log in ---------- */
-#out .card{background:linear-gradient(180deg,var(--s2),var(--s1));box-shadow:0 30px 60px -40px #000}
-.tabs{display:flex;gap:4px;margin:0 0 14px;padding:4px;background:var(--s1);border:1px solid var(--line);border-radius:16px}
-.tabs button{flex:1;margin:0;padding:11px 10px;border-radius:12px;box-shadow:none;font:600 16px 'Chakra Petch',sans-serif}
-.tabs button.ghost{background:transparent;border:0;color:var(--mut)}
-.tabs button.on{background:var(--ac);color:var(--ink);box-shadow:0 6px 18px -8px var(--ac)}
+/* ---------- logged out: Join / Log in as two menu items ---------- */
+.tabs{display:flex;gap:6px;margin:0 0 14px}
+.tabs button{flex:1;margin:0;padding:14px 16px;font-size:18px;text-align:left}
+.tabs button.on{background:var(--ac);color:var(--ink)}
+.tabs button.ghost{background:transparent;border:0;color:var(--dim);clip-path:none;text-align:left}
+.tabs button.ghost::before{content:"\25B6";visibility:hidden}
+#out .card{padding-top:8px}
+#jb,#lb{margin-top:24px;padding:18px 20px;font-size:18px}
 
-/* ---------- logged in: one screen ---------- */
+/* ---------- logged in ---------- */
 #in{display:flex;flex-direction:column}
 
-/* 1. the transfer panel – first, because that's why the guest scanned the TV */
-#playc{order:-1;margin:0 0 18px;padding:22px 18px 18px;border:1px solid color-mix(in srgb,var(--ac) 45%,transparent);overflow:hidden;
-  background:radial-gradient(130% 80% at 100% 0,color-mix(in srgb,var(--ac) 30%,transparent),transparent 60%),linear-gradient(180deg,#18132a,var(--s1));
-  box-shadow:0 30px 70px -40px color-mix(in srgb,var(--ac) 70%,transparent),inset 0 1px 0 rgba(255,255,255,.06)}
-#playc::before{content:"";position:absolute;left:18px;right:18px;top:0;height:3px;border-radius:0 0 3px 3px;
-  background:repeating-linear-gradient(90deg,var(--ac) 0 12px,transparent 12px 16px);opacity:.9}
-#playh{font-size:13px;color:var(--txt);margin:2px 0 8px}
-#playc>.fine{margin:0 0 10px}
-#playb>label{display:flex!important;align-items:center;gap:12px!important;margin:8px 0!important;padding:10px 12px;font-size:17px!important;font-weight:600;color:var(--txt)!important;
-  background:rgba(244,241,251,.04);border:1px solid var(--line);border-radius:16px;cursor:pointer;transition:background .15s,border-color .15s}
-#playb>label:has(:checked){background:color-mix(in srgb,var(--ac) 14%,transparent);border-color:color-mix(in srgb,var(--ac) 50%,transparent)}
-#playb>label .av{width:40px!important;height:40px!important;font-size:22px!important;border-radius:12px;box-shadow:0 0 0 1px var(--ac)}
-/* the tick box becomes a switch on the right */
-#playb input[type=checkbox]{order:2;margin-left:auto;appearance:none;-webkit-appearance:none;width:48px!important;height:28px!important;flex:none;border-radius:999px;padding:0;
-  background:#2a2438;border:1px solid var(--edge);position:relative;cursor:pointer;transition:background .2s}
-#playb input[type=checkbox]::before{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#cfc8e3;transition:transform .2s}
-#playb input[type=checkbox]:checked{background:var(--ac);border-color:var(--ac)}
-#playb input[type=checkbox]:checked::before{transform:translateX(20px);background:var(--ink)}
-#playb input[type=checkbox]:focus-visible{outline:3px solid var(--txt);outline-offset:2px}
-#playb>.fine{margin:12px 2px 0}
-/* Load: the big one. While it sends (the page disables it) saves stream through it */
-#playb [data-go]{margin-top:14px;padding:18px 14px;font:400 13px/1.5 'Press Start 2P',monospace;letter-spacing:.04em;border-radius:16px;
-  background:linear-gradient(180deg,color-mix(in srgb,var(--ac) 88%,#fff),var(--ac));position:relative;overflow:hidden}
-#playb [data-go]:disabled{opacity:1;background:repeating-linear-gradient(90deg,var(--ac) 0 14px,color-mix(in srgb,var(--ac) 55%,#000) 14px 18px);background-size:36px 100%;
-  animation:r2stream .5s linear infinite}
+/* 1. PLAY ON <ROOM> NOW – first, styled as the TV menu: switched-on players light up as the room-colour bar */
+#playc{order:-1;padding:22px 20px 20px;margin:0 0 22px;border-color:color-mix(in srgb,var(--ac) 50%,transparent);
+  background:linear-gradient(180deg,color-mix(in srgb,var(--ac) 12%,rgba(12,10,21,.94)),var(--panel) 45%)}
+#playh{display:block;font:700 30px/1.05 'Chakra Petch',sans-serif;letter-spacing:.02em;text-transform:uppercase;color:var(--txt);margin:0 0 10px}
+#playc>.fine{margin:0 0 14px}
+#playb>label{position:relative;display:flex!important;align-items:center;gap:14px!important;margin:6px 0!important;padding:10px 16px 10px 40px;cursor:pointer;
+  font:600 17px 'Chakra Petch',sans-serif!important;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)!important;clip-path:var(--slant);transition:background .15s,color .15s}
+#playb>label::before{content:"\25B6";position:absolute;left:16px;font-size:12px;opacity:0}
+#playb>label:has(:checked){background:color-mix(in srgb,var(--ac) 20%,transparent);color:var(--txt)!important;box-shadow:inset 4px 0 0 var(--ac)}
+#playb>label:has(:checked)::before{opacity:1;color:var(--ac)}
+#playb>label:has(:focus-visible){box-shadow:inset 0 0 0 2px var(--txt)}
+#playb>label .av{width:38px!important;height:38px!important;font-size:20px!important;border-width:1px!important}
+#playb>label:has(:checked) .av{border-color:var(--ac)}
+#playb input[type=checkbox]{order:2;margin-left:auto;appearance:none;-webkit-appearance:none;width:24px!important;height:24px!important;flex:none;padding:0;
+  border:2px solid currentColor;background:transparent;cursor:pointer}
+#playb input[type=checkbox]:checked{background:var(--ac);border-color:var(--ac);box-shadow:inset 0 0 0 4px #110e1c}
+#playb input[type=checkbox]:focus{box-shadow:none}
+#playb input[type=checkbox]:checked:focus{box-shadow:inset 0 0 0 4px #110e1c}
+#playb>.fine{margin:14px 0 0}
+#playb [data-go]{margin-top:18px;padding:20px 20px;font-size:17px;letter-spacing:.1em;box-shadow:0 14px 34px -16px var(--ac)}
+#playb [data-go]:disabled{background:repeating-linear-gradient(90deg,var(--ac) 0 14px,color-mix(in srgb,var(--ac) 55%,#000) 14px 18px);background-size:36px 100%;
+  animation:r2stream .45s linear infinite}
 @keyframes r2stream{to{background-position:36px 0}}
-#playb [data-rout]{margin-top:10px;background:transparent;border-color:transparent;color:var(--mut);font-size:14px;text-decoration:underline;text-underline-offset:3px}
+#playb [data-rout]{margin:14px auto 0;width:auto;border:0;padding:6px 4px;font:400 9px/1.6 'Press Start 2P',monospace;letter-spacing:.14em;color:var(--dim)}
 
-/* 2. the crew: one surface – crew card, every player, add a player, PIN – joined by hairlines */
-#in>.card:not(#playc),#pls>.card{margin:0;border-radius:0;border-width:0 1px;background:var(--s1)}
-#in #pls>.card,#in>#addc:not(#playc),#in>.card:not(#playc):last-of-type{border-top:1px solid var(--line)}
-#in>.card:not(#playc):first-child{border-radius:var(--r) var(--r) 0 0;border-top-width:1px;padding-top:22px;
-  background:linear-gradient(180deg,color-mix(in srgb,var(--ac) 10%,var(--s2)),var(--s1))}
-#in>.card:not(#playc):not(#addc):not(:first-child){border-radius:0 0 var(--r) var(--r);border-bottom-width:1px;margin-bottom:8px}
+/* 2. the crew: one panel – crew name, players, add a player, PIN – divided by hairlines */
+#in>.card:not(#playc),#pls>.card{margin:0;border-width:0 1px;background:var(--panel)}
+#in>.card:not(#playc):first-child{border-top-width:1px}
+#in #pls>.card,#in>#addc:not(#playc),#in>.card:not(#playc):last-of-type{border-top:1px solid var(--hair)}
+#in>.card:not(#playc):last-of-type{border-bottom-width:1px;margin-bottom:10px}
 
-/* crew header: name big, Save beside it */
-#in>.card:first-child{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;align-items:end}
-#in>.card:first-child>*{grid-column:1/-1}
-#in>.card:first-child>.fine:first-child{font-family:'Press Start 2P',monospace;font-size:10px;letter-spacing:.06em;color:var(--mut)}
-#in>.card:first-child>label{margin:12px 0 6px;font-size:13px}
-#cr{grid-column:1;font-size:22px;font-weight:700;padding:10px 12px}
-#crb{grid-column:2;width:auto;margin:0;padding:13px 14px;font-size:14px}
-#ph{margin-top:12px!important;font-size:13px}
+/* crew header: spec-row eyebrow, big name, save beside it */
+#in>.card:not(#playc):first-child{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;align-items:end}
+#in>.card:not(#playc):first-child>*{grid-column:1/-1}
+#in>.card:not(#playc):first-child>.fine:first-child{font:400 10px/1.6 'Press Start 2P',monospace;letter-spacing:.16em;color:var(--acT)}
+#in>.card:not(#playc):first-child>#cr{grid-column:1;font:700 24px 'Chakra Petch',sans-serif;letter-spacing:.04em;text-transform:uppercase;padding:10px 12px}
+#in>.card:not(#playc):first-child>#crb{grid-column:1/-1;justify-self:start;width:auto;margin:10px 0 0;padding:11px 14px;font-size:12px}   /* under the name: long crew names keep the full width */
+#ph{margin-top:14px!important;font:600 12px/1.6 'Chakra Petch',sans-serif;letter-spacing:.12em;color:var(--dim);text-transform:uppercase}
 
-/* players: rows, not boxes */
-#pls>.card{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;padding:18px}
+/* players */
+#pls>.card{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px}
 #pls>.card>*{grid-column:1/-1}
 .pl{display:flex;gap:12px;align-items:center;justify-content:space-between}
 .who{display:flex;gap:14px;align-items:center}
-.who b{font-size:20px;font-weight:700;line-height:1.2}
-#pls>.card>label{margin:14px 0 6px;font-size:13px}
-#pls>.card>input{grid-column:1;padding:10px 12px;font-size:17px}
-#pls>.card>[data-sv]{grid-column:2;grid-row:3;align-self:end;width:auto;margin:0;padding:12px 14px;font-size:14px;border-radius:12px;
-  background:color-mix(in srgb,var(--ac) 16%,transparent);color:var(--txt);border:1px solid color-mix(in srgb,var(--ac) 60%,transparent);box-shadow:none}   /* only Load is solid */
-#pls [data-del]{background:transparent;border-color:transparent;color:var(--mut);text-decoration:underline;text-underline-offset:3px;padding:6px 4px}
-/* pictures: one swipe strip */
-.pics{display:flex;gap:8px;overflow-x:auto;margin:2px -18px 0;padding:6px 18px 8px;scroll-snap-type:x proximity;scrollbar-width:none}
+.who b{font:700 22px/1.1 'Chakra Petch',sans-serif;letter-spacing:.06em;text-transform:uppercase}
+#pls>.card>input{grid-column:1;padding:11px 12px;font-size:17px}
+#pls>.card>[data-sv]{grid-column:2;grid-row:3;align-self:end;width:auto;margin:0;padding:13px 14px;font-size:13px;text-align:center;clip-path:none;
+  background:transparent;color:var(--txt);border:1px solid var(--ac)}
+#pls>.card>[data-sv]::before{content:none}
+/* pictures: one swipe strip, the chosen one framed in the room colour */
+.pics{display:flex;gap:8px;overflow-x:auto;margin:2px -20px 0;padding:4px 20px 6px;scroll-snap-type:x proximity;scrollbar-width:none}
 .pics::-webkit-scrollbar{display:none}
-.pics div{flex:none;width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:26px;border-radius:14px;background:var(--s2);
-  border:1px solid var(--line);cursor:pointer;scroll-snap-align:start;transition:transform .12s,background .15s}
-.pics div.sel{background:color-mix(in srgb,var(--ac) 26%,var(--s2));border:2px solid var(--ac);transform:translateY(-2px);box-shadow:0 8px 18px -10px var(--ac)}
-.pics div img{width:100%;height:100%;display:block;border-radius:inherit}
+.pics div{flex:none;width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:26px;background:rgba(244,241,251,.05);
+  border:1px solid var(--hair);cursor:pointer;scroll-snap-align:start}
+.pics div.sel{background:color-mix(in srgb,var(--ac) 24%,transparent);border:2px solid var(--ac);box-shadow:0 0 18px -6px var(--ac)}
+.pics div img{width:100%;height:100%;display:block}
 .pics div:has(img){padding:0;overflow:hidden}
-.pics .more{font-size:13px;color:var(--ac)}
+.pics .more{font:400 9px 'Press Start 2P',monospace;color:var(--acT)}
 
-/* add a player + change PIN: settings rows */
+/* add a player + change PIN: settings, quiet */
 #addc{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;align-items:end}
 #addc>*{grid-column:1/-1}
-#addc>#an{grid-column:1;padding:10px 12px;font-size:17px}
-#addc>#ab{grid-column:2;grid-row:3;width:auto;margin:0;padding:12px 14px;font-size:14px}
-#addc>label,#in>.card:last-of-type>label{font-size:13px;margin:10px 0 6px}
-#pb{margin-top:14px}
+#addc>#an{grid-column:1;padding:11px 12px;font-size:17px}
+#addc>#ab{grid-column:2;grid-row:3;width:auto;margin:0;padding:13px 14px;font-size:13px}
+#pb{margin-top:16px}
 
 /* 3. footer */
-#in>.fine{margin:22px 4px 6px;text-align:center}
-#lo{width:auto;align-self:center;margin:4px 0 0;background:transparent;border-color:transparent;color:var(--mut);text-decoration:underline;text-underline-offset:3px}
+#in>.fine{margin:24px 0 8px;text-align:center}
+#lo{width:auto;align-self:center;margin:6px 0 0;border:0;padding:8px;font:400 10px/1.6 'Press Start 2P',monospace;letter-spacing:.14em;color:var(--dim)}
 
 @media (prefers-reduced-motion:reduce){*{transition:none!important}#playb [data-go]:disabled{animation:none}}
