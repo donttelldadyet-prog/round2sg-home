@@ -5121,8 +5121,8 @@ function memPage(u, D) {
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#06050a"><style>:root{--ac:${ac};--ink:${ink};--hero-h:${R ? 250 : 150}px}${D && D.css ? D.css : MEM_CSS}</style></head><body><main>
 <header class="hero"><img class="logo" src="${MEM_LOGO}" alt="Round2">${R ? `<img class="char" src="${MEM_WIX + R[3]}" alt="">` : ''}
-<div class="kick px">ROUND2 MEMBERS</div>${R ? `<div class="room">${R[0].toUpperCase()}</div><div class="tag">Join or log in – your crew’s saves, names and pictures load onto this room’s PS4.</div>` : '<h1>Your Round2<br>game crew</h1>'}</header><div class="bar"></div>
-<section id="out"><div class="tabs"><button id="tJ" class="on">Join</button><button id="tL" class="ghost">Log in</button></div>
+<div class="kick px">ROUND2 MEMBERS</div>${R ? `<div class="room" role="heading" aria-level="1">${R[0].toUpperCase()}</div><div class="tag">Join or log in – your crew’s saves, names and pictures load onto this room’s PS4.</div>` : '<h1>Your Round2<br>game crew</h1>'}</header><div class="bar"></div>
+<section id="out"><div class="tabs"><button id="tJ" class="on" aria-pressed="true">Join</button><button id="tL" class="ghost" aria-pressed="false">Log in</button></div>
 <div class="card"><div id="fJ"><label for="jn">Your player name on the PS4 (2–16 letters or numbers)</label><input id="jn" autocomplete="nickname" maxlength="16">
 <label for="jc">Crew name (optional) – your couple or group name. Leave it empty to use your player name.</label><input id="jc" maxlength="24">
 <div id="jpw" hidden><label id="jpl">Your picture on the PS4</label><div class="pics" id="jpics" role="radiogroup" aria-labelledby="jpl"></div></div>
@@ -5154,7 +5154,7 @@ function jp(){$('jpw').hidden=!AV.all.length;$('jpics').innerHTML=grid(JAV,MORE.
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function api(o){if(T)o.tok=T;return fetch('/m/api',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(o)}).then(function(r){return r.json()}).catch(function(){return{error:'No connection – try again.'}})}
 function keep(t){T=t;try{localStorage.setItem('r2.mem',t)}catch(e){}}
-function tab(j){$('fJ').hidden=!j;$('fL').hidden=j;$('tJ').className=j?'on':'ghost';$('tL').className=j?'ghost':'on';$('e1').textContent=''}
+function tab(j){$('fJ').hidden=!j;$('fL').hidden=j;$('tJ').className=j?'on':'ghost';$('tL').className=j?'ghost':'on';$('tJ').setAttribute('aria-pressed',!!j);$('tL').setAttribute('aria-pressed',!j);$('e1').textContent=''}
 $('tJ').onclick=function(){tab(1)};
 $('jpics').onclick=function(e){var d=e.target.closest('[data-a]');if(d){JAV=d.dataset.a;jp();return}if(e.target.closest('[data-more]')){MORE.j=(MORE.j||0)+1;jp()}};
 fetch('/m/av/list').then(function(r){return r.json()}).then(function(r){AV=r;if(!JAV)JAV=AV.lapy[Math.floor(Math.random()*AV.lapy.length)]||AV.all[0]||'';jp();if(M)show({me:M})}).catch(function(){});$('tL').onclick=function(){tab(0)};
