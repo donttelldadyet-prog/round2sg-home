@@ -56,6 +56,8 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   plus extra bottom padding on the pinned bar for iPhones (`@supports (-webkit-touch-callout:none)`). Checked on an iPhone 22 Nov
   9:21pm: bar fully above Safari's bar, HOLD & PAY tappable; leaves a small empty band under the bar on iPhones (the extra +30px
   can probably come down). Function side: please run the Light check and tidy if needed. (22 Nov 2026, design)
+- [x] (LIVE 22 Nov ~9:55pm, applied from the design side – owner OK'd) 1 · booking page, details step · The pinned bar had no
+  "YOUR BOOKING" heading on the details step (the pick step has one). Added the same `<h4 class="sumh">` line – markup only. (22 Nov 2026, design)
 
 **Member page `book.round2.sg/m` (`memPage` / `memApi` in `worker/round2-book.js`) – from the design + accessibility review, 22 Nov 2026**
 > **Function side – LIVE 22 Nov 9:00pm** (engine hash 0981692a…, 27 bindings, 3 timers; Light check 18/3/0 before and after;
