@@ -4538,17 +4538,29 @@ async function ps4DnsIni(env, req) {   /* the helper: the settings file for its 
   if (!ini) return J({ error: 'gone' }, 404);
   return new Response(ini, { headers: { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
 }
+/* 22 Nov (owner: "if join on their own, then how can the new member claim their saves"): a removed player who claimed their saves
+   with a code now lives in another crew (moved:<old crew>/<slot> = <new crew>/<slot>). A PS4 that still has them linked to the old
+   crew (same night, cloud batch later) reads and writes the player's list at the NEW place, so nothing played tonight is lost.
+   Only list files (members/<crew>/<slot>/index.txt) are checked – one Durable Object read each, kept 60 s. Save pieces have their
+   full path in the list and stay where they are. */
+const MOVED_MEMO = new Map();
+async function ps4Moved(env, k) {
+  const mm = /^members\/([a-z0-9-]{3,31}\/[a-z0-9]{1,15})\/index\.txt$/.exec(k); if (!mm) return k;
+  const c = MOVED_MEMO.get(mm[1]), now = Date.now(); let to = c && now - c.t < 60e3 ? c.to : undefined;
+  if (to === undefined) { to = (await book(env).kvGet('moved:' + mm[1])) || ''; MOVED_MEMO.set(mm[1], { t: now, to }); if (MOVED_MEMO.size > 200) MOVED_MEMO.delete(MOVED_MEMO.keys().next().value); }
+  return to ? 'members/' + to + '/index.txt' : k;
+}
 async function ps4SPut(env, req, u) {
   if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
   if (!env.SAVES) return J({ error: 'no storage' }, 503);
-  const k = ps4SaveKey(u.searchParams.get('k')); if (!k) return J({ error: 'bad key' }, 400);
+  let k = ps4SaveKey(u.searchParams.get('k')); if (!k) return J({ error: 'bad key' }, 400); k = await ps4Moved(env, k);
   const b = await req.arrayBuffer(); if (b.byteLength > 20e6) return J({ error: 'too big' }, 413);
   await env.SAVES.put('saves/' + k, b); return J({ ok: true, n: b.byteLength });
 }
 async function ps4SGet(env, req, u) {
   if (!env.PS4_KEY || req.headers.get('x-r2-ps4') !== env.PS4_KEY) return J({ error: 'no' }, 403);
   if (!env.SAVES) return J({ error: 'no storage' }, 503);
-  const k = ps4SaveKey(u.searchParams.get('k')); if (!k) return J({ error: 'bad key' }, 400);
+  let k = ps4SaveKey(u.searchParams.get('k')); if (!k) return J({ error: 'bad key' }, 400); k = await ps4Moved(env, k);
   const o = await env.SAVES.get('saves/' + k); if (!o) return J({ error: 'not found' }, 404);
   return new Response(o.body, { headers: { 'content-type': 'application/octet-stream', 'content-length': String(o.size) } });
 }
@@ -4929,6 +4941,31 @@ async function memAvSet(env, mid, slot, n) {   /* the bundle the helper reads: "
 async function memAvOk(env, a) { a = String(a || ''); return /^\d{4}$/.test(a) && (await memAvIndex(env)).all.includes(a) ? a : ''; }
 async function memAvDefault(env, not) { const L = await memAvIndex(env), d = L.lapy.length ? L.lapy : L.all.slice(0, 24), f = d.filter((x) => !(not || []).includes(x)); const u = f.length ? f : d; return u.length ? u[Math.floor(Math.random() * u.length)] : ''; }
 const MEM_MAXP = 4;
+/* 22 Nov (owner: removed player claims their saves): removing a player makes a one-time code (8 letters/numbers, 30 days). The
+   removed player types it when they join (their saves become their first player) or on their own crew page (added as a new
+   player). The move copies the player's list (index.txt – every save piece is listed with its full path, nothing else moves) and
+   picture, and points the old place at the new one (moved:) so a PS4 still holding them tonight uploads to the new crew. */
+/* who else is loaded in this room this session (same TV code, not logged out of the room); can(rep) = the PS4's helper knows /_memadd */
+function memRoomCrews(mp, tk, mid) {
+  const live = mp && !mp.out && tk && mp.k === tk.k && Date.now() < (mp.until || 0), L = live ? (mp.crews || [{ mid: mp.mid, crew: mp.name, main: true }]) : [];
+  const v = (x) => String(x || '0').split('.').map((n) => +n || 0), ge = (a, b) => { for (let i = 0; i < 3; i++) if ((a[i] || 0) !== (b[i] || 0)) return (a[i] || 0) > (b[i] || 0); return true; };
+  return { others: L.filter((x) => x.mid !== mid), mainMine: L.length ? !!(L.find((x) => x.mid === mid) || {}).main : true, can: (rep) => ge(v(rep && rep.v), [1, 1, 152]) };
+}
+const MEM_CLAIM_ABC = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function memClaimNew() { const b = crypto.getRandomValues(new Uint8Array(8)); let c = ''; for (const x of b) c += MEM_CLAIM_ABC[x % 32]; return c; }
+const memClaimShow = (c) => c.slice(0, 4) + '-' + c.slice(4);
+async function memClaimGet(hb, code) {
+  const c = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); if (c.length !== 8) return null;
+  const r = await hb.kvGet('claim:' + c); return r && !r.used && Date.now() < r.until ? Object.assign({}, r, { code: c }) : null;
+}
+async function memClaimMove(env, hb, cl, mid, slot, withPic) {
+  const from = 'saves/members/' + cl.from + '/' + cl.slot + '/', to = 'saves/members/' + mid + '/' + slot + '/', now = Date.now(); let n = 0;
+  if (env.SAVES) for (const f of withPic ? ['index.txt', 'avatar.bin'] : ['index.txt']) { const o = await env.SAVES.get(from + f); if (o) { await env.SAVES.put(to + f, await o.arrayBuffer()); n++; } }
+  const om = cl.phone ? await hb.kvGet('mem:' + cl.phone) : null, g = om && (om.gone || []).find((x) => x.slot === cl.slot);
+  if (g) g.claimed = now;
+  await hb.kvMany([], [['claim:' + cl.code, Object.assign({}, cl, { used: now, to: mid + '/' + slot })], ['moved:' + cl.from + '/' + cl.slot, mid + '/' + slot]].concat(g ? [['mem:' + cl.phone, om]] : []));
+  MOVED_MEMO.delete(cl.from + '/' + cl.slot); return n;
+}
 function memPhone(p) { let d = String(p || '').replace(/\D/g, ''); if (d.length === 8 && /^[3689]/.test(d)) d = '65' + d; return /^\d{10,15}$/.test(d) ? d : ''; }
 const memB64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 async function memMac(env, s) {
@@ -4942,7 +4979,7 @@ function memNorm(m) {   /* accounts made before crews (19 Nov 10:23pm) get one p
   if (!Array.isArray(m.players) || !m.players.length) m.players = [{ slot: 'p1', shown: m.shown || 'Player', pic: m.pic || 0, at: m.at }];
   if (!m.crew) m.crew = m.players[0].shown; return m;
 }
-const memPub = (m) => ({ id: m.id, crew: m.crew, players: m.players.map((p) => ({ slot: p.slot, shown: p.shown, pic: p.pic || 0, av: p.av || '' })), phone: m.phone.replace(/^65(\d{8})$/, '$1').replace(/^(\d{4})(\d{4})$/, '$1 $2'), staff: !!m.staff, since: m.at, max: MEM_MAXP });
+const memPub = (m) => ({ id: m.id, crew: m.crew, players: m.players.map((p) => ({ slot: p.slot, shown: p.shown, pic: p.pic || 0, av: p.av || '' })), phone: m.phone.replace(/^65(\d{8})$/, '$1').replace(/^(\d{4})(\d{4})$/, '$1 $2'), gone: (m.gone || []).filter((g) => g.code && !g.claimed && Date.now() < g.until).map((g) => ({ shown: g.shown, code: memClaimShow(g.code), until: g.until })), staff: !!m.staff, since: m.at, max: MEM_MAXP });
 async function memTok(env, m) { const p = m.phone + '.' + (Date.now() + 180 * 86400e3).toString(36) + '.' + (m.tv || 0); return p + '.' + (await memMac(env, 'tok|' + p)).slice(0, 24); }
 async function memFromTok(env, hb, t) {
   const a = String(t || '').split('.'); if (a.length !== 4) return null;
@@ -4961,12 +4998,15 @@ async function memApi(env, req) {
     if (!/^\d{4,8}$/.test(pin)) return J({ error: 'The PIN must be 4 to 8 numbers.', field: 'jk' });
     if (memWeak(pin)) return J({ error: 'Pick a less easy PIN (not 1234… or all the same number).', field: 'jk' });
     if (await hb.kvGet('mem:' + phone)) return J({ error: 'This number already has an account – log in instead.', login: true, field: 'lk' });
+    const cl = String(f.claim || '').trim() ? await memClaimGet(hb, f.claim) : null;
+    if (String(f.claim || '').trim() && !cl) return J({ error: 'That claim code doesn’t work – check it, or leave it empty. Codes work once, for 30 days.', field: 'jx' });
     const salt = memB64(crypto.getRandomValues(new Uint8Array(9))), id = 'm' + memB64(crypto.getRandomValues(new Uint8Array(6))).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8).padEnd(8, '0');
     const av = (await memAvOk(env, f.av)) || (await memAvDefault(env));
     const m = { id, crew, phone, salt, pin: await memMac(env, 'pin|' + salt + '|' + pin), at: now, players: [{ slot: 'p1', shown: name, pic: 0, av, at: now }], staff: false, tv: 0, bad: 0, lock: 0, by: 'self' };
     if (av) await memAvSet(env, id, 'p1', av).catch(() => false);
     const list = (await hb.kvGet('memlist')) || []; if (!list.includes(phone)) list.push(phone);
     await hb.kvMany([], [['mem:' + phone, m], ['memlist', list]]);
+    if (cl) { await memClaimMove(env, hb, cl, id, 'p1', false); return J(Object.assign({ ok: true, me: memPub(m), pics: MEM_PICS, tok: await memTok(env, m), claimed: cl.shown })); }
     return ok(m, true);
   }
   if (act === 'login') {
@@ -4992,6 +5032,17 @@ async function memApi(env, req) {
       if (!(await memAvSet(env, m.id, p.slot, a).catch(() => false))) return J({ error: 'That picture could not be prepared – pick another.' }); p.av = a; }
     return save();
   }
+  if (act === 'claim') {   /* a member types a claim code: that removed player joins this crew with their saves */
+    if (!(await hb.gmRate('memclaim:' + who, 10))) return J({ error: 'Too many tries from here. Wait 10 minutes.' });
+    const cl = await memClaimGet(hb, f.code); if (!cl) return J({ error: 'That code doesn’t work – check it. Codes work once, for 30 days.' });
+    if (cl.from === m.id) return J({ error: 'That player was removed from this crew – add them back with “Add a player” instead.' });
+    if (m.players.length >= MEM_MAXP) return J({ error: `Your crew already has ${MEM_MAXP} players – remove one first.` });
+    let s = memShown(cl.shown) || 'Player'; for (let n = 2; m.players.some((x) => x.shown.toLowerCase() === s.toLowerCase()); n++) s = memShown(cl.shown).slice(0, 14) + n;
+    const used = m.players.concat(m.gone || []).map((x) => +String(x.slot).slice(1) || 0), slot = 'p' + (Math.max(0, ...used) + 1);
+    await memClaimMove(env, hb, cl, m.id, slot, true);
+    m.players.push({ slot, shown: s, pic: (m.players.length * 3) % MEM_PICS.length, av: cl.av || '', at: now, from: cl.from + '/' + cl.slot });
+    await hb.kvSet('mem:' + m.phone, m); return J({ ok: true, me: memPub(m), pics: MEM_PICS, claimed: s });
+  }
   if (act === 'addp') {
     if (m.players.length >= MEM_MAXP) return J({ error: `A crew can have up to ${MEM_MAXP} players.` });
     const s = memShown(f.shown); if (s.length < 2) return J({ error: 'The PS4 name needs 2–16 letters or numbers.' });
@@ -5006,8 +5057,10 @@ async function memApi(env, req) {
     if ((await memMac(env, 'pin|' + m.salt + '|' + String(f.pin || ''))) !== m.pin) return J({ error: 'Wrong PIN – the player was not removed.' });
     const i = m.players.findIndex((x) => x.slot === String(f.slot)); if (i < 0) return J({ error: 'That player isn’t in your crew.' });
     if (m.players.length === 1) return J({ error: 'A crew needs at least one player.' });
-    const [g] = m.players.splice(i, 1); m.gone = (m.gone || []).concat([{ slot: g.slot, shown: g.shown, at: now }]).slice(-20);
-    return save();
+    const [g] = m.players.splice(i, 1), code = memClaimNew(), until = now + 30 * 86400e3;
+    m.gone = (m.gone || []).concat([{ slot: g.slot, shown: g.shown, at: now, code, until }]).slice(-20);
+    await hb.kvMany([], [['mem:' + m.phone, m], ['claim:' + code, { from: m.id, phone: m.phone, slot: g.slot, shown: g.shown, av: g.av || '', at: now, until }]]);
+    return J({ ok: true, me: memPub(m), pics: MEM_PICS, claim: { shown: g.shown, code: memClaimShow(code), until } });
   }
   if (act === 'play') {   /* 20 Nov 12:05am: "Load <player> on this PS4" (page opened from the tile's QR) -> helper 1.1.90 /_memplay */
     const room = String(f.room || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12), want = (Array.isArray(f.slots) ? f.slots : [f.slot]).map(String);   /* 12:53am owner: tick several players, load at once (helper 1.1.94) */
@@ -5015,30 +5068,40 @@ async function memApi(env, req) {
     if (!p) return J({ error: 'Tick at least one player.' });
     const map = (await hb.kvGet('ps4map')) || {}, id = Object.keys(map).find((i) => map[i] === room);
     if (!id) return J({ error: 'This room’s PS4 isn’t set up for members yet – please ask staff.' });
-    const K = await hb.kvMany(['ps4poll:' + id, 'ps4cmd:' + id, 'tiletok:' + id, 'ps4fg:' + id], []), c0 = K['ps4cmd:' + id], tk = K['tiletok:' + id], fg = K['ps4fg:' + id];
+    const K = await hb.kvMany(['ps4poll:' + id, 'ps4cmd:' + id, 'tiletok:' + id, 'ps4fg:' + id, 'memplay:' + id, 'ps4:' + id], []), c0 = K['ps4cmd:' + id], tk = K['tiletok:' + id], fg = K['ps4fg:' + id];
     /* 20 Nov 2:55am (owner): the QR's code only works for the session it was shown in – a guest who scanned and went home can't load */
     if (!tk || !f.k || String(f.k) !== tk.k || now >= tk.until) return J({ error: 'This code has run out. Scan the code on the room’s TV again to load.', rescan: true });
     if (now - (K['ps4poll:' + id] || 0) > 3 * 60e3) return J({ error: 'The PS4 in this room isn’t answering – is it switched on?' });
     /* helper 1.1.128+ says when the Round2 tile opens/closes (ps4fg); older helpers never do, so no record = no check */
     if (fg && fg.on === 0) return J({ error: 'Open the Round2 tile on the TV first, then press Load again.', tile: false });
     if (c0 && (c0.state === 'sent' || c0.state === 'taken') && now - c0.at < 2 * 60e3) return J({ error: 'The PS4 is busy for a moment – try again in a minute.', busy: true });
-    const names = ps.filter((x) => x.slot !== 'main').map((x) => x.shown).join(' + ') || m.crew, c = { cid: 'l' + now.toString(36), do: 'look', p: `/_memplay.${m.id}.` + ps.map((x) => x.slot + '.' + x.shown.replace(/ /g, '_')).join('.'), at: now, by: 'member ' + m.id, state: 'sent', nobusy: true };
-    await hb.kvMany([], [['ps4cmd:' + id, c], ['memplay:' + id, { name: names, cid: c.cid, at: now, until: tk.until, mid: m.id }]]);   /* until (owner 20 Nov 8:01am): the tile keeps showing this member for the whole session */
-    return J({ ok: true, sent: true, name: names, room });
+    /* 22 Nov (owner: "2 members in one room, each with individual saves, is there a way we can load from each?"): another crew
+       already loaded here THIS session (same code on the TV) and hasn't logged out of the room → helper 1.1.152+ "/_memadd": this
+       crew's players go on the free profiles, the other crew's profiles stay as they are. Older helpers: one crew at a time. */
+    const ad = memRoomCrews(K['memplay:' + id], tk, m.id), add = ad.others.length > 0 && ad.can(K['ps4:' + id]);
+    if (add && ps.some((x) => x.slot === 'main') && !ad.mainMine) return J({ error: 'The room’s main profile belongs to the crew that loaded first – switch it off and pick your players.' });
+    const names = ps.filter((x) => x.slot !== 'main').map((x) => x.shown).join(' + ') || m.crew, c = { cid: 'l' + now.toString(36), do: 'look', p: `/_mem${add ? 'add' : 'play'}.${m.id}.` + ps.map((x) => x.slot + '.' + x.shown.replace(/ /g, '_')).join('.'), at: now, by: 'member ' + m.id, state: 'sent', nobusy: true };
+    const crews = (add ? ad.others : []).concat([{ mid: m.id, crew: m.crew, at: now, main: add ? ad.mainMine : true }]);
+    await hb.kvMany([], [['ps4cmd:' + id, c], ['memplay:' + id, { name: names, cid: c.cid, at: now, until: tk.until, mid: m.id, k: tk.k, crews }]]);   /* until (owner 20 Nov 8:01am): the tile keeps showing this member for the whole session */
+    TILE_MEMO.delete(id); return J({ ok: true, sent: true, name: names, room, add });
   }
   if (act === 'loadst') {   /* 22 Nov (design review: "little feedback after Load"): the phone shows the same progress as the tile */
     const room = String(f.room || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12), map = (await hb.kvGet('ps4map')) || {}, id = Object.keys(map).find((i) => map[i] === room);
     if (!id) return J({ error: 'Unknown room.' });
     const tk = await hb.kvGet('tiletok:' + id); if (!tk || !f.k || String(f.k) !== tk.k || now >= tk.until) return J({ error: 'This code has run out.', rescan: true });   /* names only for the crew holding the room's code */
     const t = await (await ps4Tile(env, new URL('https://x/ps4/tile?id=' + id))).json();
-    return J({ ok: true, status: t.status || '', title: t.title || '', line: t.line || '', board: t.board || '', done: +t.done || 0, total: +t.total || 0 });
+    const K2 = await hb.kvMany(['memplay:' + id, 'ps4:' + id], []), ad = memRoomCrews(K2['memplay:' + id], tk, m.id), can = ad.others.length > 0 && ad.can(K2['ps4:' + id]);
+    return J({ ok: true, status: t.status || '', title: t.title || '', line: t.line || '', board: t.board || '', done: +t.done || 0, total: +t.total || 0,
+      others: can ? ad.others.map((x) => x.crew) : [], mainok: !can || ad.mainMine, mine: !!(K2['memplay:' + id] && K2['memplay:' + id].mid === m.id) });
   }
   if (act === 'roomout') {   /* owner 20 Nov 8:01am: "a button to logout manually" – this member is done in this room; the tile shows the code again */
     const room = String(f.room || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12), map = (await hb.kvGet('ps4map')) || {}, id = Object.keys(map).find((i) => map[i] === room);
     if (!id) return J({ error: 'Unknown room.' });
     const K = await hb.kvMany(['tiletok:' + id, 'memplay:' + id], []), tk = K['tiletok:' + id], mp = K['memplay:' + id];
     if (!tk || !f.k || String(f.k) !== tk.k || now >= tk.until) return J({ error: 'This code has run out – nothing to log out of.', rescan: true });
-    if (mp && !mp.out) { mp.out = now; await hb.kvSet('memplay:' + id, mp); }
+    if (mp && !mp.out) { const left = (mp.crews || []).filter((x) => x.mid !== m.id);   /* 22 Nov: with two crews, only this crew leaves */
+      if (left.length && mp.k === tk.k) { mp.crews = left; if (mp.mid === m.id) { mp.mid = left[left.length - 1].mid; mp.name = left[left.length - 1].crew; } } else mp.out = now;
+      await hb.kvSet('memplay:' + id, mp); }
     TILE_MEMO.delete(id); return J({ ok: true, room });
   }
   if (act === 'pin') {
@@ -5129,6 +5192,7 @@ function memPage(u, D) {
 <label for="jp">Phone number</label><input id="jp" inputmode="tel" autocomplete="tel" placeholder="9123 4567">
 <label for="jk">Pick a PIN (4 to 8 numbers)</label><input id="jk" inputmode="numeric" maxlength="8" type="password" autocomplete="new-password">
 <label for="jk2">PIN again</label><input id="jk2" inputmode="numeric" maxlength="8" type="password" autocomplete="new-password">
+<details id="jxw"><summary>Removed from a crew? Got a claim code?</summary><label for="jx">Claim code (8 letters/numbers) – your saves come with you</label><input id="jx" maxlength="9" autocapitalize="characters" autocomplete="off" placeholder="ABCD-2345"></details>
 <button id="jb">Join Round2</button><p class="fine">You can add the rest of your crew after joining – each player gets their own name, picture and saves. Your saves follow you to any Round2 room.</p></div>
 <div id="fL" hidden><label for="lp">Phone number</label><input id="lp" inputmode="tel" autocomplete="tel" placeholder="9123 4567">
 <label for="lk">PIN</label><input id="lk" inputmode="numeric" maxlength="8" type="password" autocomplete="current-password"><button id="lb">Log in</button>
@@ -5136,11 +5200,13 @@ function memPage(u, D) {
 <section id="in" hidden><div class="card"><div class="fine">CREW<span class="badge px" id="bd"></span></div><label for="cr">Crew name</label><input id="cr" maxlength="24">
 <div class="fine" id="ph" style="margin-top:10px"></div></div>
 <div id="pls"></div>
+<div class="card" id="gonec" hidden tabindex="-1"><b>Removed players</b><p class="fine">Give each one their code. When they join Round2 with their own phone and type it, their saves move to their own account. Codes work once, for 30 days.</p><div id="gonel"></div></div>
 <div class="card" id="savec"><button id="svall">Save changes</button><p class="err" role="alert" id="e0"></p></div>
-<div class="card" id="playc" hidden><b id="playh"></b><p class="fine">Switch on everyone who’s playing. Each player’s saves come back into the same profile they used last time.</p><div id="playb"></div><p class="err" role="alert" id="e5"></p>
+<div class="card" id="playc" hidden><b id="playh"></b><p class="fine">Switch on everyone who’s playing. Each player’s saves come back into the same profile they used last time.</p><p class="fine share" id="rshare" hidden></p><div id="playb"></div><p class="err" role="alert" id="e5"></p>
 <div id="lprog" hidden><div class="lbar" style="height:10px;background:rgba(255,255,255,.12);margin:12px 0 6px;overflow:hidden"><i id="lpbar" style="display:block;height:100%;width:0;background:var(--ac);transition:width .6s"></i></div><p class="fine" id="lptx" aria-live="polite"></p><div class="lst" id="lpl"></div></div></div>
 <div class="card" id="addc"><b>Add a player</b><label for="an">Their name on the PS4</label><input id="an" maxlength="16"><button class="ghost" id="ab">Add player</button>
 <p class="err" role="alert" id="e4"></p></div>
+<div class="card" id="clmc"><b>Got a claim code?</b><p class="fine">Someone was removed from another crew and is joining yours – type their code and they come with their saves.</p><label for="cx">Claim code</label><input id="cx" maxlength="9" autocapitalize="characters" autocomplete="off" placeholder="ABCD-2345"><button class="ghost" id="cb">Add with their saves</button><p class="err" role="alert" id="e7"></p></div>
 <div class="card"><b>Change PIN</b><label for="po">Current PIN</label><input id="po" inputmode="numeric" maxlength="8" type="password" autocomplete="current-password">
 <label for="pn">New PIN (4 to 8 numbers)</label><input id="pn" inputmode="numeric" maxlength="8" type="password"><button class="ghost" id="pb">Change PIN</button><p class="err" role="alert" id="e3"></p></div>
 <p class="fine">In the room: open the Round2 tile on the PS4, scan the code, choose who’s playing – each player’s saves, name and picture load in.</p>
@@ -5176,15 +5242,20 @@ $('tJ').onclick=function(){tab(1)};
 $('jpics').onclick=function(e){var d=e.target.closest('[data-a]');if(d){JAV=d.dataset.a;jp()}};
 fetch('/m/av/list').then(function(r){return r.json()}).then(function(r){AV=r;if(!JAV)JAV=AV.lapy[Math.floor(Math.random()*AV.lapy.length)]||AV.all[0]||'';jp();if(M)show({me:M})}).catch(function(){});$('tL').onclick=function(){tab(0)};
 function show(r){if(r.pics)P=r.pics;M=r.me;$('out').hidden=true;$('in').hidden=false;$('cr').value=M.crew;$('bd').textContent=M.staff?'STAFF':'MEMBER';
-$('ph').textContent='Phone '+M.phone+' · '+M.players.length+' of '+M.max+' players';$('addc').hidden=M.players.length>=M.max;
+$('ph').textContent='Phone '+M.phone+' · '+M.players.length+' of '+M.max+' players';$('addc').hidden=$('clmc').hidden=M.players.length>=M.max;
+var G=M.gone||[];$('gonec').hidden=!G.length;$('gonel').innerHTML=G.map(function(g){return '<div class="gone" style="margin-top:10px"><b>'+esc(g.shown)+'</b> – code <span class="code px" style="color:var(--ac);letter-spacing:1px">'+esc(g.code)+'</span> <span class="fine">until '+new Date(g.until).toLocaleDateString('en-SG',{day:'numeric',month:'short'})+'</span></div>'}).join('');
 $('pls').innerHTML=M.players.map(function(p){sel[p.slot]=p.av||p.pic;return '<div class="card" data-s="'+p.slot+'"><div class="pl"><div class="who"><div class="av">'+face(p)+'</div><b>'+esc(p.shown)+'</b></div>'+
 (M.players.length>1?'<button class="ghost sm" data-del="1" aria-label="Remove '+esc(p.shown)+'">Remove</button>':'')+'</div><label for="n-'+p.slot+'">Name on the PS4</label><input id="n-'+p.slot+'" data-n="1" maxlength="16" value="'+esc(p.shown)+'">'+
 '<label id="pl-'+p.slot+'">Picture on the PS4</label><div class="pics" role="radiogroup" aria-labelledby="pl-'+p.slot+'">'+(AV.all.length?grid(p.av,p.slot):P.map(function(x,i){return '<div data-i="'+i+'" class="'+(i===p.pic?'sel':'')+'" role="radio" aria-checked="'+(i===p.pic)+'" aria-label="Picture '+(i+1)+'" tabindex="'+(i===p.pic||(p.pic<0&&!i)?0:-1)+'">'+x+'</div>'}).join(''))+'</div>'+picbar(p.slot)+
 '<div class="rmc" hidden></div><p class="err" role="alert"></p></div>'}).join('');play()}
 var ROOM=new URLSearchParams(location.search).get('room')||'',KEY=new URLSearchParams(location.search).get('k')||'';
+/* 22 Nov (owner: two crews in one room): ask once who else is loaded here this session – their profiles stay as they are */
+var RS=null;function roomst(){if(!ROOM||!KEY||!M)return;api({act:'loadst',room:ROOM,k:KEY}).then(function(r){if(!r.ok)return;RS=r;var o=(r.others||[]).join(' and '),n=$('rshare');
+if(n){n.hidden=!o;n.textContent=o?o+(r.others.length>1?' are':' is')+' also playing in this room. Your players go on the free Player profiles – theirs stay as they are.':''}
+var mn=document.querySelector('[data-tick=main]');if(mn&&!r.mainok){mn.checked=false;mn.closest('label').hidden=true}})}
 function play(){if(!ROOM||!M){$('playc').hidden=true;return}$('playc').hidden=false;$('playh').textContent='Choose who’s playing on '+ROOM.toUpperCase();
 if(!KEY){$('playb').innerHTML='<p class="fine">To load your saves, open the Round2 tile on this room’s PS4 and scan its code.</p>';return}
-$('playb').innerHTML=[{slot:'main',shown:ROOM.toUpperCase()+' (main profile)',pic:-1}].concat(M.players).map(function(p){return '<label style="display:flex;gap:12px;align-items:center;font-size:18px;color:#f4f1fb;margin:10px 0"><input type="checkbox" data-tick="'+p.slot+'" checked style="width:26px;height:26px"> <span class="av" style="width:36px;height:36px;font-size:20px;border-width:1px">'+(p.slot==='main'?'🏠':face(p))+'</span> '+esc(p.shown)+'</label>'}).join('')+'<button data-go="1">Load saves</button><p class="fine">Everything played in this room – the main profile and Player 1-4 – is saved to your crew after the session.</p><button class="ghost" data-rout="1">Log out of '+esc(ROOM.toUpperCase())+'</button>'}
+$('playb').innerHTML=[{slot:'main',shown:ROOM.toUpperCase()+' (main profile)',pic:-1}].concat(M.players).map(function(p){return '<label style="display:flex;gap:12px;align-items:center;font-size:18px;color:#f4f1fb;margin:10px 0"><input type="checkbox" data-tick="'+p.slot+'" checked style="width:26px;height:26px"> <span class="av" style="width:36px;height:36px;font-size:20px;border-width:1px">'+(p.slot==='main'?'🏠':face(p))+'</span> '+esc(p.shown)+'</label>'}).join('')+'<button data-go="1">Load saves</button><p class="fine">Everything played in this room – the main profile and Player 1-4 – is saved to your crew after the session.</p><button class="ghost" data-rout="1">Log out of '+esc(ROOM.toUpperCase())+'</button>';roomst()}
 $('playb').onclick=function(e){if(e.target.closest('[data-rout]')){var e6=$('e5');e6.className='err';api({act:'roomout',room:ROOM,k:KEY}).then(function(r){if(r.error){e6.textContent=r.error;return}e6.className='err ok';e6.textContent='Logged out of '+ROOM.toUpperCase()+'. The TV shows the code again for the next members.'});return}var b=e.target.closest('[data-go]');if(!b)return;var e5=$('e5');e5.className='err';e5.textContent='';var sl=[].map.call(document.querySelectorAll('[data-tick]:checked'),function(x){return x.dataset.tick});if(!sl.length){e5.textContent='Switch on at least one player.';return}b.disabled=true;
 api({act:'play',room:ROOM,slots:sl,k:KEY}).then(function(r){b.disabled=false;if(r.error){e5.textContent=r.error;if(r.out)out();return}e5.className='err ok';e5.textContent='Sent! Loading '+r.name+'’s saves – watch here or on the TV.';prog(1)})};
 /* 22 Nov (design review): the phone follows the load like the tile does – profiles ready, the bar, then what to do */
@@ -5201,10 +5272,10 @@ var a=e.target.closest('[data-a]');if(a){sel[s]=a.dataset.a;[].forEach.call(c.qu
 
 var d=e.target.closest('[data-i]');if(d){sel[s]=+d.dataset.i;[].forEach.call(c.querySelectorAll('.pics div'),function(x){var on=+x.dataset.i===sel[s];x.className=on?'sel':'';x.setAttribute('aria-checked',on);x.tabIndex=on?0:-1});c.querySelector('.av').textContent=P[sel[s]];return}
 var rm=c.querySelector('.rmc'),nm=c.querySelector('b').textContent;
-if(e.target.dataset.del){rm.hidden=false;rm.innerHTML='<p class="fine">Remove '+esc(nm)+' from your crew? Their saves stay safe with Round2, but they’ll need to join on their own.</p><label for="rp-'+s+'">Your PIN</label><input id="rp-'+s+'" type="password" inputmode="numeric" maxlength="8" autocomplete="current-password"><button class="ghost" data-rmgo="1">Remove '+esc(nm)+'</button> <button class="ghost" data-rmno="1">Keep '+esc(nm)+'</button>';$('rp-'+s).focus();return}
+if(e.target.dataset.del){rm.hidden=false;rm.innerHTML='<p class="fine">Remove '+esc(nm)+' from your crew? You’ll get a code to give them – with it, they take their saves to their own Round2 account.</p><label for="rp-'+s+'">Your PIN</label><input id="rp-'+s+'" type="password" inputmode="numeric" maxlength="8" autocomplete="current-password"><button class="ghost" data-rmgo="1">Remove '+esc(nm)+'</button> <button class="ghost" data-rmno="1">Keep '+esc(nm)+'</button>';$('rp-'+s).focus();return}
 if(e.target.dataset.rmno){rm.hidden=true;rm.innerHTML='';c.querySelector('[data-del]').focus();return}
 if(e.target.dataset.rmgo){var pin=$('rp-'+s).value;if(!pin){er.textContent='Type your PIN to remove '+nm+'.';$('rp-'+s).focus();return}
-api({act:'delp',slot:s,pin:pin}).then(function(r){if(r.error){er.textContent=r.error;var q=$('rp-'+s);if(q){q.value='';q.focus()}if(r.out)out();return}show(r);$('ph').focus&&$('ph').setAttribute('tabindex','-1');$('ph').focus()})}};
+api({act:'delp',slot:s,pin:pin}).then(function(r){if(r.error){er.textContent=r.error;var q=$('rp-'+s);if(q){q.value='';q.focus()}if(r.out)out();return}show(r);$('gonec').hidden=false;$('gonec').focus();$('gonec').scrollIntoView({block:'center'})})}};
 /* 22 Nov (design review): pictures work with a keyboard – arrows move, Enter/Space picks; "More pictures" like a button */
 document.addEventListener('keydown',function(e){var t=e.target;if(!t||!t.closest)return;var r=t.closest('.pics [role=radio]'),mo=t.closest('.pics [data-more]');
 if(mo&&(e.key==='Enter'||e.key===' ')){e.preventDefault();mo.click();return}if(!r)return;
@@ -5218,12 +5289,14 @@ api(jobs[i].o).then(function(r){if(r.error){busy(b,0,'Save changes');if(last)sho
 function busy(b,on,t){b.disabled=on;if(t)b.textContent=t}
 document.addEventListener('input',function(e){if(e.target&&e.target.removeAttribute)e.target.removeAttribute('aria-invalid')});
 $('jb').onclick=function(){var e=$('e1');e.textContent='';if($('jk').value!==$('jk2').value){e.textContent='The two PINs are not the same.';$('jk2').setAttribute('aria-invalid','true');$('jk2').focus();return}
-busy($('jb'),1,'Joining…');api({act:'join',crew:$('jc').value,name:$('jn').value,phone:$('jp').value,pin:$('jk').value,av:JAV}).then(function(r){busy($('jb'),0,'Join Round2');
-if(r.error){e.textContent=r.error;if(r.login){$('lp').value=$('jp').value;tab(0)}var q=$(r.field||'jn');if(q){q.setAttribute('aria-invalid','true');q.focus()}return}keep(r.tok);show(r)})};
+busy($('jb'),1,'Joining…');api({act:'join',crew:$('jc').value,name:$('jn').value,phone:$('jp').value,pin:$('jk').value,av:JAV,claim:$('jx').value}).then(function(r){busy($('jb'),0,'Join Round2');
+if(r.error){e.textContent=r.error;if(r.login){$('lp').value=$('jp').value;tab(0)}if(r.field==='jx')$('jxw').open=true;var q=$(r.field||'jn');if(q){q.setAttribute('aria-invalid','true');q.focus()}return}keep(r.tok);show(r);if(r.claimed){var e0=$('e0');e0.className='err ok';e0.textContent='Welcome! '+r.claimed+'’s saves are now on your account.'}})};
 $('lb').onclick=function(){var e=$('e1');e.textContent='';busy($('lb'),1,'Logging in…');api({act:'login',phone:$('lp').value,pin:$('lk').value}).then(function(r){busy($('lb'),0,'Log in');
 if(r.error){e.textContent=r.error;if(r.join){$('jp').value=$('lp').value;tab(1);$('jn').focus()}else{$('lk').value='';$('lk').focus()}return}keep(r.tok);show(r)})};
 
 $('ab').onclick=function(){var e=$('e4');e.className='err';e.textContent='';api({act:'addp',shown:$('an').value}).then(function(r){if(r.error){e.textContent=r.error;if(r.out)out();return}$('an').value='';show(r)})};
+$('cb').onclick=function(){var e=$('e7');e.className='err';e.textContent='';busy($('cb'),1,'Adding…');api({act:'claim',code:$('cx').value}).then(function(r){busy($('cb'),0,'Add with their saves');
+if(r.error){e.textContent=r.error;$('cx').setAttribute('aria-invalid','true');$('cx').focus();if(r.out)out();return}$('cx').value='';show(r);e.className='err ok';e.textContent=r.claimed+' joined your crew with their saves.'})};
 $('pb').onclick=function(){var e=$('e3');e.className='err';e.textContent='';api({act:'pin',old:$('po').value,pin:$('pn').value}).then(function(r){
 if(r.error){e.textContent=r.error;if(r.out)out();return}keep(r.tok);$('po').value=$('pn').value='';e.className='err ok';e.textContent='PIN changed. Other phones are logged out.'})};
 function out(){T=null;try{localStorage.removeItem('r2.mem')}catch(e){}$('in').hidden=true;$('out').hidden=false}
@@ -5275,7 +5348,7 @@ async function ps4Tile(env, u) {
     if (!res || prep || clBusy || more || young || (res['memplay/loading'] && !prepDone)) { o.status = 'loading'; o.title = 'Hi ' + nm + '!'; o.line = prep ? `Loading ${who}'s saves${o.pn ? ` (player ${o.pk} of ${o.pn})` : ''}: ${cl.done || 0} of ${cl.total || 0} games. Please don't start a game yet.` : more ? `Getting ${who}'s profile ready${o.pn ? ` (player ${o.pk} of ${o.pn})` : ''}...` : `Getting a profile ready for ${nm}...`; o.line2 = 'Please don\'t start a game yet - this screen updates by itself.'; }
     else if (res['memplay/loading'] && prepDone && cl.fails > 0) { o.status = 'off'; o.title = 'Sorry, ' + nm; o.line = `${cl.fails} of ${cl.total} games could not be loaded. Your saves are safe on your Round2 account.`; o.line2 = 'Please ask staff - they can load them again.'; }   /* 20 Nov 12:50am: the tile said Ready although Vampire Survivors failed */
     else if (res['memplay/loading'] || res['memplay/ready']) { o.status = 'done'; o.title = 'Ready, ' + nm + '!'; const onMain = /^main /.test(String(res['memplay/loading'] || res['memplay/ready'])), first = nm.split(' + ')[0], R = room.toUpperCase();   /* helper 1.1.95: the first ticked player goes into the main profile */
-      o.line = `Your saves are back on the profiles you ticked - pick up where you left off.`; o.line2 = `The ${R} profile and Player 1-4 all save to your crew after the session. PS button > switch user to change profile.`; void onMain; void first; }
+      o.line = `Your saves are back on the profiles you ticked - pick up where you left off.`; o.line2 = (mp.crews || []).length > 1 ? 'Two crews in one room: every player\'s saves go back to their own crew after the session. PS button > switch user to change profile.' : `The ${R} profile and Player 1-4 all save to your crew after the session. PS button > switch user to change profile.`; void onMain; void first; }
     else if (res['memplay/waits']) { o.status = 'reset'; o.title = 'Please wait'; o.line = `The room is being reset first. Press Load for ${nm} on your phone again in a minute.`; o.line2 = ''; }
     else if (res['memplay/refused'] || res['memplay/error']) { o.status = 'off'; o.title = 'Sorry, ' + nm; o.line = String(res['memplay/refused'] || res['memplay/error']).replace(/^- /, ''); o.line2 = 'Please ask staff.'; }
     /* 22 Nov 12am (owner: profile cards on the tile while loading): helper 1.1.148 reports the load board – each room profile and

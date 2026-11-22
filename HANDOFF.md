@@ -71,6 +71,21 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 > `.picbar` (row with the two buttons, inline flex default), `#avb` (gallery overlay, inline fixed/dark default), `#avbg`
 > (its grid, also `.pics`), `#avbn` (page text), `#avbp` / `#avbnx` / `#avbx` (Back / Next / Close). `.more` is no longer used.
 
+> **Function side – LIVE 22 Nov ~9:40pm (owner: "build both, then put into handoff for design team"): CLAIM CODES + TWO CREWS
+> IN ONE ROOM** (engine hash ed0f56da…, 27 bindings, 3 timers; Light check 18/3/0 before). What guests now see, and what design
+> can restyle (all on the member page; inline styles are only defaults – override in member.css):
+> - **Remove a player** → the confirm text now says they'll get a code. After removing, the page jumps to a new card
+>   `#gonec` "Removed players" (one row `.gone` per player: name, code in `.code`, "until <date>"). It stays for 30 days or
+>   until the code is used, so a lost code can be read again.
+> - **Join form** → new fold `#jxw` (a `<details>`: "Removed from a crew? Got a claim code?") with input `#jx`. A good code =
+>   the new account's first player gets the removed player's saves; message in `#e0` "Welcome! <name>'s saves are now on your account."
+> - **Logged in** → new card `#clmc` "Got a claim code?" (input `#cx`, button `#cb`, message `#e7`): adds the removed player
+>   to this crew with their saves. Hidden when the crew is full (4 players), like "Add a player".
+> - **Play card** → new line `#rshare` (`.fine.share`, hidden unless needed): "<Crew> is also playing in this room. Your players
+>   go on the free Player profiles – theirs stay as they are." When another crew holds the main profile, the main profile's
+>   switch is hidden. Only shows in rooms whose PS4 helper is 1.1.152+ (none yet – Kaeden first, see the 22 Nov 9:40pm entry).
+> - **TV tile** (no design change): when two crews are in, the "Ready" second line says every player's saves go back to their own crew.
+
 **Round2 PS4 tile (`/ps4/tile` in `worker/round2-book.js`, tile app in round2-tv-launcher `ps4/tile`) – 22 Nov 2026**
 - [x] (fixed 22 Nov 9:00pm, member-a11y) 2 · tile · The tile can only draw plain letters: any non-ASCII character from the engine shows as "?" per byte. The
   busy line "One moment – this PS4 is finishing a job…" shows as "One moment ??? this PS4…" on the TV (the – is 3
@@ -79,6 +94,40 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 ---
 
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
+
+## ⭐ 22 Nov 2026, 9:40pm – CLAIM CODES (removed player takes their saves) + TWO CREWS IN ONE ROOM (helper 1.1.152, test)
+Owner 8:49pm: "if join on their own, then how can the new member claim their saves, also what if there are 2 members in one room,
+each with individual saves, is there a way we can load from each?" → 8:53pm "BUILD BOTH, THEN put into handoff for design team".
+- **Before:** a removed player's saves stayed under the old crew with no way out; a second crew pressing Load cleared the first
+  crew's profiles (saves safe in the cloud first) – one crew per room at a time.
+- **Claim codes (engine, LIVE ed0f56da…):** `delp` now makes a one-time code (8 chars from ABCDEFGHJKLMNPQRSTUVWXYZ23456789,
+  shown XXXX-XXXX, 30 days) → KV `claim:<CODE>` {from crew id, phone, slot, shown, av, until} + kept on the crew's `gone` entry
+  (memPub `gone` lists unclaimed, unexpired ones). Use it: `join` with `claim` (checked BEFORE the account is made; bad code =
+  field jx, no account) → the player's list goes to `<new>/p1` (picture: the one picked at join); or logged-in `claim` act
+  (rate 10/10 min per IP; refused for your own crew – use Add a player; crew full = refused) → new slot, picture copied too.
+  The move copies ONLY `members/<old>/<slot>/index.txt` (+ avatar.bin) – every line holds the full path of its save version, so
+  nothing else is copied; the old index stays as history (no SAVES.delete anywhere). `moved:<old>/<slot>` = `<new>/<slot>`:
+  /ps4/sget and /ps4/sput redirect that player's index.txt (60 s memo, one DO read per index call only), so a PS4 that still
+  has them linked tonight (cloud batch later) uploads to the NEW account. Tested in node with a fake store (join + claim, reuse
+  refused, own-crew refused, redirect) and in the page (Playwright).
+- **Two crews (engine LIVE, helper 1.1.152 on ps4-test – NOT installed anywhere):** `memplay:<ps4>` now keeps `k` (the TV code)
+  and `crews` [{mid, crew, main}]. `play`: another crew loaded with the SAME code and not logged out of the room + the PS4 reports
+  helper ≥ 1.1.152 → command `/_memadd.<crew>.<slot>.<Name>…` instead of `/_memplay`; main profile refused unless this crew owns
+  it (first crew = main). `roomout` removes only that crew (room "out" when none left). `loadst` returns `others` (other crews'
+  names) + `mainok` for the phone. Older helpers: unchanged (one crew at a time, the old switch).
+- **Helper 1.1.152 (ps4-helper 1.1.151 + this; sym in /home/claude/symbols):** `/_memadd` = look_memplay add mode: profiles
+  linked to any crew's player (tag not empty, not x<k>) and the main profile are never released/renamed/re-linked; new players
+  take free spares (no tag or x<k>), clean ones (no member-able games) first; too few free = refused before anything changes
+  ("This PS4 has N free player profiles and M players to load…"); only this crew's profiles get linked. **Also in BOTH modes:** a
+  profile taking a NEW player is released first if it still holds member-able games (GT Sport/house saves don't count) – before,
+  the last owner's other games stayed on it and went to the new player's cloud after the session. **To test on Kaeden (owner
+  there, no game open, owner's OK to install):** 1) tile first on the home screen after a load (1.1.151 part); 2) crew A loads 1
+  player, crew B scans the same code + loads 1 → B on Player 2, A untouched, tile "Ready" line says each crew; 3) session upload
+  → each player's saves in their own crew; 4) remove a player, claim on another phone, load → saves there.
+- **System check:** new step "Member claim codes + two crews in a room" (light-safe: a wrong code is refused before an account is
+  made; member save lists locked to the PS4 key; lists rooms whose helper can take a second crew). systems.json: "Member crews:
+  claim codes + two crews in one room (22 Nov)" = test. Control centre commit bdca5fa.
+- **Design:** see "Function side – LIVE 22 Nov ~9:40pm" under DESIGN → FUNCTION CONCERNS (new ids/classes).
 
 ## ⭐ 19 Nov 2026, 10:10pm – MEMBER LOGIN PART 1 LIVE + Kaeden back to normal + Bella/Atlas Wi-Fi plan
 - **Member accounts (engine c933972, live sha 9d18544eee64, 27 bindings, 3 timers; Light check 14/4/0 before and after):**
