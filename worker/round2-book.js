@@ -5125,7 +5125,7 @@ function memPage(u, D) {
 <section id="out"><div class="tabs"><button id="tJ" class="on" aria-pressed="true">Join</button><button id="tL" class="ghost" aria-pressed="false">Log in</button></div>
 <div class="card"><div id="fJ"><label for="jn">Your player name on the PS4 (2–16 letters or numbers)</label><input id="jn" autocomplete="nickname" maxlength="16">
 <label for="jc">Crew name (optional) – your couple or group name. Leave it empty to use your player name.</label><input id="jc" maxlength="24">
-<div id="jpw" hidden><label id="jpl">Your picture on the PS4</label><div class="pics" id="jpics" role="radiogroup" aria-labelledby="jpl"></div></div>
+<div id="jpw" hidden><label id="jpl">Your picture on the PS4</label><div class="pics" id="jpics" role="radiogroup" aria-labelledby="jpl"></div><div id="jpbar"></div></div>
 <label for="jp">Phone number</label><input id="jp" inputmode="tel" autocomplete="tel" placeholder="9123 4567">
 <label for="jk">Pick a PIN (4 to 8 numbers)</label><input id="jk" inputmode="numeric" maxlength="8" type="password" autocomplete="new-password">
 <label for="jk2">PIN again</label><input id="jk2" inputmode="numeric" maxlength="8" type="password" autocomplete="new-password">
@@ -5145,24 +5145,41 @@ function memPage(u, D) {
 <label for="pn">New PIN (4 to 8 numbers)</label><input id="pn" inputmode="numeric" maxlength="8" type="password"><button class="ghost" id="pb">Change PIN</button><p class="err" role="alert" id="e3"></p></div>
 <p class="fine">In the room: open the Round2 tile on the PS4, scan the code, choose who’s playing – each player’s saves, name and picture load in.</p>
 <button class="ghost" id="lo">Log out</button></section>
+<div id="avb" hidden role="dialog" aria-modal="true" aria-labelledby="avbh" style="position:fixed;inset:0;z-index:50;background:rgba(6,5,10,.97);overflow:auto;padding:16px"><div style="max-width:560px;margin:0 auto">
+<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px"><b id="avbh">All pictures</b><button type="button" class="ghost sm" id="avbx">Close</button></div>
+<div class="pics" id="avbg" role="radiogroup" aria-labelledby="avbh"></div>
+<div class="picbar" style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:12px"><button type="button" class="ghost sm" id="avbp">‹ Back</button><span class="fine" id="avbn" aria-live="polite"></span><button type="button" class="ghost sm" id="avbnx">Next ›</button></div></div></div>
 <script>
-var $=function(i){return document.getElementById(i)},T=null,P=[],M=null,sel={},AV={all:[],lapy:[]},JAV='',MORE={};
+var $=function(i){return document.getElementById(i)},T=null,P=[],M=null,sel={},AV={all:[],lapy:[]},JAV='',MORE={},SET={},BRW=null;
 function avu(n){return '/m/av/'+n+'.png'}function face(p){return p.av?'<img src="'+avu(p.av)+'" alt="">':(P[p.pic]||'')}
-function grid(cur,more){var L=AV.lapy.length?AV.lapy:AV.all.slice(0,20),rest=AV.all.filter(function(x){return L.indexOf(x)<0}),n=(more||0)*30,list=L.concat(rest.slice(0,n));if(cur&&list.indexOf(cur)<0)list.unshift(cur);
-var on=list.indexOf(cur)<0?0:list.indexOf(cur);return list.map(function(a,i){return '<div data-a="'+a+'" class="'+(a===cur?'sel':'')+'" role="radio" aria-checked="'+(a===cur)+'" aria-label="Picture '+(i+1)+'" tabindex="'+(i===on?0:-1)+'"><img loading="lazy" src="'+avu(a)+'" alt=""></div>'}).join('')+(rest.length>n?'<div class="more" data-more="1" role="button" tabindex="0">More pictures</div>':'')}
-function jp(){$('jpw').hidden=!AV.all.length;$('jpics').innerHTML=grid(JAV,MORE.j)}try{T=localStorage.getItem('r2.mem')}catch(e){}
+/* 22 Nov (owner: "the LAPY avatars randomise … different avatars every time we log in" + "the more button seems endless"): 12
+   pictures, mixed from Lapy's 21 and the big pack, new every time the page opens; Shuffle = 12 new ones; Browse all = pages of 24 */
+function shuf(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
+function pickSet(key,fresh){var old=SET[key]||[],L=shuf(AV.lapy.filter(function(x){return old.indexOf(x)<0})),A=shuf(AV.all.filter(function(x){return AV.lapy.indexOf(x)<0&&old.indexOf(x)<0}));if(L.length<7)L=L.concat(shuf(AV.lapy.slice()));SET[key]=shuf(L.slice(0,7).concat(A.slice(0,5)));return SET[key]}
+function grid(cur,key){var list=(SET[key]||pickSet(key)).slice();if(cur&&list.indexOf(cur)<0)list=[cur].concat(list.slice(0,11));
+var on=list.indexOf(cur)<0?0:list.indexOf(cur);return list.map(function(a,i){return '<div data-a="'+a+'" class="'+(a===cur?'sel':'')+'" role="radio" aria-checked="'+(a===cur)+'" aria-label="Picture '+(i+1)+'" tabindex="'+(i===on?0:-1)+'"><img loading="lazy" src="'+avu(a)+'" alt=""></div>'}).join('')}
+function picbar(key){return AV.all.length?'<div class="picbar" style="display:flex;gap:8px;margin-top:8px"><button type="button" class="ghost sm" data-shuf="'+key+'">\u{1F3B2} Shuffle</button><button type="button" class="ghost sm" data-brw="'+key+'">Browse all '+AV.all.length+'</button></div>':''}
+function brw(key,page){var cur=key==='j'?JAV:sel[key],per=24,n=Math.max(1,Math.ceil(AV.all.length/per));if(page==null){var ix=AV.all.indexOf(cur);page=ix<0?0:Math.floor(ix/per)}page=(page+n)%n;BRW={key:key,page:page};
+var list=AV.all.slice(page*per,page*per+per);$('avbg').innerHTML=list.map(function(a,i){return '<div data-a="'+a+'" class="'+(a===cur?'sel':'')+'" role="radio" aria-checked="'+(a===cur)+'" aria-label="Picture '+(page*per+i+1)+'" tabindex="'+((a===cur||(list.indexOf(cur)<0&&!i))?0:-1)+'"><img loading="lazy" src="'+avu(a)+'" alt=""></div>'}).join('');
+$('avbn').textContent='Page '+(page+1)+' of '+n;var w=$('avb');if(w.hidden){w.hidden=false;document.body.style.overflow='hidden'}var f=$('avbg').querySelector('[tabindex="0"]');if(f)f.focus()}
+function brwClose(){var k=BRW&&BRW.key;$('avb').hidden=true;document.body.style.overflow='';BRW=null;var b=document.querySelector('[data-brw="'+k+'"]');if(b)b.focus()}
+$('avbx').onclick=brwClose;$('avbp').onclick=function(){brw(BRW.key,BRW.page-1)};$('avbnx').onclick=function(){brw(BRW.key,BRW.page+1)};
+$('avb').addEventListener('keydown',function(e){if(e.key==='Escape')brwClose()});
+$('avbg').onclick=function(e){var d=e.target.closest('[data-a]');if(!d||!BRW)return;var k=BRW.key,a=d.dataset.a;if(k==='j'){JAV=a;jp()}else{sel[k]=a;var c=document.querySelector('[data-s="'+k+'"]');if(c){c.querySelector('.pics').innerHTML=grid(a,k);c.querySelector('.av').innerHTML='<img src="'+avu(a)+'" alt="">'}}brwClose()};
+document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('[data-shuf],[data-brw]');if(!t)return;var k=t.dataset.shuf||t.dataset.brw;if(t.dataset.brw){brw(k);return}pickSet(k,1);if(k==='j')jp();else{var c=document.querySelector('[data-s="'+k+'"]');if(c)c.querySelector('.pics').innerHTML=grid(sel[k],k)}});
+function jp(){$('jpw').hidden=!AV.all.length;$('jpics').innerHTML=grid(JAV,'j');var pb=$('jpbar');if(pb)pb.innerHTML=picbar('j')}try{T=localStorage.getItem('r2.mem')}catch(e){}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function api(o){if(T)o.tok=T;return fetch('/m/api',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(o)}).then(function(r){return r.json()}).catch(function(){return{error:'No connection – try again.'}})}
 function keep(t){T=t;try{localStorage.setItem('r2.mem',t)}catch(e){}}
 function tab(j){$('fJ').hidden=!j;$('fL').hidden=j;$('tJ').className=j?'on':'ghost';$('tL').className=j?'ghost':'on';$('tJ').setAttribute('aria-pressed',!!j);$('tL').setAttribute('aria-pressed',!j);$('e1').textContent=''}
 $('tJ').onclick=function(){tab(1)};
-$('jpics').onclick=function(e){var d=e.target.closest('[data-a]');if(d){JAV=d.dataset.a;jp();return}if(e.target.closest('[data-more]')){MORE.j=(MORE.j||0)+1;jp()}};
+$('jpics').onclick=function(e){var d=e.target.closest('[data-a]');if(d){JAV=d.dataset.a;jp()}};
 fetch('/m/av/list').then(function(r){return r.json()}).then(function(r){AV=r;if(!JAV)JAV=AV.lapy[Math.floor(Math.random()*AV.lapy.length)]||AV.all[0]||'';jp();if(M)show({me:M})}).catch(function(){});$('tL').onclick=function(){tab(0)};
 function show(r){if(r.pics)P=r.pics;M=r.me;$('out').hidden=true;$('in').hidden=false;$('cr').value=M.crew;$('bd').textContent=M.staff?'STAFF':'MEMBER';
 $('ph').textContent='Phone '+M.phone+' · '+M.players.length+' of '+M.max+' players';$('addc').hidden=M.players.length>=M.max;
 $('pls').innerHTML=M.players.map(function(p){sel[p.slot]=p.av||p.pic;return '<div class="card" data-s="'+p.slot+'"><div class="pl"><div class="who"><div class="av">'+face(p)+'</div><b>'+esc(p.shown)+'</b></div>'+
 (M.players.length>1?'<button class="ghost sm" data-del="1" aria-label="Remove '+esc(p.shown)+'">Remove</button>':'')+'</div><label for="n-'+p.slot+'">Name on the PS4</label><input id="n-'+p.slot+'" data-n="1" maxlength="16" value="'+esc(p.shown)+'">'+
-'<label id="pl-'+p.slot+'">Picture on the PS4</label><div class="pics" role="radiogroup" aria-labelledby="pl-'+p.slot+'">'+(AV.all.length?grid(p.av,MORE[p.slot]):P.map(function(x,i){return '<div data-i="'+i+'" class="'+(i===p.pic?'sel':'')+'" role="radio" aria-checked="'+(i===p.pic)+'" aria-label="Picture '+(i+1)+'" tabindex="'+(i===p.pic||(p.pic<0&&!i)?0:-1)+'">'+x+'</div>'}).join(''))+'</div>'+
+'<label id="pl-'+p.slot+'">Picture on the PS4</label><div class="pics" role="radiogroup" aria-labelledby="pl-'+p.slot+'">'+(AV.all.length?grid(p.av,p.slot):P.map(function(x,i){return '<div data-i="'+i+'" class="'+(i===p.pic?'sel':'')+'" role="radio" aria-checked="'+(i===p.pic)+'" aria-label="Picture '+(i+1)+'" tabindex="'+(i===p.pic||(p.pic<0&&!i)?0:-1)+'">'+x+'</div>'}).join(''))+'</div>'+picbar(p.slot)+
 '<div class="rmc" hidden></div><p class="err" role="alert"></p></div>'}).join('');play()}
 var ROOM=new URLSearchParams(location.search).get('room')||'',KEY=new URLSearchParams(location.search).get('k')||'';
 function play(){if(!ROOM||!M){$('playc').hidden=true;return}$('playc').hidden=false;$('playh').textContent='Choose who’s playing on '+ROOM.toUpperCase();
@@ -5181,7 +5198,7 @@ if(/^Sorry/.test(r.title||'')){$('lptx').textContent=r.title+' '+(r.line||'');re
 $('lptx').textContent=nt?(nd+' of '+nt+' profile'+(nt>1?'s':'')+' ready'+(cl&&!li?' – getting the profiles ready first':'')):(r.status==='loading'||r.status==='reset'?'Getting the room ready…':'Waiting for the PS4…');PT=setTimeout(prog,3500)})}
 $('pls').onclick=function(e){var c=e.target.closest('[data-s]');if(!c)return;var s=c.dataset.s,er=c.querySelector('.err');
 var a=e.target.closest('[data-a]');if(a){sel[s]=a.dataset.a;[].forEach.call(c.querySelectorAll('.pics [data-a]'),function(x){var on=x.dataset.a===sel[s];x.className=on?'sel':'';x.setAttribute('aria-checked',on);x.tabIndex=on?0:-1});c.querySelector('.av').innerHTML='<img src="'+avu(sel[s])+'" alt="">';return}
-if(e.target.closest('[data-more]')){MORE[s]=(MORE[s]||0)+1;c.querySelector('.pics').innerHTML=grid(sel[s],MORE[s]);return}
+
 var d=e.target.closest('[data-i]');if(d){sel[s]=+d.dataset.i;[].forEach.call(c.querySelectorAll('.pics div'),function(x){var on=+x.dataset.i===sel[s];x.className=on?'sel':'';x.setAttribute('aria-checked',on);x.tabIndex=on?0:-1});c.querySelector('.av').textContent=P[sel[s]];return}
 var rm=c.querySelector('.rmc'),nm=c.querySelector('b').textContent;
 if(e.target.dataset.del){rm.hidden=false;rm.innerHTML='<p class="fine">Remove '+esc(nm)+' from your crew? Their saves stay safe with Round2, but they’ll need to join on their own.</p><label for="rp-'+s+'">Your PIN</label><input id="rp-'+s+'" type="password" inputmode="numeric" maxlength="8" autocomplete="current-password"><button class="ghost" data-rmgo="1">Remove '+esc(nm)+'</button> <button class="ghost" data-rmno="1">Keep '+esc(nm)+'</button>';$('rp-'+s).focus();return}

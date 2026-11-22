@@ -63,6 +63,14 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 - [x] (fixed 22 Nov 9:00pm, member-a11y) 1 · player card · Remove asks for the PIN in a browser pop-up (`prompt()`), which shows the PIN as it's typed. Use a
   small in-page confirm with a password field.
 
+> **Function side – LIVE 22 Nov ~9:30pm (owner asked): pictures are random + better browsing** (engine hash bc3cce3e…, 27 bindings,
+> 3 timers; Light check 17/4/0 before, 18/3/0 after). Every time the page opens, each picker shows 12 pictures picked at random
+> (7 Lapy + 5 from the big pack; the player's current picture stays first). The endless "More pictures" is gone. Instead,
+> under each picker: **🎲 Shuffle** (12 new random ones) and **Browse all 1200** (full-screen gallery, 24 per page, Back / Next,
+> "Page X of 50", opens on the page with the current picture, Escape or Close shuts it). For design, new things to style:
+> `.picbar` (row with the two buttons, inline flex default), `#avb` (gallery overlay, inline fixed/dark default), `#avbg`
+> (its grid, also `.pics`), `#avbn` (page text), `#avbp` / `#avbnx` / `#avbx` (Back / Next / Close). `.more` is no longer used.
+
 **Round2 PS4 tile (`/ps4/tile` in `worker/round2-book.js`, tile app in round2-tv-launcher `ps4/tile`) – 22 Nov 2026**
 - [x] (fixed 22 Nov 9:00pm, member-a11y) 2 · tile · The tile can only draw plain letters: any non-ASCII character from the engine shows as "?" per byte. The
   busy line "One moment – this PS4 is finishing a job…" shows as "One moment ??? this PS4…" on the TV (the – is 3
