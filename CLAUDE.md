@@ -3,6 +3,8 @@
 - **Two kinds of work happen in this repo – read the "READ FIRST" box at the top of `HANDOFF.md`.** DESIGN work (the admin/
   design team, looks only) stays inside `design/` on its own branch with a pull request – never `worker/`, never deploys.
   FUNCTION work follows every rule below and leaves `design/` files to the design team.
+  **Design finds a functional problem → it goes in HANDOFF "DESIGN → FUNCTION CONCERNS" (owner, 22 Nov 2026); function work
+  reads that list before touching a screen it names, and ticks items off with date + commit when fixed.**
 
 - **Run the System check before and after any change** (control centre at staff.round2.sg › Tests & systems › System
   check; code: round2-tv-launcher `manager/index.html`, `SysCheck`). Add a step for every new feature that touches another
