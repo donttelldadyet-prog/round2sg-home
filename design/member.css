@@ -129,6 +129,29 @@ button.sm:hover{color:var(--txt)}
 .pics div:has(img){padding:0;overflow:hidden}
 .pics .more{font:400 9px 'Press Start 2P',monospace;color:var(--acT)}
 
+/* "Save changes" (one for crew name, player names and pictures – member-a11y): the panel's commit row, outlined so Load stays the only solid bar */
+#savec{padding:16px 20px 18px}
+#svall{margin:0;background:transparent;color:var(--txt);clip-path:none;border:1px solid var(--ac);box-shadow:inset 4px 0 0 var(--ac);font-size:15px;padding:15px 18px}
+#svall::before{color:var(--acT)}
+#svall:focus-visible{box-shadow:inset 4px 0 0 var(--ac);outline:2px solid var(--txt);outline-offset:2px}
+#savec .err{margin-top:10px}
+
+/* load progress on the phone (member-a11y #lprog): the LV bar fills as profiles get ready, one line per player under it */
+#lprog{margin-top:18px;padding-top:16px;border-top:1px solid var(--hair)}
+#lprog .lbar{height:14px!important;margin:0 0 12px!important;background:repeating-linear-gradient(90deg,rgba(244,241,251,.14) 0 12px,transparent 12px 16px)!important}
+#lpbar{background:repeating-linear-gradient(90deg,var(--ac) 0 12px,transparent 12px 16px)!important;filter:drop-shadow(0 0 6px var(--ac))}
+#lptx{margin:0 0 10px;font:600 17px/1.4 'Chakra Petch',sans-serif;color:var(--txt)}
+.lst .fine{display:flex;align-items:center;gap:10px;padding:9px 0 9px 14px;border-top:1px solid var(--hair);font:600 14px/1.4 'Chakra Petch',sans-serif;
+  letter-spacing:.06em;text-transform:uppercase;color:var(--txt);box-shadow:inset 3px 0 0 var(--hair)}
+.lst .fine:first-child{border-top:0}
+
+/* Remove a player: confirm in the card with a PIN box (member-a11y .rmc) */
+.rmc{display:grid;grid-template-columns:1fr 1fr;column-gap:8px;margin:14px 0 0;padding:14px 16px 16px;background:rgba(255,122,122,.06);box-shadow:inset 3px 0 0 #ff8a8a}
+.rmc>*{grid-column:1/-1}
+.rmc>.fine{margin:0;color:var(--txt)}
+.rmc>button{grid-column:auto;margin-top:12px;font-size:13px;padding:13px 10px}
+.rmc>[data-rmgo]{border-color:#ff8a8a;color:#ffc2c2}
+
 /* add a player + change PIN: settings, quiet */
 #addc{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;align-items:end}
 #addc>*{grid-column:1/-1}
