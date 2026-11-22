@@ -7,15 +7,15 @@ These files decide how Round2 **looks** to guests. The booking engine reads them
 | `rooms.json` | Each room's name, accent colour, text colour on the accent, and character picture | Phone member page (book.round2.sg/m) **and** the Round2 tile on the room PS4s (the colours) |
 | `member.css` | The look of the phone member page: fonts, sizes, spacing, cards, buttons, backgrounds | book.round2.sg/m |
 
-Coming next (not yet read from here): the PS4 tile's wording and timings (loading screen, "What happens next").
+Coming next (not yet read from here): the PS4 tile's wording and timings (loading screen, "What happens next") – asked for in HANDOFF's concerns list. Until then, write tile changes you want there.
 
 ## How to change something safely
 
-1. **Work on your own branch** (for example `design-gf-colours`), never straight on `main`. The engine reads `main`, so a push to `main` is live for guests within about 5 minutes.
-2. **Preview your branch** on your phone before it goes live:
+1. **You can publish straight to `main`** – no pull request, no approval needed (owner, 22 Nov 2026). The engine reads `main`, so a push is live for guests within about 5 minutes. Pull first: other people push to this repo too.
+2. **Good habit: preview first** on your phone with a branch:
    `https://book.round2.sg/m?room=kaeden&design=<your-branch-name>`
-   (branch names: lowercase letters, numbers and dashes only). The preview updates about 15 seconds after you push.
-3. **When it looks right**, open a pull request into `main`. The owner (or his Claude) merges it.
+   (branch names: lowercase letters, numbers and dashes only). The preview updates about 15 seconds after you push. Then merge it into `main` yourself.
+3. **Tell the owner** in plain words what you changed after it's live.
 4. If a file has a mistake, nothing breaks: the engine ignores a file it can't read and keeps the built-in look. You'll just see the old design. Check the preview.
 
 ## Rules for these files

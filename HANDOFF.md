@@ -6,19 +6,20 @@ team (the owner's girlfriend) and her Claude for the look of things. Newest note
 standing rules. Keep it short; add a rule here only when the owner asks for one.
 
 **If you are working on DESIGN (looks, colours, wording, layout):**
-1. Work only in **`design/`** of this repo (round2sg-home), and only on your **own branch**; open a pull request into `main`.
-   `design/README.md` says which file changes what and how to preview a branch on your phone
-   (`book.round2.sg/m?room=kaeden&design=<branch>`). A push to `main` is live for guests within ~5 minutes.
+1. **The design team owns the look of the member page, the PS4 tile and the homepage, and publishes it freely (owner, 22 Nov
+   2026): straight to `main`, no pull request and no owner approval.** That means `design/` (member page `book.round2.sg/m`
+   and the PS4 tile's colours/room names, later its wording too) and `index.html` (the homepage). A push to `main` is live
+   within ~5 minutes. Good habit, not a gate: try a `design/` change first on a branch with the phone preview
+   (`book.round2.sg/m?room=kaeden&design=<branch>`, see `design/README.md`), and pull before pushing.
 2. **Never edit** `worker/` (the live booking engine – bookings, payments, PS4s), `slots/`, `email/`, `menu/`, `move/`,
    `CLAUDE.md`, or the long dated notes below.
-   **Exception – the homepage is the design team's (owner, 22 Nov 2026):** `index.html` (round2.sg's game-homescreen page) can
-   be edited freely – look, wording, layout, sections, pictures – and published **straight to `main`, no pull request and no
-   owner approval needed** (live within ~5 minutes). Pull first, check it on a phone after, and keep the booking buttons
-   working (they must still open the booking page). Rules 1 and 5 (own branch, pull request, ask before merge) are for
-   `design/` only, not the homepage.
+   The homepage `index.html` is the design team's (rule 1): look, wording, layout, sections, pictures – just keep the booking
+   buttons opening the booking page, and check it on a phone after.
 3. Never deploy anything to Cloudflare and never run the "Full check" – that's the owner's side.
 4. Keep the class / id names and the `var(--ac)` / `var(--ink)` room colours – the page's functions rely on them.
-5. Tell the owner in plain words what you changed and send him the preview link before asking him to merge.
+5. After publishing, tell the owner in plain words what changed (no need to wait for him). The PS4 tile draws only its colours
+   and room names from `design/` today; for anything else on the tile (wording, layout, timings) write what you want in the
+   concerns list below until the tile reads it from `design/` too.
 6. **Functional concerns go in the list below** (owner, 22 Nov 2026): anything you find that the design files can't fix –
    behaviour, wording that lives in the engine, missing feedback, accessibility in the page's HTML, bugs – write it in
    **"DESIGN → FUNCTION CONCERNS"** right under this box (screen, what's wrong, why it matters, severity 1–4, date). Don't
@@ -38,6 +39,13 @@ phones) in this file or in design files.
 
 ## DESIGN → FUNCTION CONCERNS (design writes, function fixes and ticks – newest first)
 Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [ ] sev · screen · what's wrong – why – (date, who)`.
+
+**PS4 tile – design can't change it yet (owner wants design to edit the tile freely, 22 Nov 2026)**
+- [ ] 3 · PS4 tile · Only room colours and names come from `design/rooms.json`; every word, size and timing of the tile is in the
+  tile's code (round2-tv-launcher `ps4/tile/tile/main.cpp`), so the design team can't edit it. Please build "phase 2": the tile
+  (or the engine's `/ps4/tile` answer) reads its wording and timings – idle / loading / ready / "What happens next" texts, how
+  long the ready burst and the closing screen last – from a `design/tile.json`, with today's values as defaults, plain ASCII
+  only. Then add it to `design/README.md` and to the design preview. (22 Nov, design)
 
 **Booking page `round2.sg/slots` on iPhone (iOS 26 Safari) – reported by a guest-tester 22 Nov 2026**
 - [x] (LIVE 22 Nov ~9:45pm, applied from the design side at the co-owner's request – please review) 4 · booking page, pick +
