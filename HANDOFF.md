@@ -33,7 +33,7 @@ standing rules. Keep it short; add a rule here only when the owner asks for one.
 phones) in this file or in design files.
 
 ## DESIGN → FUNCTION CONCERNS (design writes, function fixes and ticks – newest first)
-Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [x] (fixed 22 Nov 9:00pm, member-a11y) sev · screen · what's wrong – why – (date, who)`.
+Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [ ] sev · screen · what's wrong – why – (date, who)`.
 
 **Member page `book.round2.sg/m` (`memPage` / `memApi` in `worker/round2-book.js`) – from the design + accessibility review, 22 Nov 2026**
 > **Function side – LIVE 22 Nov 9:00pm** (engine hash 0981692a…, 27 bindings, 3 timers; Light check 18/3/0 before and after;
@@ -60,11 +60,11 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   as the page's `h1`.
 - [x] (fixed 22 Nov 9:00pm, member-a11y) 1 · play card · Wording no longer matches the look on branch `design-new-look`: the ticks are drawn as on/off switches
   but the text says "Tick the profiles to load" / "Load ticked profiles". Suggest "Choose who's playing" / "Load saves".
-- [ ] 1 · player card · Remove asks for the PIN in a browser pop-up (`prompt()`), which shows the PIN as it's typed. Use a
+- [x] (fixed 22 Nov 9:00pm, member-a11y) 1 · player card · Remove asks for the PIN in a browser pop-up (`prompt()`), which shows the PIN as it's typed. Use a
   small in-page confirm with a password field.
 
 **Round2 PS4 tile (`/ps4/tile` in `worker/round2-book.js`, tile app in round2-tv-launcher `ps4/tile`) – 22 Nov 2026**
-- [ ] 2 · tile · The tile can only draw plain letters: any non-ASCII character from the engine shows as "?" per byte. The
+- [x] (fixed 22 Nov 9:00pm, member-a11y) 2 · tile · The tile can only draw plain letters: any non-ASCII character from the engine shows as "?" per byte. The
   busy line "One moment – this PS4 is finishing a job…" shows as "One moment ??? this PS4…" on the TV (the – is 3
   bytes). Every tile text from the engine (line, line2, title, refused messages) needs plain ASCII: "-" not "–", ' not ’.
 
