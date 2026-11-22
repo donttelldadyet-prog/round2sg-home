@@ -72,7 +72,7 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 > (its grid, also `.pics`), `#avbn` (page text), `#avbp` / `#avbnx` / `#avbx` (Back / Next / Close). `.more` is no longer used.
 
 > **Function side – LIVE 22 Nov ~9:40pm (owner: "build both, then put into handoff for design team"): CLAIM CODES + TWO CREWS
-> IN ONE ROOM** (engine hash ed0f56da…, 27 bindings, 3 timers; Light check 18/3/0 before). What guests now see, and what design
+> IN ONE ROOM** (engine hash ed0f56da…, 27 bindings, 3 timers; Light check 18/3/0 before, 19/3/0 after incl. the new step). What guests now see, and what design
 > can restyle (all on the member page; inline styles are only defaults – override in member.css):
 > - **Remove a player** → the confirm text now says they'll get a code. After removing, the page jumps to a new card
 >   `#gonec` "Removed players" (one row `.gone` per player: name, code in `.code`, "until <date>"). It stays for 30 days or
