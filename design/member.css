@@ -1,92 +1,146 @@
 /* Round2 member page (book.round2.sg/m) – the look only. Edited by design; read by the booking engine. See design/README.md.
    Colours: var(--ac) = the room colour, var(--ink) = text on it, var(--hero-h) = header height (both set by the engine).
-   22 Nov 2026 "new look": 8-bit windows – stepped pixel corners on cards, buttons and pictures; a segmented LV bar under
-   the room name (like the room cards on round2.sg); hard arcade shadow on the room name. Press Start 2P = the game-menu
-   voice (titles, main buttons, badges); Chakra Petch = everything people read or type. Logo = the page's own Round2 logo. */
+   22 Nov 2026 "save console": the logged-in page is one connected screen built around moving saves –
+   1) the transfer panel first (room glow, a switch per player, one big Load button that streams while it sends),
+   2) the crew as ONE surface below (crew name, players as rows with a swipe strip of pictures, add a player, PIN) with
+   hairline dividers instead of separate boxes, 3) a quiet footer. Round2 signature: Press Start 2P titles, the segmented
+   LV bar, the room colour. Everything else modern: soft radius, depth, glow. Logo = the page's own Round2 logo. */
+:root{--bg:#07060c;--s1:#100d1a;--s2:#161223;--line:rgba(244,241,251,.09);--edge:rgba(244,241,251,.42);--txt:#f4f1fb;--mut:#aaa2c0;--r:20px;--r2:14px}
 *{box-sizing:border-box}
-body{margin:0;color:#f4f1fb;font:16px/1.5 'Chakra Petch',system-ui,sans-serif;min-height:100vh;
-  background:radial-gradient(110% 55% at 100% -8%,color-mix(in srgb,var(--ac) 30%,transparent),transparent 60%),#06050a;background-attachment:fixed}
-main{max-width:460px;margin:0 auto;padding:22px 16px 48px;overflow-x:clip}   /* the character art may hang off the edge, never makes the page scroll sideways (320px phones) */
-/* logged in: "Play on <ROOM> now" first – that's why a guest scanned the TV */
-#in{display:flex;flex-direction:column}#playc{order:-1}
 [hidden]{display:none!important}
+body{margin:0;color:var(--txt);font:16px/1.5 'Chakra Petch',system-ui,sans-serif;min-height:100vh;
+  background:radial-gradient(120% 60% at 100% -10%,color-mix(in srgb,var(--ac) 34%,transparent),transparent 62%),
+             radial-gradient(90% 50% at -20% 110%,color-mix(in srgb,var(--ac) 12%,transparent),transparent 70%),var(--bg);background-attachment:fixed}
+main{max-width:460px;margin:0 auto;padding:22px 16px 56px;overflow-x:clip}   /* the character art may hang off the edge, never scrolls sideways */
+.px{font-family:'Press Start 2P',monospace;letter-spacing:.06em}
 
-/* 8-bit edges. Outlined things (windows, fields, outline buttons, avatars) get a 2px border drawn OUTSIDE the box with the
-   corner pixel left empty; solid things (main buttons, picture tiles, badges) get stepped corners cut out of the fill. */
-.card,input:not([type=checkbox]),button.ghost,.tabs button.ghost,.av,.pics div.sel{--pb:rgba(244,241,251,.42);box-shadow:0 -2px 0 var(--pb),0 2px 0 var(--pb),-2px 0 0 var(--pb),2px 0 0 var(--pb)}
-button:not(.ghost),.pics div:not(.sel),.badge{
-  clip-path:polygon(0 6px,3px 6px,3px 3px,6px 3px,6px 0,calc(100% - 6px) 0,calc(100% - 6px) 3px,calc(100% - 3px) 3px,calc(100% - 3px) 6px,100% 6px,100% calc(100% - 6px),calc(100% - 3px) calc(100% - 6px),calc(100% - 3px) calc(100% - 3px),calc(100% - 6px) calc(100% - 3px),calc(100% - 6px) 100%,6px 100%,6px calc(100% - 3px),3px calc(100% - 3px),3px calc(100% - 6px),0 calc(100% - 6px))}
-
-/* header: the real Round2 logo, ROUND2 MEMBERS, the room as the title screen */
+/* ---------- header: the real logo, ROUND2 MEMBERS, the room as a title screen ---------- */
 .hero{position:relative;min-height:var(--hero-h);margin:0 0 4px;overflow:visible}
 .hero .logo{height:32px;width:auto;display:block;margin:0 0 22px}
 .hero .char{position:absolute;right:-22px;top:-12px;height:300px;pointer-events:none;
   -webkit-mask-image:linear-gradient(to bottom,#000 58%,transparent 97%);mask-image:linear-gradient(to bottom,#000 58%,transparent 97%);
-  filter:drop-shadow(0 0 30px color-mix(in srgb,var(--ac) 40%,transparent))}
-.px{font-family:'Press Start 2P',monospace;letter-spacing:.06em}
-.kick{position:relative;font-size:10px;color:#a79fbd}
+  filter:drop-shadow(0 0 34px color-mix(in srgb,var(--ac) 45%,transparent))}
+.kick{position:relative;font-size:10px;color:var(--mut)}
 .hero .room{position:relative;font-family:'Press Start 2P',monospace;font-size:clamp(26px,8.4vw,36px);line-height:1.1;color:var(--ac);margin:10px 0 14px;
-  text-shadow:3px 3px 0 color-mix(in srgb,var(--ac) 35%,#06050a),6px 6px 0 rgba(0,0,0,.55);word-break:break-word;max-width:72%}
-.hero .tag{position:relative;max-width:56%;font-size:15px;line-height:1.45;color:#d6cfe8}
-h1{position:relative;font-family:'Press Start 2P',monospace;font-size:18px;line-height:1.55;margin:10px 0 18px;color:#f4f1fb;text-shadow:3px 3px 0 rgba(0,0,0,.6)}
+  text-shadow:3px 3px 0 color-mix(in srgb,var(--ac) 35%,#06050a),0 0 28px color-mix(in srgb,var(--ac) 45%,transparent);word-break:break-word;max-width:72%}
+.hero .tag{position:relative;max-width:56%;font-size:15px;line-height:1.45;color:#d9d2ea}
+h1{position:relative;font-family:'Press Start 2P',monospace;font-size:18px;line-height:1.55;margin:10px 0 18px;text-shadow:3px 3px 0 rgba(0,0,0,.6)}
+/* the LV bar */
+.bar{height:8px;margin:0 0 24px;background:repeating-linear-gradient(90deg,var(--ac) 0 14px,transparent 14px 18px);
+  -webkit-mask-image:linear-gradient(90deg,#000 55%,rgba(0,0,0,.15));mask-image:linear-gradient(90deg,#000 55%,rgba(0,0,0,.15))}
 
-/* the LV bar: room colour in segments, fading out like a gauge that isn't full */
-.bar{height:10px;margin:0 0 22px;background:repeating-linear-gradient(90deg,var(--ac) 0 16px,transparent 16px 20px);
-  -webkit-mask-image:linear-gradient(90deg,#000 55%,rgba(0,0,0,.18));mask-image:linear-gradient(90deg,#000 55%,rgba(0,0,0,.18))}
-
-/* windows */
-.card{--pb:color-mix(in srgb,var(--ac) 45%,#3a3450);position:relative;background:#0e0b17;padding:18px 16px 16px;margin:2px 2px 16px}
-.card>b:first-child,#playh{display:block;font-family:'Press Start 2P',monospace;font-size:11px;line-height:1.6;letter-spacing:.04em;color:color-mix(in srgb,var(--ac) 70%,#fff);font-weight:400;margin:0 0 4px}
-.card .fine:first-child{color:#a79fbd}
-
-/* Join / Log in: a two-way switch */
-.tabs{display:flex;gap:6px;margin:0 0 12px}
-.tabs button{flex:1;margin:0;font:600 16px 'Chakra Petch',sans-serif;letter-spacing:0;padding:13px 10px;box-shadow:none}
-.tabs button.on{background:#f4f1fb;color:#06050a}
-.tabs{padding:0 2px}.tabs button.ghost{--pb:rgba(244,241,251,.3);background:#0e0b17;color:#a79fbd}
-
-/* fields */
-label{display:block;font-size:14px;color:#a79fbd;margin:14px 0 6px}
-input{width:100%;padding:13px 14px;border:0;background:#06050a;color:#f4f1fb;font:500 18px 'Chakra Petch',sans-serif;border-radius:0;
-}   /* field edge (--pb, .42) = 3.5:1 against the window */
+/* ---------- shared parts ---------- */
+.card{position:relative;background:var(--s1);padding:20px 18px;margin:0 0 14px;border-radius:var(--r);border:1px solid var(--line)}
+.card>b:first-child,#playh{display:block;font-family:'Press Start 2P',monospace;font-size:11px;line-height:1.6;letter-spacing:.04em;font-weight:400;
+  color:color-mix(in srgb,var(--ac) 70%,#fff);margin:0 0 6px}
+label{display:block;font-size:14px;color:var(--mut);margin:14px 0 6px}
+input{width:100%;padding:13px 14px;background:var(--bg);color:var(--txt);font:500 18px 'Chakra Petch',sans-serif;
+  border:1px solid var(--edge);border-radius:12px;transition:border-color .15s,background .15s}   /* edge .42 = 3.5:1 on the surface */
 input::placeholder{color:#8a83a0}
-input:focus{outline:0;--pb:var(--ac);background:color-mix(in srgb,var(--ac) 8%,#06050a)}
-input[type=checkbox]{accent-color:var(--ac);box-shadow:none;padding:0;flex:none}
-
-/* buttons: the main one is a console button (pixel type, pressed-in bottom edge); the rest are quiet outlines */
-button{display:block;width:100%;margin-top:16px;padding:16px 14px 18px;border:0;border-radius:0;cursor:pointer;
-  background:var(--ac);color:var(--ink);font:400 12px/1.5 'Press Start 2P',monospace;letter-spacing:.04em;
-  box-shadow:inset 0 -5px 0 rgba(0,0,0,.28);transition:transform .06s,box-shadow .06s}
-button:not(.ghost):active{transform:translateY(2px);box-shadow:inset 0 -2px 0 rgba(0,0,0,.28)}
-button:focus-visible{outline:3px solid var(--ink);outline-offset:-8px}   /* ring in the room's text colour: shows on light rooms (Atlas) too */
-button.ghost:focus-visible,.tabs button.ghost:focus-visible{outline-color:#f4f1fb}
-.tabs button.on:focus-visible{outline-color:#06050a}
-button:disabled{opacity:.55;cursor:wait}
-button.ghost{--pb:rgba(244,241,251,.36);background:transparent;color:#f4f1fb;font:600 15px 'Chakra Petch',sans-serif;letter-spacing:0;padding:13px 14px}
-button.ghost:active{transform:none;background:rgba(244,241,251,.06)}
-button.on{background:#f4f1fb;color:#06050a}
-button.sm{width:auto;padding:8px 12px;margin:0;font:600 13px 'Chakra Petch',sans-serif}
-
-/* messages */
-.err{color:#ff8a8a;min-height:1.2em;margin:10px 0 0;font-size:14px}
+input:focus{outline:0;border-color:var(--ac);background:color-mix(in srgb,var(--ac) 9%,var(--bg));box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 30%,transparent)}
+button{display:block;width:100%;margin-top:16px;padding:15px 14px;border:0;border-radius:var(--r2);cursor:pointer;
+  background:var(--ac);color:var(--ink);font:700 16px 'Chakra Petch',sans-serif;letter-spacing:.01em;
+  box-shadow:0 10px 26px -12px color-mix(in srgb,var(--ac) 80%,transparent),inset 0 1px 0 rgba(255,255,255,.25);transition:transform .08s,filter .15s}
+button:active{transform:translateY(1px) scale(.99)}
+button:focus-visible{outline:3px solid var(--txt);outline-offset:3px}
+button:disabled{opacity:.6;cursor:wait}
+button.ghost{background:rgba(244,241,251,.05);color:var(--txt);font:600 15px 'Chakra Petch',sans-serif;border:1px solid rgba(244,241,251,.28);box-shadow:none;padding:13px 14px}
+button.ghost:active{background:rgba(244,241,251,.1)}
+button.on{background:var(--txt);color:#06050a}
+button.sm{width:auto;padding:7px 12px;margin:0;font:600 13px 'Chakra Petch',sans-serif;border-radius:10px}
+.err{color:#ff8a8a;min-height:0;margin:8px 0 0;font-size:14px}.err:empty{margin:0}
 .ok{color:#7dffa8}
-.fine{font-size:14px;line-height:1.5;color:#a79fbd}
-main>section>.fine{margin:18px 2px}
-
-/* players: save slots */
-.pl{display:flex;gap:12px;align-items:center;justify-content:space-between}
-.who{display:flex;gap:12px;align-items:center}
-.who b{font-family:'Press Start 2P',monospace;font-size:12px;font-weight:400;letter-spacing:.04em;line-height:1.5}
-.av{--pb:var(--ac);font-size:30px;width:52px;height:52px;margin:2px;flex:none;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--ac) 22%,#14111f)}
+.fine{font-size:14px;line-height:1.5;color:var(--mut)}
+.badge{display:inline-block;font-family:'Press Start 2P',monospace;font-size:9px;padding:5px 8px;border-radius:999px;background:var(--ac);color:var(--ink);margin-left:8px;vertical-align:middle}
+.av{font-size:28px;width:52px;height:52px;flex:none;display:flex;align-items:center;justify-content:center;border-radius:16px;overflow:hidden;
+  background:radial-gradient(circle at 30% 25%,color-mix(in srgb,var(--ac) 45%,#1d1830),#120e1d);box-shadow:0 0 0 2px var(--ac),0 6px 18px -8px var(--ac)}
 .av img{width:100%;height:100%;display:block}
-.badge{display:inline-block;font-size:9px;padding:5px 7px;background:var(--ac);color:var(--ink);margin-left:8px;vertical-align:middle}
 
-/* picture picker */
-.pics{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-top:6px}
-.pics{padding:2px}.pics div{font-size:26px;text-align:center;padding:8px 0;background:#16121f;cursor:pointer}
-.pics div.sel{--pb:var(--ac);background:color-mix(in srgb,var(--ac) 24%,#16121f)}
-.pics div img{width:100%;display:block;aspect-ratio:1}
-.pics div:has(img){padding:0}
-.pics .more{font-size:13px;display:flex;align-items:center;justify-content:center;color:var(--ac)}
+/* ---------- logged out: Join / Log in ---------- */
+#out .card{background:linear-gradient(180deg,var(--s2),var(--s1));box-shadow:0 30px 60px -40px #000}
+.tabs{display:flex;gap:4px;margin:0 0 14px;padding:4px;background:var(--s1);border:1px solid var(--line);border-radius:16px}
+.tabs button{flex:1;margin:0;padding:11px 10px;border-radius:12px;box-shadow:none;font:600 16px 'Chakra Petch',sans-serif}
+.tabs button.ghost{background:transparent;border:0;color:var(--mut)}
+.tabs button.on{background:var(--ac);color:var(--ink);box-shadow:0 6px 18px -8px var(--ac)}
 
-@media (prefers-reduced-motion:reduce){button{transition:none}button:active{transform:none}}
+/* ---------- logged in: one screen ---------- */
+#in{display:flex;flex-direction:column}
+
+/* 1. the transfer panel – first, because that's why the guest scanned the TV */
+#playc{order:-1;margin:0 0 18px;padding:22px 18px 18px;border:1px solid color-mix(in srgb,var(--ac) 45%,transparent);overflow:hidden;
+  background:radial-gradient(130% 80% at 100% 0,color-mix(in srgb,var(--ac) 30%,transparent),transparent 60%),linear-gradient(180deg,#18132a,var(--s1));
+  box-shadow:0 30px 70px -40px color-mix(in srgb,var(--ac) 70%,transparent),inset 0 1px 0 rgba(255,255,255,.06)}
+#playc::before{content:"";position:absolute;left:18px;right:18px;top:0;height:3px;border-radius:0 0 3px 3px;
+  background:repeating-linear-gradient(90deg,var(--ac) 0 12px,transparent 12px 16px);opacity:.9}
+#playh{font-size:13px;color:var(--txt);margin:2px 0 8px}
+#playc>.fine{margin:0 0 10px}
+#playb>label{display:flex!important;align-items:center;gap:12px!important;margin:8px 0!important;padding:10px 12px;font-size:17px!important;font-weight:600;color:var(--txt)!important;
+  background:rgba(244,241,251,.04);border:1px solid var(--line);border-radius:16px;cursor:pointer;transition:background .15s,border-color .15s}
+#playb>label:has(:checked){background:color-mix(in srgb,var(--ac) 14%,transparent);border-color:color-mix(in srgb,var(--ac) 50%,transparent)}
+#playb>label .av{width:40px!important;height:40px!important;font-size:22px!important;border-radius:12px;box-shadow:0 0 0 1px var(--ac)}
+/* the tick box becomes a switch on the right */
+#playb input[type=checkbox]{order:2;margin-left:auto;appearance:none;-webkit-appearance:none;width:48px!important;height:28px!important;flex:none;border-radius:999px;padding:0;
+  background:#2a2438;border:1px solid var(--edge);position:relative;cursor:pointer;transition:background .2s}
+#playb input[type=checkbox]::before{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#cfc8e3;transition:transform .2s}
+#playb input[type=checkbox]:checked{background:var(--ac);border-color:var(--ac)}
+#playb input[type=checkbox]:checked::before{transform:translateX(20px);background:var(--ink)}
+#playb input[type=checkbox]:focus-visible{outline:3px solid var(--txt);outline-offset:2px}
+#playb>.fine{margin:12px 2px 0}
+/* Load: the big one. While it sends (the page disables it) saves stream through it */
+#playb [data-go]{margin-top:14px;padding:18px 14px;font:400 13px/1.5 'Press Start 2P',monospace;letter-spacing:.04em;border-radius:16px;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--ac) 88%,#fff),var(--ac));position:relative;overflow:hidden}
+#playb [data-go]:disabled{opacity:1;background:repeating-linear-gradient(90deg,var(--ac) 0 14px,color-mix(in srgb,var(--ac) 55%,#000) 14px 18px);background-size:36px 100%;
+  animation:r2stream .5s linear infinite}
+@keyframes r2stream{to{background-position:36px 0}}
+#playb [data-rout]{margin-top:10px;background:transparent;border-color:transparent;color:var(--mut);font-size:14px;text-decoration:underline;text-underline-offset:3px}
+
+/* 2. the crew: one surface – crew card, every player, add a player, PIN – joined by hairlines */
+#in>.card:not(#playc),#pls>.card{margin:0;border-radius:0;border-width:0 1px;background:var(--s1)}
+#in #pls>.card,#in>#addc:not(#playc),#in>.card:not(#playc):last-of-type{border-top:1px solid var(--line)}
+#in>.card:not(#playc):first-child{border-radius:var(--r) var(--r) 0 0;border-top-width:1px;padding-top:22px;
+  background:linear-gradient(180deg,color-mix(in srgb,var(--ac) 10%,var(--s2)),var(--s1))}
+#in>.card:not(#playc):not(#addc):not(:first-child){border-radius:0 0 var(--r) var(--r);border-bottom-width:1px;margin-bottom:8px}
+
+/* crew header: name big, Save beside it */
+#in>.card:first-child{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;align-items:end}
+#in>.card:first-child>*{grid-column:1/-1}
+#in>.card:first-child>.fine:first-child{font-family:'Press Start 2P',monospace;font-size:10px;letter-spacing:.06em;color:var(--mut)}
+#in>.card:first-child>label{margin:12px 0 6px;font-size:13px}
+#cr{grid-column:1;font-size:22px;font-weight:700;padding:10px 12px}
+#crb{grid-column:2;width:auto;margin:0;padding:13px 14px;font-size:14px}
+#ph{margin-top:12px!important;font-size:13px}
+
+/* players: rows, not boxes */
+#pls>.card{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;padding:18px}
+#pls>.card>*{grid-column:1/-1}
+.pl{display:flex;gap:12px;align-items:center;justify-content:space-between}
+.who{display:flex;gap:14px;align-items:center}
+.who b{font-size:20px;font-weight:700;line-height:1.2}
+#pls>.card>label{margin:14px 0 6px;font-size:13px}
+#pls>.card>input{grid-column:1;padding:10px 12px;font-size:17px}
+#pls>.card>[data-sv]{grid-column:2;grid-row:3;align-self:end;width:auto;margin:0;padding:12px 14px;font-size:14px;border-radius:12px;
+  background:color-mix(in srgb,var(--ac) 16%,transparent);color:var(--txt);border:1px solid color-mix(in srgb,var(--ac) 60%,transparent);box-shadow:none}   /* only Load is solid */
+#pls [data-del]{background:transparent;border-color:transparent;color:var(--mut);text-decoration:underline;text-underline-offset:3px;padding:6px 4px}
+/* pictures: one swipe strip */
+.pics{display:flex;gap:8px;overflow-x:auto;margin:2px -18px 0;padding:6px 18px 8px;scroll-snap-type:x proximity;scrollbar-width:none}
+.pics::-webkit-scrollbar{display:none}
+.pics div{flex:none;width:52px;height:52px;display:flex;align-items:center;justify-content:center;font-size:26px;border-radius:14px;background:var(--s2);
+  border:1px solid var(--line);cursor:pointer;scroll-snap-align:start;transition:transform .12s,background .15s}
+.pics div.sel{background:color-mix(in srgb,var(--ac) 26%,var(--s2));border:2px solid var(--ac);transform:translateY(-2px);box-shadow:0 8px 18px -10px var(--ac)}
+.pics div img{width:100%;height:100%;display:block;border-radius:inherit}
+.pics div:has(img){padding:0;overflow:hidden}
+.pics .more{font-size:13px;color:var(--ac)}
+
+/* add a player + change PIN: settings rows */
+#addc{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:10px;align-items:end}
+#addc>*{grid-column:1/-1}
+#addc>#an{grid-column:1;padding:10px 12px;font-size:17px}
+#addc>#ab{grid-column:2;grid-row:3;width:auto;margin:0;padding:12px 14px;font-size:14px}
+#addc>label,#in>.card:last-of-type>label{font-size:13px;margin:10px 0 6px}
+#pb{margin-top:14px}
+
+/* 3. footer */
+#in>.fine{margin:22px 4px 6px;text-align:center}
+#lo{width:auto;align-self:center;margin:4px 0 0;background:transparent;border-color:transparent;color:var(--mut);text-decoration:underline;text-underline-offset:3px}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important}#playb [data-go]:disabled{animation:none}}
