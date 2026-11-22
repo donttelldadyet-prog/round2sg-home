@@ -257,6 +257,13 @@ h3.nm, .nm { color: var(--rc); }
 .note { font-size: 13px; color: var(--mute); padding: 0 16px 14px; margin: 0; }
 /* booking popup */
 .modal { position: fixed; inset: 0; background: rgba(6,5,10,.86); display: flex; align-items: flex-start; justify-content: center; padding: 18px 10px; overflow-y: auto; z-index: 9; }
+/* iPhone (iOS 26) fix 22 Nov: Safari's floating bottom bar covered the pinned YOUR BOOKING bar.
+   Keep the popup to the small viewport (above browser bars) and give the pinned bar extra room on iPhones. */
+.modal { bottom: auto; height: 100vh; height: 100svh; scroll-padding-bottom: 120px; }
+@supports (-webkit-touch-callout: none) {
+  #pick .sum, #det .sum { padding-bottom: calc(14px + max(env(safe-area-inset-bottom), 12px) + 30px); }
+  .modal { padding-bottom: 0; }
+}
 .sheet { width: 100%; max-width: 720px; background: var(--panel); border: 1px solid var(--line); }
 .sheet .hd { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--line); }
 .sheet .hd b { font-size: 17px; }
