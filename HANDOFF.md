@@ -35,6 +35,16 @@ phones) in this file or in design files.
 ## DESIGN → FUNCTION CONCERNS (design writes, function fixes and ticks – newest first)
 Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [ ] sev · screen · what's wrong – why – (date, who)`.
 
+**Booking page `round2.sg/slots` on iPhone (iOS 26 Safari) – reported by a guest-tester 22 Nov 2026**
+- [ ] 4 · booking page, pick + details steps · On newer iPhones Safari's address bar floats at the bottom *over* the page, so the pinned
+  YOUR BOOKING bar (CONTINUE / HOLD & PAY) sits behind it: the guest can't scroll further and the button is hard or impossible to
+  tap – it blocks booking on those phones. Cause: `.modal` is `position: fixed; inset: 0` and `#pick .sum, #det .sum` stick to its
+  bottom, which on iOS 26 is behind Safari's bar. **A tested fix is ready** (CSS only, 7 lines) on branch `room-refine`, commit
+  `a25e528`: `.modal { bottom:auto; height:100vh; height:100svh }` plus extra bottom padding on the pinned bar for iPhones
+  (`@supports (-webkit-touch-callout:none)`). Checked on an iPhone 22 Nov 9:21pm: bar fully above Safari's bar, HOLD & PAY
+  tappable (a small empty band under the bar – the extra iPhone padding can probably come down). Needs the owner's side to apply,
+  since `slots/` is function code. (22 Nov 2026, design)
+
 **Member page `book.round2.sg/m` (`memPage` / `memApi` in `worker/round2-book.js`) – from the design + accessibility review, 22 Nov 2026**
 > **Function side – LIVE 22 Nov 9:00pm** (engine hash 0981692a…, 27 bindings, 3 timers; Light check 18/3/0 before and after;
 > branch `member-a11y` merged into `main`). All 9 items below are fixed. For design: pictures stay `.pics div` (now role=radio,
