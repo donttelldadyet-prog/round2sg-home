@@ -4955,12 +4955,12 @@ async function memApi(env, req) {
   if ((act === 'join' || act === 'login') && !(await hb.gmRate('mem:' + who, 60))) return J({ error: 'Too many tries from here. Wait 10 minutes.' });
   if (act === 'join') {
     const phone = memPhone(f.phone), name = memShown(f.name), crew = memCrew(f.crew) || name, pin = String(f.pin || '');
-    if (crew.length < 2) return J({ error: 'Type a crew name (your couple or group name – or just your name).' });
-    if (name.length < 2) return J({ error: 'Type your player name for the PS4 (2–16 letters or numbers).' });
-    if (!phone) return J({ error: 'That phone number doesn’t look right.' });
-    if (!/^\d{4,8}$/.test(pin)) return J({ error: 'The PIN must be 4 to 8 numbers.' });
-    if (memWeak(pin)) return J({ error: 'Pick a less easy PIN (not 1234… or all the same number).' });
-    if (await hb.kvGet('mem:' + phone)) return J({ error: 'This number already has an account – log in instead.', login: true });
+    if (name.length < 2) return J({ error: 'Type your player name for the PS4 (2–16 letters or numbers).', field: 'jn' });   /* 22 Nov: field = which box to put the cursor back in */
+    if (crew.length < 2) return J({ error: 'The crew name needs 2–24 characters – or leave it empty to use your name.', field: 'jc' });
+    if (!phone) return J({ error: 'That phone number doesn’t look right.', field: 'jp' });
+    if (!/^\d{4,8}$/.test(pin)) return J({ error: 'The PIN must be 4 to 8 numbers.', field: 'jk' });
+    if (memWeak(pin)) return J({ error: 'Pick a less easy PIN (not 1234… or all the same number).', field: 'jk' });
+    if (await hb.kvGet('mem:' + phone)) return J({ error: 'This number already has an account – log in instead.', login: true, field: 'lk' });
     const salt = memB64(crypto.getRandomValues(new Uint8Array(9))), id = 'm' + memB64(crypto.getRandomValues(new Uint8Array(6))).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 8).padEnd(8, '0');
     const av = (await memAvOk(env, f.av)) || (await memAvDefault(env));
     const m = { id, crew, phone, salt, pin: await memMac(env, 'pin|' + salt + '|' + pin), at: now, players: [{ slot: 'p1', shown: name, pic: 0, av, at: now }], staff: false, tv: 0, bad: 0, lock: 0, by: 'self' };
@@ -5025,6 +5025,13 @@ async function memApi(env, req) {
     const names = ps.filter((x) => x.slot !== 'main').map((x) => x.shown).join(' + ') || m.crew, c = { cid: 'l' + now.toString(36), do: 'look', p: `/_memplay.${m.id}.` + ps.map((x) => x.slot + '.' + x.shown.replace(/ /g, '_')).join('.'), at: now, by: 'member ' + m.id, state: 'sent', nobusy: true };
     await hb.kvMany([], [['ps4cmd:' + id, c], ['memplay:' + id, { name: names, cid: c.cid, at: now, until: tk.until, mid: m.id }]]);   /* until (owner 20 Nov 8:01am): the tile keeps showing this member for the whole session */
     return J({ ok: true, sent: true, name: names, room });
+  }
+  if (act === 'loadst') {   /* 22 Nov (design review: "little feedback after Load"): the phone shows the same progress as the tile */
+    const room = String(f.room || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12), map = (await hb.kvGet('ps4map')) || {}, id = Object.keys(map).find((i) => map[i] === room);
+    if (!id) return J({ error: 'Unknown room.' });
+    const tk = await hb.kvGet('tiletok:' + id); if (!tk || !f.k || String(f.k) !== tk.k || now >= tk.until) return J({ error: 'This code has run out.', rescan: true });   /* names only for the crew holding the room's code */
+    const t = await (await ps4Tile(env, new URL('https://x/ps4/tile?id=' + id))).json();
+    return J({ ok: true, status: t.status || '', title: t.title || '', line: t.line || '', board: t.board || '', done: +t.done || 0, total: +t.total || 0 });
   }
   if (act === 'roomout') {   /* owner 20 Nov 8:01am: "a button to logout manually" – this member is done in this room; the tile shows the code again */
     const room = String(f.room || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12), map = (await hb.kvGet('ps4map')) || {}, id = Object.keys(map).find((i) => map[i] === room);
@@ -5114,67 +5121,91 @@ function memPage(u, D) {
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 <meta name="theme-color" content="#06050a"><style>:root{--ac:${ac};--ink:${ink};--hero-h:${R ? 250 : 150}px}${D && D.css ? D.css : MEM_CSS}</style></head><body><main>
 <header class="hero"><img class="logo" src="${MEM_LOGO}" alt="Round2">${R ? `<img class="char" src="${MEM_WIX + R[3]}" alt="">` : ''}
-<div class="kick px">ROUND2 MEMBERS</div>${R ? `<div class="room">${R[0].toUpperCase()}</div><div class="tag">Join or log in – your crew’s saves, names and pictures load onto this room’s PS4.</div>` : '<h1>Your Round2<br>game crew</h1>'}</header><div class="bar"></div>
-<section id="out"><div class="tabs"><button id="tJ" class="on">Join</button><button id="tL" class="ghost">Log in</button></div>
-<div class="card"><div id="fJ"><label>Crew name – your couple or group name (or just your name)</label><input id="jc" maxlength="24">
-<label>Your player name on the PS4 (2–16 letters or numbers)</label><input id="jn" autocomplete="nickname" maxlength="16">
-<div id="jpw" hidden><label>Your picture on the PS4</label><div class="pics" id="jpics"></div></div>
-<label>Phone number</label><input id="jp" inputmode="tel" autocomplete="tel" placeholder="9123 4567">
-<label>Pick a PIN (4 to 8 numbers)</label><input id="jk" inputmode="numeric" maxlength="8" type="password" autocomplete="new-password">
-<label>PIN again</label><input id="jk2" inputmode="numeric" maxlength="8" type="password" autocomplete="new-password">
+<div class="kick px">ROUND2 MEMBERS</div>${R ? `<div class="room" role="heading" aria-level="1">${R[0].toUpperCase()}</div><div class="tag">Join or log in – your crew’s saves, names and pictures load onto this room’s PS4.</div>` : '<h1>Your Round2<br>game crew</h1>'}</header><div class="bar"></div>
+<section id="out"><div class="tabs"><button id="tJ" class="on" aria-pressed="true">Join</button><button id="tL" class="ghost" aria-pressed="false">Log in</button></div>
+<div class="card"><div id="fJ"><label for="jn">Your player name on the PS4 (2–16 letters or numbers)</label><input id="jn" autocomplete="nickname" maxlength="16">
+<label for="jc">Crew name (optional) – your couple or group name. Leave it empty to use your player name.</label><input id="jc" maxlength="24">
+<div id="jpw" hidden><label id="jpl">Your picture on the PS4</label><div class="pics" id="jpics" role="radiogroup" aria-labelledby="jpl"></div></div>
+<label for="jp">Phone number</label><input id="jp" inputmode="tel" autocomplete="tel" placeholder="9123 4567">
+<label for="jk">Pick a PIN (4 to 8 numbers)</label><input id="jk" inputmode="numeric" maxlength="8" type="password" autocomplete="new-password">
+<label for="jk2">PIN again</label><input id="jk2" inputmode="numeric" maxlength="8" type="password" autocomplete="new-password">
 <button id="jb">Join Round2</button><p class="fine">You can add the rest of your crew after joining – each player gets their own name, picture and saves. Your saves follow you to any Round2 room.</p></div>
-<div id="fL" hidden><label>Phone number</label><input id="lp" inputmode="tel" autocomplete="tel" placeholder="9123 4567">
-<label>PIN</label><input id="lk" inputmode="numeric" maxlength="8" type="password" autocomplete="current-password"><button id="lb">Log in</button>
-<p class="fine">Forgot your PIN? Ask staff to reset it.</p></div><p class="err" id="e1"></p></div></section>
-<section id="in" hidden><div class="card"><div class="fine">CREW<span class="badge px" id="bd"></span></div><label>Crew name</label><input id="cr" maxlength="24">
-<button class="ghost" id="crb">Save crew name</button><div class="fine" id="ph" style="margin-top:10px"></div><p class="err" id="e0"></p></div>
+<div id="fL" hidden><label for="lp">Phone number</label><input id="lp" inputmode="tel" autocomplete="tel" placeholder="9123 4567">
+<label for="lk">PIN</label><input id="lk" inputmode="numeric" maxlength="8" type="password" autocomplete="current-password"><button id="lb">Log in</button>
+<p class="fine">Forgot your PIN? Ask staff to reset it.</p></div><p class="err" role="alert" id="e1"></p></div></section>
+<section id="in" hidden><div class="card"><div class="fine">CREW<span class="badge px" id="bd"></span></div><label for="cr">Crew name</label><input id="cr" maxlength="24">
+<div class="fine" id="ph" style="margin-top:10px"></div></div>
 <div id="pls"></div>
-<div class="card" id="playc" hidden><b id="playh"></b><p class="fine">Tick the profiles to load. Each one comes back into the same profile you used last time.</p><div id="playb"></div><p class="err" id="e5"></p></div>
-<div class="card" id="addc"><b>Add a player</b><label>Their name on the PS4</label><input id="an" maxlength="16"><button class="ghost" id="ab">Add player</button>
-<p class="err" id="e4"></p></div>
-<div class="card"><b>Change PIN</b><label>Current PIN</label><input id="po" inputmode="numeric" maxlength="8" type="password">
-<label>New PIN (4 to 8 numbers)</label><input id="pn" inputmode="numeric" maxlength="8" type="password"><button class="ghost" id="pb">Change PIN</button><p class="err" id="e3"></p></div>
-<p class="fine">In the room: open the Round2 tile on the PS4, scan the code, tick who's playing – each player's saves, name and picture load in.</p>
+<div class="card" id="savec"><button id="svall">Save changes</button><p class="err" role="alert" id="e0"></p></div>
+<div class="card" id="playc" hidden><b id="playh"></b><p class="fine">Switch on everyone who’s playing. Each player’s saves come back into the same profile they used last time.</p><div id="playb"></div><p class="err" role="alert" id="e5"></p>
+<div id="lprog" hidden><div class="lbar" style="height:10px;background:rgba(255,255,255,.12);margin:12px 0 6px;overflow:hidden"><i id="lpbar" style="display:block;height:100%;width:0;background:var(--ac);transition:width .6s"></i></div><p class="fine" id="lptx" aria-live="polite"></p><div class="lst" id="lpl"></div></div></div>
+<div class="card" id="addc"><b>Add a player</b><label for="an">Their name on the PS4</label><input id="an" maxlength="16"><button class="ghost" id="ab">Add player</button>
+<p class="err" role="alert" id="e4"></p></div>
+<div class="card"><b>Change PIN</b><label for="po">Current PIN</label><input id="po" inputmode="numeric" maxlength="8" type="password" autocomplete="current-password">
+<label for="pn">New PIN (4 to 8 numbers)</label><input id="pn" inputmode="numeric" maxlength="8" type="password"><button class="ghost" id="pb">Change PIN</button><p class="err" role="alert" id="e3"></p></div>
+<p class="fine">In the room: open the Round2 tile on the PS4, scan the code, choose who’s playing – each player’s saves, name and picture load in.</p>
 <button class="ghost" id="lo">Log out</button></section>
 <script>
 var $=function(i){return document.getElementById(i)},T=null,P=[],M=null,sel={},AV={all:[],lapy:[]},JAV='',MORE={};
 function avu(n){return '/m/av/'+n+'.png'}function face(p){return p.av?'<img src="'+avu(p.av)+'" alt="">':(P[p.pic]||'')}
 function grid(cur,more){var L=AV.lapy.length?AV.lapy:AV.all.slice(0,20),rest=AV.all.filter(function(x){return L.indexOf(x)<0}),n=(more||0)*30,list=L.concat(rest.slice(0,n));if(cur&&list.indexOf(cur)<0)list.unshift(cur);
-return list.map(function(a){return '<div data-a="'+a+'" class="'+(a===cur?'sel':'')+'"><img loading="lazy" src="'+avu(a)+'" alt=""></div>'}).join('')+(rest.length>n?'<div class="more" data-more="1">More</div>':'')}
+var on=list.indexOf(cur)<0?0:list.indexOf(cur);return list.map(function(a,i){return '<div data-a="'+a+'" class="'+(a===cur?'sel':'')+'" role="radio" aria-checked="'+(a===cur)+'" aria-label="Picture '+(i+1)+'" tabindex="'+(i===on?0:-1)+'"><img loading="lazy" src="'+avu(a)+'" alt=""></div>'}).join('')+(rest.length>n?'<div class="more" data-more="1" role="button" tabindex="0">More pictures</div>':'')}
 function jp(){$('jpw').hidden=!AV.all.length;$('jpics').innerHTML=grid(JAV,MORE.j)}try{T=localStorage.getItem('r2.mem')}catch(e){}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function api(o){if(T)o.tok=T;return fetch('/m/api',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(o)}).then(function(r){return r.json()}).catch(function(){return{error:'No connection – try again.'}})}
 function keep(t){T=t;try{localStorage.setItem('r2.mem',t)}catch(e){}}
-function tab(j){$('fJ').hidden=!j;$('fL').hidden=j;$('tJ').className=j?'on':'ghost';$('tL').className=j?'ghost':'on';$('e1').textContent=''}
+function tab(j){$('fJ').hidden=!j;$('fL').hidden=j;$('tJ').className=j?'on':'ghost';$('tL').className=j?'ghost':'on';$('tJ').setAttribute('aria-pressed',!!j);$('tL').setAttribute('aria-pressed',!j);$('e1').textContent=''}
 $('tJ').onclick=function(){tab(1)};
 $('jpics').onclick=function(e){var d=e.target.closest('[data-a]');if(d){JAV=d.dataset.a;jp();return}if(e.target.closest('[data-more]')){MORE.j=(MORE.j||0)+1;jp()}};
 fetch('/m/av/list').then(function(r){return r.json()}).then(function(r){AV=r;if(!JAV)JAV=AV.lapy[Math.floor(Math.random()*AV.lapy.length)]||AV.all[0]||'';jp();if(M)show({me:M})}).catch(function(){});$('tL').onclick=function(){tab(0)};
 function show(r){if(r.pics)P=r.pics;M=r.me;$('out').hidden=true;$('in').hidden=false;$('cr').value=M.crew;$('bd').textContent=M.staff?'STAFF':'MEMBER';
 $('ph').textContent='Phone '+M.phone+' · '+M.players.length+' of '+M.max+' players';$('addc').hidden=M.players.length>=M.max;
 $('pls').innerHTML=M.players.map(function(p){sel[p.slot]=p.av||p.pic;return '<div class="card" data-s="'+p.slot+'"><div class="pl"><div class="who"><div class="av">'+face(p)+'</div><b>'+esc(p.shown)+'</b></div>'+
-(M.players.length>1?'<button class="ghost sm" data-del="1">Remove</button>':'')+'</div><label>Name on the PS4</label><input data-n="1" maxlength="16" value="'+esc(p.shown)+'">'+
-'<label>Picture on the PS4</label><div class="pics">'+(AV.all.length?grid(p.av,MORE[p.slot]):P.map(function(x,i){return '<div data-i="'+i+'" class="'+(i===p.pic?'sel':'')+'">'+x+'</div>'}).join(''))+'</div>'+
-'<button data-sv="1">Save '+esc(p.shown)+'</button><p class="err"></p></div>'}).join('');play()}
+(M.players.length>1?'<button class="ghost sm" data-del="1" aria-label="Remove '+esc(p.shown)+'">Remove</button>':'')+'</div><label for="n-'+p.slot+'">Name on the PS4</label><input id="n-'+p.slot+'" data-n="1" maxlength="16" value="'+esc(p.shown)+'">'+
+'<label id="pl-'+p.slot+'">Picture on the PS4</label><div class="pics" role="radiogroup" aria-labelledby="pl-'+p.slot+'">'+(AV.all.length?grid(p.av,MORE[p.slot]):P.map(function(x,i){return '<div data-i="'+i+'" class="'+(i===p.pic?'sel':'')+'" role="radio" aria-checked="'+(i===p.pic)+'" aria-label="Picture '+(i+1)+'" tabindex="'+(i===p.pic||(p.pic<0&&!i)?0:-1)+'">'+x+'</div>'}).join(''))+'</div>'+
+'<div class="rmc" hidden></div><p class="err" role="alert"></p></div>'}).join('');play()}
 var ROOM=new URLSearchParams(location.search).get('room')||'',KEY=new URLSearchParams(location.search).get('k')||'';
-function play(){if(!ROOM||!M){$('playc').hidden=true;return}$('playc').hidden=false;$('playh').textContent='Play on '+ROOM.toUpperCase()+' now';
+function play(){if(!ROOM||!M){$('playc').hidden=true;return}$('playc').hidden=false;$('playh').textContent='Choose who’s playing on '+ROOM.toUpperCase();
 if(!KEY){$('playb').innerHTML='<p class="fine">To load your saves, open the Round2 tile on this room’s PS4 and scan its code.</p>';return}
-$('playb').innerHTML=[{slot:'main',shown:ROOM.toUpperCase()+' (main profile)',pic:-1}].concat(M.players).map(function(p){return '<label style="display:flex;gap:12px;align-items:center;font-size:18px;color:#f4f1fb;margin:10px 0"><input type="checkbox" data-tick="'+p.slot+'" checked style="width:26px;height:26px"> <span class="av" style="width:36px;height:36px;font-size:20px;border-width:1px">'+(p.slot==='main'?'🏠':face(p))+'</span> '+esc(p.shown)+'</label>'}).join('')+'<button data-go="1">Load ticked profiles</button><p class="fine">Everything played in this room – the main profile and Player 1-4 – is saved to your crew after the session.</p><button class="ghost" data-rout="1">Log out of '+esc(ROOM.toUpperCase())+'</button>'}
-$('playb').onclick=function(e){if(e.target.closest('[data-rout]')){var e6=$('e5');e6.className='err';api({act:'roomout',room:ROOM,k:KEY}).then(function(r){if(r.error){e6.textContent=r.error;return}e6.className='err ok';e6.textContent='Logged out of '+ROOM.toUpperCase()+'. The TV shows the code again for the next members.'});return}var b=e.target.closest('[data-go]');if(!b)return;var e5=$('e5');e5.className='err';e5.textContent='';var sl=[].map.call(document.querySelectorAll('[data-tick]:checked'),function(x){return x.dataset.tick});if(!sl.length){e5.textContent='Tick at least one player.';return}b.disabled=true;
-api({act:'play',room:ROOM,slots:sl,k:KEY}).then(function(r){b.disabled=false;if(r.error){e5.textContent=r.error;if(r.out)out();return}e5.className='err ok';e5.textContent='Sent! Watch the TV – the profile for '+r.name+' will be ready in a moment.'})};
+$('playb').innerHTML=[{slot:'main',shown:ROOM.toUpperCase()+' (main profile)',pic:-1}].concat(M.players).map(function(p){return '<label style="display:flex;gap:12px;align-items:center;font-size:18px;color:#f4f1fb;margin:10px 0"><input type="checkbox" data-tick="'+p.slot+'" checked style="width:26px;height:26px"> <span class="av" style="width:36px;height:36px;font-size:20px;border-width:1px">'+(p.slot==='main'?'🏠':face(p))+'</span> '+esc(p.shown)+'</label>'}).join('')+'<button data-go="1">Load saves</button><p class="fine">Everything played in this room – the main profile and Player 1-4 – is saved to your crew after the session.</p><button class="ghost" data-rout="1">Log out of '+esc(ROOM.toUpperCase())+'</button>'}
+$('playb').onclick=function(e){if(e.target.closest('[data-rout]')){var e6=$('e5');e6.className='err';api({act:'roomout',room:ROOM,k:KEY}).then(function(r){if(r.error){e6.textContent=r.error;return}e6.className='err ok';e6.textContent='Logged out of '+ROOM.toUpperCase()+'. The TV shows the code again for the next members.'});return}var b=e.target.closest('[data-go]');if(!b)return;var e5=$('e5');e5.className='err';e5.textContent='';var sl=[].map.call(document.querySelectorAll('[data-tick]:checked'),function(x){return x.dataset.tick});if(!sl.length){e5.textContent='Switch on at least one player.';return}b.disabled=true;
+api({act:'play',room:ROOM,slots:sl,k:KEY}).then(function(r){b.disabled=false;if(r.error){e5.textContent=r.error;if(r.out)out();return}e5.className='err ok';e5.textContent='Sent! Loading '+r.name+'’s saves – watch here or on the TV.';prog(1)})};
+/* 22 Nov (design review): the phone follows the load like the tile does – profiles ready, the bar, then what to do */
+var PT=null,PN=0,PSEEN=0;function prog(start){if(start){PN=0;PSEEN=0;$('lprog').hidden=false;$('lpbar').style.width='3%';$('lptx').textContent='Starting…';$('lpl').innerHTML=''}clearTimeout(PT);if(++PN>80)return;
+api({act:'loadst',room:ROOM,k:KEY}).then(function(r){if(r.error){if(r.rescan){$('lptx').textContent='';return}PT=setTimeout(prog,4000);return}var B=(r.board||'').split('|').filter(Boolean).map(function(x){var f=x.split('~');return{st:f[0],cur:f[1],tgt:f[2]||f[1],who:f[3]||''}}),pl=B.filter(function(b){return 'wldf'.indexOf(b.st)>=0}),nd=pl.filter(function(b){return b.st==='d'||b.st==='f'}).length,li=pl.filter(function(b){return b.st==='l'})[0],cl=B.filter(function(b){return b.st==='c'}).length;
+if(r.status==='loading')PSEEN=1;var nt=pl.length,fr=nt?(nd+(li&&r.total?Math.min(r.done/r.total,.95):0))/nt:0,fin=r.status==='done'&&(PSEEN||(nt&&nd===nt));
+$('lpbar').style.width=Math.max(3,Math.round((fin?1:fr)*100))+'%';
+$('lpl').innerHTML=pl.map(function(b){var t=b.st==='d'?'✓ ready':b.st==='f'?'ready – some games failed, staff will check':b.st==='l'?'loading saves…':'waiting';return '<div class="fine">'+esc(b.who||b.tgt)+' – '+t+'</div>'}).join('');
+if(fin){$('lptx').textContent='All set! Press the PS button on the controller and pick your profile.';$('e5').textContent='';return}
+if(/^Sorry/.test(r.title||'')){$('lptx').textContent=r.title+' '+(r.line||'');return}
+$('lptx').textContent=nt?(nd+' of '+nt+' profile'+(nt>1?'s':'')+' ready'+(cl&&!li?' – getting the profiles ready first':'')):(r.status==='loading'||r.status==='reset'?'Getting the room ready…':'Waiting for the PS4…');PT=setTimeout(prog,3500)})}
 $('pls').onclick=function(e){var c=e.target.closest('[data-s]');if(!c)return;var s=c.dataset.s,er=c.querySelector('.err');
-var a=e.target.closest('[data-a]');if(a){sel[s]=a.dataset.a;[].forEach.call(c.querySelectorAll('.pics [data-a]'),function(x){x.className=x.dataset.a===sel[s]?'sel':''});c.querySelector('.av').innerHTML='<img src="'+avu(sel[s])+'" alt="">';return}
+var a=e.target.closest('[data-a]');if(a){sel[s]=a.dataset.a;[].forEach.call(c.querySelectorAll('.pics [data-a]'),function(x){var on=x.dataset.a===sel[s];x.className=on?'sel':'';x.setAttribute('aria-checked',on);x.tabIndex=on?0:-1});c.querySelector('.av').innerHTML='<img src="'+avu(sel[s])+'" alt="">';return}
 if(e.target.closest('[data-more]')){MORE[s]=(MORE[s]||0)+1;c.querySelector('.pics').innerHTML=grid(sel[s],MORE[s]);return}
-var d=e.target.closest('[data-i]');if(d){sel[s]=+d.dataset.i;[].forEach.call(c.querySelectorAll('.pics div'),function(x){x.className=+x.dataset.i===sel[s]?'sel':''});c.querySelector('.av').textContent=P[sel[s]];return}
-if(e.target.dataset.sv){er.className='err';er.textContent='';var o={act:'player',slot:s,shown:c.querySelector('[data-n]').value};if(typeof sel[s]==='string'&&sel[s])o.av=sel[s];else o.pic=sel[s];api(o).then(function(r){if(r.error){er.textContent=r.error;if(r.out)out();return}show(r);var c2=document.querySelector('[data-s="'+s+'"] .err');if(c2){c2.className='err ok';c2.textContent='Saved.'}});return}
-if(e.target.dataset.del){var nm=c.querySelector('b').textContent,pin=prompt('Remove '+nm+' from your crew? Their saves are kept safe with Round2, but they will need to join on their own.\\n\\nType your PIN to confirm:');if(!pin)return;
-api({act:'delp',slot:s,pin:pin}).then(function(r){if(r.error){er.textContent=r.error;if(r.out)out();return}show(r)})}};
+var d=e.target.closest('[data-i]');if(d){sel[s]=+d.dataset.i;[].forEach.call(c.querySelectorAll('.pics div'),function(x){var on=+x.dataset.i===sel[s];x.className=on?'sel':'';x.setAttribute('aria-checked',on);x.tabIndex=on?0:-1});c.querySelector('.av').textContent=P[sel[s]];return}
+var rm=c.querySelector('.rmc'),nm=c.querySelector('b').textContent;
+if(e.target.dataset.del){rm.hidden=false;rm.innerHTML='<p class="fine">Remove '+esc(nm)+' from your crew? Their saves stay safe with Round2, but they’ll need to join on their own.</p><label for="rp-'+s+'">Your PIN</label><input id="rp-'+s+'" type="password" inputmode="numeric" maxlength="8" autocomplete="current-password"><button class="ghost" data-rmgo="1">Remove '+esc(nm)+'</button> <button class="ghost" data-rmno="1">Keep '+esc(nm)+'</button>';$('rp-'+s).focus();return}
+if(e.target.dataset.rmno){rm.hidden=true;rm.innerHTML='';c.querySelector('[data-del]').focus();return}
+if(e.target.dataset.rmgo){var pin=$('rp-'+s).value;if(!pin){er.textContent='Type your PIN to remove '+nm+'.';$('rp-'+s).focus();return}
+api({act:'delp',slot:s,pin:pin}).then(function(r){if(r.error){er.textContent=r.error;var q=$('rp-'+s);if(q){q.value='';q.focus()}if(r.out)out();return}show(r);$('ph').focus&&$('ph').setAttribute('tabindex','-1');$('ph').focus()})}};
+/* 22 Nov (design review): pictures work with a keyboard – arrows move, Enter/Space picks; "More pictures" like a button */
+document.addEventListener('keydown',function(e){var t=e.target;if(!t||!t.closest)return;var r=t.closest('.pics [role=radio]'),mo=t.closest('.pics [data-more]');
+if(mo&&(e.key==='Enter'||e.key===' ')){e.preventDefault();mo.click();return}if(!r)return;
+if(e.key==='Enter'||e.key===' '){e.preventDefault();r.click();var g=r.parentNode.querySelector('[data-a="'+r.dataset.a+'"],[data-i="'+r.dataset.i+'"]');if(g)g.focus();return}
+var k={ArrowRight:1,ArrowDown:1,ArrowLeft:-1,ArrowUp:-1}[e.key];if(!k)return;e.preventDefault();var L=[].slice.call(r.parentNode.querySelectorAll('[role=radio]')),n=L[(L.indexOf(r)+k+L.length)%L.length];L.forEach(function(x){x.tabIndex=x===n?0:-1});n.focus()});
+$('svall').onclick=function(){var e=$('e0'),b=$('svall');e.className='err';e.textContent='';var jobs=[];if($('cr').value.trim()!==M.crew)jobs.push({o:{act:'crew',crew:$('cr').value},f:'cr'});
+M.players.forEach(function(p){var c=document.querySelector('[data-s="'+p.slot+'"]');if(!c)return;var nv=c.querySelector('[data-n]').value,o={act:'player',slot:p.slot,shown:nv};var sv=sel[p.slot],ov=p.av||p.pic;if(typeof sv==='string'&&sv)o.av=sv;else o.pic=sv;if(nv.trim()!==p.shown||sv!==ov)jobs.push({o:o,f:'n-'+p.slot,nm:p.shown})});
+if(!jobs.length){e.className='err ok';e.textContent='Nothing to save – no changes.';return}busy(b,1,'Saving…');var last=null;
+(function next(i){if(i>=jobs.length){busy(b,0,'Save changes');if(last)show(last);var e2=$('e0');e2.className='err ok';e2.textContent='Saved.';return}
+api(jobs[i].o).then(function(r){if(r.error){busy(b,0,'Save changes');if(last)show(last);var e2=$('e0');e2.className='err';e2.textContent=(jobs[i].nm?jobs[i].nm+': ':'')+r.error;var q=$(jobs[i].f);if(q){q.setAttribute('aria-invalid','true');q.focus()}if(r.out)out();return}last=r;next(i+1)})})(0)};
 function busy(b,on,t){b.disabled=on;if(t)b.textContent=t}
-$('jb').onclick=function(){var e=$('e1');e.textContent='';if($('jk').value!==$('jk2').value){e.textContent='The two PINs are not the same.';return}
+document.addEventListener('input',function(e){if(e.target&&e.target.removeAttribute)e.target.removeAttribute('aria-invalid')});
+$('jb').onclick=function(){var e=$('e1');e.textContent='';if($('jk').value!==$('jk2').value){e.textContent='The two PINs are not the same.';$('jk2').setAttribute('aria-invalid','true');$('jk2').focus();return}
 busy($('jb'),1,'Joining…');api({act:'join',crew:$('jc').value,name:$('jn').value,phone:$('jp').value,pin:$('jk').value,av:JAV}).then(function(r){busy($('jb'),0,'Join Round2');
-if(r.error){e.textContent=r.error;if(r.login){$('lp').value=$('jp').value;tab(0)}return}keep(r.tok);show(r)})};
+if(r.error){e.textContent=r.error;if(r.login){$('lp').value=$('jp').value;tab(0)}var q=$(r.field||'jn');if(q){q.setAttribute('aria-invalid','true');q.focus()}return}keep(r.tok);show(r)})};
 $('lb').onclick=function(){var e=$('e1');e.textContent='';busy($('lb'),1,'Logging in…');api({act:'login',phone:$('lp').value,pin:$('lk').value}).then(function(r){busy($('lb'),0,'Log in');
-if(r.error){e.textContent=r.error;if(r.join){$('jp').value=$('lp').value;tab(1)}return}keep(r.tok);show(r)})};
-$('crb').onclick=function(){var e=$('e0');e.className='err';e.textContent='';api({act:'crew',crew:$('cr').value}).then(function(r){if(r.error){e.textContent=r.error;if(r.out)out();return}show(r);e.className='err ok';e.textContent='Saved.'})};
+if(r.error){e.textContent=r.error;if(r.join){$('jp').value=$('lp').value;tab(1);$('jn').focus()}else{$('lk').value='';$('lk').focus()}return}keep(r.tok);show(r)})};
+
 $('ab').onclick=function(){var e=$('e4');e.className='err';e.textContent='';api({act:'addp',shown:$('an').value}).then(function(r){if(r.error){e.textContent=r.error;if(r.out)out();return}$('an').value='';show(r)})};
 $('pb').onclick=function(){var e=$('e3');e.className='err';e.textContent='';api({act:'pin',old:$('po').value,pin:$('pn').value}).then(function(r){
 if(r.error){e.textContent=r.error;if(r.out)out();return}keep(r.tok);$('po').value=$('pn').value='';e.className='err ok';e.textContent='PIN changed. Other phones are logged out.'})};
@@ -5246,6 +5277,8 @@ async function ps4Tile(env, u) {
      for the tile's progress bar (strings – the tile reads "key":"value" only) */
   { const R = Object.assign({}, MEM_ROOMS, await designRooms('main'))[room === 'max' ? 'maximillion' : room]; if (R) { o.color = R[1].slice(1); o.rname = R[0]; } }   /* 22 Nov: colours from design/rooms.json */
   if (o.status === 'loading' || o.status === 'reset') { const busy = cl.state === 'running' || cl.state === 'paused'; o.done = String(busy ? cl.done || 0 : 0); o.total = String(busy ? cl.total || 0 : 0); }
+  /* 22 Nov (design kit): the tile draws any non-ASCII character as "?" – "One moment – this PS4…" showed "One moment ??? this PS4" */
+  for (const k of ['title', 'line', 'line2', 'rname', 'pnow']) if (typeof o[k] === 'string') o[k] = o[k].replace(/[\u2013\u2014]/g, '-').replace(/[\u2018\u2019]/g, "'").replace(/[\u201c\u201d]/g, '"').replace(/\u2026/g, '...').replace(/\u00b7/g, '-').replace(/[^\x20-\x7e]/g, '');
   TILE_MEMO.set(id, { t: now, o }); if (TILE_MEMO.size > 50) TILE_MEMO.delete(TILE_MEMO.keys().next().value);
   return J(o);
 }
