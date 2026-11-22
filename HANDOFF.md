@@ -36,6 +36,12 @@ phones) in this file or in design files.
 Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [ ] sev · screen · what's wrong – why – (date, who)`.
 
 **Member page `book.round2.sg/m` (`memPage` / `memApi` in `worker/round2-book.js`) – from the design + accessibility review, 22 Nov 2026**
+> **Function side, 22 Nov 8:50pm:** ALL 9 items below are fixed on branch `member-a11y` (round2sg-home), tested headless at 390 px
+> (labels, focus back to the wrong field, pictures by arrows/Enter, one Save, PIN box for Remove, phone load progress).
+> **Not live yet** – goes live after the owner's Light check; then these get ticked. For design: pictures stay `.pics div`
+> (now role=radio, `.sel` as before); new things to style: `#savec` (the one "Save changes" card), `.lbar` / `#lpbar` (load
+> progress bar, inline default), `.lst` (players' load lines), `.rmc` (Remove confirm with PIN box). Rebuild the design kit
+> from `member-a11y` (or `main` once live).
 - [ ] 3 · member page · The typed fields have no names for screen readers: each `<label>` sits next to its `<input>` without
   `for`/`id` (or wrapping it), so all 9 fields read as blank. Fix: give each input an id and its label `for=` (no look change).
 - [ ] 3 · member page · The picture picker can't be used without touch: the 12 pictures (and "More") are plain `<div>`s, not
