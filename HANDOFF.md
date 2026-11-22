@@ -33,33 +33,32 @@ standing rules. Keep it short; add a rule here only when the owner asks for one.
 phones) in this file or in design files.
 
 ## DESIGN → FUNCTION CONCERNS (design writes, function fixes and ticks – newest first)
-Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [ ] sev · screen · what's wrong – why – (date, who)`.
+Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [x] (fixed 22 Nov 9:00pm, member-a11y) sev · screen · what's wrong – why – (date, who)`.
 
 **Member page `book.round2.sg/m` (`memPage` / `memApi` in `worker/round2-book.js`) – from the design + accessibility review, 22 Nov 2026**
-> **Function side, 22 Nov 8:50pm:** ALL 9 items below are fixed on branch `member-a11y` (round2sg-home), tested headless at 390 px
-> (labels, focus back to the wrong field, pictures by arrows/Enter, one Save, PIN box for Remove, phone load progress).
-> **Not live yet** – goes live after the owner's Light check; then these get ticked. For design: pictures stay `.pics div`
-> (now role=radio, `.sel` as before); new things to style: `#savec` (the one "Save changes" card), `.lbar` / `#lpbar` (load
-> progress bar, inline default), `.lst` (players' load lines), `.rmc` (Remove confirm with PIN box). Rebuild the design kit
-> from `member-a11y` (or `main` once live).
-- [ ] 3 · member page · The typed fields have no names for screen readers: each `<label>` sits next to its `<input>` without
+> **Function side – LIVE 22 Nov 9:00pm** (engine hash 0981692a…, 27 bindings, 3 timers; Light check 18/3/0 before and after;
+> branch `member-a11y` merged into `main`). All 9 items below are fixed. For design: pictures stay `.pics div` (now role=radio,
+> `.sel` as before); new things to style: `#savec` (the one "Save changes" card), `.lbar` / `#lpbar` (load progress bar, inline
+> default), `.lst` (players' load lines), `.rmc` (Remove confirm with PIN box). Rebuild the design kit from `main`.
+> Also fixed (from design-preview.md): the tile showed "???" for – ’ … in engine texts – the engine now sends the tile plain ASCII.
+- [x] (fixed 22 Nov 9:00pm, member-a11y) 3 · member page · The typed fields have no names for screen readers: each `<label>` sits next to its `<input>` without
   `for`/`id` (or wrapping it), so all 9 fields read as blank. Fix: give each input an id and its label `for=` (no look change).
-- [ ] 3 · member page · The picture picker can't be used without touch: the 12 pictures (and "More") are plain `<div>`s, not
+- [x] (fixed 22 Nov 9:00pm, member-a11y) 3 · member page · The picture picker can't be used without touch: the 12 pictures (and "More") are plain `<div>`s, not
   buttons, so a keyboard can't reach them. Fix: make them `<button type="button">` (or role=radio in a radiogroup) – design
   keeps the look through `.pics div`/`.pics button`, tell design which.
-- [ ] 3 · member page · Errors and "Saved." / "Sent!" messages aren't announced to screen readers (no `aria-live`/`role=status`
+- [x] (fixed 22 Nov 9:00pm, member-a11y) 3 · member page · Errors and "Saved." / "Sent!" messages aren't announced to screen readers (no `aria-live`/`role=status`
   on `.err`), and after a failed Join the keyboard focus falls back to the page because the button is disabled while it
   sends. Fix: `role="status"` (or `aria-live="polite"`) on each `.err`; move focus to the message or the first bad field.
-- [ ] 2 · member page · After Load the phone only says "Sent! Watch the TV". Guests can't see progress on the phone; the
+- [x] (fixed 22 Nov 9:00pm, member-a11y) 2 · member page · After Load the phone only says "Sent! Watch the TV". Guests can't see progress on the phone; the
   tile already knows "2 of 3 profiles ready". Idea: poll the same status and show it on the play card.
-- [ ] 2 · member page · Too many Save buttons when logged in (crew name + one per player). One "Save" for the whole crew,
+- [x] (fixed 22 Nov 9:00pm, member-a11y) 2 · member page · Too many Save buttons when logged in (crew name + one per player). One "Save" for the whole crew,
   or save on change, would be simpler.
-- [ ] 2 · join form · Crew name is asked first and reads as required, but it's optional (the engine uses the player name when
+- [x] (fixed 22 Nov 9:00pm, member-a11y) 2 · join form · Crew name is asked first and reads as required, but it's optional (the engine uses the player name when
   it's blank). Ask for the player name first and mark crew name "optional".
-- [ ] 2 · member page · Join / Log in tabs don't say which is selected to screen readers (no `aria-pressed`/`aria-selected`),
+- [x] (fixed 22 Nov 9:00pm, member-a11y) 2 · member page · Join / Log in tabs don't say which is selected to screen readers (no `aria-pressed`/`aria-selected`),
   and with a room the page has no heading at all (room name is a `div`). Fix: `aria-pressed` on the two buttons; room name
   as the page's `h1`.
-- [ ] 1 · play card · Wording no longer matches the look on branch `design-new-look`: the ticks are drawn as on/off switches
+- [x] (fixed 22 Nov 9:00pm, member-a11y) 1 · play card · Wording no longer matches the look on branch `design-new-look`: the ticks are drawn as on/off switches
   but the text says "Tick the profiles to load" / "Load ticked profiles". Suggest "Choose who's playing" / "Load saves".
 - [ ] 1 · player card · Remove asks for the PIN in a browser pop-up (`prompt()`), which shows the PIN as it's typed. Use a
   small in-page confirm with a password field.
