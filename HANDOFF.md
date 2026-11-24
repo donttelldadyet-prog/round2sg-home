@@ -60,7 +60,7 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   claim-code link, Continue pinned at the bottom, "Already a member? Log in" → step 2 as today in the new look. **4 Log in** – phone + PIN,
   WhatsApp PIN link, Log in pinned at the bottom, "New here? Join Round2". Back buttons on 2–4. Owner thinks the swirl may exist as an
   open-source repo – fine to swap in if its licence allows. Words/prices are drafts. (25 Nov, design)
-  **Update 12:50am – logged-in screen + status badges:** prototype now has a 5th screen (tap Log in → Log in): crew header with an
+  **12:57am – Karen: prototype is final for tonight, over to you to edit/build** (uses design/components/status-badge since 8c3f2fb). **Update 12:50am – logged-in screen + status badges:** prototype now has a 5th screen (tap Log in → Log in): crew header with an
   "Active member" badge, the crew card, "Expires in 5 days" badge + Renew, and each profile shows Waiting → Loading → Ready badges while
   "Load saves on the TV" runs. Badges are Spectrum UI's Status Badge (Apache-2.0, github.com/arihantcodes/spectrum-ui
   app/registry/status-badge), dark variant, rebuilt in plain CSS + Lucide icons – the page isn't React, so copy the CSS from the prototype
