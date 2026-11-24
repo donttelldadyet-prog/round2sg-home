@@ -154,3 +154,9 @@ body{background:linear-gradient(180deg,#0d0b13 0%,#08070c 55%,#060509 100%)}
 .tn{font-size:10px;letter-spacing:.38em;color:rgba(255,255,255,.72)}
 .cn{font-size:14px;color:#f3f1f8;text-shadow:0 1px 0 rgba(0,0,0,.6)}
 .cs{font-size:10px;letter-spacing:.2em}
+/* 24 Nov 2026 8:45pm design – Karen: no gold chip. Matte tonal chip, same graphite as the card, engraved lines. */
+.chip{box-shadow:inset 0 1px 0 rgba(255,255,255,.12),inset 0 0 0 1px rgba(255,255,255,.1);
+  background:linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.35)) 50% 0/1px 100% no-repeat,
+  linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.35)) 0 35%/100% 1px no-repeat,
+  linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.35)) 0 65%/100% 1px no-repeat,
+  linear-gradient(135deg,#5a5962,#3a3940 55%,#4b4a52)}
