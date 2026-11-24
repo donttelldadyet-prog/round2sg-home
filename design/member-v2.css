@@ -188,3 +188,5 @@ main{overflow:hidden;min-height:100vh;min-height:100dvh;padding-bottom:0}
 .tex{background-image:radial-gradient(color-mix(in srgb,var(--ac) 55%,transparent) 1px,transparent 1.5px);background-size:9px 9px;opacity:.5}
 input.fld{border-radius:26px;padding:12px 18px}
 .btn{border-radius:26px}
+#out .logo{align-self:flex-start;width:auto}
+#j1>div:first-child{display:none!important}
