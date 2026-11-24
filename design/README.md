@@ -6,8 +6,10 @@ These files decide how Round2 **looks** to guests. The booking engine reads them
 |---|---|---|
 | `rooms.json` | Each room's name, accent colour, text colour on the accent, and character picture | Phone member page (book.round2.sg/m) **and** the Round2 tile on the room PS4s (the colours) |
 | `member.css` | The look of the phone member page: fonts, sizes, spacing, cards, buttons, backgrounds | book.round2.sg/m |
+| `tile.json` | The PS4 tile's words and timings (tile 0.14+, added 24 Nov): scan screen, the three cards' labels/notes, the "Welcome back, {crew}" screen, "What happens next", and how long the ready burst / closing screen last | The Round2 tile on the room PS4s (Kaeden first) |
+| `member-v2.css` | The look of the **new** member page (book.round2.sg/m?v=2 – the membership design, preview until the owners switch it on) | book.round2.sg/m?v=2 |
 
-Coming next (not yet read from here): the PS4 tile's wording and timings (loading screen, "What happens next") – asked for in HANDOFF's concerns list. Until then, write tile changes you want there.
+**tile.json rules:** plain letters only (no – ’ “ … · – the TV can't draw them; the engine turns – into -, ’ into ' and drops the rest). `{crew}` is replaced by the crew's name. Each text has a length limit (longer is cut). Card notes (`c1n`–`c3n`) and the bottom line `s_foot` may be empty = not drawn – that's where prices go once the owners decide (on hold, 24 Nov). Times: `t_burst` 0.5–5 s, `t_next` 3–20 s (outside = clamped). A broken file = the tile keeps its own words. Preview the words without a PS4: `https://round2-book.donttelldadyet.workers.dev/ps4/tilecfg?design=<branch>` shows what the tile would get. The tile asks again every 10 minutes.
 
 ## How to change something safely
 

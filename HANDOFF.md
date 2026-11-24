@@ -40,25 +40,40 @@ phones) in this file or in design files.
 ## DESIGN → FUNCTION CONCERNS (design writes, function fixes and ticks – newest first)
 Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [ ] sev · screen · what's wrong – why – (date, who)`.
 
+> **Function side – LIVE 24 Nov ~1:40pm (owner: "build functions and fix concerns", pricing on hold)** – engine 981806b4, 27 bindings,
+> 3 timers; Light check 18/4/0 before, 20/3/0 after. **New member page = preview at `book.round2.sg/m?v=2`** (Kaeden's tile QR
+> opens it; every other room still opens today's page). Its look is **`design/member-v2.css`** (a copy of the built-in look – edit
+> freely; today's page keeps `member.css`). Ids/classes it needs: `#out` (join/log in) with `#tabs` (`.pill`, `#tJ`/`#tL`),
+> `#j1` (step 1: `#jcard` crew card, `#jp`, `#jxw`/`#jx`, `#jnext`) and `#j2` (step 2: `#jc`, `#jn`, `#jpics` `.grid`, `#jpbar`
+> `.picbar`, `#jk`, `#jk2`, `#jb`, `#jback`); `#fL` (`#lp`, `#lk`, `#lb`, `#wa` WhatsApp link). Logged in `#in`: `#tierlab`, `#hi`
+> (crew name), `#pc`, `#mc` crew card, `#ren` Rename crew, `.box` with `#boxh`, `#rshare`, `#pls` rows (`.pl`, `.pl.off`, `.chk`
+> tick = role=checkbox, `.ri` room initial, `.plh` label, `[data-ed]` Edit), `#add`, `#ld` Load, `.lbar`/`#lbi`, `#lt`; `#gonec`,
+> `.more` (`#clmc`, Change PIN). Edit panel `#sheet` + `#scrim` (`.grab`, `#sht`, `#en`, `#g2`, `#ecr`, `#sv`, `#rm`, `.rmc`).
+> Crew card reveal `#rev` (`#rc`, `.flip`), picture gallery `#avb` (`#avbg`). Cards: `.cd` (`.dots`, `.shine`, `.edge`, `.chip`,
+> `.clogo`, `.cn` name, `.cs` since, `.cd.staff`). Kept from the prototype: card colours, `.in .a` rise, `.rise`, `.wipe`, `.flip`,
+> reduced-motion rule. Not built (pricing on hold): tier picker, payment, VALID TO, "<Tier> until", Extend. **PS4 tile:** words
+> and the two times from **`design/tile.json`** (see `design/README.md`); layout/look is in round2-tv-launcher
+> `ps4/tile/tile/draw.h` (one file, with a desktop simulator in `ps4/tile/sim`).
+
 **Membership tiers, crew card, simpler member page (design, 24 Nov 2026) – full spec + clickable prototype in `design/membership/`**
-- [ ] 1 · join (prototype) · Tier card stack overlaps the top of the tier buttons on 430px-wide phones (~24px); size the stack from the card height. (24 Nov, preview check)
-- [ ] 3 · member page + PS4 tile · Paid membership: Standard 2 months $20, Gold 3 months, Platinum 6 months (Gold/Platinum prices
+- [ ] (not changed by function: it's design's prototype file. The built page has no tier stack yet – pricing on hold – and its one crew card sizes from its own width (aspect-ratio), checked at 375/393/430px, 24 Nov) 1 · join (prototype) · Tier card stack overlaps the top of the tier buttons on 430px-wide phones (~24px); size the stack from the card height. (24 Nov, preview check)
+- [ ] (ON HOLD, owner 24 Nov 1:10pm: "for the pricing hold off on that first while we discuss internally" – no tiers, prices, payment, VALID TO or Extend built) 3 · member page + PS4 tile · Paid membership: Standard 2 months $20, Gold 3 months, Platinum 6 months (Gold/Platinum prices
   still to be set by the owners), then $10 a month. Needs a payment step before an account is created, each crew's tier + join +
   expiry date stored, and Extend. Until this is built the design can't show tiers or prices. (24 Nov, design)
-- [ ] 2 · member page · Crew name should be the identity: on a membership card ("CREW SINCE / VALID TO"), a "Your crew card is
+- [x] (fixed 24 Nov 1:35pm, engine 981806b4 / commit 50e9e0e – in the PREVIEW page `/m?v=2`, becomes the real page once the owner and Karen have both tried it) – card shows CREW SINCE only; VALID TO + tier name wait for pricing. 2 · member page · Crew name should be the identity: on a membership card ("CREW SINCE / VALID TO"), a "Your crew card is
   ready" screen after paying, the page header after login, and "Loading <crew>'s saves". Sign-up step 2 starts with "Name your
   crew". (24 Nov, design – asked by the owner)
-- [ ] 2 · member page · Too much scrolling: every player has a full name box + 12-picture grid. Wanted: one short row per player
+- [x] (fixed 24 Nov 1:35pm, engine 981806b4 / commit 50e9e0e – in the PREVIEW page `/m?v=2`, becomes the real page once the owner and Karen have both tried it) 2 · member page · Too much scrolling: every player has a full name box + 12-picture grid. Wanted: one short row per player
   (tick, picture, name, Edit); Edit / "+ Add a player" opens a slide-up panel with name, pictures, Shuffle, Browse all, Save,
   Remove. Room profile stays the first row ("Vale profile", ticked by default, hidden when `mainok` is false). (24 Nov, design)
-- [ ] 2 · member page · "Forgot your PIN? WhatsApp us" on Log in → https://wa.me/6591625767 with text "Hi Round2, I forgot my
+- [x] (fixed 24 Nov 1:35pm, LIVE on today's page too, 50e9e0e; on the preview the link adds the typed phone number) 2 · member page · "Forgot your PIN? WhatsApp us" on Log in → https://wa.me/6591625767 with text "Hi Round2, I forgot my
   member PIN. My phone number is ". (24 Nov, design)
-- [ ] 3 · PS4 tile · New scan screen (tier cards, "Pick up where you left off.", members/new guests under the QR, "Not saving
+- [x] (built 24 Nov 1:40pm: tile 0.14, round2-tv-launcher 2c91662, released on ps4-tile bc7cdcb – only Kaeden has the tile, it updates itself within ~30 min when no game is open. Cards show labels only, no prices (on hold). Built from the written spec – Karen's TV mockups weren't in the repo yet; will be matched when they land) 3 · PS4 tile · New scan screen (tier cards, "Pick up where you left off.", members/new guests under the QR, "Not saving
   today? Press PS to play.", no version text) and a new signed-in screen ("Welcome back, <crew>" with the crew card, profiles
   list, progress bar), room-colour glow, calm motion. Wording/sizes in `design/membership/HANDOFF-membership-design.md`. (24 Nov, design)
 
 **PS4 tile – design can't change it yet (owner wants design to edit the tile freely, 22 Nov 2026)**
-- [ ] 3 · PS4 tile · Only room colours and names come from `design/rooms.json`; every word, size and timing of the tile is in the
+- [x] (fixed 24 Nov 1:40pm: `design/tile.json` – every tile word + the two times; engine /ps4/tilecfg, tile 0.14; README updated. The design preview's tile tab still shows 0.13 – see the 24 Nov 1:40pm entry) 3 · PS4 tile · Only room colours and names come from `design/rooms.json`; every word, size and timing of the tile is in the
   tile's code (round2-tv-launcher `ps4/tile/tile/main.cpp`), so the design team can't edit it. Please build "phase 2": the tile
   (or the engine's `/ps4/tile` answer) reads its wording and timings – idle / loading / ready / "What happens next" texts, how
   long the ready burst and the closing screen last – from a `design/tile.json`, with today's values as defaults, plain ASCII
@@ -135,6 +150,36 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 ---
 
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
+
+## ⭐ 24 Nov 2026, 1:40pm – MEMBERSHIP LOOK BUILT (no pricing): member page v2 preview + PS4 tile 0.14 + design/tile.json
+Owner 1:10pm: "ok handoff read the ps4 tile and phone member handoff, we need additional functionalities, for the pricing hold
+off on that first while we discuss internally, build functions and fix concerns". 1:33pm: Karen's TV mockups are being pushed
+("give it a bit of time") – not in the repo at 1:40pm; tile 0.14 follows the written spec until they land.
+- **Engine (live 981806b4, 50e9e0e; Light check 18/4/0 before, 20/3/0 after – Light, not Full: no booking/payment code touched):**
+  `memPage2` at `/m?v=2` (look: design/member-v2.css → built-in MEM2_CSS), same `memApi` acts (join with crew + name + av +
+  claim; login; crew; player; addp; delp; claim; play; loadst; roomout; pin). Join is 2 steps in the page, ONE `join` call.
+  Today's page unchanged except the WhatsApp PIN link. `/ps4/tile` now also sends `crew` (all crews this session, ASCII, max 44,
+  fallback "your crew") + `since` (mm/yy of the crew's join; `memplay` crews keep `since`). Kaeden's tile URL adds `&v=2`.
+  `/ps4/tilecfg` = design/tile.json flattened (groups ignored), every text ASCII + length-capped, empty = default (except
+  s_foot / c1n–c3n), t_burst clamped 0.5–5, t_next 3–20; `?design=<branch>` previews a branch.
+- **Deploy note:** the change was ~46 KB, too big to paste in one go – pieces were stored for an hour in KV `HOLDS` as
+  `deploytmp:p7_NN` (each SHA-checked), assembled, live hash checked before/after, then deleted.
+- **Tile 0.14** (round2-tv-launcher ps4-helper 2c91662; released ps4-tile bc7cdcb – only Kaeden has the tile, so only Kaeden
+  updates, by itself, no game open): drawing moved to `ps4/tile/tile/draw.h`; desktop simulator `ps4/tile/sim` draws the same
+  code. Scan screen: words left (kicker + room name, "Pick up where you left off.", sub), 3 matte cards (charcoal / bronze /
+  near-black, labels from tile.json, no prices), QR right with room-colour corners, "Members scan to log in / New guests scan to
+  join", "Not saving today? Press PS to play.", glow + dot texture + dark edges; ~1.6 s intro, then only the QR corners and logo
+  breathe. Signed-in screen ("loading" with a crew, or the load board): "Welcome back, <crew>." + crew card (CREW SINCE) +
+  profiles list + bar; done = "<crew> is all set." Ready burst / "What happens next" times + words from tile.json. Version +
+  id now only next to an error. Not tested on the TV yet – Kaeden needs to pick it up (helper checks every 30 min).
+- **Design files added (new, nothing overwritten):** `design/tile.json` (today's words), `design/member-v2.css` (the v2 look),
+  README rows + tile.json rules. **Design preview kit** (`docs/design-preview`): its tile tab is still a canvas copy of 0.13 – not
+  ported yet on purpose: Karen's TV mockups are about to change the tile again; port after that (or use `ps4/tile/sim` pictures).
+- **System check:** new step "PS4 tile words + new member page" (ASCII, timings in range, where the words came from).
+  systems.json: "New member page + new PS4 tile screens (24 Nov)" = test. Control centre 716fbb0.
+- **Next:** owner + Karen try `/m?v=2` (on Kaeden: scan the tile) → switch `/m` to v2 for every room (one line in the route);
+  match Karen's TV mockups when pushed; pricing when the owners decide (tier, join + expiry per crew, payment, Extend).
+  Helper 1.1.152 (two crews) still waits for the owner's OK – tile 0.14 doesn't need it.
 
 ## ⭐ 24 Nov 2026, 1:10pm – MEMBERSHIP: design → build pack (owner builds next)
 Everything the design side has for the membership build, in one place. **Owner: "ill build" (24 Nov).**

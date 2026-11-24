@@ -1,0 +1,40 @@
+{
+  "_about": "Words and timings of the Round2 PS4 tile (tile 0.14+). Plain letters only (A-Z, numbers, ' \" - . , ! ?) - anything else is dropped because the TV can't draw it. {crew} = the crew's name. Empty card notes / foot = not drawn (prices on hold, 24 Nov). Times in seconds: ready burst 0.5-5, closing screen 3-20. A wrong file = the tile keeps its own words.",
+  "scan": {
+    "s_kick": "ROUND2 MEMBERS",
+    "s_title": "Pick up where you left off.",
+    "s_sub": "Save your game here and carry on from any Round2 room.",
+    "s_foot": "",
+    "s_qr1": "Members scan to log in",
+    "s_qr2": "New guests scan to join",
+    "s_ps": "Not saving today? Press PS to play.",
+    "s_url": "book.round2.sg/m"
+  },
+  "cards": {
+    "c1": "ROUND2",
+    "c1n": "",
+    "c2": "ROUND2",
+    "c2n": "",
+    "c3": "ROUND2 CREW",
+    "c3n": ""
+  },
+  "signed_in": {
+    "w_kick": "ROUND2 CREW",
+    "w_title": "Welcome back, {crew}.",
+    "w_sub": "Your saves are loading onto this PS4. Please don't start a game yet.",
+    "w_ready": "{crew} is all set.",
+    "w_ready2": "Press PS on your controller and pick your profile."
+  },
+  "what_happens_next": {
+    "n_title": "What happens next",
+    "n1": "1.  This screen closes by itself.",
+    "n2": "2.  Your TV shows \"Press PS button\".",
+    "n3": "3.  Press the PS button on your controller.",
+    "n4": "4.  Pick your profile - it has your name and picture.",
+    "n5": "5.  More players? Each one presses PS on their own controller and picks theirs."
+  },
+  "times": {
+    "t_burst": 1.5,
+    "t_next": 6
+  }
+}
