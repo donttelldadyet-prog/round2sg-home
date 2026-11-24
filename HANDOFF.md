@@ -40,6 +40,22 @@ phones) in this file or in design files.
 ## DESIGN → FUNCTION CONCERNS (design writes, function fixes and ticks – newest first)
 Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [ ] sev · screen · what's wrong – why – (date, who)`.
 
+**Membership tiers, crew card, simpler member page (design, 24 Nov 2026) – full spec + clickable prototype in `design/membership/`**
+- [ ] 3 · member page + PS4 tile · Paid membership: Standard 2 months $20, Gold 3 months, Platinum 6 months (Gold/Platinum prices
+  still to be set by the owners), then $10 a month. Needs a payment step before an account is created, each crew's tier + join +
+  expiry date stored, and Extend. Until this is built the design can't show tiers or prices. (24 Nov, design)
+- [ ] 2 · member page · Crew name should be the identity: on a membership card ("CREW SINCE / VALID TO"), a "Your crew card is
+  ready" screen after paying, the page header after login, and "Loading <crew>'s saves". Sign-up step 2 starts with "Name your
+  crew". (24 Nov, design – asked by the owner)
+- [ ] 2 · member page · Too much scrolling: every player has a full name box + 12-picture grid. Wanted: one short row per player
+  (tick, picture, name, Edit); Edit / "+ Add a player" opens a slide-up panel with name, pictures, Shuffle, Browse all, Save,
+  Remove. Room profile stays the first row ("Vale profile", ticked by default, hidden when `mainok` is false). (24 Nov, design)
+- [ ] 2 · member page · "Forgot your PIN? WhatsApp us" on Log in → https://wa.me/6591625767 with text "Hi Round2, I forgot my
+  member PIN. My phone number is ". (24 Nov, design)
+- [ ] 3 · PS4 tile · New scan screen (tier cards, "Pick up where you left off.", members/new guests under the QR, "Not saving
+  today? Press PS to play.", no version text) and a new signed-in screen ("Welcome back, <crew>" with the crew card, profiles
+  list, progress bar), room-colour glow, calm motion. Wording/sizes in `design/membership/HANDOFF-membership-design.md`. (24 Nov, design)
+
 **PS4 tile – design can't change it yet (owner wants design to edit the tile freely, 22 Nov 2026)**
 - [ ] 3 · PS4 tile · Only room colours and names come from `design/rooms.json`; every word, size and timing of the tile is in the
   tile's code (round2-tv-launcher `ps4/tile/tile/main.cpp`), so the design team can't edit it. Please build "phase 2": the tile
