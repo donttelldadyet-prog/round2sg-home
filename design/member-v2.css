@@ -122,3 +122,16 @@ input.fld[aria-invalid=true]{border-color:#ff8fa8}
 input.fld{height:50px;border-radius:10px;background:rgba(244,241,251,.04);padding:12px 14px}
 .btn{border-radius:10px;padding:15px}
 .note summary{font-size:13px;margin-top:4px}
+/* 24 Nov 2026 8:30pm design – classier background: deep gradient base, a soft room-colour light from the top right, a quiet
+   halo behind the crew card, a faint cool light bottom-left, darker edges and a fine film grain (no hard dots on the glow). */
+html,body{background:#08070c}
+body{background:linear-gradient(180deg,#0d0b13 0%,#08070c 55%,#060509 100%)}
+.glow{background:
+  radial-gradient(640px 420px at 85% -6%,color-mix(in srgb,var(--ac) 30%,transparent),transparent 70%),
+  radial-gradient(360px 260px at 50% 40%,color-mix(in srgb,var(--ac) 12%,transparent),transparent 70%),
+  radial-gradient(520px 420px at -10% 105%,rgba(120,110,190,.10),transparent 70%),
+  radial-gradient(130% 90% at 50% 40%,transparent 60%,rgba(0,0,0,.55) 100%)}
+.glow::after{content:"";position:absolute;inset:0;opacity:.07;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.tex{opacity:.45;-webkit-mask-image:radial-gradient(520px 300px at 85% 0%,#000,transparent 70%);mask-image:radial-gradient(520px 300px at 85% 0%,#000,transparent 70%)}
+.logo{opacity:.92}
+.kick{letter-spacing:.24em}
