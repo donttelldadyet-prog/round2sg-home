@@ -5081,7 +5081,7 @@ async function memApi(env, req) {
     const ad = memRoomCrews(K['memplay:' + id], tk, m.id), add = ad.others.length > 0 && ad.can(K['ps4:' + id]);
     if (add && ps.some((x) => x.slot === 'main') && !ad.mainMine) return J({ error: 'The room’s main profile belongs to the crew that loaded first – switch it off and pick your players.' });
     const names = ps.filter((x) => x.slot !== 'main').map((x) => x.shown).join(' + ') || m.crew, c = { cid: 'l' + now.toString(36), do: 'look', p: `/_mem${add ? 'add' : 'play'}.${m.id}.` + ps.map((x) => x.slot + '.' + x.shown.replace(/ /g, '_')).join('.'), at: now, by: 'member ' + m.id, state: 'sent', nobusy: true };
-    const crews = (add ? ad.others : []).concat([{ mid: m.id, crew: m.crew, at: now, main: add ? ad.mainMine : true }]);
+    const crews = (add ? ad.others : []).concat([{ mid: m.id, crew: m.crew, since: m.at || 0, at: now, main: add ? ad.mainMine : true }]);
     await hb.kvMany([], [['ps4cmd:' + id, c], ['memplay:' + id, { name: names, cid: c.cid, at: now, until: tk.until, mid: m.id, k: tk.k, crews }]]);   /* until (owner 20 Nov 8:01am): the tile keeps showing this member for the whole session */
     TILE_MEMO.delete(id); return J({ ok: true, sent: true, name: names, room, add });
   }
@@ -5196,7 +5196,7 @@ function memPage(u, D) {
 <button id="jb">Join Round2</button><p class="fine">You can add the rest of your crew after joining – each player gets their own name, picture and saves. Your saves follow you to any Round2 room.</p></div>
 <div id="fL" hidden><label for="lp">Phone number</label><input id="lp" inputmode="tel" autocomplete="tel" placeholder="9123 4567">
 <label for="lk">PIN</label><input id="lk" inputmode="numeric" maxlength="8" type="password" autocomplete="current-password"><button id="lb">Log in</button>
-<p class="fine">Forgot your PIN? Ask staff to reset it.</p></div><p class="err" role="alert" id="e1"></p></div></section>
+<p class="fine">Forgot your PIN? <a href="https://wa.me/6591625767?text=Hi%20Round2%2C%20I%20forgot%20my%20member%20PIN.%20My%20phone%20number%20is%20" target="_blank" rel="noopener" style="color:var(--ac);font-weight:600">WhatsApp us</a></p></div><p class="err" role="alert" id="e1"></p></div></section>
 <section id="in" hidden><div class="card"><div class="fine">CREW<span class="badge px" id="bd"></span></div><label for="cr">Crew name</label><input id="cr" maxlength="24">
 <div class="fine" id="ph" style="margin-top:10px"></div></div>
 <div id="pls"></div>
@@ -5304,6 +5304,319 @@ $('lo').onclick=out;
 if(T)api({act:'me'}).then(function(r){if(r.ok)show(r);else out()});
 </script></main></body></html>`;
 }
+const MEM2_CSS = `*{box-sizing:border-box}
+html{background:#09080d}
+body{margin:0;color:#f4f1fb;font:16px/1.45 'Chakra Petch',system-ui,sans-serif;min-height:100vh;background:#09080d}
+.glow{position:fixed;inset:0;pointer-events:none;background:radial-gradient(420px 300px at 70% 6%,color-mix(in srgb,var(--ac) 33%,transparent),transparent 70%)}
+.tex{position:fixed;inset:0;pointer-events:none;background-image:radial-gradient(rgba(255,255,255,.07) 1px,transparent 1.4px);background-size:8px 8px;-webkit-mask-image:radial-gradient(420px 320px at 70% 6%,#000,transparent 75%);mask-image:radial-gradient(420px 320px at 70% 6%,#000,transparent 75%)}
+main{position:relative;max-width:440px;margin:0 auto;padding:24px 20px 40px}
+.px{font-family:'Press Start 2P',monospace}
+.logo{height:24px;display:block}
+.kick{font-size:9px;color:#bdb5d3;letter-spacing:.2em;margin-top:20px}
+.kick b{color:var(--ac);font-weight:400}
+h1{font-size:28px;font-weight:400;line-height:1.1;margin:8px 0 0}
+.sub{font-size:14px;color:#d9d3ea;margin-top:6px;line-height:1.4}
+.tabs{display:flex;gap:8px;margin:16px 0 14px;position:relative}
+.tabs button{flex:1;padding:11px;font:600 15px 'Chakra Petch',sans-serif;background:transparent;color:#f4f1fb;border:1px solid rgba(244,241,251,.28);border-radius:0;cursor:pointer;position:relative;z-index:1;transition:color .2s}
+.tabs button.on{color:#09080d}
+.tabs .pill{position:absolute;top:0;bottom:0;left:0;width:calc(50% - 4px);background:#f4f1fb;transition:transform .3s cubic-bezier(.2,0,0,1)}
+.tabs.r .pill{transform:translateX(calc(100% + 8px))}
+.cd{position:relative;width:100%;aspect-ratio:1.586;border-radius:13px;padding:13px 15px;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 8px 22px rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.16);background:linear-gradient(160deg,#3b3b41,#2a2a2f 60%);color:#dcdbe1}
+.cd.staff{border-color:rgba(214,180,106,.4);background:linear-gradient(160deg,#3e3421,#2a2316 60%);color:#dcbf7c}
+.dots{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.1) 1px,transparent 1.5px);background-size:7px 7px;-webkit-mask-image:linear-gradient(120deg,transparent 35%,#000 100%);mask-image:linear-gradient(120deg,transparent 35%,#000 100%)}
+.edge{position:absolute;inset:4px;border-radius:9px;border:1px solid rgba(255,255,255,.07)}
+.shine{position:absolute;inset:0;background:linear-gradient(110deg,transparent 40%,rgba(255,255,255,.18) 50%,transparent 60%);background-size:300% 100%;background-position:120% 0}
+.rw{position:relative;display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.tn{font-size:12px;letter-spacing:.3em}
+.chip{position:relative;width:30px;height:23px;border-radius:4px;border:1px solid currentColor;opacity:.45}
+.clogo{height:12px;opacity:.8}
+.cn{font-family:'Press Start 2P',monospace;font-size:12px;line-height:1.6;word-break:break-word}
+.cs{font-size:11px;letter-spacing:.15em;opacity:.7;margin-top:3px}
+.ccard{margin:14px 0 12px}
+label.lb{display:block;font-size:13px;color:#bdb5d3;margin:12px 0 6px}
+input.fld{width:100%;height:44px;border:1px solid rgba(244,241,251,.22);background:rgba(9,8,13,.6);padding:10px 12px;font:inherit;font-size:16px;color:#f4f1fb;border-radius:0;outline:none;transition:border-color .2s}
+input.fld:focus{border-color:var(--ac)}
+input.fld[aria-invalid=true]{border-color:#ff8fa8}
+.btn{display:block;width:100%;margin-top:16px;padding:13px;border:0;border-radius:0;background:var(--ac);color:var(--ink);font:600 16px 'Chakra Petch',sans-serif;cursor:pointer;transition:transform .1s}
+.btn:active{transform:scale(.98)}
+.btn:disabled{opacity:.6}
+.btn.ghost{background:transparent;color:#f4f1fb;border:1px solid rgba(244,241,251,.3)}
+.link{color:var(--ac);font:inherit;font-weight:600;text-decoration:none;cursor:pointer;background:none;border:0;padding:0}
+.link.dim{color:#bdb5d3}
+.note{font-size:13px;color:#bdb5d3;margin-top:10px}
+.err{font-size:13px;color:#ff8fa8;min-height:18px;margin-top:6px}
+.err.ok{color:#7dffa8}
+.steps{display:flex;gap:6px;margin-top:10px}.steps i{flex:1;height:3px;background:rgba(244,241,251,.18)}.steps i.on{background:var(--ac)}
+.stepl{font-size:12px;color:#bdb5d3;margin-top:14px}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px 10px}
+.grid button{position:relative;display:block;width:100%;padding:4px;margin:0;border:0;border-radius:50%;background:none;cursor:pointer;transition:transform .12s}
+.grid button img{display:block;width:100%;height:auto;aspect-ratio:1/1;object-fit:cover;border-radius:50%}
+.grid button::before{content:"";position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 2px transparent;transition:box-shadow .15s}
+.grid button.on::before{box-shadow:0 0 0 3px var(--ac)}
+.grid button.on::after{content:"\\2713";position:absolute;right:-2px;bottom:-2px;width:22px;height:22px;border-radius:50%;background:var(--ac);color:var(--ink);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid #121019}
+.grid button:active{transform:scale(.94)}
+.picbar{display:flex;justify-content:center;gap:22px;margin-top:12px}
+.box{margin-top:18px;border:1px solid rgba(244,241,251,.14);border-top:3px solid var(--ac);background:rgba(11,9,20,.7);padding:16px}
+.boxh{font-size:16px;font-weight:600}
+.boxh b{color:var(--ac);font-weight:600}
+.pls{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.pl{display:flex;gap:12px;align-items:center;font-size:16px;padding:4px 0}
+.pl .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.pl.off .nm{color:#bdb5d3}
+.pl .nm small{display:block;font-size:12px;color:#8f88a3;margin-top:1px}
+.pl img,.pl .ri{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:none}
+.pl .ri{background:var(--ac);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:12px}
+.pl .em{width:36px;height:36px;border-radius:50%;background:#14111f;display:inline-flex;align-items:center;justify-content:center;font-size:20px;flex:none}
+.chk{width:24px;height:24px;flex:none;border:1px solid #bdb5d3;display:inline-flex;align-items:center;justify-content:center;transition:background .2s,border-color .2s;cursor:pointer;background:none;padding:0;border-radius:0}
+.chk svg{width:15px;height:15px;stroke:var(--ink);stroke-width:3;fill:none;stroke-dasharray:20;stroke-dashoffset:20;transition:stroke-dashoffset .25s ease-out .05s}
+.chk[aria-checked=true]{background:var(--ac);border-color:var(--ac)}.chk[aria-checked=true] svg{stroke-dashoffset:0}
+.plh{font-size:12px;color:#8f88a3;margin:4px 0 0;letter-spacing:.04em}
+.share{font-size:13px;color:#bdb5d3;margin-top:8px}
+.lbar{height:4px;background:rgba(244,241,251,.15);margin-top:12px;overflow:hidden}.lbar i{display:block;height:100%;width:0;background:var(--ac);transition:width .6s cubic-bezier(.2,0,0,1)}
+.lt{font-size:13px;color:#bdb5d3;margin-top:6px;min-height:18px}
+.more{margin-top:18px}
+.more details{border-top:1px solid rgba(244,241,251,.1);padding:10px 0}
+.more summary{cursor:pointer;color:#d9d3ea;font-weight:600;font-size:15px}
+.gone{margin-top:10px;font-size:14px}
+.gone .code{color:var(--ac);letter-spacing:1px;font-family:'Press Start 2P',monospace;font-size:12px}
+.badge{display:inline-block;font-size:9px;padding:3px 6px;background:#dcbf7c;color:#0b0914;margin-left:8px;vertical-align:middle;letter-spacing:.1em}
+.scrim{position:fixed;inset:0;background:rgba(5,4,8,.6);opacity:0;pointer-events:none;transition:opacity .25s;z-index:8}
+.scrim.s{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;margin:0 auto;max-width:480px;overflow-x:hidden;background:#121019;border-top:3px solid var(--ac);padding:16px 20px 28px;transform:translateY(105%);transition:transform .35s cubic-bezier(.2,0,0,1);z-index:9;max-height:88vh;max-height:88dvh;overflow-y:auto;visibility:hidden}
+.sheet.s{transform:none;visibility:visible}
+.grab{width:40px;height:4px;background:rgba(244,241,251,.25);margin:0 auto 12px}
+.shh{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.shh b{font-size:18px;font-weight:600}
+.rmc{margin-top:12px;border-left:3px solid #ff8fa8;padding:4px 0 4px 12px}
+.rev{position:fixed;inset:0;background:rgba(9,8,13,.97);z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:30px;text-align:center}
+.rev .k{font-size:12px;letter-spacing:.3em;color:#bdb5d3}
+.rev .cd{max-width:330px}
+.rev .t{font-size:24px}
+.rev .btn{max-width:330px}
+.avb{position:fixed;inset:0;z-index:50;background:rgba(6,5,10,.97);overflow:auto;padding:16px}
+.avb .in{max-width:520px;margin:0 auto}
+.avb .grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.avb .nav{display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:12px}
+.avb .nav button,.avb .top button{width:auto;margin:0;padding:8px 14px}
+.avb .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+[hidden]{display:none!important}
+.in .a{animation:up .45s cubic-bezier(0,0,.2,1) both}
+.in .rise{animation:rise .7s cubic-bezier(.2,0,0,1) both}
+.in .rise .shine,.flip .shine{animation:sh 1.1s ease-in-out .9s both}
+.in .wipe{animation:wipe .9s ease-out .5s both}
+.flip{animation:flip .9s cubic-bezier(.2,0,0,1) both}
+@keyframes up{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes rise{from{opacity:0;transform:translateY(30px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes sh{from{background-position:120% 0}to{background-position:-20% 0}}
+@keyframes wipe{from{clip-path:inset(0 0 0 100%)}to{clip-path:inset(0)}}
+@keyframes flip{0%{opacity:0;transform:rotateY(-90deg) scale(.9)}60%{opacity:1;transform:rotateY(8deg) scale(1)}100%{transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-delay:0s!important;transition-duration:.01ms!important}}`;
+/* 24 Nov 2026 (owner: "build functions and fix concerns" – design's membership pack, pricing on hold): member page v2 – crew
+   name as the identity (header + crew card), 2-step join (phone → name your crew + first player + PIN → crew card reveal), short
+   player rows with a slide-up Edit panel, the room profile as the first row, "Loading <crew>'s saves · <profile>…", WhatsApp
+   link for a forgotten PIN. Tiers, prices, VALID TO and Extend wait for the owners (pricing on hold). Preview: /m?v=2 (with
+   ?room=…&k=… from the tile). Its look: design/member-v2.css (built-in MEM2_CSS when missing or refused). Same API as v1. */
+async function memDesign2(u) {
+  const br = u.searchParams.get('design') || 'main'; let css = await designGet('member-v2.css', br);
+  if (css && (/<\/|<script|@import|javascript:/i.test(css) || css.length > 60000)) css = null;
+  return { css, rooms: await designRooms(br) };
+}
+function memPage2(u, D) {
+  const room = String(u.searchParams.get('room') || '').toLowerCase().replace(/[^a-z]/g, '').slice(0, 12);
+  const RM = Object.assign({}, MEM_ROOMS, (D && D.rooms) || {}), R = RM[room === 'max' ? 'maximillion' : room] || null, ac = R ? R[1] : '#f5c400', ink = R ? R[2] : '#06050a';
+  const RN = R ? R[0] : '', CHK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5"/></svg>';
+  const card = (id, cls) => `<div class="cd${cls}" id="${id}"><div class="dots wipe"></div><div class="shine"></div><div class="edge"></div><div class="rw"><span class="tn" data-ct>ROUND2 CREW</span><img class="clogo" src="${MEM_LOGO}" alt=""></div><div class="chip"></div><div class="rw"><div><div class="cn" data-cn>YOUR CREW</div><div class="cs" data-cs>CREW SINCE --/--</div></div><span class="cs" data-cv></span></div></div>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Round2 members</title>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&family=Press+Start+2P&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#09080d"><style>:root{--ac:${ac};--ink:${ink}}${D && D.css ? D.css : MEM2_CSS}</style></head><body><div class="glow"></div><div class="tex"></div><main>
+<section id="out" class="in"><img class="logo a" src="${MEM_LOGO}" alt="Round2">
+<div class="kick px a" style="animation-delay:.05s">ROUND2 MEMBERS${R ? ` · <b>${R[0].toUpperCase()}</b>` : ''}</div>
+<h1 class="a" id="hh" style="animation-delay:.1s">Pick up where you left off.</h1>
+<div class="tabs a" id="tabs" style="animation-delay:.15s"><span class="pill"></span><button type="button" class="on" id="tJ" aria-pressed="true">Join</button><button type="button" id="tL" aria-pressed="false">Log in</button></div>
+<div id="fJ"><div id="j1">
+<div class="a" style="display:flex;justify-content:space-between;align-items:baseline;animation-delay:.2s"><span style="font-size:15px;font-weight:600">Your crew card</span><span style="font-size:12px;color:#bdb5d3">Step 1 of 2</span></div>
+<div class="ccard a" style="animation-delay:.25s">${card('jcard', '')}</div>
+<div class="sub a" style="animation-delay:.3s">Save your games here and carry on from any Round2 room. Your crew card shows on the TV every time you play.</div>
+<label class="lb a" for="jp" style="animation-delay:.35s">Phone number</label><input class="fld a" id="jp" inputmode="tel" autocomplete="tel" placeholder="9123 4567" style="animation-delay:.35s">
+<details id="jxw" class="note"><summary>Removed from a crew? Got a claim code?</summary><label class="lb" for="jx">Claim code – your saves come with you</label><input class="fld" id="jx" maxlength="9" autocapitalize="characters" autocomplete="off" placeholder="ABCD-2345"></details>
+<p class="err" role="status" id="e1"></p>
+<button type="button" class="btn a" id="jnext" style="animation-delay:.4s">Continue</button></div>
+<div id="j2" hidden><div class="stepl">Step 2 of 2</div><div class="steps"><i class="on"></i><i class="on"></i></div>
+<h2 style="font-size:28px;font-weight:400;line-height:1.1;margin:14px 0 0" id="j2h" tabindex="-1">Name your crew</h2>
+<div class="sub">Your crew name goes on your card and shows on the TV every time you play.</div>
+<label class="lb" for="jc">Crew name</label><input class="fld" id="jc" maxlength="16" placeholder="Your couple, group or squad name">
+<div style="font-size:15px;font-weight:600;margin-top:22px">You, the first player</div>
+<label class="lb" for="jn">Your name on the PS4 (2 to 16 letters or numbers)</label><input class="fld" id="jn" maxlength="16" autocomplete="nickname">
+<div id="jpw" hidden><label class="lb" id="jpl" style="margin-top:16px">Your picture on the PS4</label><div class="grid" id="jpics" role="radiogroup" aria-labelledby="jpl"></div><div class="picbar" id="jpbar"></div></div>
+<label class="lb" for="jk">Pick a PIN (4 to 8 numbers)</label><input class="fld" id="jk" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password">
+<label class="lb" for="jk2">PIN again</label><input class="fld" id="jk2" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password">
+<p class="err" role="status" id="e2"></p>
+<button type="button" class="btn" id="jb">Done</button><div style="text-align:center;margin-top:14px"><button type="button" class="link dim" id="jback">Back</button></div></div></div>
+<div id="fL" hidden><label class="lb" for="lp">Phone number</label><input class="fld" id="lp" inputmode="tel" autocomplete="tel" placeholder="9123 4567">
+<label class="lb" for="lk">PIN</label><input class="fld" id="lk" type="password" inputmode="numeric" maxlength="8" autocomplete="current-password">
+<p class="err" role="status" id="e3"></p><button type="button" class="btn" id="lb">Log in</button>
+<div style="text-align:center;font-size:14px;color:#bdb5d3;margin-top:16px">Forgot your PIN? <a class="link" id="wa" target="_blank" rel="noopener" href="https://wa.me/6591625767?text=Hi%20Round2%2C%20I%20forgot%20my%20member%20PIN.%20My%20phone%20number%20is%20">WhatsApp us</a></div></div>
+</section>
+<section id="in" hidden><img class="logo a" src="${MEM_LOGO}" alt="Round2">
+<div class="a" id="tierlab" style="font-size:12px;color:#bdb5d3;letter-spacing:.3em;margin-top:20px;animation-delay:.6s">ROUND2 CREW</div>
+<h1 class="a px" id="hi" style="animation-delay:.7s;font-size:20px;margin-top:12px;word-break:break-word"></h1>
+<div class="sub a" id="pc" style="animation-delay:.75s"></div>
+<div class="ccard">${card('mc', ' rise')}</div>
+<div class="a" style="text-align:right;animation-delay:.8s"><button type="button" class="link" id="ren">Rename crew</button></div>
+<div class="box a" style="animation-delay:.9s"><div class="boxh" id="boxh"></div><p class="share" id="rshare" hidden></p>
+<div class="pls" id="pls"></div>
+<div style="margin-top:12px" id="addw"><button type="button" class="link" id="add">+ Add a player</button></div>
+<div id="ldw"><button type="button" class="btn" id="ld">Load saves on the TV</button><div class="lbar" id="lbar" hidden><i id="lbi"></i></div><p class="lt" id="lt" aria-live="polite"></p></div>
+<p class="note" id="nokey" hidden>To load your saves, open the Round2 tile on this room’s PS4 and scan its code.</p>
+<p class="err" role="status" id="e5"></p>
+<div id="routw" style="text-align:center;margin-top:8px" hidden><button type="button" class="link dim" id="rout"></button></div></div>
+<div class="box" id="gonec" hidden tabindex="-1"><div class="boxh">Removed players</div><p class="note">Give each one their code. When they join Round2 with their own phone and type it, their saves move to their own account. Codes work once, for 30 days.</p><div id="gonel"></div></div>
+<div class="more"><details id="clmc"><summary>Got a claim code?</summary><p class="note">Someone was removed from another crew and is joining yours – type their code and they come with their saves.</p><label class="lb" for="cx">Claim code</label><input class="fld" id="cx" maxlength="9" autocapitalize="characters" autocomplete="off" placeholder="ABCD-2345"><button type="button" class="btn ghost" id="cb">Add with their saves</button><p class="err" role="status" id="e7"></p></details>
+<details><summary>Change PIN</summary><label class="lb" for="po">Current PIN</label><input class="fld" id="po" type="password" inputmode="numeric" maxlength="8" autocomplete="current-password">
+<label class="lb" for="pn">New PIN (4 to 8 numbers)</label><input class="fld" id="pn" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password"><button type="button" class="btn ghost" id="pb">Change PIN</button><p class="err" role="status" id="e4"></p></details>
+<p class="note" id="ph"></p></div>
+<div style="text-align:center;margin-top:18px"><button type="button" class="link dim" id="lo">Log out</button></div></section>
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sht"><div class="grab"></div>
+<div class="shh"><b id="sht"></b><button type="button" class="link dim" id="shx">Close</button></div>
+<div id="shp"><label class="lb" for="en">Name on the PS4 (2 to 16 letters or numbers)</label><input class="fld" id="en" maxlength="16">
+<div id="epw"><label class="lb" id="epl" style="margin-top:14px">Picture</label><div class="grid" id="g2" role="radiogroup" aria-labelledby="epl"></div><div class="picbar" id="g2bar"></div></div></div>
+<div id="shc" hidden><label class="lb" for="ecr">Crew name</label><input class="fld" id="ecr" maxlength="16"></div>
+<p class="err" role="status" id="ee"></p><button type="button" class="btn" id="sv">Save</button>
+<div style="text-align:center;margin-top:14px" id="rmw"><button type="button" class="link dim" id="rm">Remove this player</button></div>
+<div class="rmc" id="rmc" hidden><p class="note" id="rmt"></p><label class="lb" for="rpin">Your PIN</label><input class="fld" id="rpin" type="password" inputmode="numeric" maxlength="8" autocomplete="current-password"><button type="button" class="btn ghost" id="rmgo"></button></div></div>
+<div class="rev" id="rev" hidden role="dialog" aria-modal="true" aria-labelledby="rtx"><div class="k">WELCOME TO ROUND2</div><div style="width:100%;max-width:330px;perspective:900px">${card('rc', '')}</div>
+<div class="t" id="rtx" tabindex="-1">Your crew card is ready.</div><div style="font-size:14px;color:#bdb5d3;max-width:280px">It shows on the TV every time your crew plays at Round2.</div>
+<button type="button" class="btn" id="rgo">Let’s play</button></div>
+<div class="avb" id="avb" hidden role="dialog" aria-modal="true" aria-labelledby="avbh"><div class="in"><div class="top"><b id="avbh">All pictures</b><button type="button" class="btn ghost" id="avbx">Close</button></div>
+<div class="grid" id="avbg" role="radiogroup" aria-labelledby="avbh"></div>
+<div class="nav"><button type="button" class="btn ghost" id="avbp">‹ Back</button><span class="note" id="avbn" aria-live="polite" style="margin:0"></span><button type="button" class="btn ghost" id="avbnx">Next ›</button></div></div></div>
+<script>
+var $=function(i){return document.getElementById(i)},T=null,P=[],M=null,AV={all:[],lapy:[]},JAV='',SET={},BRW=null,ED=null,EAV='',TICK={},RS=null,RN=${JSON.stringify(RN)},CHK='${CHK}';
+var ROOM=new URLSearchParams(location.search).get('room')||'',KEY=new URLSearchParams(location.search).get('k')||'';
+try{T=localStorage.getItem('r2.mem')}catch(e){}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function avu(n){return '/m/av/'+n+'.png'}
+function face(p){return p.av?'<img src="'+avu(p.av)+'" alt="">':'<span class="em">'+esc(P[p.pic]||'')+'</span>'}
+function api(o){if(T)o.tok=T;return fetch('/m/api',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(o)}).then(function(r){return r.json()}).catch(function(){return{error:'No connection – try again.'}})}
+function keep(t){T=t;try{localStorage.setItem('r2.mem',t)}catch(e){}}
+function busy(b,on,t){b.disabled=on;if(t)b.textContent=t}
+function msg(id,t,ok){var e=$(id);e.className='err'+(ok?' ok':'');e.textContent=t||''}
+function bad(id){var q=$(id);if(q){q.setAttribute('aria-invalid','true');q.focus()}}
+document.addEventListener('input',function(e){if(e.target&&e.target.removeAttribute)e.target.removeAttribute('aria-invalid')});
+function mmyy(t){var d=new Date(t||Date.now());return ('0'+(d.getMonth()+1)).slice(-2)+'/'+String(d.getFullYear()).slice(-2)}
+function setCard(id,crew,since,staff){var c=$(id);c.querySelector('[data-cn]').textContent=String(crew||'YOUR CREW').toUpperCase();c.querySelector('[data-cs]').textContent='CREW SINCE '+(since?mmyy(since):'--/--');c.querySelector('[data-ct]').textContent=staff?'ROUND2 STAFF':'ROUND2 CREW';c.classList.toggle('staff',!!staff)}
+/* pictures: 12 random (7 Lapy + 5 from the pack) per place, Shuffle = 12 new, Browse all = pages of 24 (22 Nov) */
+function shuf(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
+function pickSet(key){var old=SET[key]||[],L=shuf(AV.lapy.filter(function(x){return old.indexOf(x)<0})),A=shuf(AV.all.filter(function(x){return AV.lapy.indexOf(x)<0&&old.indexOf(x)<0}));if(L.length<7)L=L.concat(shuf(AV.lapy.slice()));SET[key]=shuf(L.slice(0,7).concat(A.slice(0,5)));return SET[key]}
+function grid(cur,key){var list=(SET[key]||pickSet(key)).slice();if(cur&&list.indexOf(cur)<0)list=[cur].concat(list.slice(0,11));var on=list.indexOf(cur)<0?0:list.indexOf(cur);
+return list.map(function(a,i){return '<button type="button" data-a="'+a+'" class="'+(a===cur?'on':'')+'" role="radio" aria-checked="'+(a===cur)+'" aria-label="Picture '+(i+1)+'" tabindex="'+(i===on?0:-1)+'"><img loading="lazy" src="'+avu(a)+'" alt=""></button>'}).join('')}
+function picbar(key){return AV.all.length?'<button type="button" class="link" data-shuf="'+key+'">Shuffle</button><button type="button" class="link" data-brw="'+key+'">Browse all '+AV.all.length+'</button>':''}
+function jp(){$('jpw').hidden=!AV.all.length;$('jpics').innerHTML=grid(JAV,'j');$('jpbar').innerHTML=picbar('j')}
+function ep(){$('epw').hidden=!AV.all.length;$('g2').innerHTML=grid(EAV,'e');$('g2bar').innerHTML=picbar('e')}
+function brw(key,page){var cur=key==='j'?JAV:EAV,per=24,n=Math.max(1,Math.ceil(AV.all.length/per));if(page==null){var ix=AV.all.indexOf(cur);page=ix<0?0:Math.floor(ix/per)}page=(page+n)%n;BRW={key:key,page:page};
+var list=AV.all.slice(page*per,page*per+per);$('avbg').innerHTML=list.map(function(a,i){return '<button type="button" data-a="'+a+'" class="'+(a===cur?'on':'')+'" role="radio" aria-checked="'+(a===cur)+'" aria-label="Picture '+(page*per+i+1)+'" tabindex="'+((a===cur||(list.indexOf(cur)<0&&!i))?0:-1)+'"><img loading="lazy" src="'+avu(a)+'" alt=""></button>'}).join('');
+$('avbn').textContent='Page '+(page+1)+' of '+n;$('avb').hidden=false;document.body.style.overflow='hidden';var f=$('avbg').querySelector('[tabindex="0"]');if(f)f.focus()}
+function brwClose(){var k=BRW&&BRW.key;$('avb').hidden=true;if(!$('sheet').classList.contains('s'))document.body.style.overflow='';BRW=null;var b=document.querySelector('[data-brw="'+k+'"]');if(b)b.focus()}
+$('avbx').onclick=brwClose;$('avbp').onclick=function(){brw(BRW.key,BRW.page-1)};$('avbnx').onclick=function(){brw(BRW.key,BRW.page+1)};
+$('avbg').onclick=function(e){var d=e.target.closest('[data-a]');if(!d||!BRW)return;if(BRW.key==='j'){JAV=d.dataset.a;jp()}else{EAV=d.dataset.a;ep()}brwClose()};
+$('jpics').onclick=function(e){var d=e.target.closest('[data-a]');if(d){JAV=d.dataset.a;jp();var g=$('jpics').querySelector('[data-a="'+JAV+'"]');if(g)g.focus()}};
+$('g2').onclick=function(e){var d=e.target.closest('[data-a]');if(d){EAV=d.dataset.a;ep();var g=$('g2').querySelector('[data-a="'+EAV+'"]');if(g)g.focus()}};
+document.addEventListener('click',function(e){var t=e.target.closest&&e.target.closest('[data-shuf],[data-brw]');if(!t)return;var k=t.dataset.shuf||t.dataset.brw;if(t.dataset.brw){brw(k);return}pickSet(k);if(k==='j')jp();else ep()});
+document.addEventListener('keydown',function(e){var t=e.target;if(e.key==='Escape'){if(!$('avb').hidden){brwClose();return}if($('sheet').classList.contains('s')){closeSheet();return}}
+if(!t||!t.closest)return;var r=t.closest('.grid [role=radio]');if(!r)return;var k={ArrowRight:1,ArrowDown:1,ArrowLeft:-1,ArrowUp:-1}[e.key];if(!k)return;e.preventDefault();var L=[].slice.call(r.parentNode.querySelectorAll('[role=radio]')),n=L[(L.indexOf(r)+k+L.length)%L.length];L.forEach(function(x){x.tabIndex=x===n?0:-1});n.focus()});
+fetch('/m/av/list').then(function(r){return r.json()}).then(function(r){AV=r;if(!JAV)JAV=AV.lapy[Math.floor(Math.random()*AV.lapy.length)]||AV.all[0]||'';jp()}).catch(function(){});
+/* join: step 1 phone (+ claim code) → step 2 crew, first player, picture, PIN → one "join" call → crew card */
+function tab(l){$('tabs').classList.toggle('r',!!l);$('tJ').className=l?'':'on';$('tL').className=l?'on':'';$('tJ').setAttribute('aria-pressed',!l);$('tL').setAttribute('aria-pressed',!!l);$('fJ').hidden=!!l;$('fL').hidden=!l;$('hh').textContent=l?'Welcome back.':'Pick up where you left off.';msg('e1');msg('e3')}
+$('tJ').onclick=function(){tab(0)};$('tL').onclick=function(){tab(1)};
+function step(n){$('j1').hidden=n!==1;$('j2').hidden=n!==2;if(n===2){setCard('jcard',$('jc').value);$('j2h').focus()}else $('jp').focus()}
+$('jnext').onclick=function(){var d=$('jp').value.replace(/[^0-9]/g,'');if(!(d.length===8||(d.length>=10&&d.length<=15))){msg('e1','Type your phone number (8 numbers).');bad('jp');return}msg('e1');step(2)};
+$('jback').onclick=function(){step(1)};$('jc').oninput=function(){setCard('jcard',$('jc').value)};
+$('jb').onclick=function(){msg('e2');if($('jc').value.trim().length<2){msg('e2','Give your crew a name (2 to 16 characters).');bad('jc');return}if($('jk').value!==$('jk2').value){msg('e2','The two PINs are not the same.');bad('jk2');return}
+busy($('jb'),1,'Joining…');api({act:'join',crew:$('jc').value,name:$('jn').value,phone:$('jp').value,pin:$('jk').value,av:JAV,claim:$('jx').value}).then(function(r){busy($('jb'),0,'Done');
+if(r.error){if(r.login){$('lp').value=$('jp').value;tab(1);msg('e3',r.error);$('lk').focus();return}if(r.field==='jp'||r.field==='jx'){step(1);if(r.field==='jx')$('jxw').open=true;msg('e1',r.error);bad(r.field);return}msg('e2',r.error);bad(r.field||'jn');return}
+keep(r.tok);M=r.me;setCard('rc',M.crew,M.since||Date.now(),M.staff);$('rev').hidden=false;var c=$('rc');c.classList.remove('flip');void c.offsetWidth;c.classList.add('flip');$('rtx').focus();
+$('rgo').onclick=function(){$('rev').hidden=true;show(r);if(r.claimed)msg('e5','Welcome! '+r.claimed+'’s saves are now on your account.',1)}})};
+$('lb').onclick=function(){msg('e3');busy($('lb'),1,'Logging in…');api({act:'login',phone:$('lp').value,pin:$('lk').value}).then(function(r){busy($('lb'),0,'Log in');
+if(r.error){msg('e3',r.error);if(r.join){$('jp').value=$('lp').value;tab(0);step(1)}else{$('lk').value='';$('lk').focus()}return}keep(r.tok);show(r)})};
+$('lp').oninput=function(){$('wa').href='https://wa.me/6591625767?text='+encodeURIComponent('Hi Round2, I forgot my member PIN. My phone number is '+$('lp').value.trim())};
+/* logged in */
+function show(r){if(r.pics)P=r.pics;M=r.me;$('out').hidden=true;var s=$('in');s.hidden=false;s.classList.remove('in');void s.offsetWidth;s.classList.add('in');
+$('hi').textContent=String(M.crew||'').toUpperCase();$('tierlab').innerHTML=M.staff?'ROUND2 CREW<span class="badge">STAFF</span>':'ROUND2 CREW';$('pc').textContent=M.players.length+' of '+M.max+' player'+(M.max===1?'':'s');
+setCard('mc',M.crew,M.since,M.staff);$('ph').textContent='Phone '+M.phone;$('addw').hidden=M.players.length>=M.max;$('clmc').hidden=M.players.length>=M.max;
+var G=M.gone||[];$('gonec').hidden=!G.length;$('gonel').innerHTML=G.map(function(g){return '<div class="gone"><b>'+esc(g.shown)+'</b> – code <span class="code">'+esc(g.code)+'</span> <span class="note">until '+new Date(g.until).toLocaleDateString('en-SG',{day:'numeric',month:'short'})+'</span></div>'}).join('');
+rows();roomst()}
+function canLoad(){return !!(ROOM&&KEY)}
+function rows(){var live=canLoad(),h=$('boxh');h.innerHTML=ROOM&&RN?'Who’s playing in <b>'+esc(RN)+'</b>?':'Your players';
+var out='',mainok=!RS||RS.mainok!==false;if(TICK.main==null)TICK.main=1;
+if(live&&mainok&&RN)out+='<div class="pl'+(TICK.main?'':' off')+'" data-s="main"><button type="button" class="chk" role="checkbox" aria-checked="'+!!TICK.main+'" aria-label="Load the '+esc(RN)+' profile">'+CHK+'</button><span class="ri" aria-hidden="true">'+esc(RN.charAt(0))+'</span><span class="nm">'+esc(RN)+' profile<small>Everything played on the room profile</small></span></div><div class="plh">PLAYERS · PLAYER 1-4 PROFILES</div>';
+out+=M.players.map(function(p){if(TICK[p.slot]==null)TICK[p.slot]=1;return '<div class="pl'+(live&&!TICK[p.slot]?' off':'')+'" data-s="'+p.slot+'">'+(live?'<button type="button" class="chk" role="checkbox" aria-checked="'+!!TICK[p.slot]+'" aria-label="Playing: '+esc(p.shown)+'">'+CHK+'</button>':'')+face(p)+'<span class="nm">'+esc(p.shown)+'</span><button type="button" class="link" data-ed="'+p.slot+'" aria-label="Edit '+esc(p.shown)+'">Edit</button></div>'}).join('');
+$('pls').innerHTML=out;$('ldw').hidden=!live;$('nokey').hidden=!(ROOM&&!KEY);$('routw').hidden=!live;$('rout').textContent='Log out of '+(RN||ROOM).toUpperCase()}
+$('pls').onclick=function(e){var ed=e.target.closest('[data-ed]');if(ed){openSheet(ed.dataset.ed);return}var c=e.target.closest('.chk');if(!c)return;var s=c.closest('[data-s]').dataset.s;TICK[s]=TICK[s]?0:1;c.setAttribute('aria-checked',!!TICK[s]);c.closest('.pl').classList.toggle('off',!TICK[s])};
+/* another crew in this room this session (22 Nov): their profiles stay; the room profile row hides when it's theirs */
+function roomst(){if(!canLoad()||!M)return;api({act:'loadst',room:ROOM,k:KEY}).then(function(r){if(!r.ok)return;RS=r;var o=(r.others||[]).join(' and '),n=$('rshare');n.hidden=!o;n.textContent=o?o+(r.others.length>1?' are':' is')+' also playing in this room. Your players go on the free Player profiles – theirs stay as they are.':'';if(r.mainok===false)TICK.main=0;rows()})}
+/* edit panel (slide-up): a player's name + picture, add a player, rename the crew, remove with PIN */
+var LASTF=null;
+function openSheet(slot){LASTF=document.activeElement;ED=slot;var crew=slot==='crew',p=crew?null:slot==='new'?{shown:'',av:''}:M.players.filter(function(x){return x.slot===slot})[0];if(!crew&&!p)return;
+$('shp').hidden=crew;$('shc').hidden=!crew;$('rmc').hidden=true;msg('ee');$('sht').textContent=crew?'Rename your crew':slot==='new'?'Add a player':'Edit '+p.shown;
+$('sv').textContent=slot==='new'?'Add player':'Save';$('rmw').hidden=crew||slot==='new'||M.players.length<2;
+if(crew)$('ecr').value=M.crew;else{$('en').value=p.shown;EAV=p.av||(slot==='new'?(AV.lapy[Math.floor(Math.random()*AV.lapy.length)]||''):'');SET.e=null;ep()}
+$('scrim').classList.add('s');$('sheet').classList.add('s');document.body.style.overflow='hidden';setTimeout(function(){(crew?$('ecr'):$('en')).focus()},50)}
+function closeSheet(){$('scrim').classList.remove('s');$('sheet').classList.remove('s');document.body.style.overflow='';ED=null;if(LASTF&&LASTF.focus)LASTF.focus()}
+$('shx').onclick=closeSheet;$('scrim').onclick=closeSheet;$('add').onclick=function(){openSheet('new')};$('ren').onclick=function(){openSheet('crew')};
+$('sv').onclick=function(){var b=$('sv'),o;msg('ee');if(ED==='crew')o={act:'crew',crew:$('ecr').value};else if(ED==='new')o={act:'addp',shown:$('en').value};else{o={act:'player',slot:ED,shown:$('en').value};if(EAV)o.av=EAV}
+var t=b.textContent;busy(b,1,'Saving…');api(o).then(function(r){if(r.error){busy(b,0,t);msg('ee',r.error);bad(ED==='crew'?'ecr':'en');if(r.out)out();return}
+if(ED==='new'&&EAV){var np=r.me.players[r.me.players.length-1];return api({act:'player',slot:np.slot,shown:np.shown,av:EAV}).then(function(r2){busy(b,0,t);closeSheet();show(r2.error?r:r2)})}busy(b,0,t);closeSheet();show(r)})};
+$('rm').onclick=function(){var p=M.players.filter(function(x){return x.slot===ED})[0];$('rmt').textContent='Remove '+p.shown+' from your crew? You’ll get a code to give them – with it, they take their saves to their own Round2 account.';$('rmgo').textContent='Remove '+p.shown;$('rmc').hidden=false;$('rpin').value='';$('rpin').focus()};
+$('rmgo').onclick=function(){var pin=$('rpin').value;if(!pin){msg('ee','Type your PIN to remove this player.');bad('rpin');return}busy($('rmgo'),1);api({act:'delp',slot:ED,pin:pin}).then(function(r){busy($('rmgo'),0);if(r.error){msg('ee',r.error);$('rpin').value='';bad('rpin');if(r.out)out();return}
+LASTF=null;closeSheet();show(r);$('gonec').hidden=false;$('gonec').focus();$('gonec').scrollIntoView({block:'center'})})};
+/* load: the room profile + ticked players → the TV; the phone follows like the tile (profiles ready, the bar, then what to do) */
+$('ld').onclick=function(){msg('e5');var sl=Object.keys(TICK).filter(function(k){return TICK[k]&&(k==='main'?!!document.querySelector('[data-s=main]'):M.players.some(function(p){return p.slot===k}))});if(!sl.length){msg('e5','Tick at least one profile first.');return}
+var b=$('ld');busy(b,1,'Sending…');api({act:'play',room:ROOM,slots:sl,k:KEY}).then(function(r){if(r.error){busy(b,0,'Load saves on the TV');msg('e5',r.error);if(r.out)out();return}b.textContent='Sent to the TV';prog(1)})};
+var PT=null,PN=0,PSEEN=0;function prog(start){if(start){PN=0;PSEEN=0;$('lbar').hidden=false;$('lbi').style.width='3%';$('lt').textContent='Loading '+M.crew+'’s saves…'}clearTimeout(PT);if(++PN>80){busy($('ld'),0,'Load saves on the TV');return}
+api({act:'loadst',room:ROOM,k:KEY}).then(function(r){if(r.error){if(r.rescan){$('lt').textContent=r.error;busy($('ld'),0,'Load saves on the TV');return}PT=setTimeout(prog,4000);return}
+var B=(r.board||'').split('|').filter(Boolean).map(function(x){var f=x.split('~');return{st:f[0],cur:f[1],tgt:f[2]||f[1],who:f[3]||''}}),pl=B.filter(function(b){return 'wldf'.indexOf(b.st)>=0}),nd=pl.filter(function(b){return b.st==='d'||b.st==='f'}).length,li=pl.filter(function(b){return b.st==='l'})[0],cl=B.filter(function(b){return b.st==='c'}).length;
+if(r.status==='loading')PSEEN=1;var nt=pl.length,fr=nt?(nd+(li&&r.total?Math.min(r.done/r.total,.95):0))/nt:0,fin=r.status==='done'&&(PSEEN||(nt&&nd===nt)),fail=pl.filter(function(b){return b.st==='f'}).length;
+$('lbi').style.width=Math.max(3,Math.round((fin?1:fr)*100))+'%';
+if(fin){$('lt').textContent=M.crew+' is all set. Press PS on your controller and pick your profile.'+(fail?' Some games didn’t load – staff will check.':'');busy($('ld'),0,'Load saves on the TV');return}
+if(/^Sorry/.test(r.title||'')){$('lt').textContent=r.title+' '+(r.line||'');busy($('ld'),0,'Load saves on the TV');return}
+var nm=li?(li.tgt||li.who):'';$('lt').textContent=li?(nd?nd+' of '+nt+' ready · loading '+nm+'…':'Loading '+M.crew+'’s saves · '+nm+'…'):cl?'Getting the profiles ready first…':nt?nd+' of '+nt+' ready':'Waiting for the PS4…';PT=setTimeout(prog,3500)})}
+$('rout').onclick=function(){api({act:'roomout',room:ROOM,k:KEY}).then(function(r){if(r.error){msg('e5',r.error);return}msg('e5','Logged out of '+(RN||ROOM).toUpperCase()+'. The TV shows the code again for the next members.',1)})};
+$('cb').onclick=function(){msg('e7');busy($('cb'),1,'Adding…');api({act:'claim',code:$('cx').value}).then(function(r){busy($('cb'),0,'Add with their saves');if(r.error){msg('e7',r.error);bad('cx');if(r.out)out();return}$('cx').value='';show(r);msg('e7',r.claimed+' joined your crew with their saves.',1)})};
+$('pb').onclick=function(){msg('e4');api({act:'pin',old:$('po').value,pin:$('pn').value}).then(function(r){if(r.error){msg('e4',r.error);if(r.out)out();return}keep(r.tok);$('po').value=$('pn').value='';msg('e4','PIN changed. Other phones are logged out.',1)})};
+function out(){T=null;M=null;try{localStorage.removeItem('r2.mem')}catch(e){}$('in').hidden=true;$('out').hidden=false;closeSheet()}
+$('lo').onclick=out;
+if(T)api({act:'me'}).then(function(r){if(r.ok)show(r);else out()});
+</script></main></body></html>`;
+}
+/* 24 Nov 2026 (design concern "tile phase 2" + owner: "build functions and fix concerns"): the PS4 tile's words and timings come
+   from round2sg-home design/tile.json, so the design team can change the tile without a new tile build. Tile 0.14+ asks
+   GET /ps4/tilecfg once when it opens and every 10 min (no key: only screen words). Every text is made plain ASCII (the tile draws
+   bytes, not UTF-8 – anything else showed as "?"), cut to its length, and a missing / wrong / empty value keeps the default below
+   (the tile's own words before 0.14). Timings are clamped so a bad file can never strand guests: the ready burst 0.5–5 s, the
+   "What happens next" screen 3–20 s. {crew} in a text = the crew's name. Prices: the scan screen's card notes and "foot" line are
+   empty until the owners decide (pricing on hold, 24 Nov) – empty = not drawn. */
+const TILE_CFG = {
+  s_kick: ['ROUND2 MEMBERS', 24], s_title: ['Pick up where you left off.', 60], s_sub: ['Save your game here and carry on from any Round2 room.', 110],
+  s_foot: ['', 80], s_qr1: ['Members scan to log in', 34], s_qr2: ['New guests scan to join', 34], s_ps: ['Not saving today? Press PS to play.', 50], s_url: ['book.round2.sg/m', 30],
+  c1: ['ROUND2', 14], c1n: ['', 22], c2: ['ROUND2', 14], c2n: ['', 22], c3: ['ROUND2 CREW', 14], c3n: ['', 22],
+  w_kick: ['ROUND2 CREW', 24], w_title: ['Welcome back, {crew}.', 60], w_sub: ["Your saves are loading onto this PS4. Please don't start a game yet.", 110], w_ready: ['{crew} is all set.', 60],
+  w_ready2: ['Press PS on your controller and pick your profile.', 90],
+  n_title: ['What happens next', 40], n1: ['1.  This screen closes by itself.', 90], n2: ['2.  Your TV shows "Press PS button".', 90], n3: ['3.  Press the PS button on your controller.', 90],
+  n4: ['4.  Pick your profile - it has your name and picture.', 90], n5: ['5.  More players? Each one presses PS on their own controller and picks theirs.', 100],
+  t_burst: ['1.5', 0, 0.5, 5], t_next: ['6', 0, 3, 20]
+};
+const tileAscii = (v) => String(v == null ? '' : v).replace(/[–—]/g, '-').replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/…/g, '...').replace(/·/g, '-').replace(/[^\x20-\x7e]/g, '').replace(/\s+/g, ' ').trim();
+async function ps4TileCfg(br) {
+  let j = null; try { j = JSON.parse((await designGet('tile.json', br)) || 'null'); } catch (e) { j = null; }
+  const flat = {}; if (j && typeof j === 'object') for (const g of Object.values(j)) if (g && typeof g === 'object' && !Array.isArray(g)) Object.assign(flat, g);
+  const o = { ok: true, from: j ? 'design' : 'default' };
+  for (const [k, d] of Object.entries(TILE_CFG)) {
+    if (d.length === 4) { const n = +flat[k]; o[k] = String(Number.isFinite(n) && flat[k] !== '' && flat[k] != null ? Math.min(d[3], Math.max(d[2], n)) : +d[0]); continue; }
+    const v = k in flat ? tileAscii(flat[k]).slice(0, d[1]) : null; o[k] = v === null || (v === '' && d[0] && !/^(s_foot|c\dn)$/.test(k)) ? d[0] : v;
+  }
+  return o;
+}
 /* 19 Nov 2026 11pm: the Round2 PS4 tile (fPKG RTWO00001, round2-tv-launcher ps4/tile) asks here every 8–20 s what its PS4 is
    doing: GET /ps4/tile?id=<the PS4's id>. No key (the answer is only the room's name and plain status text). One storage call,
    and the same answer is reused for 10 s per PS4 (in memory) so an idle tile can't eat the Durable Object budget.
@@ -5320,7 +5633,7 @@ async function ps4Tile(env, u) {
   const K = await book(env).kvMany(['ps4map', 'ps4:' + id, 'memplay:' + id, 'ps4look:' + id, 'tiletok:' + id, 'ps4awake', 'ps4busy:' + id], []), room = (K.ps4map || {})[id] || '', cl = (K['ps4:' + id] || {}).clean || {};
   let tk = K['tiletok:' + id];
   if (room && (!tk || !tk.k || now >= tk.until || tk.room !== room)) { tk = { k: memB64(crypto.getRandomValues(new Uint8Array(9))).replace(/[^A-Za-z0-9]/g, '').slice(0, 8), at: now, until: tileTokUntil(K.ps4awake, room, now), room }; await book(env).kvSet('tiletok:' + id, tk); }
-  const o = { ok: true, room, url: room ? PUBLIC_BOOK + '/m?room=' + room + '&k=' + tk.k : PUBLIC_BOOK + '/m', status: 'ready',
+  const o = { ok: true, room, url: room ? PUBLIC_BOOK + '/m?room=' + room + '&k=' + tk.k + (room === 'kaeden' ? '&v=2' : '') : PUBLIC_BOOK + '/m', status: 'ready',   /* 24 Nov: Kaeden (test bench, no guests) opens the new member page */
     line: 'Members: log in on your phone and your saves load into this PS4.', line2: 'Not a member yet? Scan to join - your saves follow you to every Round2 room.' };
   if (!room) { o.status = 'off'; o.line = 'This PS4 is not linked to a room yet - please ask staff.'; o.line2 = ''; }
   else if (cl.state === 'running' || cl.state === 'paused') {
@@ -5367,6 +5680,9 @@ async function ps4Tile(env, u) {
      for the tile's progress bar (strings – the tile reads "key":"value" only) */
   { const R = Object.assign({}, MEM_ROOMS, await designRooms('main'))[room === 'max' ? 'maximillion' : room]; if (R) { o.color = R[1].slice(1); o.rname = R[0]; } }   /* 22 Nov: colours from design/rooms.json */
   if (o.status === 'loading' || o.status === 'reset') { const busy = cl.state === 'running' || cl.state === 'paused'; o.done = String(busy ? cl.done || 0 : 0); o.total = String(busy ? cl.total || 0 : 0); }
+  /* 24 Nov (design: "Welcome back, <crew>" + the crew card on the TV): the crew(s) loaded this session – plain ASCII, with a fallback */
+  if (room && mp && !mp.out && now < Math.max(mp.at + 20 * 60e3, mp.until || 0)) { const cs = (mp.crews && mp.crews.length ? mp.crews : [{ crew: mp.name }]), me = cs.find((x) => x.mid === mp.mid) || cs[cs.length - 1];
+    o.crew = cs.map((x) => tileAscii(x.crew).slice(0, 20)).filter(Boolean).join(' + ').slice(0, 44) || 'your crew'; if (me && me.since) { const d = new Date(me.since + 8 * 3600e3); o.since = String(d.getUTCMonth() + 1).padStart(2, '0') + '/' + String(d.getUTCFullYear()).slice(-2); } }
   /* 22 Nov (design kit): the tile draws any non-ASCII character as "?" – "One moment – this PS4…" showed "One moment ??? this PS4" */
   for (const k of ['title', 'line', 'line2', 'rname', 'pnow']) if (typeof o[k] === 'string') o[k] = o[k].replace(/[\u2013\u2014]/g, '-').replace(/[\u2018\u2019]/g, "'").replace(/[\u201c\u201d]/g, '"').replace(/\u2026/g, '...').replace(/\u00b7/g, '-').replace(/[^\x20-\x7e]/g, '');
   TILE_MEMO.set(id, { t: now, o }); if (TILE_MEMO.size > 50) TILE_MEMO.delete(TILE_MEMO.keys().next().value);
@@ -5797,7 +6113,7 @@ const HANDLER = {
         }
         return Response.redirect('https://cue.round2.sg/' + tv.code, 302);
       }
-      if (u.pathname === '/m' || u.pathname === '/m/') return H(memPage(u, await memDesign(u)));   /* 19 Nov: member join / log in (phone + PIN) */
+      if (u.pathname === '/m' || u.pathname === '/m/') return H(u.searchParams.get('v') === '2' ? memPage2(u, await memDesign2(u)) : memPage(u, await memDesign(u)));   /* 24 Nov: ?v=2 = the new member page (preview) */   /* 19 Nov: member join / log in (phone + PIN) */
       if (u.pathname === '/m/api' && req.method === 'POST') return await memApi(env, req);
       if (u.pathname === '/ps4/tileart') return await ps4TileArt(env, u);   /* 20 Nov: the tile's room character */
       if (u.pathname === '/m/av/list') { const L = await memAvIndex(env); return new Response(JSON.stringify(L), { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=600' } }); }   /* 20 Nov: Lapy's avatars */
@@ -5806,6 +6122,7 @@ const HANDLER = {
       if (u.pathname === '/ps4/resetok' && req.method === 'POST') return await ps4ResetOk(env, req);   /* 17 Nov: last check before a reset */   /* room PS4 check-ins (13 Nov) */
       if (u.pathname === '/ps4/games') return await ps4Games(env);
       if (u.pathname === '/ps4/tile') return await ps4Tile(env, u);   /* 19 Nov: the Round2 PS4 tile's status */
+      if (u.pathname === '/ps4/tilecfg') return J(await ps4TileCfg(u.searchParams.get('design') || 'main'));   /* 24 Nov: the tile's words + timings from design/tile.json */
       if (u.pathname === '/ps4/tileinfo') return await ps4TileInfo(env, req);   /* helper 1.1.87: newest tile version */
       if (u.pathname === '/ps4/tilepkg' && req.method === 'POST') return await ps4TilePkg(env, req);
       if (u.pathname === '/ps4/prx') return await ps4Prx(env, req, u);   /* helper 1.1.109: Round2 system-menu add-ons */   /* helper 1.1.87: the tile .pkg */
