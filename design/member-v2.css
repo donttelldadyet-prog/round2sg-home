@@ -135,3 +135,22 @@ body{background:linear-gradient(180deg,#0d0b13 0%,#08070c 55%,#060509 100%)}
 .tex{opacity:.45;-webkit-mask-image:radial-gradient(520px 300px at 85% 0%,#000,transparent 70%);mask-image:radial-gradient(520px 300px at 85% 0%,#000,transparent 70%)}
 .logo{opacity:.92}
 .kick{letter-spacing:.24em}
+/* 24 Nov 2026 8:40pm design – crew card: graphite with a faint brushed grain, room-colour light in the top corner, lit top
+   edge, a real gold chip, quieter tier text, a bigger embossed crew name and a thin room-colour line along the bottom. */
+.cd{border-radius:16px;padding:16px 18px;border:1px solid rgba(255,255,255,.1);
+  background:radial-gradient(120% 90% at 100% 0%,color-mix(in srgb,var(--ac) 20%,transparent),transparent 55%),
+  repeating-linear-gradient(115deg,rgba(255,255,255,.014) 0 2px,transparent 2px 4px),
+  linear-gradient(155deg,#36353d 0%,#1e1d23 55%,#141318 100%)}
+.cd.staff{background:linear-gradient(155deg,#43381f 0%,#2a2316 60%,#1c170e 100%)}
+.ccard .cd,.rev .cd{box-shadow:inset 0 1px 0 rgba(255,255,255,.14),inset 0 -1px 0 rgba(0,0,0,.4),0 22px 40px -14px color-mix(in srgb,var(--ac) 45%,transparent),0 10px 24px rgba(0,0,0,.55)}
+.cd::after{content:"";position:absolute;left:18px;right:18px;bottom:0;height:2px;background:linear-gradient(90deg,transparent,var(--ac),transparent);opacity:.75}
+.dots{opacity:.6;-webkit-mask-image:linear-gradient(135deg,transparent 45%,#000 100%);mask-image:linear-gradient(135deg,transparent 45%,#000 100%)}
+.edge{inset:5px;border-radius:12px;border-color:rgba(255,255,255,.05)}
+.chip{width:36px;height:27px;border-radius:5px;border:0;opacity:1;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25);
+  background:linear-gradient(rgba(0,0,0,.3),rgba(0,0,0,.3)) 50% 0/1px 100% no-repeat,
+  linear-gradient(rgba(0,0,0,.3),rgba(0,0,0,.3)) 0 35%/100% 1px no-repeat,
+  linear-gradient(rgba(0,0,0,.3),rgba(0,0,0,.3)) 0 65%/100% 1px no-repeat,
+  linear-gradient(135deg,#ead9a4,#a98b4d 55%,#d9c38b)}
+.tn{font-size:10px;letter-spacing:.38em;color:rgba(255,255,255,.72)}
+.cn{font-size:14px;color:#f3f1f8;text-shadow:0 1px 0 rgba(0,0,0,.6)}
+.cs{font-size:10px;letter-spacing:.2em}
