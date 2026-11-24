@@ -108,3 +108,17 @@ input.fld[aria-invalid=true]{border-color:#ff8fa8}
 @keyframes wipe{from{clip-path:inset(0 0 0 100%)}to{clip-path:inset(0)}}
 @keyframes flip{0%{opacity:0;transform:rotateY(-90deg) scale(.9)}60%{opacity:1;transform:rotateY(8deg) scale(1)}100%{transform:none}}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-delay:0s!important;transition-duration:.01ms!important}}
+/* 24 Nov 2026 8pm design – Join step 1: one main button (tabs become a quiet switch), smaller crew card with a room-colour
+   glow under it, a real chip, and the same soft corners on fields and buttons as on the card. */
+.tabs{gap:0;padding:4px;margin:18px 0 22px;background:rgba(244,241,251,.05);border:1px solid rgba(244,241,251,.12);border-radius:12px}
+.tabs button{padding:9px;border:0;border-radius:9px;font-size:14px;color:#bdb5d3}
+.tabs button.on{color:#09080d}
+.tabs .pill{top:4px;bottom:4px;left:4px;width:calc(50% - 4px);border-radius:9px}
+.tabs.r .pill{transform:translateX(100%)}
+.ccard{max-width:300px;margin:14px auto 18px}
+.ccard .cd{box-shadow:0 22px 40px -14px color-mix(in srgb,var(--ac) 45%,transparent),0 8px 22px rgba(0,0,0,.55)}
+.chip{width:34px;height:26px;opacity:.55;background:linear-gradient(currentColor,currentColor) 50% 0/1px 100% no-repeat,linear-gradient(currentColor,currentColor) 0 50%/100% 1px no-repeat;background-color:rgba(255,255,255,.04)}
+#j1 .sub{margin:0 0 6px;color:#bdb5d3;text-align:center}
+input.fld{height:50px;border-radius:10px;background:rgba(244,241,251,.04);padding:12px 14px}
+.btn{border-radius:10px;padding:15px}
+.note summary{font-size:13px;margin-top:4px}
