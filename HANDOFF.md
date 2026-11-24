@@ -41,6 +41,7 @@ phones) in this file or in design files.
 Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [ ] sev · screen · what's wrong – why – (date, who)`.
 
 **Membership tiers, crew card, simpler member page (design, 24 Nov 2026) – full spec + clickable prototype in `design/membership/`**
+- [ ] 1 · join (prototype) · Tier card stack overlaps the top of the tier buttons on 430px-wide phones (~24px); size the stack from the card height. (24 Nov, preview check)
 - [ ] 3 · member page + PS4 tile · Paid membership: Standard 2 months $20, Gold 3 months, Platinum 6 months (Gold/Platinum prices
   still to be set by the owners), then $10 a month. Needs a payment step before an account is created, each crew's tier + join +
   expiry date stored, and Extend. Until this is built the design can't show tiers or prices. (24 Nov, design)
@@ -134,6 +135,52 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 ---
 
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
+
+## ⭐ 24 Nov 2026, 1:10pm – MEMBERSHIP: design → build pack (owner builds next)
+Everything the design side has for the membership build, in one place. **Owner: "ill build" (24 Nov).**
+
+**Already live (design, `design/member.css`, Karen 24 Nov 1:02pm):** round pictures with a room-colour ring + small ✓ on the
+chosen one, round player pictures, tick boxes in the room colour. Works on today's page (with the member-a11y fixes, live
+since 22 Nov 8:36pm). Nothing else of the membership design is live – it all needs code.
+
+**The spec:** `design/membership/HANDOFF-membership-design.md` (wording, layout, motion, card look for phone + TV) and the
+clickable phone prototype `design/membership/prototype.html` (also in the design preview, "Membership draft" tab). Karen's TV
+mockups are on her own design canvas "Round2 PS4 tile – Scan screen redesign" – ask her for the link.
+
+**What to build** (each is also a line in DESIGN → FUNCTION CONCERNS above – tick them there when done):
+1. **Paid sign-up** – tier picker (Standard 2 mo $20 · Gold 3 mo $__ · Platinum 6 mo $__ – owners still to set Gold/Platinum),
+   phone number → HitPay → only then create the account; renewals $10/month; **Extend**. Open questions for the owners: does
+   every tier renew at $10/month? perks per tier? what happens at expiry (the 13 Nov notes say: saves frozen ~3 months, then
+   deleted – not final)?
+2. **Store per crew:** tier, join date, expiry; send crew name + tier + expiry to the tile (`/ps4/tile`) for the signed-in card.
+3. **Join step 2:** "Name your crew" first, then first player's name + picture (12 shown, Shuffle, Browse all) + PIN → crew
+   card reveal ("Your crew card is ready", CREW SINCE mm/yy, VALID TO mm/yy).
+4. **Logged in:** crew header (pixel font) with "<TIER> CREW" + "n of 4 players", the crew card, "<Tier> until <date>" +
+   Extend; "Who's playing in <room>?" with the room profile row first ("<Room> profile", ticked by default, no Edit, hidden
+   when `mainok` is false), then **compact player rows** (tick, picture, name, Edit). Edit / "+ Add a player" opens a
+   slide-up panel (name, pictures, Shuffle, Browse all, Save, Remove). Max 4 players. Load → "Loading <crew>'s saves ·
+   <profile>…" → "<crew> is all set." Keeps today's `loadst` progress.
+5. **Log in:** "Forgot your PIN? WhatsApp us" → `https://wa.me/6591625767?text=Hi%20Round2%2C%20I%20forgot%20my%20member%20PIN.%20My%20phone%20number%20is%20`
+6. **PS4 tile (needs a new tile build):** new scan screen (three columns: words / stacked tier cards / QR with room-colour
+   corners; "Pick up where you left off."; "Members scan to log in" / "New guests scan to join"; "Not saving today? Press
+   [PS] to play."; **remove the "tile 0.13 id file" text**), new signed-in screen ("Welcome back, <crew>", crew card, profiles
+   list + bar), room-colour glow, calm motion. Matte cards: draw in code or ship one PNG per tier. **Plain ASCII only** – the
+   tile shows any other character as "?" (the open "???" item above is the same bug).
+7. **Tile phase 2** (item above): let the tile read its words/timings from `design/tile.json` so the design team can change
+   the tile without a build – worth doing together with 6.
+
+**Build notes from the preview:**
+- Prototype bug to fix while building: the stacked tier cards overlap the top of the Standard / Gold / Platinum buttons on
+  wider phones (≈24px at 430px wide – iPhone Plus / Pro Max; 1px at 393; fine at 375). Size the stack from the card height
+  (e.g. stack height = card height + 2 × offset) instead of a fixed 280px.
+- Keep the class/id names the current page uses where the parts survive (design CSS relies on them), or tell the design team
+  the new names in `design/README.md`.
+- After building: Full check (bookings/payments touched) and update the design preview so Karen can see it – kit and how-to in
+  **`docs/design-preview/`** (its tile tab is a copy of tile 0.13 – port the new tile screens into it).
+
+**Not merged, for reference:** branch `design-new-look` (22 Nov, owner's design session) – an alternative "player select" look
+for the member page in the TV home screen / round2.sg style. Karen's live design (round pictures) replaced it as the direction;
+keep or delete as the design team likes.
 
 ## ⭐ 22 Nov 2026, 9:40pm – CLAIM CODES (removed player takes their saves) + TWO CREWS IN ONE ROOM (helper 1.1.152, test)
 Owner 8:49pm: "if join on their own, then how can the new member claim their saves, also what if there are 2 members in one room,

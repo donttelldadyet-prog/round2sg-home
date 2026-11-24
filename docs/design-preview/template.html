@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Round2 design preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap">
+<style>
+/* VOICE: a working bench for the design team – quiet frame, the two screens are the show.
+   IDEA: a shop counter with the guest's phone on the left and the room TV on the right, wired together.
+   PICTURE: the live member page in a phone and the live PS4 tile on a TV, both in the picked room's colour.
+   COLOUR and TYPE: Round2 night – #06050a ground, #f4f1fb ink, the room colour as the only accent; Chakra Petch + Press Start 2P.
+   LAYOUT: room chips on top; phone + TV side by side on wide screens, one at a time (tabs) on a phone. */
+:root{color-scheme:dark;--bg:#06050a;--card:#0f0d18;--line:rgba(244,241,251,.13);--ink:#f4f1fb;--dim:#a79fbd;--ac:#4DB848;--acInk:#0b0914}
+*{box-sizing:border-box;min-width:0}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 'Chakra Petch',system-ui,sans-serif;overflow-x:clip}
+body{background:radial-gradient(90% 50% at 100% 0,color-mix(in srgb,var(--ac) 18%,transparent),transparent 70%),var(--bg);min-height:100vh;transition:background .4s}
+button{font:600 15px 'Chakra Petch',sans-serif;color:var(--ink);background:transparent;border:1px solid var(--line);padding:10px 14px;min-height:44px;cursor:pointer;border-radius:0}
+button:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+button.on{background:var(--ac);color:var(--acInk);border-color:var(--ac)}
+.top{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:16px max(4vw,14px) 6px}
+.top img{height:26px}.top h1{font:400 13px 'Press Start 2P',monospace;margin:0;letter-spacing:.04em}
+.meta{font-size:13px;color:var(--dim);flex-basis:100%}
+.warn{margin:8px max(4vw,14px) 0;padding:10px 14px;border:1px solid #ff7a7a;color:#ffc2c2;font-size:14px}
+.warn b{color:#ff7a7a}
+.bar{display:flex;gap:8px;padding:10px max(4vw,14px);flex-wrap:wrap;align-items:center}
+.seg{display:flex;width:100%;max-width:440px}.seg button{flex:1;white-space:nowrap;padding:10px 8px}
+.rooms{display:flex;gap:6px;overflow-x:auto;padding:0 max(4vw,14px) 12px;scrollbar-width:none}
+.rooms button{flex:none;display:flex;gap:8px;align-items:center;padding:8px 12px}
+.rooms i{width:14px;height:14px;display:block;border:1px solid rgba(255,255,255,.3)}
+.stage{display:grid;gap:22px;padding:6px max(4vw,14px) 30px;grid-template-columns:minmax(0,1fr)}
+@media(min-width:1100px){.stage.both{grid-template-columns:410px minmax(0,1fr)}}
+.stage>section[hidden]{display:none}
+h2{font:400 11px 'Press Start 2P',monospace;color:var(--ac);margin:0 0 10px;letter-spacing:.05em}
+.ctl{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px;align-items:center}
+.ctl span{font-size:13px;color:var(--dim);margin-right:4px}
+.ctl button{padding:8px 11px;font-size:14px}
+.device{width:min(100%,410px);border:10px solid #1b1826;border-radius:34px;overflow:hidden;background:#06050a;box-shadow:0 0 0 1px var(--line),0 30px 80px -30px color-mix(in srgb,var(--ac) 50%,transparent)}
+.device iframe{display:block;width:100%;height:min(780px,74vh);border:0;background:#06050a}
+@media(max-width:600px){.device{border-width:0;border-radius:0;box-shadow:none;width:100%;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.device iframe{height:78vh}}
+.tv{position:relative;width:100%;aspect-ratio:16/9;background:#000;border:10px solid #111;border-bottom-width:18px;box-shadow:0 30px 80px -30px color-mix(in srgb,var(--ac) 50%,transparent)}
+.tv canvas{position:absolute;inset:0;width:100%;height:100%}
+.tv .closed{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:16px;background:#07070b;font-size:clamp(13px,1.6vw,18px);color:var(--dim)}
+.tv .closed[hidden]{display:none}
+.tv .closed b{font:400 clamp(12px,1.6vw,20px)/1.5 'Press Start 2P',monospace;color:var(--ink)}
+.cap{font-size:14px;color:var(--dim);margin:10px 0 0;min-height:2.6em}
+.note{font-size:13px;color:var(--dim);margin:10px 0 0;max-width:62ch}
+.toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--ac);color:var(--acInk);padding:12px 16px;font-weight:600;display:flex;gap:12px;align-items:center;z-index:9;max-width:92vw}
+.toast button{border-color:var(--acInk);color:var(--acInk);min-height:36px;padding:6px 10px}
+details{margin:0 max(4vw,14px) 30px;border-top:1px solid var(--line);padding-top:10px;font-size:13px;color:var(--dim)}
+details summary{cursor:pointer;min-height:32px}
+details ol{margin:6px 0 0;padding-left:20px;max-height:240px;overflow:auto}
+@media(prefers-reduced-motion:reduce){body{transition:none}}
+</style></head><body>
+<header class="top"><img id="lg" alt="Round2"><h1>DESIGN PREVIEW</h1><div class="meta" id="meta"></div></header>
+<div id="warns"></div>
+<div class="bar"><div class="seg" id="seg"><button data-v="phone">Phone app</button><button data-v="tile">PS4 tile</button><button data-v="both">Both</button><button data-v="proto">Membership draft</button></div></div>
+<nav class="rooms" id="rooms" aria-label="Room"></nav>
+<main class="stage" id="stage">
+<section id="sPhone"><h2>PHONE · BOOK.ROUND2.SG/M</h2>
+  <div class="ctl" id="openCtl"><span>Opened from</span><button data-o="tile">The tile's QR</button><button data-o="link">A room link</button><button data-o="plain">Plain link</button></div>
+  <div class="device"><iframe id="ph" title="Member page preview"></iframe></div>
+  <p class="note">Test crew <b>Night Owls</b>: phone 9123 4567, PIN 2580. Or join with any number. Nothing here reaches Round2: a pretend server answers like the real one. Character art and the avatar pack live online, so grey stand-ins and the old emoji pictures show here.</p>
+  <div class="ctl" style="margin-top:8px"><button id="resetData">Reset test data</button></div>
+</section>
+<section id="sTile"><h2>PS4 TILE · 1920×1080</h2>
+  <div class="tv" id="tv"><canvas id="cv" width="1920" height="1080"></canvas>
+    <div class="closed" id="closed" hidden><b>PRESS PS BUTTON</b><span>The tile closed by itself. The TV now shows the PS4's own screen.</span><button id="reopen">Open the Round2 tile again</button></div></div>
+  <p class="cap" id="cap"></p>
+  <div class="ctl" id="stCtl"></div>
+  <div class="ctl"><span>Speed</span><button data-sp="1">1×</button><button data-sp="3">3×</button><button id="closeTile">Close the tile</button></div>
+  <p class="note">Drawn here with the tile's own layout, fonts, colours, timings and QR encoder (tile 0.13). Wording comes from the engine and the PS4 helper, as on the real PS4.</p>
+</section>
+<section id="sProto" hidden><h2>MEMBERSHIP DRAFT · DESIGN TEAM PROTOTYPE</h2>
+  <p class="note" id="protoNote" style="margin:0 0 10px"></p>
+  <iframe id="pr" title="Membership prototype" style="display:block;width:100%;max-width:390px;height:min(900px,88vh);border:0;background:#1a1820"></iframe>
+</section>
+</main>
+<details><summary>What the pretend server did</summary><ol id="log"></ol></details>
+<div class="toast" id="toast" hidden><span id="toastT"></span><button id="toastB">Watch the tile</button></div>
+<script>
+{
+const D = /*R2DATA*/null;
+const $ = (i) => document.getElementById(i);
+const ROOMS = Object.keys(D.rooms);
+const S = { view: 'phone', room: 'kaeden', open: 'tile', speed: 1 };
+try { const v = localStorage.getItem('r2prev'); if (v) Object.assign(S, JSON.parse(v)); } catch (e) {}
+const keepS = () => { try { localStorage.setItem('r2prev', JSON.stringify(S)); } catch (e) {} };
+const hx = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+
+/* ---------- header ---------- */
+$('lg').src = D.logo;
+$('meta').textContent = `Built ${D.built} from round2sg-home · branch ${D.branch} · ${D.commit}${D.dirty ? ' + changes not saved to GitHub yet' : ''}`;
+if (D.warn.length) $('warns').innerHTML = '<div class="warn"><b>The engine would refuse part of the design files:</b><br>' + D.warn.map((w) => w.replace(/[<&]/g, '')).join('<br>') + '</div>';
+
+/* ---------- log ---------- */
+const LOG = [];
+function log(s) { const t = new Date(); LOG.unshift(t.toTimeString().slice(0, 8) + '  ' + s); LOG.length = Math.min(LOG.length, 40); $('log').innerHTML = LOG.map((x) => '<li>' + x.replace(/[<&]/g, '') + '</li>').join(''); }
+let toastT = 0;
+function toast(msg, btn) { $('toastT').textContent = msg; $('toastB').hidden = !btn; $('toast').hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { $('toast').hidden = true; }, 5000); }
+$('toastB').onclick = () => { $('toast').hidden = true; setView(innerWidth >= 1100 ? 'both' : 'tile'); };
+
+/* ---------- pretend member server (mirrors memApi in worker/round2-book.js) ---------- */
+const PICS = ['🎮', '🍿', '🎬', '🚀', '👻', '👑', '⭐', '🎲', '🍕', '🎧', '🐱', '⚡'];
+const fresh = () => ({ acc: { '6591234567': { id: 'mdemo0001', crew: 'Night Owls', phone: '6591234567', pin: '2580', players: [{ slot: 'p1', shown: 'Ronnie', pic: 0, av: '0007' }, { slot: 'p2', shown: 'Jess', pic: 3, av: '0023' }], staff: false, bad: 0, lock: 0, gone: [] } }, toks: {}, ls: {} });
+let DB = fresh();
+const memPhone = (p) => { let d = String(p || '').replace(/\D/g, ''); if (d.length === 8 && /^[3689]/.test(d)) d = '65' + d; return /^\d{10,15}$/.test(d) ? d : ''; };
+const memShown = (s) => String(s || '').replace(/[^A-Za-z0-9 ]/g, '').replace(/\s+/g, ' ').trim().slice(0, 16).trim();
+const memCrew = (s) => String(s || '').replace(/[<>"]/g, '').replace(/\s+/g, ' ').trim().slice(0, 24).trim();
+const memWeak = (p) => /^(\d)\1+$/.test(p) || '0123456789'.includes(p) || '9876543210'.includes(p);
+const pub = (m) => ({ id: m.id, crew: m.crew, players: m.players.map((p) => ({ slot: p.slot, shown: p.shown, pic: p.pic || 0, av: p.av || '' })), phone: m.phone.replace(/^65(\d{8})$/, '$1').replace(/^(\d{4})(\d{4})$/, '$1 $2'), staff: !!m.staff, max: 4 });
+const okR = (m, tok) => { const r = { ok: true, me: pub(m), pics: PICS }; if (tok) { const t = 'tok' + Math.random().toString(36).slice(2, 10); DB.toks[t] = m.phone; r.tok = t; } return r; };
+function serve(f) {
+  const act = String(f.act || ''), now = Date.now();
+  if (act === 'join') {
+    const phone = memPhone(f.phone), name = memShown(f.name), crew = memCrew(f.crew) || name, pin = String(f.pin || '');
+    if (crew.length < 2) return { error: 'Type a crew name (your couple or group name – or just your name).' };
+    if (name.length < 2) return { error: 'Type your player name for the PS4 (2–16 letters or numbers).' };
+    if (!phone) return { error: 'That phone number doesn’t look right.' };
+    if (!/^\d{4,8}$/.test(pin)) return { error: 'The PIN must be 4 to 8 numbers.' };
+    if (memWeak(pin)) return { error: 'Pick a less easy PIN (not 1234… or all the same number).' };
+    if (DB.acc[phone]) return { error: 'This number already has an account – log in instead.', login: true };
+    const m = { id: 'm' + Math.random().toString(36).slice(2, 10), crew, phone, pin, players: [{ slot: 'p1', shown: name, pic: 0 }], staff: false, bad: 0, lock: 0, gone: [] };
+    DB.acc[phone] = m; return okR(m, true);
+  }
+  if (act === 'login') {
+    const m = DB.acc[memPhone(f.phone)];
+    if (!m) return { error: 'No account with this number yet – join instead.', join: true };
+    if (m.lock > now) return { error: `Too many wrong PINs. Try again in ${Math.ceil((m.lock - now) / 60e3)} min, or ask staff.` };
+    if (String(f.pin || '') !== m.pin) { m.bad++; let left = 5 - m.bad; if (left <= 0) { m.lock = now + 15 * 60e3; m.bad = 0; left = 0; }
+      return { error: left ? `Wrong PIN (${left} ${left === 1 ? 'try' : 'tries'} left).` : 'Wrong PIN. Locked for 15 minutes – or ask staff.' }; }
+    m.bad = 0; m.lock = 0; return okR(m, true);
+  }
+  const m = DB.acc[DB.toks[f.tok]]; if (!m) return { error: 'Please log in again.', out: true };
+  if (act === 'me') return okR(m);
+  if (act === 'crew') { const c = memCrew(f.crew); if (c.length < 2) return { error: 'The crew name needs 2–24 characters.' }; m.crew = c; return okR(m); }
+  if (act === 'player') { const p = m.players.find((x) => x.slot === String(f.slot)); if (!p) return { error: 'That player isn’t in your crew.' };
+    if (f.shown !== undefined) { const s = memShown(f.shown); if (s.length < 2) return { error: 'The PS4 name needs 2–16 letters or numbers.' }; p.shown = s; }
+    if (f.pic !== undefined) { const n = +f.pic; if (n >= 0 && n < PICS.length) p.pic = n; }
+    if (f.av !== undefined) p.av = String(f.av).replace(/\D/g, '').slice(0, 4); return okR(m); }
+  if (act === 'addp') { if (m.players.length >= 4) return { error: 'A crew can have up to 4 players.' };
+    const s = memShown(f.shown); if (s.length < 2) return { error: 'The PS4 name needs 2–16 letters or numbers.' };
+    if (m.players.some((x) => x.shown.toLowerCase() === s.toLowerCase())) return { error: 'Someone in your crew already has that name.' };
+    const used = m.players.concat(m.gone).map((x) => +String(x.slot).slice(1) || 0);
+    m.players.push({ slot: 'p' + (Math.max(0, ...used) + 1), shown: s, pic: (m.players.length * 3) % PICS.length }); return okR(m); }
+  if (act === 'delp') { if (String(f.pin || '') !== m.pin) return { error: 'Wrong PIN – the player was not removed.' };
+    const i = m.players.findIndex((x) => x.slot === String(f.slot)); if (i < 0) return { error: 'That player isn’t in your crew.' };
+    if (m.players.length === 1) return { error: 'A crew needs at least one player.' };
+    m.gone.push(m.players.splice(i, 1)[0]); return okR(m); }
+  if (act === 'pin') { if (String(f.old || '') !== m.pin) return { error: 'Your current PIN is wrong.' };
+    const pin = String(f.pin || ''); if (!/^\d{4,8}$/.test(pin) || memWeak(pin)) return { error: 'The new PIN must be 4 to 8 numbers, not 1234… or all the same number.' };
+    m.pin = pin; for (const t in DB.toks) if (DB.toks[t] === m.phone) delete DB.toks[t]; return okR(m, true); }
+  if (act === 'play') {
+    const want = (Array.isArray(f.slots) ? f.slots : [f.slot]).map(String), ps = [{ slot: 'main', shown: 'Main' }].concat(m.players).filter((x) => want.includes(x.slot)).slice(0, 5);
+    if (!ps.length) return { error: 'Tick at least one player.' };
+    if (String(f.room) !== S.room) return { error: 'This room’s PS4 isn’t set up for members yet – please ask staff.' };
+    if (String(f.k || '') !== D.tok) return { error: 'This code has run out. Scan the code on the room’s TV again to load.', rescan: true };
+    if (!TILE.open) return { error: 'Open the Round2 tile on the TV first, then press Load again.', tile: false };
+    if (SIM.running) return { error: 'The PS4 is busy for a moment – try again in a minute.', busy: true };
+    const names = ps.filter((x) => x.slot !== 'main').map((x) => x.shown).join(' + ') || m.crew;
+    setTimeout(() => runLoad(ps, m.crew, names, false), 400);
+    setTimeout(() => toast('Sent to ' + S.room.toUpperCase() + '’s PS4', S.view === 'phone'), 300);
+    return { ok: true, sent: true, name: names, room: S.room };
+  }
+  if (act === 'loadst') {   /* member-a11y: the phone follows the load like the tile (same board) */
+    if (String(f.k || '') !== D.tok) return { error: 'This code has run out.', rescan: true };
+    const st = LV.ok ? (LV.state === 'l' ? 'loading' : (G.status === 'off' ? 'off' : 'done')) : G.status;
+    return { ok: true, status: st, board: LV.ok ? LV.board : G.board, done: +G.done || 0, total: +G.total || 0, title: G.title, line: G.line };
+  }
+  if (act === 'roomout') { if (String(f.k || '') !== D.tok) return { error: 'This code has run out – nothing to log out of.', rescan: true };
+    SIM.member = null; if (!SIM.running) stIdle(); return { ok: true, room: S.room }; }
+  return { error: 'unknown' };
+}
+const AVL = { all: Array.from({ length: 60 }, (_, i) => String(i + 1).padStart(4, '0')), lapy: Array.from({ length: 24 }, (_, i) => String(i * 2 + 1).padStart(4, '0')) };
+const avCache = {};
+function avImg(id) {   /* stand-in for the 440px avatar pack (online only): a round face in a colour picked from the number */
+  if (avCache[id]) return avCache[id]; const n = +id || 1, h = (n * 47) % 360, h2 = (h + 40) % 360, e = ['◕', '•', '^', '◉'][n % 4];
+  return (avCache[id] = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><radialGradient id="g" cx=".35" cy=".3"><stop offset="0" stop-color="hsl(${h2},80%,72%)"/><stop offset="1" stop-color="hsl(${h},65%,42%)"/></radialGradient></defs><rect width="100" height="100" fill="url(#g)"/><circle cx="50" cy="56" r="26" fill="hsl(${h},50%,88%)"/><text x="50" y="62" font-size="20" text-anchor="middle" fill="#1b1626" font-family="sans-serif">${e} ${e}</text><text x="50" y="94" font-size="11" text-anchor="middle" fill="rgba(255,255,255,.8)" font-family="sans-serif">#${id}</text></svg>`));
+}
+window.R2 = {
+  avList: () => AVL, avImg,
+  ls: null,
+  query: () => (S.open === 'plain' || !S.room) ? '' : '?room=' + S.room + (S.open === 'tile' ? '&k=' + D.tok : ''),
+  api: (o) => new Promise((res) => setTimeout(() => { const r = serve(o); if (o.act !== 'loadst' || r.error) log(o.act + (r.error ? ' → "' + r.error + '"' : ' → ok')); res(r); }, o.act === 'loadst' ? 60 : 260)),
+  ask: (msg) => { const m = DB.acc[DB.toks[DB.ls['r2.mem']]]; log('Phone pop-up: "' + String(msg).split('\n')[0] + '" – the preview typed the PIN'); return m ? m.pin : ''; },
+};
+
+/* ---------- phone ---------- */
+const artSvg = (room) => { const c = (D.rooms[room] || {}).colour || '#888';
+  return 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="300" height="420" viewBox="0 0 300 420"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c}" stop-opacity=".55"/><stop offset="1" stop-color="${c}" stop-opacity=".1"/></linearGradient></defs><circle cx="170" cy="120" r="62" fill="url(#g)"/><path d="M60 420c0-120 50-200 110-200s110 80 110 200z" fill="url(#g)"/><text x="170" y="330" font-family="sans-serif" font-size="15" fill="#fff" fill-opacity=".55" text-anchor="middle">character art</text></svg>`); };
+const STUB = '<script>(function(){var P=parent.R2;window.__Q=P.query();var st={getItem:function(k){return P.ls[k]==null?null:P.ls[k]},setItem:function(k,v){P.ls[k]=String(v)},removeItem:function(k){delete P.ls[k]}};try{Object.defineProperty(window,"localStorage",{value:st,configurable:true})}catch(e){}' +
+  'window.fetch=function(u,o){u=String(u);if(u.indexOf("/m/api")>=0)return P.api(JSON.parse(o&&o.body||"{}")).then(function(r){return{json:function(){return Promise.resolve(r)}}});if(u.indexOf("/m/av/list")>=0)return Promise.resolve({json:function(){return Promise.resolve(P.avList())}});return Promise.reject(new Error("offline"))};window.prompt=function(m){return P.ask(m)};var fx=function(r){(r.querySelectorAll?r.querySelectorAll("img"):[]).forEach(function(i){var v=i.getAttribute("src")||"";var m=v.match(/\\/m\\/av\\/(\\d+)\\.png/);if(m)i.setAttribute("src",P.avImg(m[1]))})};new MutationObserver(function(ms){ms.forEach(function(x){if(x.type==="attributes")fx(x.target.parentNode||document);x.addedNodes&&x.addedNodes.forEach(function(n){if(n.nodeType===1){if(n.tagName==="IMG")fx(n.parentNode);else fx(n)}})})}).observe(document,{subtree:true,childList:true,attributes:true,attributeFilter:["src"]});})()<\/script>';
+function loadPhone() {
+  R2.ls = DB.ls;
+  const key = S.room || '';
+  let h = D.pages[key].split('__R2LOGO__').join(D.logo).replace(/__R2ART__\/[\w~.-]+/g, artSvg(key));
+  h = h.split('new URLSearchParams(location.search)').join('new URLSearchParams(window.__Q)');
+  h = h.replace('<head>', '<head>' + STUB);
+  $('ph').srcdoc = h;
+}
+$('resetData').onclick = () => { DB = fresh(); log('Test data reset'); loadPhone(); };
+
+/* ---------- PS4 tile (port of round2-tv-launcher ps4/tile/tile/main.cpp, tile 0.13) ---------- */
+const W = 1920, H = 1080, LW = 640, LH = 163;
+const BG = [6, 5, 10], CARD = [20, 17, 31], INK = [244, 241, 251], DIM = [167, 159, 189], GOLD = [245, 196, 0], WHITE = [255, 255, 255], RED = [255, 122, 122], GREEN = [125, 255, 168];
+const FN = { big: "600 72px 'Chakra Petch'", mid: "400 44px 'Chakra Petch'", small: "600 34px 'Chakra Petch'", tiny: "400 24px 'Chakra Petch'", pix: "64px 'Press Start 2P'", pixS: "20px 'Press Start 2P'" };
+const BX = 130, BY = 900, BW = 940, BH = 22, QX = 1270, QY = 230, QS = 480, CX0 = 1210, CY0 = 196, CW = 580, CH = 118, CG = 14;
+const cv = $('cv'), X = cv.getContext('2d'), base = document.createElement('canvas'); base.width = W; base.height = H; const BXc = base.getContext('2d');
+const lc = document.createElement('canvas'); lc.width = LW; lc.height = LH; const LC = lc.getContext('2d');
+const logoImg = new Image(); logoImg.src = D.logo;
+const rgba = (c, a = 255) => `rgba(${c[0]},${c[1]},${c[2]},${Math.max(0, Math.min(255, a)) / 255})`;
+const mixc = (a, b, k) => [0, 1, 2].map((i) => Math.round(a[i] + (b[i] - a[i]) * k));
+const ascii = (s) => Array.from(new TextEncoder().encode(String(s))).map((b) => b >= 128 ? '?' : String.fromCharCode(b)).join('');   /* the tile draws any non-ASCII byte as '?' */
+const nowS = () => performance.now() / 1000;
+function text(c, f, s, x, y, col, draw = 1) { c.font = FN[f]; s = ascii(s); if (draw) { c.fillStyle = rgba(col); c.fillText(s, x, y); } return x + c.measureText(s).width; }
+function wrap(c, f, s, x, y, maxw, lh, col) { let line = ''; for (const word of ascii(s).split(' ').filter(Boolean)) { const t = line ? line + ' ' + word : word;
+  if (line && text(c, f, t, 0, 0, col, 0) > maxw) { text(c, f, line, x, y, col); y += lh; line = word; } else line = t; } if (line) { text(c, f, line, x, y, col); y += lh; } return y; }
+const rect = (c, x, y, w, h, col, a = 255) => { c.fillStyle = rgba(col, a); c.fillRect(x, y, w, h); };
+function logoTint(c, x, y, col, a) { if (a <= 0 || !logoImg.complete) return; LC.globalCompositeOperation = 'source-over'; LC.clearRect(0, 0, LW, LH); LC.drawImage(logoImg, 0, 0, LW, LH); LC.globalCompositeOperation = 'source-in'; LC.fillStyle = rgba(col); LC.fillRect(0, 0, LW, LH); c.globalAlpha = Math.min(1, a / 255); c.drawImage(lc, x, y); c.globalAlpha = 1; }
+function logoFx(c, x, y, col, a, sx, fade = 0) {
+  if (fade) logoTint(c, x, y, BG, fade); logoTint(c, x, y, col, a); if (!logoImg.complete) return;
+  LC.globalCompositeOperation = 'source-over'; LC.clearRect(0, 0, LW, LH);
+  const g = LC.createLinearGradient(sx - 70, LH / 2, sx + 56, LH / 2 + 42); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,255,255,.93)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+  LC.fillStyle = g; LC.fillRect(0, 0, LW, LH); LC.globalCompositeOperation = 'destination-in'; LC.drawImage(logoImg, 0, 0, LW, LH); c.drawImage(lc, x, y);
+}
+function ring(c, cx, cy, r, t, col, a) { if (r <= 0 || a <= 0) return; c.beginPath(); c.arc(cx, cy, r + t / 2, 0, 7); c.lineWidth = t; c.strokeStyle = rgba(col, a); c.stroke(); }
+function disc(c, cx, cy, r, col) { c.beginPath(); c.arc(cx, cy, r, 0, 7); c.fillStyle = rgba(col); c.fill(); }
+function frameBox(c, x, y, w, h, t, col, a) { c.lineWidth = t; c.strokeStyle = rgba(col, a); c.strokeRect(x - t / 2, y - t / 2, w + t, h + t); }
+function band(c, x0, y, x1, h, cx, half, peak) { const g = c.createLinearGradient(cx - half, 0, cx + half, 0); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, `rgba(255,255,255,${peak / 255})`); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; const a = Math.max(x0, cx - half), b = Math.min(x1, cx + half); if (b > a) c.fillRect(a, y, b - a, h); }
+function drawQR(c, rows, x, y, size) { if (!rows) return; const q = rows.length, cell = Math.floor(size / (q + 8)), off = Math.floor((size - cell * q) / 2);
+  rect(c, x, y, size, size, WHITE); c.fillStyle = '#000'; rows.forEach((r, i) => { for (let k = 0; k < q; k++) if (r[k] === '1') c.fillRect(x + off + k * cell, y + off + i * cell, cell, cell); }); }
+
+/* what the engine (G) and the PS4 helper's live file (LV) say – the simulator below sets these */
+const G = { room: '', rname: '', color: '', url: '', status: 'wait', title: '', line: 'Connecting to Round2...', line2: '', err: '', board: '', done: 0, total: 0, pk: '', pn: '', pnow: '' };
+const LV = { ok: 0, state: 'i', board: '', pd: 0, pt: 0 };
+let T, dirty = 2;
+const TILE = { open: true };
+function tileStart() { T = { frame: 0, f0: nowS(), busy: 0, done: 0, total: 0, st: 'wait', AC: GOLD, shown: 0, seenLoading: 0, howto: 0, seenBar: 0, readyT0: 0, doneSince: 0, bn: 0, wasBusy: 0, lit: [0, 0, 0, 0, 0], litT: [0, 0, 0, 0, 0], lastLit: 0, b: [], pk: '', pn: '', pw: '', lastk: -1, since2: 0, lastdone: -1, since: 0 }; dirty = 2; }
+function compose() {
+  let { title: ti, room, url, line, line2, err, color: co, rname: rn } = G, st = G.status;
+  T.done = +G.done || 0; T.total = +G.total || 0; T.pk = G.pk; T.pn = G.pn; T.pw = G.pnow;
+  if (LV.ok) st = LV.state === 'l' ? 'loading' : 'done';
+  T.st = st; T.AC = /^[0-9a-fA-F]{6}$/.test(co) ? hx('#' + co) : GOLD; T.busy = st === 'loading' || st === 'reset'; const AC = T.AC;
+  const bd = LV.ok ? LV.board : G.board; T.b = bd ? bd.split('|').slice(0, 5).map((p) => { const f = p.split('~'); return { st: (f[0] || '')[0] || '', cur: f[1] || '', tgt: f[2] || f[1] || '', who: f[3] || '' }; }) : []; T.bn = T.b.length;
+  if (T.busy && !T.wasBusy) { T.lit = [0, 0, 0, 0, 0]; T.lastLit = 0; } T.wasBusy = T.busy;
+  if (LV.ok && T.bn > 0) { let nt = 0, nd = 0, li = -1, ci = -1; T.b.forEach((x, i) => { if ('wldf'.includes(x.st)) nt++; if ('df'.includes(x.st)) nd++; if (x.st === 'l') li = i; if (x.st === 'c') ci = i; });
+    if (LV.state === 'l') { if (li >= 0) line = `Loading ${T.b[li].who}'s saves${nt > 1 ? ` (player ${nd + 1} of ${nt})` : ''}. Please don't start a game yet.`; else if (ci >= 0) line = "Getting the profiles ready first. Please don't start a game yet.";
+      line2 = "Watch the profiles on the right - each one lights up when it's ready."; }
+    else if (!ti || !ti.startsWith('Sorry')) { ti = 'All set!'; line = 'Your saves are on your profiles.'; line2 = ''; } }
+  if (T.busy) { T.seenLoading = 1; if (T.total > 0) T.seenBar = 1; if (T.readyT0 && !T.howto) T.readyT0 = 0; T.doneSince = 0; }
+  const fin = st === 'done' || (st === 'off' && ti.startsWith('Sorry'));
+  if (fin && T.seenLoading && !T.doneSince) T.doneSince = nowS();
+  if (fin && T.seenLoading && !T.readyT0 && (T.seenBar || nowS() - T.doneSince >= 10)) T.readyT0 = nowS();
+  const c = BXc; c.globalAlpha = 1; rect(c, 0, 0, W, H, BG);
+  const g = c.createRadialGradient(1650, -150, 0, 1650, -150, 1350); for (let i = 0; i <= 10; i++) { const f = i / 10, k = (1 - f * f) ** 2 * 0.34; g.addColorStop(f, rgba(mixc(BG, AC, k))); }
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  rect(c, 0, 0, W, 12, AC); logoTint(c, 130, 90, WHITE, 255); text(c, 'pixS', 'MEMBERS', 136, 318, AC);
+  const up = (rn || room).toUpperCase(); if (up) text(c, 'pix', up, 130, 410, AC);
+  let y = wrap(c, 'big', ti || (T.busy ? 'Please wait' : 'Scan to log in'), 130, 520, 940, 84, st === 'done' ? GREEN : INK);
+  y = wrap(c, 'mid', line, 130, y + 10, 940, 56, T.busy ? AC : INK);
+  if (line2) wrap(c, 'small', line2, 130, y + 14, 940, 44, DIM);
+  if (err) text(c, 'tiny', err, 130, 1050, DIM);
+  text(c, 'tiny', `tile ${D.tileV}  id file`, 1640, 1060, DIM);
+  const cards = T.bn > 0 && (T.busy || st === 'done');
+  if (cards) text(c, 'pixS', 'PROFILES', CX0, CY0 - 30, AC);
+  else { rect(c, QX - 20, QY - 20, QS + 40, QS + 40, CARD); rect(c, QX - 20, QY - 20, QS + 40, 6, AC); }
+  if (!cards) { if (url) { drawQR(c, D.qr[room || ''], QX, QY, QS); const s1 = 'Scan with your phone camera', w1 = text(c, 'small', s1, 0, 0, INK, 0); text(c, 'small', s1, QX + QS / 2 - w1 / 2, QY + QS + 80, INK);
+      const s2 = 'book.round2.sg/m', w2 = text(c, 'tiny', s2, 0, 0, DIM, 0); text(c, 'tiny', s2, QX + QS / 2 - w2 / 2, QY + QS + 122, DIM); }
+    else { text(c, 'small', 'QR code appears when', QX + 60, QY + 210, DIM); text(c, 'small', 'Round2 answers', QX + 100, QY + 260, DIM); } }
+  if (T.busy || st === 'done') rect(c, BX, BY, BW, BH, CARD); else text(c, 'small', "Members: scan, log in, tick who's playing.", 130, 990, DIM);
+}
+function composeHowto() { const c = BXc, AC = T.AC; rect(c, 0, 0, W, H, BG); rect(c, 0, 0, W, 12, AC); logoTint(c, 130, 90, WHITE, 255);
+  let y = wrap(c, 'big', 'What happens next', 130, 380, 1660, 84, GREEN);
+  const L = ['1.  This screen closes by itself.', '2.  Your TV shows "Press PS button".', '3.  Press the PS button on your controller.', '4.  Pick your profile - it has your name and picture.', '5.  More players? Each one presses PS on their own controller and picks theirs.'];
+  y += 20; L.forEach((s, i) => { y = wrap(c, 'mid', s, 150, y + 18, 1620, 56, i === 2 || i === 3 ? INK : DIM); }); }
+function tick() {
+  requestAnimationFrame(tick); if (!TILE.open || !T) return;
+  const t = nowS(), nf = Math.floor((t - T.f0) * 60), df = Math.max(1, nf - T.frame); T.frame = nf; const frame = nf, AC = T.AC, ease = 1 - 0.94 ** df;
+  if (dirty > 0 && !T.howto) { compose(); dirty--; }
+  X.drawImage(base, 0, 0);
+  const st = T.st, busy = T.busy, cardsOn = T.bn > 0 && !T.howto && (busy || st === 'done');
+  if (cardsOn) { const GREY = [58, 54, 72];
+    for (let i = 0; i < T.bn; i++) { if (T.lit[i]) continue; const s = T.b[i].st; if ('dfu'.includes(s) && s && t - T.lastLit >= 0.45) { T.lit[i] = 1; T.litT[i] = t; T.lastLit = t; } break; }
+    T.b.forEach((B, i) => { const y = CY0 + i * (CH + CG), L = T.lit[i], active = !L && (B.st === 'c' || B.st === 'l'), since = L ? t - T.litT[i] : 0;
+      rect(X, CX0, y, CW, CH, CARD); rect(X, CX0, y, 8, CH, L ? AC : GREY);
+      if (L && since < 0.6) rect(X, CX0, y, CW, CH, AC, 110 * (1 - since / 0.6));
+      if (active) { const ph = (t % 1.6) / 1.6, sx = CX0 - 120 + ph * (CW + 240); band(X, CX0, y, CX0 + CW, CH, sx, 70, 34); frameBox(X, CX0, y, CW, CH, 3, AC, 110 + 100 * (ph < 0.5 ? ph * 2 : 2 - ph * 2)); }
+      const cx = CX0 + 72, cy = y + CH / 2, r = 40, nm = L ? B.tgt : B.cur; disc(X, cx, cy, r, L ? AC : GREY);
+      if (active) { const ph = (t % 1.2) / 1.2; ring(X, cx, cy, r + 4 + ph * 26, 3, AC, 190 * (1 - ph)); }
+      if (L && since < 0.9) ring(X, cx, cy, r + since * 130, 5, AC, 220 * (1 - since / 0.9));
+      const ini = (nm[0] || '?').toUpperCase(), w2 = text(X, 'small', ini, 0, 0, INK, 0); text(X, 'small', ini, cx - (w2 - 0) / 2, cy + 13, L ? BG : DIM);
+      const nx = CX0 + 136, ny = y + 52;
+      if (L && B.cur !== B.tgt && since < 0.55) { const k = since / 0.55; text(X, 'small', B.cur, nx, ny - k * 26, mixc(DIM, CARD, k)); text(X, 'small', B.tgt, nx, ny + 26 - k * 26, mixc(CARD, INK, k)); }
+      else text(X, 'small', nm, nx, ny, L ? INK : DIM);
+      let ln, lc = DIM; const s = B.st;
+      if (L) { if (s === 'f') { ln = 'Ready - some games failed, staff will check'; lc = RED; } else { ln = s === 'd' && B.who && B.cur === B.tgt && i === 0 ? `Ready - ${B.who}'s saves are in` : 'Ready'; lc = GREEN; } }
+      else if (s === 'c') { ln = 'Clearing for the next player...'; lc = AC; } else if (s === 'l') { ln = `Loading ${B.who || 'the'}'s saves...`; lc = AC; }
+      else if (s === 'w') ln = `Waiting - ${B.who || 'a player'} is next`; else ln = 'Waiting';
+      if (active) ln = ln.replace(/\.+$/, '') + '.'.repeat(Math.floor(t * 2.5) % 4);
+      text(X, 'tiny', ln, nx, y + 92, lc);
+      if (L) { const kx = CX0 + CW - 54, ky = y + CH / 2, gg = since < 0.35 ? since / 0.35 : 1, kc = s === 'f' ? RED : GREEN;
+        for (let s2 = 0; s2 < Math.floor(14 * gg); s2++) rect(X, kx + s2, ky + s2, 5, 5, kc);
+        if (gg >= 1) for (let s2 = 0; s2 < 26; s2++) rect(X, kx + 13 + s2, ky + 13 - s2, 5, 5, kc); } }); }
+  if (busy) { let lab, fw = 0;
+    let bnt = 0, bnd = 0, bli = 0; T.b.forEach((B) => { if ('wldf'.includes(B.st) && B.st) bnt++; if ('df'.includes(B.st) && B.st) bnd++; if (B.st === 'l') bli = 1; });
+    const bar = (want) => { T.shown += (want - T.shown) * ease; if (T.shown > want) T.shown = want; fw = Math.max(26, Math.floor(BW * T.shown)); rect(X, BX, BY, fw, BH, AC);
+      const sx = (frame * 9) % (fw + 160) - 160; X.save(); X.beginPath(); X.rect(BX, BY, fw, BH); X.clip(); band(X, BX + Math.max(0, sx), BY, BX + fw, BH, BX + sx + 80, 80, 90); X.restore(); };
+    if (T.bn > 0 && bnt > 0) { const pd = LV.ok ? LV.pd : T.done, pt = LV.ok ? LV.pt : T.total, key = bnd * 100 + pd; if (key !== T.lastk) { T.lastk = key; T.since2 = t; }
+      const tt = t - T.since2; let inside = bli && pt > 0 ? (pd + 0.9 * (1 - 1 / (1 + tt / 20))) / pt : (bli ? 0.5 * (1 - 1 / (1 + tt / 15)) : 0); if (inside > 0.98) inside = 0.98;
+      bar((bnd + inside) / bnt); lab = `${bnd} of ${bnt} profile${bnt === 1 ? '' : 's'} ready  -  ${Math.floor(T.shown * 100)}%`; }
+    else if (T.total > 0) { if (T.done !== T.lastdone) { T.lastdone = T.done; T.since = t; } const tt = t - T.since, creep = T.done < T.total ? 0.9 * (1 - 1 / (1 + tt / 20)) : 0;
+      bar((T.done + creep) / T.total); lab = T.pn && +T.pn > 1 ? `${T.pw} (player ${T.pk} of ${T.pn})  -  ${T.done} of ${T.total} games` : `${T.done} of ${T.total} games  -  ${Math.floor(T.done * 100 / T.total)}%`; }
+    else { const span = BW - 220, p = (frame * 7) % (2 * span), x = p < span ? p : 2 * span - p; rect(X, BX + x, BY, 220, BH, AC); lab = 'Getting ready'; }
+    const lx = text(X, 'small', lab, BX, BY + 70, INK); text(X, 'small', '.'.repeat(Math.floor(frame / 20) % 4), lx + 4, BY + 70, AC);
+    const ph = frame % 60 < 30 ? frame % 30 : 30 - frame % 30; logoFx(X, 130, 90, AC, 90 + ph * 5, (frame * 14) % (LW + 400) - 200, 160 - ph * 5); }
+  else if (st === 'done' && !T.howto) { T.shown = 0; rect(X, BX, BY, BW, BH, GREEN); text(X, 'small', 'All set - enjoy!', BX, BY + 70, GREEN); }
+  if (!T.readyT0 && T.doneSince && T.seenLoading && t - T.doneSince >= 10 && (st === 'done' || st === 'off')) T.readyT0 = t;
+  if (T.readyT0) { const e = t - T.readyT0;
+    if (e < 1.5) { const cx = 130 + LW / 2, cy = 90 + LH / 2; for (let k = 0; k < 3; k++) { const q = e - k * 0.25; if (q > 0) ring(X, cx, cy, q * 1000, 6, k === 1 ? AC : GREEN, 200 * (1 - q / 1.5)); }
+      logoFx(X, 130, 90, GREEN, 120 + 120 * (1 - e / 1.5), Math.floor(e * 800) % (LW + 300) - 150); }
+    else if (e < 7.5) { if (!T.howto) { T.howto = 1; composeHowto(); X.drawImage(base, 0, 0); }
+      const left = 7.5 - e; rect(X, 130, 960, 1660, 18, CARD); rect(X, 130, 960, Math.max(0, Math.floor(1660 * left / 6)), 18, AC);
+      text(X, 'small', 'Closing in ' + (Math.floor(left) + 1), 130, 1030, DIM); logoFx(X, 130, 90, AC, 60, (frame * 10) % (LW + 300) - 150); }
+    else closeTile(true); }
+  else { if (!busy) T.shown = 0;
+    if (!cardsOn) frameBox(X, QX - 20, QY - 20, QS + 40, QS + 40, 4, AC, 110 + 100 * (frame % 120 < 60 ? frame % 60 : 60 - frame % 60) / 60);
+    const ph = frame % 180 < 90 ? frame % 90 : 90 - frame % 90; logoFx(X, 130, 90, AC, ph * 2, (frame * 6) % (LW + 900) - 300, ph); }
+}
+
+/* ---------- the engine + PS4 helper, pretend (what /ps4/tile and tile-live.txt would say) ---------- */
+const SIM = { timers: [], running: 0, member: null };
+const cap = (s) => { $('cap').textContent = s; };
+const later = (ms, f) => SIM.timers.push(setTimeout(f, ms / S.speed));
+function stopSim() { SIM.timers.forEach(clearTimeout); SIM.timers = []; SIM.running = 0; }
+function setG(o) { Object.assign(G, { title: '', line: '', line2: '', err: '', board: '', done: 0, total: 0, pk: '', pn: '', pnow: '' }, o); dirty = 2; }
+function roomG() { const R = D.rooms[S.room]; Object.assign(G, { room: S.room, rname: R ? R.name : '', color: R ? R.colour.slice(1) : '', url: S.room ? `https://book.round2.sg/m?room=${S.room}&k=${D.tok}` : 'https://book.round2.sg/m' }); dirty = 2; }
+function stIdle(extra) { stopSim(); LV.ok = 0; roomG();
+  if (SIM.member) { setG({ status: 'done', title: 'Ready, ' + SIM.member + '!', line: 'Your saves are back on the profiles you ticked - pick up where you left off.', line2: 'Signed in for this session. Switch players or log out of this room on your phone.' }); cap('Reopened after a load: the members are still signed in for the session, so it greets them and shows the code for switching players.'); return; }
+  setG(Object.assign({ status: 'ready', line: 'Members: log in on your phone and your saves load into this PS4.', line2: 'Not a member yet? Scan to join - your saves follow you to every Round2 room.' }, extra || {}));
+  if (!extra) cap('Waiting for members: the code opens this room’s member page. Scan it with the phone preview’s “Opened from: the tile’s QR”, or use the phone tab.'); }
+const STAGES = [
+  ['wait', 'Waiting (QR)', () => { SIM.member = null; stIdle(); }],
+  ['reset', 'Room reset', () => { SIM.member = null; stopSim(); LV.ok = 0; roomG(); SIM.running = 1; const n = 7; let d = 0;
+    const step = () => { setG({ status: 'reset', line: `This room is being reset (${d} of ${n} games). Member saves load right after.`, line2: "Please don't start a game yet - it only takes a minute or two.", done: d, total: n });
+      if (d++ < n) later(1300, step); else later(1500, () => stIdle()); };
+    step(); cap('Clean slate between bookings: the room’s saves are cleared and the bar counts the games.'); }],
+  ['load', 'Member load', () => runLoad(null, 'Night Owls', 'Ronnie + Jess', false)],
+  ['fail', 'Load with a failed game', () => runLoad(null, 'Night Owls', 'Ronnie + Jess', true)],
+  ['again', 'Reopened after a load', () => { SIM.member = 'Ronnie + Jess'; stIdle(); }],
+  ['job', 'PS4 finishing a job', () => { SIM.member = null; stIdle({ line2: 'One moment – this PS4 is finishing a job. Loading works again in a minute.' }); cap('The engine’s message has a long dash (–); the tile can only draw plain letters, so it shows “???” – this is how it looks on the real PS4 today.'); }],
+  ['off', 'Can’t reach Round2', () => { SIM.member = null; stIdle(); setG({ status: 'off', line: 'Cannot reach Round2 right now - trying again...', err: 'https 0x80431075  http 0x80431075' }); cap('No internet or the engine is down: the last code stays up and a small error code shows at the bottom.'); }],
+  ['unlinked', 'PS4 not linked', () => { SIM.member = null; stopSim(); LV.ok = 0; Object.assign(G, { room: '', rname: '', color: '', url: 'https://book.round2.sg/m' }); setG({ status: 'off', line: 'This PS4 is not linked to a room yet - please ask staff.' }); cap('A PS4 that staff haven’t linked to a room yet: gold accent, plain member link.'); }],
+];
+$('stCtl').innerHTML = STAGES.map(([k, l]) => `<button data-st="${k}">${l}</button>`).join('');
+$('stCtl').onclick = (e) => { const b = e.target.closest('[data-st]'); if (!b) return; if (!TILE.open) openTile(); STAGES.find((x) => x[0] === b.dataset.st)[2](); };
+function runLoad(ps, crew, names, fail) {
+  stopSim(); if (!TILE.open) openTile(); roomG(); SIM.running = 1; SIM.member = null; LV.ok = 0;
+  const acc = DB.acc['6591234567'], players = ps ? ps.filter((x) => x.slot !== 'main') : acc.players.slice(0, 2), main = ps ? ps.some((x) => x.slot === 'main') : true;
+  const rn = (D.rooms[S.room] || {}).name || 'Main', games = [4, 7, 3, 5, 6];
+  const cards = [{ st: main ? 'w' : 'u', cur: rn, tgt: rn, who: main ? crew : '' }].concat([1, 2, 3, 4].map((n, i) => { const p = players[i]; return p ? { st: 'w', cur: 'Player ' + n, tgt: p.shown, who: p.shown } : { st: 'u', cur: 'Player ' + n, tgt: 'Player ' + n, who: '' }; }));
+  const order = cards.map((c, i) => i).filter((i) => cards[i].st === 'w'), failAt = fail ? order[order.length - 1] : -1;
+  const board = () => cards.map((c) => [c.st, c.cur, c.tgt, c.who].join('~')).join('|');
+  const live = (state, pd = 0, pt = 0) => { Object.assign(LV, { ok: 1, state, board: board(), pd, pt }); dirty = 2; };
+  setG({ status: 'loading', title: 'Hi ' + names + '!', line: `Getting ${names}'s profile ready...`, board: '' });
+  cap('Load pressed on the phone: the tile switches to “Please wait” before the PS4 has started.');
+  later(2200, () => { cards[order[0]].st = 'c'; live('l'); cap('The PS4 helper takes over: profile cards replace the code. The first one is cleared for the incoming player.'); });
+  let k = 0;
+  const next = () => {
+    if (k >= order.length) { setG(fail ? { status: 'off', title: 'Sorry, ' + names, line: '1 of 3 games could not be loaded. Your saves are safe on your Round2 account.', line2: 'Please ask staff - they can load them again.' } : { status: 'done', title: 'Ready, ' + names + '!' });
+      live('d'); SIM.running = 0; SIM.member = names;
+      cap(fail ? 'One player’s game failed: their card turns red, the rest carry on, then “What happens next” and the tile closes.' : 'Every card lit: “All set!”, the logo bursts, then 6 seconds of “What happens next” and the tile closes itself.'); return; }
+    const i = order[k], n = games[i]; cards[i].st = 'l'; let d = 0; G.total = n; G.done = 0;
+    const g = () => { live('l', d, n); G.done = d; if (d++ < n) later(1500, g); else { cards[i].st = i === failAt ? 'f' : 'd'; k++; if (k < order.length) { cards[order[k]].st = 'c'; live('l'); } later(1600, next); } };
+    g(); cap(`Loading ${cards[i].who}’s saves into the ${cards[i].cur} profile – the bar covers the whole load, player by player.`);
+  };
+  later(4600, next);
+}
+function openTile() { TILE.open = true; $('closed').hidden = true; tileStart(); }
+function closeTile(auto) { TILE.open = false; stopSim(); $('closed').hidden = false; cap(auto ? 'The tile closed itself. The PS4 menu add-on signs everyone out of the tile; on the TV guests now press PS and pick their profile.' : 'Tile closed by hand.'); }
+$('reopen').onclick = () => { openTile(); stIdle(); };
+$('closeTile').onclick = () => closeTile(false);
+document.querySelectorAll('[data-sp]').forEach((b) => { b.onclick = () => { S.speed = +b.dataset.sp; keepS(); paint(); }; });
+
+/* ---------- rooms, views ---------- */
+function paint() {
+  const R = D.rooms[S.room]; document.documentElement.style.setProperty('--ac', R ? R.colour : '#f5c400'); document.documentElement.style.setProperty('--acInk', R ? R.ink : '#06050a');
+  $('rooms').innerHTML = ROOMS.map((k) => `<button data-r="${k}" class="${k === S.room ? 'on' : ''}"><i style="background:${D.rooms[k].colour}"></i>${D.rooms[k].name.replace(/[<&]/g, '')}</button>`).join('') + `<button data-r="" class="${S.room ? '' : 'on'}">No room</button>`;
+  document.querySelectorAll('#seg button').forEach((b) => b.classList.toggle('on', b.dataset.v === S.view));
+  document.querySelectorAll('#openCtl button').forEach((b) => b.classList.toggle('on', b.dataset.o === S.open));
+  document.querySelectorAll('[data-sp]').forEach((b) => b.classList.toggle('on', +b.dataset.sp === S.speed));
+  $('sPhone').hidden = S.view === 'tile' || S.view === 'proto'; $('sTile').hidden = S.view === 'phone' || S.view === 'proto'; $('sProto').hidden = S.view !== 'proto';
+  if (S.view === 'proto' && !$('pr').srcdoc) $('pr').srcdoc = D.proto || '<p style="color:#fff;font:16px sans-serif;padding:20px">No prototype in this build.</p>'; $('stage').className = 'stage' + (S.view === 'both' ? ' both' : '');
+}
+function setView(v) { S.view = v; keepS(); paint(); if (location.hash !== '#' + v) history.replaceState(null, '', '#' + v); }
+$('seg').onclick = (e) => { const b = e.target.closest('[data-v]'); if (b) setView(b.dataset.v); };
+$('rooms').onclick = (e) => { const b = e.target.closest('[data-r]'); if (!b) return; S.room = b.dataset.r; keepS(); paint(); loadPhone(); openTile(); SIM.member = null; stIdle(); };
+$('openCtl').onclick = (e) => { const b = e.target.closest('[data-o]'); if (!b) return; S.open = b.dataset.o; keepS(); paint(); loadPhone(); };
+const fromHash = () => { const h = location.hash.slice(1); if (['phone', 'tile', 'both', 'proto'].includes(h)) { S.view = h; paint(); } };
+addEventListener('hashchange', fromHash);
+if (!D.rooms[S.room] && S.room) S.room = 'kaeden';
+if (!location.hash && innerWidth >= 1100) S.view = 'both';
+fromHash(); paint(); loadPhone();
+tileStart(); stIdle();
+const go = () => { dirty = 2; requestAnimationFrame(tick); };
+Promise.all([document.fonts.load(FN.big), document.fonts.load(FN.mid), document.fonts.load(FN.pix), new Promise((r) => { if (logoImg.complete) r(); else logoImg.onload = logoImg.onerror = r; })]).then(go, go);
+}
+</script>
+</body></html>
