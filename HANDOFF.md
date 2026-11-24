@@ -40,6 +40,20 @@ phones) in this file or in design files.
 ## DESIGN → FUNCTION CONCERNS (design writes, function fixes and ticks – newest first)
 Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [ ] sev · screen · what's wrong – why – (date, who)`.
 
+**New member welcome flow (design, 25 Nov 2026 12:35am – Karen + owner agreed on Telegram: "before this page need clean UI, just 2 simple buttons; when join show the benefits; then login just focus login")**
+- [ ] 3 · member page /m · Build the new flow from the clickable prototype `design/membership/welcome-flow.html`
+  (open: https://raw.githack.com/donttelldadyet-prog/round2sg-home/main/design/membership/welcome-flow.html): **1 Welcome** – pixel swirl in the
+  room colour that reacts to touch (drag scatters/spins it, tap = burst; still with Reduce Motion), "Welcome", "Pick up where you left off, in
+  any Round2 room.", white pill "Join Round2", dark pill "Log in", small "Just playing today? Press PS on the TV to skip." → **2 Why join**
+  (only after Join) – 4 benefit tiles (carry on any game / up to 4 players / crew card on the TV / scan and load), price line (draft: $20 for
+  2 months, then $10 a month – Gold/Platinum still unset), white pill "Join for $20" → **3 Join** – phone only, "+65" shown in the field,
+  claim-code link, Continue pinned at the bottom, "Already a member? Log in" → step 2 as today in the new look. **4 Log in** – phone + PIN,
+  WhatsApp PIN link, Log in pinned at the bottom, "New here? Join Round2". Back buttons on 2–4. Owner thinks the swirl may exist as an
+  open-source repo – fine to swap in if its licence allows. Words/prices are drafts. (25 Nov, design)
+- [ ] 1 · member page /m · Until the flow above is built: a CSS-only restyle of today's page is on preview branch `design-sheet7`
+  (`book.round2.sg/m?design=design-sheet7&room=vale` – card on the glow, slide-up panel, white main pill + dark "Log in"/"Join" pill).
+  Not on main yet – Karen to say "live". Button word "Continue" would read better as "Join with phone number" (words are in the engine).
+
 > **24 Nov 5:22pm – THE NEW MEMBER PAGE IS LIVE FOR EVERY ROOM** (owner 5:21pm: "ok release them live"; engine b3fa9e9c, Light check
 > 20/3/0 before and after). `book.round2.sg/m` = the new page, its look = `design/member-v2.css`. The old page is still there at
 > `/m?v=1` (fallback only) and still uses `design/member.css`.
