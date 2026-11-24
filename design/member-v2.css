@@ -191,3 +191,13 @@ input.fld{border-radius:26px;padding:12px 18px}
 #out .logo{align-self:flex-start;width:auto}
 #j1>div:first-child{display:none!important}
 #out:has(#fJ[hidden]) h1{margin-top:44px}
+/* 25 Nov 2026 12:10am design – buttons like Karen's "Welcome" reference: one white pill for the main action (Continue /
+   Log in), and right under it one dark pill for the other way in (the Join / Log in switch shows only the option you're
+   NOT on – "Log in" while joining, "Join" while logging in). Same buttons and ids, look only. */
+#out .btn{height:54px;padding:0;background:#f4f1fb;color:#09080d;font-size:16px;font-weight:600;margin-top:18px}
+#out .btn:active{transform:scale(.98);background:#dcd8e6}
+#out .tabs{background:none;border:0;padding:0;margin:10px 0 0;gap:0}
+#out .tabs .pill,#out .tabs button.on{display:none}
+#out .tabs button{height:54px;padding:0;border-radius:27px;background:#26252c;color:#f4f1fb;font-size:16px;font-weight:600}
+#out .tabs button:active{background:#302f37}
+#e1,#e3{min-height:0;margin:6px 0 0}
