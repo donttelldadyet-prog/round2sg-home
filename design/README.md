@@ -28,3 +28,11 @@ These files decide how Round2 **looks** to guests. The booking engine reads them
 - `var(--ac)` is the room colour and `var(--ink)` the text colour on it – use them instead of fixed colours, so every room keeps its own colour.
 - `rooms.json`: colours must be `#rrggbb` (6 hex digits). Only the 7 room keys are read: vale, kaeden, scarlett, bella, kai, atlas, maximillion.
 - Fonts: Chakra Petch and Press Start 2P are what the TV tile uses too – keep them, or tell the owner, because the PS4 tile has the fonts built in.
+
+## Components (shared pieces you can reuse)
+- **Status badge** – `components/status-badge.css`, demo with every state: `components/status-badge.html` (open it in a browser).
+  Pills for Active member / Expires soon / Expired / Waiting / Loading / Ready, in the look of Spectrum UI's Status Badge
+  (Apache-2.0) rebuilt in plain CSS – no React, no installer, nothing to download. Use: a span with `class="bd"` and
+  `data-st="active"` (or expiring, expired, waiting, loading, ready) holding the words; the icon and colours come with the
+  state. The same rules are already in `member-v2.css`, so the member page can show badges as soon as the engine puts them in.
+

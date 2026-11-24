@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Round2 status badge</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600&family=Press+Start+2P&display=swap">
+<style>
+/* Demo page for the design team: open it in a browser. The badge rules below are a copy of status-badge.css. */
+body{margin:0;min-height:100vh;background:radial-gradient(80% 50% at 70% 0,rgba(232,67,106,.22),transparent 70%),#09080d;color:#f4f1fb;font:16px/1.5 'Chakra Petch',sans-serif;
+  display:flex;justify-content:center;padding:28px 18px}
+main{width:100%;max-width:420px}
+.k{font:9px/1.6 'Press Start 2P',monospace;letter-spacing:.18em;color:#bdb5d3;margin:26px 0 10px}
+h1{font:400 18px/1.4 'Press Start 2P',monospace;margin:0}
+.row{display:flex;flex-wrap:wrap;gap:8px}
+.card{background:#15131b;border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:14px}
+.pl{display:flex;align-items:center;gap:12px;padding:6px 0}.pl b{flex:1;font-weight:600}
+.av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#2b2933;font:11px 'Press Start 2P',monospace}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+code{display:block;white-space:pre-wrap;background:#15131b;border-radius:12px;padding:12px;font:13px/1.5 ui-monospace,monospace;color:#d9d3ea}
+button{font:600 14px 'Chakra Petch',sans-serif;background:#E8436A;color:#0b0914;border:0;border-radius:12px;padding:12px 16px;margin-top:12px;cursor:pointer}
+p{color:#bdb5d3;font-size:14px}
+</style>
+<style>
+/* ---- Status badge (25 Nov 2026) ------------------------------------------------------------------------------------------
+   Look from Spectrum UI's "Status Badge", dark variant (ui.spectrumhq.in, github.com/arihantcodes/spectrum-ui, Apache-2.0),
+   rebuilt in plain CSS for Round2 (the member page isn't React); icons are Lucide (lucide.dev, ISC), drawn by the CSS.
+   Use: a span with class "bd" and data-st="active", holding the words (e.g. Active member). No SVG needed in the page.
+   States: active (green tick) / ready (green tick) / expiring (amber warning) / expired (red cross) /
+   loading (blue, spinning) / waiting (grey clock). Demo of every state: design/components/status-badge.html.
+   The same rules are in member-v2.css (the member page's look). */
+.bd{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 12px;font:600 13px/1 'Chakra Petch',system-ui,sans-serif;white-space:nowrap;
+  color:var(--bd-c,#d4d4d4);background:var(--bd-b,rgba(163,163,163,.1));box-shadow:inset 0 0 0 1px var(--bd-r,rgba(212,212,212,.2));transition:color .3s,background .3s,box-shadow .3s}
+.bd::before{content:"";width:14px;height:14px;flex:none;background:currentColor;-webkit-mask:var(--bd-i) center/contain no-repeat;mask:var(--bd-i) center/contain no-repeat}
+.bd[data-st=active],.bd[data-st=ready]{--bd-c:#6ee7b7;--bd-b:rgba(52,211,153,.1);--bd-r:rgba(110,231,183,.25);--bd-i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E")}
+.bd[data-st=expiring]{--bd-c:#fcd34d;--bd-b:rgba(251,191,36,.1);--bd-r:rgba(252,211,77,.25);--bd-i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E")}
+.bd[data-st=expired]{--bd-c:#fda4af;--bd-b:rgba(251,113,133,.1);--bd-r:rgba(253,164,175,.25);--bd-i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m15 9-6 6'/%3E%3Cpath d='m9 9 6 6'/%3E%3C/svg%3E")}
+.bd[data-st=loading]{--bd-c:#7dd3fc;--bd-b:rgba(56,189,248,.1);--bd-r:rgba(125,211,252,.25);--bd-i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M10.1 2.182a10 10 0 0 1 3.8 0'/%3E%3Cpath d='M13.9 21.818a10 10 0 0 1-3.8 0'/%3E%3Cpath d='M17.609 3.721a10 10 0 0 1 2.69 2.7'/%3E%3Cpath d='M2.182 13.9a10 10 0 0 1 0-3.8'/%3E%3Cpath d='M20.279 17.609a10 10 0 0 1-2.7 2.69'/%3E%3Cpath d='M21.818 10.1a10 10 0 0 1 0 3.8'/%3E%3Cpath d='M3.721 6.391a10 10 0 0 1 2.7-2.69'/%3E%3Cpath d='M6.391 20.279a10 10 0 0 1-2.69-2.7'/%3E%3C/svg%3E")}
+.bd[data-st=loading]::before{animation:bd-spin 3s linear infinite}
+.bd[data-st=waiting],.bd:not([data-st]){--bd-i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 6v6l2 4'/%3E%3C/svg%3E")}
+@keyframes bd-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.bd[data-st=loading]::before{animation:none}.bd{transition:none}}
+</style></head><body><main>
+<h1>Status badge</h1>
+<p>Round2's status badge for the member page and anywhere else on our sites. Look from Spectrum UI's Status Badge (Apache-2.0), rebuilt in plain CSS; icons from Lucide (ISC).</p>
+
+<div class="k">EVERY STATE</div>
+<div class="row">
+<span class="bd" data-st="active">Active member</span>
+<span class="bd" data-st="expiring">Expires in 5 days</span>
+<span class="bd" data-st="expired">Expired</span>
+<span class="bd" data-st="waiting">Waiting</span>
+<span class="bd" data-st="loading">Loading</span>
+<span class="bd" data-st="ready">Ready</span>
+</div>
+
+<div class="k">ON THE MEMBER PAGE (EXAMPLE)</div>
+<div class="card">
+<div class="top"><div><div class="k" style="margin:0 0 6px">ROUND2 CREW</div><b style="font:14px 'Press Start 2P',monospace">NIGHT OWLS</b></div><span class="bd" data-st="active">Active member</span></div>
+<div class="top" style="margin-top:14px"><span class="bd" data-st="expiring">Expires in 5 days</span><a style="color:#E8436A;font-weight:600">Renew</a></div>
+</div>
+<div class="card" style="margin-top:12px" id="pls">
+<div class="pl"><div class="av">V</div><b>Vale profile</b><span class="bd" data-st="waiting">Waiting</span></div>
+<div class="pl"><div class="av">J</div><b>Jun</b><span class="bd" data-st="waiting">Waiting</span></div>
+<div class="pl"><div class="av">M</div><b>Mei</b><span class="bd" data-st="waiting">Waiting</span></div>
+</div>
+<button id="go">Try it: Load saves</button>
+
+<div class="k">HOW TO USE</div>
+<code>&lt;span class="bd" data-st="active"&gt;Active member&lt;/span&gt;
+data-st = active · expiring · expired · waiting · loading · ready</code>
+<p>The icon and colours come from the state, so the page only needs the words. The rules live in <b>design/components/status-badge.css</b> and are already in <b>design/member-v2.css</b>, so the member page can use them as soon as it shows a member's status.</p>
+</main>
+<script>
+{const W={waiting:'Waiting',loading:'Loading',ready:'Ready'},b=[...document.querySelectorAll('#pls .bd')];
+const set=(e,s)=>{e.dataset.st=s;e.textContent=W[s]};
+document.getElementById('go').onclick=()=>{b.forEach((e,i)=>set(e,i?'waiting':'loading'));let i=0;
+ const t=setInterval(()=>{set(b[i],'ready');i++;if(i<b.length)set(b[i],'loading');else clearInterval(t)},1400)};}
+</script>
+</body></html>

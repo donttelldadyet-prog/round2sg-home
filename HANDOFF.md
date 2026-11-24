@@ -40,6 +40,16 @@ phones) in this file or in design files.
 ## DESIGN → FUNCTION CONCERNS (design writes, function fixes and ticks – newest first)
 Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [ ] sev · screen · what's wrong – why – (date, who)`.
 
+**Status badges are in the repo (25 Nov 2026, owner's design session)**
+- [ ] 2 · member page · Show the status badges on the live page: `design/components/status-badge.css` (already inside
+  `design/member-v2.css`), demo `design/components/status-badge.html`. Markup: `<span class="bd" data-st="…">words</span>`
+  – states `active`, `expiring`, `expired`, `waiting`, `loading`, `ready`; no SVG needed (icons come from the CSS). Wanted:
+  crew header "Active member" / "Expires in N days" (+ Renew) / "Expired" – needs the crew's expiry date; and on each
+  profile row while loading, Waiting → Loading → Ready from the same board `loadst` already returns. Karen's prototype
+  (`design/membership/welcome-flow.html`, class names `.bd .ok/.wn/.er/.ld/.ex`) shows where they go; use the `data-st`
+  version from the component (its short class names `.ok` etc. clash with the page's own `.ok`). Spectrum UI's
+  connector isn't needed for this (it can't reach spectrumhq.in from Claude sessions anyway). (25 Nov, design)
+
 **New member welcome flow (design, 25 Nov 2026 12:35am – Karen + owner agreed on Telegram: "before this page need clean UI, just 2 simple buttons; when join show the benefits; then login just focus login")**
 - [ ] 3 · member page /m · Build the new flow from the clickable prototype `design/membership/welcome-flow.html`
   (open: https://raw.githack.com/donttelldadyet-prog/round2sg-home/main/design/membership/welcome-flow.html): **1 Welcome** – pixel swirl in the
