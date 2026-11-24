@@ -40,6 +40,9 @@ phones) in this file or in design files.
 ## DESIGN → FUNCTION CONCERNS (design writes, function fixes and ticks – newest first)
 Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [ ] sev · screen · what's wrong – why – (date, who)`.
 
+> **24 Nov 5:22pm – THE NEW MEMBER PAGE IS LIVE FOR EVERY ROOM** (owner 5:21pm: "ok release them live"; engine b3fa9e9c, Light check
+> 20/3/0 before and after). `book.round2.sg/m` = the new page, its look = `design/member-v2.css`. The old page is still there at
+> `/m?v=1` (fallback only) and still uses `design/member.css`.
 > **Function side – LIVE 24 Nov ~1:40pm (owner: "build functions and fix concerns", pricing on hold)** – engine 981806b4, 27 bindings,
 > 3 timers; Light check 18/4/0 before, 20/3/0 after. **New member page = preview at `book.round2.sg/m?v=2`** (Kaeden's tile QR
 > opens it; every other room still opens today's page). Its look is **`design/member-v2.css`** (a copy of the built-in look – edit
@@ -65,10 +68,10 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 - [ ] (ON HOLD, owner 24 Nov 1:10pm: "for the pricing hold off on that first while we discuss internally" – no tiers, prices, payment, VALID TO or Extend built) 3 · member page + PS4 tile · Paid membership: Standard 2 months $20, Gold 3 months, Platinum 6 months (Gold/Platinum prices
   still to be set by the owners), then $10 a month. Needs a payment step before an account is created, each crew's tier + join +
   expiry date stored, and Extend. Until this is built the design can't show tiers or prices. (24 Nov, design)
-- [x] (fixed 24 Nov 1:35pm, engine 981806b4 / commit 50e9e0e – in the PREVIEW page `/m?v=2`, becomes the real page once the owner and Karen have both tried it) – card shows CREW SINCE only; VALID TO + tier name wait for pricing. 2 · member page · Crew name should be the identity: on a membership card ("CREW SINCE / VALID TO"), a "Your crew card is
+- [x] (fixed 24 Nov 1:35pm, engine 981806b4 / commit 50e9e0e – in the new member page – LIVE for every room since 24 Nov 5:22pm, engine b3fa9e9c) – card shows CREW SINCE only; VALID TO + tier name wait for pricing. 2 · member page · Crew name should be the identity: on a membership card ("CREW SINCE / VALID TO"), a "Your crew card is
   ready" screen after paying, the page header after login, and "Loading <crew>'s saves". Sign-up step 2 starts with "Name your
   crew". (24 Nov, design – asked by the owner)
-- [x] (fixed 24 Nov 1:35pm, engine 981806b4 / commit 50e9e0e – in the PREVIEW page `/m?v=2`, becomes the real page once the owner and Karen have both tried it) 2 · member page · Too much scrolling: every player has a full name box + 12-picture grid. Wanted: one short row per player
+- [x] (fixed 24 Nov 1:35pm, engine 981806b4 / commit 50e9e0e – in the new member page – LIVE for every room since 24 Nov 5:22pm, engine b3fa9e9c) 2 · member page · Too much scrolling: every player has a full name box + 12-picture grid. Wanted: one short row per player
   (tick, picture, name, Edit); Edit / "+ Add a player" opens a slide-up panel with name, pictures, Shuffle, Browse all, Save,
   Remove. Room profile stays the first row ("Vale profile", ticked by default, hidden when `mainok` is false). (24 Nov, design)
 - [x] (fixed 24 Nov 1:35pm, LIVE on today's page too, 50e9e0e; on the preview the link adds the typed phone number) 2 · member page · "Forgot your PIN? WhatsApp us" on Log in → https://wa.me/6591625767 with text "Hi Round2, I forgot my
@@ -155,6 +158,13 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 ---
 
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
+
+## ⭐ 24 Nov 2026, 5:22pm – NEW MEMBER PAGE LIVE FOR EVERY ROOM
+Owner 5:21pm: "ok release them live". `/m` now serves `memPage2` (the new page) for every room; `/m?v=1` = the old `memPage`
+(fallback; one line in the route to swap back). Engine b3fa9e9c (27 bindings, 3 timers), Light check 20/3/0 before and after,
+checked through book.round2.sg/m?room=vale. Tile 0.15 is released (ps4-tile) – only Kaeden has the tile; at 5:20pm it said
+"waits: CUSA00419" (a game open), so it installs by itself after the game is closed. Other rooms: the tile stays off (helper
+1.1.114, no tile-on) – turning it on there is a separate owner decision (helper update). Not tried yet with a real join/load.
 
 ## ⭐ 24 Nov 2026, 1:40pm – MEMBERSHIP LOOK BUILT (no pricing): member page v2 preview + PS4 tile 0.14 + design/tile.json
 Owner 1:10pm: "ok handoff read the ps4 tile and phone member handoff, we need additional functionalities, for the pricing hold

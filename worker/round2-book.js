@@ -6113,7 +6113,7 @@ const HANDLER = {
         }
         return Response.redirect('https://cue.round2.sg/' + tv.code, 302);
       }
-      if (u.pathname === '/m' || u.pathname === '/m/') return H(u.searchParams.get('v') === '2' ? memPage2(u, await memDesign2(u)) : memPage(u, await memDesign(u)));   /* 24 Nov: ?v=2 = the new member page (preview) */   /* 19 Nov: member join / log in (phone + PIN) */
+      if (u.pathname === '/m' || u.pathname === '/m/') return H(u.searchParams.get('v') === '1' ? memPage(u, await memDesign(u)) : memPage2(u, await memDesign2(u)));   /* 24 Nov 5:21pm (owner: "ok release them live"): the new member page for every room; ?v=1 = the old page (fallback) */   /* 19 Nov: member join / log in (phone + PIN) */
       if (u.pathname === '/m/api' && req.method === 'POST') return await memApi(env, req);
       if (u.pathname === '/ps4/tileart') return await ps4TileArt(env, u);   /* 20 Nov: the tile's room character */
       if (u.pathname === '/m/av/list') { const L = await memAvIndex(env); return new Response(JSON.stringify(L), { headers: { 'content-type': 'application/json', 'cache-control': 'public, max-age=600' } }); }   /* 20 Nov: Lapy's avatars */
