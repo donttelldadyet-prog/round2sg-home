@@ -50,6 +50,12 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   claim-code link, Continue pinned at the bottom, "Already a member? Log in" → step 2 as today in the new look. **4 Log in** – phone + PIN,
   WhatsApp PIN link, Log in pinned at the bottom, "New here? Join Round2". Back buttons on 2–4. Owner thinks the swirl may exist as an
   open-source repo – fine to swap in if its licence allows. Words/prices are drafts. (25 Nov, design)
+  **Update 12:50am – logged-in screen + status badges:** prototype now has a 5th screen (tap Log in → Log in): crew header with an
+  "Active member" badge, the crew card, "Expires in 5 days" badge + Renew, and each profile shows Waiting → Loading → Ready badges while
+  "Load saves on the TV" runs. Badges are Spectrum UI's Status Badge (Apache-2.0, github.com/arihantcodes/spectrum-ui
+  app/registry/status-badge), dark variant, rebuilt in plain CSS + Lucide icons – the page isn't React, so copy the CSS from the prototype
+  (`.bd`, `.ok/.wn/.er/.ld/.ex`), don't run their installer. Spectrum UI also has a Claude Code connector:
+  `claude mcp add spectrum-ui -- npx -y @spectrumui/mcp` (needs spectrumhq.in reachable). Needs: member expiry date for the badges.
 - [ ] 1 · member page /m · Until the flow above is built: a CSS-only restyle of today's page is on preview branch `design-sheet7`
   (`book.round2.sg/m?design=design-sheet7&room=vale` – card on the glow, slide-up panel, white main pill + dark "Log in"/"Join" pill).
   Not on main yet – Karen to say "live". Button word "Continue" would read better as "Join with phone number" (words are in the engine).
