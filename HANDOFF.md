@@ -53,7 +53,12 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 > `.clogo`, `.cn` name, `.cs` since, `.cd.staff`). Kept from the prototype: card colours, `.in .a` rise, `.rise`, `.wipe`, `.flip`,
 > reduced-motion rule. Not built (pricing on hold): tier picker, payment, VALID TO, "<Tier> until", Extend. **PS4 tile:** words
 > and the two times from **`design/tile.json`** (see `design/README.md`); layout/look is in round2-tv-launcher
-> `ps4/tile/tile/draw.h` (one file, with a desktop simulator in `ps4/tile/sim`).
+> `ps4/tile/tile/draw.h` (one file, with a desktop simulator in `ps4/tile/sim`). **Different from the prototype on purpose:** the PIN is
+> typed twice when joining (a mistyped PIN locks the crew out until WhatsApp/staff), a "Rename crew" link (the prototype had no way
+> to change the crew name), the step-1 card shows the crew card instead of the tier stack, and the TV cards say ROUND2 / ROUND2 /
+> ROUND2 CREW instead of STANDARD / GOLD / PLATINUM + prices (pricing on hold – set `c1`–`c3` / `c1n`–`c3n` in tile.json when
+> the owners decide). Checked 24 Nov 1:55pm: book.round2.sg/m?v=2 opens the new page; it uses design/member-v2.css; Light check
+> 20/3/0 after everything; Kaeden's tile still 0.13 at 1:41pm (it installs 0.15 by itself – not seen on the TV yet).
 
 **Membership tiers, crew card, simpler member page (design, 24 Nov 2026) – full spec + clickable prototype in `design/membership/`**
 - [ ] (not changed by function: it's design's prototype file. The built page has no tier stack yet – pricing on hold – and its one crew card sizes from its own width (aspect-ratio), checked at 375/393/430px, 24 Nov) 1 · join (prototype) · Tier card stack overlaps the top of the tier buttons on 430px-wide phones (~24px); size the stack from the card height. (24 Nov, preview check)
@@ -73,7 +78,7 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   list, progress bar), room-colour glow, calm motion. Wording/sizes in `design/membership/HANDOFF-membership-design.md`. (24 Nov, design)
 
 **PS4 tile – design can't change it yet (owner wants design to edit the tile freely, 22 Nov 2026)**
-- [x] (fixed 24 Nov 1:40pm: `design/tile.json` – every tile word + the two times; engine /ps4/tilecfg, tile 0.14; README updated. The design preview's tile tab still shows 0.13 – see the 24 Nov 1:40pm entry) 3 · PS4 tile · Only room colours and names come from `design/rooms.json`; every word, size and timing of the tile is in the
+- [ ] (PART DONE 24 Nov: `design/tile.json` is read – every tile word + the two times, engine /ps4/tilecfg, tile 0.14+, README updated. STILL TO DO: the design preview's tile tab is still a copy of tile 0.13 – port tile 0.15 into docs/design-preview/template.html) 3 · PS4 tile · Only room colours and names come from `design/rooms.json`; every word, size and timing of the tile is in the
   tile's code (round2-tv-launcher `ps4/tile/tile/main.cpp`), so the design team can't edit it. Please build "phase 2": the tile
   (or the engine's `/ps4/tile` answer) reads its wording and timings – idle / loading / ready / "What happens next" texts, how
   long the ready burst and the closing screen last – from a `design/tile.json`, with today's values as defaults, plain ASCII
