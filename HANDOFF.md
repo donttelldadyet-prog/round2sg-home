@@ -68,7 +68,7 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   Remove. Room profile stays the first row ("Vale profile", ticked by default, hidden when `mainok` is false). (24 Nov, design)
 - [x] (fixed 24 Nov 1:35pm, LIVE on today's page too, 50e9e0e; on the preview the link adds the typed phone number) 2 · member page · "Forgot your PIN? WhatsApp us" on Log in → https://wa.me/6591625767 with text "Hi Round2, I forgot my
   member PIN. My phone number is ". (24 Nov, design)
-- [x] (built 24 Nov 1:40pm: tile 0.14, round2-tv-launcher 2c91662, released on ps4-tile bc7cdcb – only Kaeden has the tile, it updates itself within ~30 min when no game is open. Cards show labels only, no prices (on hold). Built from the written spec – Karen's TV mockups weren't in the repo yet; will be matched when they land) 3 · PS4 tile · New scan screen (tier cards, "Pick up where you left off.", members/new guests under the QR, "Not saving
+- [x] (built 24 Nov 1:40pm: tile 0.14, round2-tv-launcher 2c91662, released on ps4-tile bc7cdcb – only Kaeden has the tile, it updates itself within ~30 min when no game is open. Cards show labels only, no prices (on hold). 1:50pm: tile 0.15 matched to Karen's mockups (round2-tv-launcher branch design-tv-tile, docs/ps4-tile-design.md + docs/img/tile-design) – released ps4-tile 34c726b) 3 · PS4 tile · New scan screen (tier cards, "Pick up where you left off.", members/new guests under the QR, "Not saving
   today? Press PS to play.", no version text) and a new signed-in screen ("Welcome back, <crew>" with the crew card, profiles
   list, progress bar), room-colour glow, calm motion. Wording/sizes in `design/membership/HANDOFF-membership-design.md`. (24 Nov, design)
 
@@ -177,6 +177,15 @@ off on that first while we discuss internally, build functions and fix concerns"
   ported yet on purpose: Karen's TV mockups are about to change the tile again; port after that (or use `ps4/tile/sim` pictures).
 - **System check:** new step "PS4 tile words + new member page" (ASCII, timings in range, where the words came from).
   systems.json: "New member page + new PS4 tile screens (24 Nov)" = test. Control centre 716fbb0.
+- **1:50pm – Karen's TV mockups landed** (round2-tv-launcher branch `design-tv-tile`: docs/ps4-tile-design.md + 3 pictures; not
+  merged – design's branch). **Tile 0.15** (ps4-helper c54752a, ps4-tile 34c726b) matches them: room name top-right (pixel font,
+  room colour), kicker in the pixel font, title/sub, divider + foot line (only when `s_foot` is set – the "$10 a month" line
+  waits for pricing), stack of 3 cards (back two = top strip only; front = chip, logo bottom-left, MEMBER bottom-right), QR
+  300 px with corners, "Members"/"New guests" in the room colour, full-width line + "Not saving today? Press [PS] to play." with
+  the PS boxed + book.round2.sg/m right. Signed in: tier kicker → "ROUND2 CREW" (no tiers yet), card with logo top-right + crew
+  name + CREW SINCE (no VALID TO yet), profiles as plain rows (name left, Ready/Loading/Next right, thin lines), thin bar full
+  width + "n of 3 profiles ready". Kept from the owner's 21 Nov ask (not in the mockup): rows light up in order, "Player 1" turns
+  into the member's name, a shine moves over the row being loaded. design/tile.json `s_ps` now has `[PS]` (a word in [ ] gets a box).
 - **Next:** owner + Karen try `/m?v=2` (on Kaeden: scan the tile) → switch `/m` to v2 for every room (one line in the route);
   match Karen's TV mockups when pushed; pricing when the owners decide (tier, join + expiry per crew, payment, Extend).
   Helper 1.1.152 (two crews) still waits for the owner's OK – tile 0.14 doesn't need it.
