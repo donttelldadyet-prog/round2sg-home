@@ -160,6 +160,7 @@ body{background:linear-gradient(180deg,#0d0b13 0%,#08070c 55%,#060509 100%)}
   linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.35)) 0 35%/100% 1px no-repeat,
   linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.35)) 0 65%/100% 1px no-repeat,
   linear-gradient(135deg,#5a5962,#3a3940 55%,#4b4a52)}
+<<<<<<< ours
 
 /* ---- Status badge (25 Nov 2026) ------------------------------------------------------------------------------------------
    Look from Spectrum UI's "Status Badge", dark variant (ui.spectrumhq.in, github.com/arihantcodes/spectrum-ui, Apache-2.0),
@@ -186,3 +187,49 @@ body{background:linear-gradient(180deg,#0d0b13 0%,#08070c 55%,#060509 100%)}
 .cp{width:30px;height:22px;border-radius:4px;opacity:.75}
 .cn{font-family:'Chakra Petch',system-ui,sans-serif!important;font-weight:600;font-size:16px;letter-spacing:.16em;text-transform:uppercase;background:linear-gradient(180deg,#fff,#b9b5c4);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .cs{font-size:8.5px;letter-spacing:.28em;opacity:.6}
+=======
+/* 25 Nov 2026 design – Join screen "hero + slide-up panel" (Karen's references): logo and the tilted crew card sit on the
+   room-colour glow at the top; a rounded dark panel slides up with the headline, phone number and Continue; pill-shaped
+   fields and buttons; the Join / Log in switch sits at the bottom of the panel. Layout only – no ids, words or order of
+   questions changed (flex order + display:contents). */
+main{overflow:hidden;min-height:100vh;min-height:100dvh;padding-bottom:0}
+#out{display:flex;flex-direction:column;position:relative;z-index:0;padding-bottom:40px}
+#fJ,#j1{display:contents}
+#out>*,#j1>*,#fJ>*{position:relative}
+#out .logo{order:1}
+#out .kick{order:2}
+#j1>div:first-child{display:none}
+#j1 .ccard{order:3;max-width:250px;width:100%;margin:30px auto 38px}
+#j1 .ccard .cd{transform:rotate(-4deg)}
+#out h1{order:4;margin:0;padding-top:34px;font-size:26px}
+#out h1::before{content:"";position:absolute;z-index:-1;left:-20px;right:-20px;top:0;height:200vh;background:#141219;border-radius:28px 28px 0 0;border-top:1px solid rgba(255,255,255,.07);box-shadow:0 -14px 34px rgba(0,0,0,.4)}
+#out h1::after{content:"";position:absolute;top:12px;left:50%;width:36px;height:4px;margin-left:-18px;border-radius:2px;background:rgba(244,241,251,.18)}
+#j2,#fL{order:5}
+#j1 .sub{order:5;text-align:left;margin:8px 0 6px}
+#j1 label.lb{order:6}
+#jp{order:7}
+#jxw{order:8}
+#e1{order:9}
+#jnext{order:10}
+#out .tabs{order:11;margin:22px 0 0;border-radius:26px}
+#out .tabs button,#out .tabs .pill{border-radius:22px}
+.tex{background-image:radial-gradient(color-mix(in srgb,var(--ac) 55%,transparent) 1px,transparent 1.5px);background-size:9px 9px;opacity:.5}
+input.fld{border-radius:26px;padding:12px 18px}
+.btn{border-radius:26px}
+#out .logo{align-self:flex-start;width:auto}
+#j1>div:first-child{display:none!important}
+#out:has(#fJ[hidden]) h1{margin-top:44px}
+/* 25 Nov 2026 12:10am design – buttons like Karen's "Welcome" reference: one white pill for the main action (Continue /
+   Log in), and right under it one dark pill for the other way in (the Join / Log in switch shows only the option you're
+   NOT on – "Log in" while joining, "Join" while logging in). Same buttons and ids, look only. */
+#out .btn{height:54px;padding:0;background:#f4f1fb;color:#09080d;font-size:16px;font-weight:600;margin-top:18px}
+#out .btn:active{transform:scale(.98);background:#dcd8e6}
+#out .tabs{background:none;border:0;padding:0;margin:10px 0 0;gap:0}
+#out .tabs .pill,#out .tabs button.on{display:none}
+#out .tabs button{height:54px;padding:0;border-radius:27px;background:#26252c;color:#f4f1fb;font-size:16px;font-weight:600}
+#out .tabs button:active{background:#302f37}
+#e1,#e3{min-height:0;margin:6px 0 0}
+#j1 .ccard .cd{transform:none}
+#jnext,#lb{margin-top:40px}
+#out #jnext,#out #lb{margin-top:44px}
+>>>>>>> theirs
