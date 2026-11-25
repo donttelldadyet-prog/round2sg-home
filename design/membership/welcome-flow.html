@@ -101,10 +101,12 @@ body{margin:0;background:#16141b;color:#f4f1fb;font-family:CP,system-ui,sans-ser
 .nl li:last-child{border-bottom:1px solid rgba(255,255,255,.08)}
 .nl span{font-family:PS;font-size:9px;color:var(--ac);letter-spacing:.1em;flex:none;width:22px}
 .nl b{display:block;font-size:16px;font-weight:600;color:#f4f1fb;margin-bottom:2px}
-.pr{text-align:center;margin:26px 0 18px}
-.pr b{display:block;font-size:46px;font-weight:600;letter-spacing:-.03em;line-height:1}
-.pr span{display:block;font-size:16px;color:#f4f1fb;margin-top:8px}
-.pr small{display:block;font-size:14px;color:#8f88a3;margin-top:2px}
+/* Apple-style subscription row (like the App Store subscribe sheet): name left, price right, grey details under each */
+.pr{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:22px 0 14px;padding:14px 16px;border-radius:14px;background:#17151d}
+.pr b{display:block;font-size:17px;font-weight:600;letter-spacing:-.01em;color:#f4f1fb}
+.pr span{display:block;font-size:13px;color:#8f88a3;margin-top:2px}
+.pr .pv{text-align:right}
+.pr .pv b{font-size:20px}
 .stp{display:flex;gap:6px;margin-top:22px}.stp i{flex:1;height:3px;border-radius:2px;background:rgba(244,241,251,.14)}.stp i.on{background:var(--ac)}
 .lb{display:block;font-size:13px;color:#bdb5d3;margin:22px 0 8px}
 .fd{display:flex;align-items:center;height:56px;border-radius:28px;background:#15131b;border:1px solid rgba(255,255,255,.09);padding:0 8px 0 20px;transition:border-color .2s}
@@ -170,7 +172,7 @@ body{margin:0;background:#16141b;color:#f4f1fb;font-family:CP,system-ui,sans-ser
   <li><span>04</span><div><b>Scan and load</b>Scan the QR, pick your profile and play.</div></li>
  </ol>
  <div class="grow"></div>
- <div class="pr"><b>$20</b><span>for your first 2 months</span><small>then $10 a month</small></div>
+ <div class="pr"><div><b>Round2 Membership</b><span>First 2 months</span></div><div class="pv"><b>$20</b><span>then $10/mo.</span></div></div>
  <button class="b1" data-go="s-join">Join Round2</button>
 </section>
 
