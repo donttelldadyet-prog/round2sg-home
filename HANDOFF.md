@@ -5,7 +5,7 @@
 > marble game with a blop-blop finish, SAVE POINT, Create / Load my save, card that flips (+ a holographic 7/7 rooms stamp),
 > room passport, renew sheet, crew name that types onto the card, player edit with YOUR avatar library (Shuffle + Browse
 > all 1200), and a "Saves loaded" TV that switches on and drops the profiles in. Play it on your phone:
-> https://raw.githack.com/donttelldadyet-prog/round2sg-home/ecaf8c4399c9c9261783ed25eadcf0b08a3f109c/design/membership/welcome-flow.html
+> https://raw.githack.com/donttelldadyet-prog/round2sg-home/cbcdf4d37d8fdfbdecb19aae321ef971f0166a90/design/membership/welcome-flow.html
 > What changed + what to build: "Welcome flow v3" and "v2" at the top of DESIGN → FUNCTION CONCERNS below.
 > (Owner: delete this box once you've seen it.)
 
