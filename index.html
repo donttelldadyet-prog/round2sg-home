@@ -1267,7 +1267,8 @@ var q=0;new MutationObserver(function(){if(q)return;q=1;requestAnimationFrame(fu
 .r2-in>*{animation:r2mUp .8s cubic-bezier(.22,1,.36,1) both}
 .r2-in>*:nth-child(1){animation-delay:.10s}.r2-in>*:nth-child(2){animation-delay:.20s}.r2-in>*:nth-child(3){animation-delay:.32s}
 .r2-in>*:nth-child(4){animation-delay:.44s}.r2-in>*:nth-child(5){animation-delay:.56s}.r2-in>*:nth-child(n+6){animation-delay:.66s}
-.r2-in>h1{animation:r2mUp .8s cubic-bezier(.22,1,.36,1) .2s both,r2mFl 6s ease-in-out 1.2s infinite!important}
+.r2-in>h1{animation:r2mReveal .9s cubic-bezier(.22,1,.36,1) .2s both!important;translate:none!important}
+@keyframes r2mReveal{from{opacity:0;clip-path:inset(0 0 100% 0);transform:translateY(22px)}to{opacity:1;clip-path:inset(0 0 -10% 0);transform:none}}
 .r2-in>div:last-child>button,.r2-in>div:last-child>a{animation:r2mUp .8s cubic-bezier(.22,1,.36,1) both}
 .r2-in>div:last-child>:nth-child(1){animation-delay:.62s!important}.r2-in>div:last-child>:nth-child(2){animation-delay:.72s!important}
 nav[aria-label="Main menu"]>*{animation:r2mUp .8s cubic-bezier(.22,1,.36,1) both}
