@@ -40,6 +40,26 @@ phones) in this file or in design files.
 ## DESIGN → FUNCTION CONCERNS (design writes, function fixes and ticks – newest first)
 Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [ ] sev · screen · what's wrong – why – (date, who)`.
 
+**Welcome flow v2 – "Save point" (Karen, 25 Nov 2026 11:17pm: "push to live") – replaces the jelly pill + some words below**
+- [ ] 3 · member page /m · Same prototype file, updated: `design/membership/welcome-flow.html`
+  (https://raw.githack.com/donttelldadyet-prog/round2sg-home/main/design/membership/welcome-flow.html). Changes vs the spec below:
+  **Welcome:** the jelly pill is gone (owner didn't like it). Now a glass **save orb**: 7 glossy marbles, one per room colour
+  (R map), orbit it like a planet ring (behind/in front); one by one each arcs in like a drop (stretches, sparkle trail), lands
+  with a ripple + jelly squish, and the orb fills with the colour of the ROOM YOU SCANNED IN (--ac; Vale = pink), never the
+  marble colours. Guests can tap a marble to catch it. No text inside the orb (screen readers get "3 of 7 collected"). Full =
+  "press me": breathes + sonar rings; tapping it empties it and plays again (a little game – not a link). Curved text
+  **"SAVE POINT"** (was ROUND2 MEMBERS). Line: "7 rooms. One save. Pick up in any of them." Buttons **"Create my save"**
+  (white) / **"Load my save"** (dark) – every 2 s the words roll to **"Sign up"** / **"Log in"** and back (aria-labels say both;
+  still with Reduce Motion). **Why join:** CTA "Create my save" (was Build your crew); price row fixed. **Join:** title "Create
+  your save"; **country-code dropdown** (SG first, region, CN/HK/TW/JP/KR/IN/AU/NZ/UK/US/FR/DE/AE; box shows only "+65") –
+  SG = 8 digits, others 6–14 → FUNCTION: member accounts + WhatsApp PIN reset assume +65; store full E.164 numbers before
+  enabling non-SG codes. Same dropdown on Log in. **All screens:** one soft top glow in the room colour (dot grid removed).
+  **Crew card:** "CREW SINCE" and "VALID TO" as two label-over-date blocks; **tap the card → it flips** (WAAPI half-turns,
+  content swap) to a back with magnetic stripe, signature strip with a random handwritten line (Caveat font, OFL, inlined;
+  list in the file: "Sup homie", "GG, see you next round", "Press start to continue"…), "If found, return to 20 Haji Lane
+  #02-00" + logo. **Logged in:** "Hey, <crew name>"; the room's profile row shows that room's character face (crops of the
+  site's art_<room>.webp, 120px, in the room-colour circle) + "<Room> profile". Old pill version: git history. (25 Nov, design)
+
 **Status badges are in the repo (25 Nov 2026, owner's design session)**
 - [ ] 2 · member page · Show the status badges on the live page: `design/components/status-badge.css` (already inside
   `design/member-v2.css`), demo `design/components/status-badge.html`. Markup: `<span class="bd" data-st="…">words</span>`
