@@ -1,11 +1,12 @@
 # Round2 HANDOFF – shared by the owner, the admin/design team and every Claude session
 
-> 📣 **MESSAGE FROM KAREN FOR THE OWNER (25 Nov 2026, 11:18pm) – Claude: show him this first thing, before anything else.**
-> **"Ur gf is cool, look at what she has done."** 🎮 The new member welcome flow v2 is done – save orb game, SAVE POINT,
-> Create / Load my save, card that flips to its back, room character faces, country codes. Play it on your phone:
-> https://raw.githack.com/donttelldadyet-prog/round2sg-home/32a2da22ced084f9540cd15101c10bb9ec77fc16/design/membership/welcome-flow.html
-> (if the /main/ link shows the old jelly pill, that's githack's cache – this pinned link is always the new one)
-> What changed + what to build: "Welcome flow v2 – Save point" at the top of DESIGN → FUNCTION CONCERNS below.
+> 📣 **MESSAGE FROM KAREN FOR THE OWNER (26 Nov 2026, 1:15am) – Claude: show him this first thing, before anything else.**
+> **"Ur gf is cool, look at what she has done. Ur gf made it. 😎"** 🎮 The member welcome flow is now **v3** – save-orb
+> marble game with a blop-blop finish, SAVE POINT, Create / Load my save, card that flips (+ a holographic 7/7 rooms stamp),
+> room passport, renew sheet, crew name that types onto the card, player edit with YOUR avatar library (Shuffle + Browse
+> all 1200), and a "Saves loaded" TV that switches on and drops the profiles in. Play it on your phone:
+> https://raw.githack.com/donttelldadyet-prog/round2sg-home/6084f89913554caf43981ccfc95f74d706d7151c/design/membership/welcome-flow.html
+> What changed + what to build: "Welcome flow v3" and "v2" at the top of DESIGN → FUNCTION CONCERNS below.
 > (Owner: delete this box once you've seen it.)
 
 ## READ FIRST – rules for everyone (owner, design, every Claude)
@@ -47,6 +48,22 @@ phones) in this file or in design files.
 
 ## DESIGN → FUNCTION CONCERNS (design writes, function fixes and ticks – newest first)
 Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [ ] sev · screen · what's wrong – why – (date, who)`.
+
+**Welcome flow v3 (Karen, 26 Nov 2026 1:15am: "send this latest design to my bf") – adds to v2 below**
+- [ ] 3 · member page /m · Same file `design/membership/welcome-flow.html`. New since v2:
+  **Orb:** marbles burst out of the orb, comet tails, lean toward the finger, charge-up before diving, shockwave on landing,
+  ring speeds up per catch, last marble = slow big arc; full orb does 3 jelly "blop" bounces + liquid slosh, bubbles and a
+  holo scan line, then the breathing pulse (inner layer clipped with clip-path – iOS square-clip bug). Paused off-screen.
+  **Name your crew** (step 2): crew name letters land on a live card as you type; Create my save flips it to the back.
+  **Logged in:** "Hey, <Crew>!" (names title-cased); room passport (7 marbles = rooms played, current room ringed; all 7 =
+  holographic 7/7 ROOMS stamp slams onto the card) → FUNCTION: needs rooms-played per crew. **Renew** opens a sheet (1 month
+  $10 / 3 months $30 – drafts) → real payment. **Players:** tap a row (✏️) to edit name + picture; "Add a player" (max 4
+  players + the room profile = 5); "Remove from crew" asks first. Pictures = your avatar library (7 Lapy + 5 pack, Shuffle,
+  Browse all 1200; prototype loads them from round2-book.donttelldadyet.workers.dev/m/av/NNNN.png); no room characters for
+  players. **Load saves:** profiles fly off, then "Saves loaded" – TV powers on (CRT line), profiles drop in (5 fit), sparkle
+  burst, title reveal. TV not answering → message + Try again (needs a timeout from the TV). **Welcome back:** phone that
+  logged in before sees "Welcome back / Hey, <Crew>!" with Log in first (needs a remembered login). **Log in** page: "Load
+  your save" title/button; wrong PIN shakes. **Phone:** SG = 8 digits, overseas = any length. (26 Nov, design)
 
 **Welcome flow v2 – "Save point" (Karen, 25 Nov 2026 11:17pm: "push to live") – replaces the jelly pill + some words below**
 - [ ] 3 · member page /m · Same prototype file, updated: `design/membership/welcome-flow.html`
