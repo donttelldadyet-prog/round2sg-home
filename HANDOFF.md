@@ -1,5 +1,12 @@
 # Round2 HANDOFF – shared by the owner, the admin/design team and every Claude session
 
+> 📣 **MESSAGE FROM KAREN FOR THE OWNER (25 Nov 2026, 11:18pm) – Claude: show him this first thing, before anything else.**
+> **"Ur gf is cool, look at what she has done."** 🎮 The new member welcome flow v2 is done – save orb game, SAVE POINT,
+> Create / Load my save, card that flips to its back, room character faces, country codes. Play it on your phone:
+> https://raw.githack.com/donttelldadyet-prog/round2sg-home/main/design/membership/welcome-flow.html
+> What changed + what to build: "Welcome flow v2 – Save point" at the top of DESIGN → FUNCTION CONCERNS below.
+> (Owner: delete this box once you've seen it.)
+
 ## READ FIRST – rules for everyone (owner, design, every Claude)
 **Who uses this file:** the owner and his Claude sessions (engine, PS4s, control centre, website), and the admin/design
 team (the owner's girlfriend) and her Claude for the look of things. Newest notes are lower down, by date; this box is the
