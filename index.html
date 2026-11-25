@@ -1213,41 +1213,39 @@ var q=0;new MutationObserver(function(){if(q)return;q=1;requestAnimationFrame(fu
      each page gets one small moment. Plays once per page open; skipped when the phone asks for reduced motion. -->
 <style id="r2-motion">
 @media (prefers-reduced-motion:no-preference){
-/* 1 · slide in one by one */
+/* 1 · a calm, staggered reveal: soft fade, small rise, slight blur to sharp */
 .r2-in>*:not(.r2-p1),
-.r2-in>div>.r2-tile,.r2-in>div>.r2-lo,.r2-in ol>li,.r2-in>div:last-child>button,.r2-in>div:last-child>a{animation:r2mUp .5s cubic-bezier(.2,.8,.2,1) both}
-.r2-in>*:nth-child(1){animation-delay:.04s}.r2-in>*:nth-child(2){animation-delay:.11s}.r2-in>*:nth-child(3){animation-delay:.18s}
-.r2-in>*:nth-child(4){animation-delay:.25s}.r2-in>*:nth-child(5){animation-delay:.32s}.r2-in>*:nth-child(6){animation-delay:.39s}
-.r2-in>*:nth-child(n+7){animation-delay:.45s}
+.r2-in>div>.r2-tile,.r2-in>div>.r2-lo,.r2-in ol>li,.r2-in>div:last-child>button,.r2-in>div:last-child>a{animation:r2mUp .8s cubic-bezier(.16,1,.3,1) both}
+.r2-in>*:nth-child(1){animation-delay:.05s}.r2-in>*:nth-child(2){animation-delay:.12s}.r2-in>*:nth-child(3){animation-delay:.19s}
+.r2-in>*:nth-child(4){animation-delay:.26s}.r2-in>*:nth-child(5){animation-delay:.33s}.r2-in>*:nth-child(n+6){animation-delay:.4s}
 .r2-in>div>.r2-tile:nth-child(2),.r2-in>div>.r2-lo:nth-child(2),.r2-in ol>li:nth-child(2),.r2-in>div:last-child>:nth-child(2){animation-delay:.2s}
-.r2-in>div>.r2-tile:nth-child(3),.r2-in>div>.r2-lo:nth-child(3),.r2-in ol>li:nth-child(3),.r2-in>div:last-child>:nth-child(3){animation-delay:.28s}
-.r2-in>div>.r2-tile:nth-child(4),.r2-in>div>.r2-lo:nth-child(4),.r2-in>div:last-child>:nth-child(4){animation-delay:.36s}
+.r2-in>div>.r2-tile:nth-child(3),.r2-in>div>.r2-lo:nth-child(3),.r2-in ol>li:nth-child(3),.r2-in>div:last-child>:nth-child(3){animation-delay:.26s}
+.r2-in>div>.r2-tile:nth-child(4),.r2-in>div>.r2-lo:nth-child(4),.r2-in>div:last-child>:nth-child(4){animation-delay:.32s}
 .r2-in>div:nth-child(2)>.r2-tile{animation-delay:.3s!important}
-@keyframes r2mUp{from{opacity:0;translate:0 14px}to{opacity:1;translate:0 0}}
-/* 2 · buttons respond to touch */
-.r2m button,.r2m a,.r2-in button,.r2-in a{transition:scale .12s ease,filter .12s ease}
-.r2m button:active,.r2m a:active,.r2-in button:active,.r2-in a:active{scale:.95;filter:brightness(1.25)}
-/* 3 · one small moment per page */
-/* Start: headline boots up with a wipe */
-.r2-in>h1{animation:r2mWipe .9s steps(14,end) .15s both!important}
-@keyframes r2mWipe{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
-/* Rooms: the card slides in when you pick another character */
-.r2-tcard.r2m-swap{animation:r2mSwap .38s cubic-bezier(.2,.8,.2,1) both!important}
-@keyframes r2mSwap{from{opacity:.2;translate:26px 0}to{opacity:1;translate:0 0}}
-/* Loadout: tiles drop in like inventory items, then a light sweeps across */
-.r2-in>div>.r2-lo{animation-name:r2mDrop!important;position:relative;overflow:hidden}
-@keyframes r2mDrop{0%{opacity:0;translate:0 -18px}70%{opacity:1;translate:0 3px}100%{opacity:1;translate:0 0}}
-.r2-in>div>.r2-lo:after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.14),transparent);transform:skewX(-18deg);animation:r2mShine 1s ease-out .75s both;pointer-events:none}
-@keyframes r2mShine{from{left:-60%}to{left:130%}}
-/* How to: a line draws down linking the steps */
+@keyframes r2mUp{from{opacity:0;translate:0 8px;filter:blur(3px)}to{opacity:1;translate:0 0;filter:blur(0)}}
+/* 2 · buttons answer the touch, quietly */
+.r2m button,.r2m a,.r2-in button,.r2-in a{transition:scale .18s cubic-bezier(.16,1,.3,1),opacity .18s}
+.r2m button:active,.r2m a:active,.r2-in button:active,.r2-in a:active{scale:.98;opacity:.85}
+/* 3 · one quiet moment per page */
+/* Start: the headline rises out of its own line */
+.r2-in>h1{animation:r2mRise 1.1s cubic-bezier(.16,1,.3,1) .1s both!important}
+@keyframes r2mRise{from{clip-path:inset(0 0 100% 0);translate:0 18px}to{clip-path:inset(0 0 0 0);translate:0 0}}
+/* Rooms: the card cross-fades when you pick another character */
+.r2-tcard.r2m-swap{animation:r2mSwap .55s cubic-bezier(.16,1,.3,1) both!important}
+@keyframes r2mSwap{from{opacity:.35;filter:blur(2px)}to{opacity:1;filter:blur(0)}}
+/* Loadout: a slow, faint light passes over the tiles once */
+.r2-in>div>.r2-lo{position:relative;overflow:hidden}
+.r2-in>div>.r2-lo:after{content:"";position:absolute;top:0;bottom:0;left:-70%;width:50%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.06),transparent);animation:r2mShine 1.6s cubic-bezier(.4,0,.2,1) .7s both;pointer-events:none}
+@keyframes r2mShine{from{left:-70%}to{left:130%}}
+/* How to: a hairline draws down through the steps */
 .r2-in ol{position:relative}
-.r2-in ol:before{content:"";position:absolute;left:10px;top:22px;bottom:14px;width:2px;background:linear-gradient(var(--r2-accent,#F2C21B),transparent);transform-origin:top;animation:r2mLine 1s cubic-bezier(.3,.7,.2,1) .35s both}
+.r2-in ol:before{content:"";position:absolute;left:10px;top:24px;bottom:16px;width:1px;background:linear-gradient(rgba(244,241,251,.45),rgba(244,241,251,0));transform-origin:top;animation:r2mLine 1.4s cubic-bezier(.16,1,.3,1) .35s both}
 @keyframes r2mLine{from{transform:scaleY(0)}to{transform:scaleY(1)}}
-.r2-in ol>li>span:first-child{position:relative;z-index:1;background:inherit}
-/* Find us: the pin drops in and bounces once */
-.r2-in>a[href*="maps"]:first-of-type{position:relative;padding-left:26px!important}
-.r2-in>a[href*="maps"]:first-of-type:before{content:"";position:absolute;left:0;top:11px;width:20px;height:20px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23F2C21B' d='M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z'/%3E%3C/svg%3E") center/contain no-repeat;animation:r2mPin .8s cubic-bezier(.3,.8,.3,1) .35s both}
-@keyframes r2mPin{0%{opacity:0;translate:0 -26px}55%{opacity:1;translate:0 0}72%{translate:0 -7px}86%{translate:0 0}93%{translate:0 -2px}100%{translate:0 0}}
+.r2-in ol>li>span:first-child{position:relative;z-index:1}
+/* Find us: a small pin settles in beside the address */
+.r2-in>a[href*="maps"]:first-of-type{position:relative;padding-left:24px!important}
+.r2-in>a[href*="maps"]:first-of-type:before{content:"";position:absolute;left:0;top:13px;width:16px;height:16px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23F2C21B' d='M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z'/%3E%3C/svg%3E") center/contain no-repeat;opacity:.9;animation:r2mPin .9s cubic-bezier(.16,1,.3,1) .35s both}
+@keyframes r2mPin{from{opacity:0;translate:0 -8px}to{opacity:.9;translate:0 0}}
 }
 </style>
 <script>
