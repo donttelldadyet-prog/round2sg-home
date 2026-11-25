@@ -5765,7 +5765,7 @@ async function widgetSnap(env, hb) {
   let ms = null;
   try { const L = await hb.gmGet('__LIST__'), raw = L && L.link && L.link.raw;
     if (raw) ms = (JSON.parse(raw).links || []).filter((x) => x.data && x.data.status === 'approved' && +x.data.at > Date.now() - 20 * 60e3 && +x.data.at < d0 + 30 * 3600e3)
-      .map((x) => ({ r: String(x.data.room || ''), at: +x.data.at, k: String(x.data.kind || (/^R2/.test(x.key) ? 'auto' : 'guest')), ti: String(x.data.title || '').slice(0, 40), tv: x.data.onTv === 'yes' ? 1 : 0, id: String(x.data.id || ''), ak: x.data.ack !== false ? 1 : 0 }))
+      .map((x) => ({ r: String(x.data.room || ''), at: +x.data.at, k: String(x.data.kind || (/^R2/.test(x.key) ? 'auto' : 'guest')), ti: String(x.data.title || '').slice(0, 40), tx: String(x.data.text || '').slice(0, 400), fr: String(x.data.from || '').slice(0, 40), tv: x.data.onTv === 'yes' ? 1 : 0, id: String(x.data.id || ''), ak: x.data.ack !== false ? 1 : 0 }))   /* tx/fr (25 Nov, owner: "show the whole message details … on the context window") – the Mac board's room details */
       .sort((a, b) => a.at - b.at).slice(0, 60); } catch (e) {}
   const prev = ms ? null : await hb.kvGet('wsum');
   await hb.kvSet('wsum', { t: Date.now(), night: t, d0, ss, ms: ms || (prev && prev.ms) || [] });
@@ -5812,7 +5812,7 @@ async function widgetApi(env, u) {
     if (p0 && p0.t) r.ps4 = { on: now - p0.t < 12 * 60e3, g: p0.g || '' };
     /* (20 Nov, owner: "turn a different colour when acknowledged") – the last 15 min too, with the TV's OK (acks, from msgAck) */
     const AK = o.acks || {}, M = ((W.ms) || []).filter((m) => m.r === GM_ROOM[u0] && m.at > now - 15 * 60e3).slice(0, 5);
-    if (M.length) r.msgs = M.map((m) => ({ at: m.at, k: m.k, ti: m.ti, tv: m.tv, ok: m.id && AK[m.id] ? AK[m.id].t : 0, ak: m.ak === 0 ? 0 : 1 }));
+    if (M.length) r.msgs = M.map((m) => ({ at: m.at, k: m.k, ti: m.ti, tx: m.tx || '', fr: m.fr || '', tv: m.tv, ok: m.id && AK[m.id] ? AK[m.id].t : 0, ak: m.ak === 0 ? 0 : 1 }));
     /* turnover: from this guest's end (+15 min cleaning) to the next start */
     const prev = cur || cl; if (prev && nx) r.gap = Math.round((nx.s - prev.e) / 60e3);
     rooms.push(r);

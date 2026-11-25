@@ -191,6 +191,13 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 
 **LIVE since 30 Oct 2026, on `main`.** Work on `main` from now on (the `own-booking` branch is merged and retired). The website's Book screen loads `slots/?embed=1` inside itself; payment opens in a new tab.
 
+## ⭐ 25 Nov 2026, 3:35pm – Mac board: TV message text in the room details (engine, read-only)
+- Owner: "show the whole message details if guest have it on the context window". The board's /w answer now carries each
+  TV message's text (`tx`, up to 400 chars) and who it's from (`fr`) – taken from the message list the timers already keep
+  (`__LIST__`, read only). No new SimplyBook or Firebase requests; appears after the next widget snapshot (≤10 min).
+- Deployed from live b3fa9e9cd019 → **live 4ff3f14dd26b** (27 bindings, 3 crons checked). **Next deploy starts from live 4ff3f14dd26b.**
+- System check not run (needs the staff code) – nothing that books, pays or sends was touched.
+
 ## ⭐ 24 Nov 2026, 5:22pm – NEW MEMBER PAGE LIVE FOR EVERY ROOM
 Owner 5:21pm: "ok release them live". `/m` now serves `memPage2` (the new page) for every room; `/m?v=1` = the old `memPage`
 (fallback; one line in the route to swap back). Engine b3fa9e9c (27 bindings, 3 timers), Light check 20/3/0 before and after,
