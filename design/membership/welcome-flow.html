@@ -101,9 +101,13 @@ body{margin:0;background:#16141b;color:#f4f1fb;font-family:CP,system-ui,sans-ser
 .nl li:last-child{border-bottom:1px solid rgba(255,255,255,.08)}
 .nl span{font-family:PS;font-size:9px;color:var(--ac);letter-spacing:.1em;flex:none;width:22px}
 .nl b{display:block;font-size:16px;font-weight:600;color:#f4f1fb;margin-bottom:2px}
-.pr{display:flex;align-items:baseline;gap:10px;margin:0 2px 14px}
-.pr b{font-size:30px;font-weight:600;letter-spacing:-.02em}
-.pr span{font-size:14px;color:#8f88a3}
+.pr{display:grid;grid-template-columns:1fr 1fr;margin:0 0 12px;border-radius:20px;background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.02));box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+.pr>div{padding:14px 18px 15px;display:flex;flex-direction:column;gap:3px}
+.pr>div+div{border-left:1px solid rgba(255,255,255,.08)}
+.pr i{font-style:normal;font-family:PS;font-size:8px;letter-spacing:.2em;color:var(--ac)}
+.pr b{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.05;margin-top:4px}
+.pr>div+div b{color:#d9d3ea}
+.pr span{font-size:13px;color:#8f88a3}
 .stp{display:flex;gap:6px;margin-top:22px}.stp i{flex:1;height:3px;border-radius:2px;background:rgba(244,241,251,.14)}.stp i.on{background:var(--ac)}
 .lb{display:block;font-size:13px;color:#bdb5d3;margin:22px 0 8px}
 .fd{display:flex;align-items:center;height:56px;border-radius:28px;background:#15131b;border:1px solid rgba(255,255,255,.09);padding:0 8px 0 20px;transition:border-color .2s}
@@ -169,7 +173,7 @@ body{margin:0;background:#16141b;color:#f4f1fb;font-family:CP,system-ui,sans-ser
   <li><span>04</span><div><b>Scan and load</b>Scan the QR, pick your profile and play.</div></li>
  </ol>
  <div class="grow"></div>
- <div class="pr"><b>$20</b><span>for 2 months, then $10 a month</span></div>
+ <div class="pr"><div><i>START</i><b>$20</b><span>first 2 months</span></div><div><i>THEN</i><b>$10</b><span>a month</span></div></div>
  <button class="b1" data-go="s-join">Join for $20</button>
 </section>
 
