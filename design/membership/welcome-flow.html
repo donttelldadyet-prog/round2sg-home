@@ -145,19 +145,21 @@ body{margin:0;background:#16141b;color:#f4f1fb;font-family:CP,system-ui,sans-ser
 .padd{width:100%;text-align:left;font:inherit;color:#cfc9de;cursor:pointer;background:transparent;border:1.5px dashed rgba(255,255,255,.14)}
 .padd .av{background:transparent;border:1.5px dashed rgba(255,255,255,.25);font-family:inherit;font-size:18px}
 .pl .av img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
-.pprev{display:flex;justify-content:center;margin:12px 0 4px}
-.pprev .av{width:76px;height:76px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:PS;font-size:18px;color:#fff;overflow:hidden;box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 60%,transparent),0 0 24px color-mix(in srgb,var(--ac) 40%,transparent)}
+.pprev{display:flex;justify-content:center;margin:6px 0 0}
+.pprev .av{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:PS;font-size:18px;color:#fff;overflow:hidden;box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 60%,transparent),0 0 24px color-mix(in srgb,var(--ac) 40%,transparent)}
 .pprev .av img{width:100%;height:100%;object-fit:cover}
-.pgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:6px}
-.pbar{display:flex;justify-content:center;gap:22px;margin-top:12px}.pbar button,.pnav button{background:none;border:0;color:var(--ac);font:inherit;font-weight:600;font-size:14px;cursor:pointer;padding:6px}
+.pgrid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:6px}
+.pbar{display:flex;justify-content:center;gap:22px;margin-top:6px}.pbar button,.pnav button{background:none;border:0;color:var(--ac);font:inherit;font-weight:600;font-size:14px;cursor:pointer;padding:6px}
 .pnav{display:flex;justify-content:center;align-items:center;gap:16px;margin-top:4px;font-size:12px;color:#8f88a3}.pnav button{font-size:20px;line-height:1}
-.pgrid.many{grid-template-columns:repeat(6,1fr);gap:7px}
+.pgrid.many{grid-template-columns:repeat(6,1fr);gap:8px}
 .pgrid button{background:#22202a}
 .pbar[hidden],.pnav[hidden]{display:none}
 .pgrid button{aspect-ratio:1;border-radius:50%;border:0;padding:0;overflow:hidden;cursor:pointer;font-family:PS;font-size:10px;color:#fff;display:flex;align-items:center;justify-content:center;outline:2px solid transparent;outline-offset:2px;transition:outline-color .2s,transform .2s}
 .pgrid button img{width:100%;height:100%;object-fit:cover}
 .pgrid button.on{outline-color:var(--ac);transform:scale(1.06)}
-#psh{max-height:92%;overflow-y:auto}
+#psh{max-height:92%;overflow-y:auto;padding-bottom:0}
+#psh .lb{margin-top:12px}
+.pfoot{position:sticky;bottom:0;margin:10px -22px 0;padding:12px 22px 16px;background:linear-gradient(180deg,rgba(20,18,25,0),#141219 22%)}
 .oin{position:absolute;inset:0;border-radius:50%;overflow:hidden;clip-path:circle(50% at 50% 50%);-webkit-mask-image:-webkit-radial-gradient(white,black);transform:translateZ(0)}
 .tl{position:absolute;inset:0;width:300px;height:300px;z-index:2;pointer-events:none}
 .shock{position:absolute;left:68px;top:68px;width:164px;height:164px;border-radius:50%;border:2px solid color-mix(in srgb,var(--ac) 60%,#fff);box-shadow:0 0 18px color-mix(in srgb,var(--ac) 50%,transparent);pointer-events:none}
@@ -463,8 +465,8 @@ body{margin:0;background:#16141b;color:#f4f1fb;font-family:CP,system-ui,sans-ser
  <div class="pgrid" id="pgrid"></div>
  <div class="pbar"><button type="button" id="pshuf">🎲 Shuffle</button><button type="button" id="pbrw">Browse all 1200</button></div>
  <div class="pnav" id="pnav" hidden><button type="button" id="pprv" aria-label="Previous page">‹</button><span id="ppg">Page 1 of 50</span><button type="button" id="pnxt" aria-label="Next page">›</button></div>
- <button class="b1" id="psave" style="margin-top:16px">Save</button>
- <p class="fine"><a id="pdel">Remove from crew</a></p>
+ <div class="pfoot"><button class="b1" id="psave">Save</button>
+ <p class="fine" style="margin:8px 0 0"><a id="pdel">Remove from crew</a></p></div>
 </div>
 <div class="sheet" id="rsh" role="dialog" aria-modal="true" aria-labelledby="rsht">
  <i class="grab"></i>
@@ -669,7 +671,7 @@ window.orbAwake=function(){return cur==='s-wel'&&!document.hidden};
    if(p.t==='img'){b.innerHTML='<img loading="lazy" src="'+p.v+'" alt="">';b.querySelector('img').onerror=function(){if(!FAIL){FAIL=true;document.querySelector('.pbar').hidden=true;document.getElementById('pnav').hidden=true;grid.classList.remove('many');fillGrid(COL.map(function(c){return {t:'col',v:c}}))}}}else{b.style.background=p.v;b.textContent='Aa'}
    b.onclick=function(){pic=p;paintPrev()};grid.appendChild(b)});paintPrev()}
  function shuffle(){page=-1;document.getElementById('pnav').hidden=true;grid.classList.remove('many');var L=[],cur=pic&&pic.t==='img'?pic:null;if(cur)L.push(cur);function add(n){if(!L.some(function(x){return x.k===id(n)}))L.push(lib(n))}while(L.length<7)add(1+Math.floor(Math.random()*21));while(L.length<12)add(22+Math.floor(Math.random()*(N-21)));for(var i=L.length-1;i>(cur?1:0);i--){var j=(cur?1:0)+Math.floor(Math.random()*(i-(cur?1:0)+1)),t=L[i];L[i]=L[j];L[j]=t}fillGrid(L)}
- function browse(d){page=page<0?0:(page+d+50)%50;document.getElementById('pnav').hidden=false;grid.classList.add('many');document.getElementById('ppg').textContent='Page '+(page+1)+' of 50';var L=[];for(var i=1;i<=24;i++)L.push(lib(page*24+i));fillGrid(L)}
+ var PP=18,NP=Math.ceil(N/PP);function browse(d){page=page<0?0:(page+d+NP)%NP;document.getElementById('pnav').hidden=false;grid.classList.add('many');document.getElementById('ppg').textContent='Page '+(page+1)+' of '+NP;var L=[];for(var i=1;i<=PP&&page*PP+i<=N;i++)L.push(lib(page*PP+i));fillGrid(L)}
  document.getElementById('pshuf').onclick=shuffle;document.getElementById('pbrw').onclick=function(){browse(0)};document.getElementById('pprv').onclick=function(){browse(-1)};document.getElementById('pnxt').onclick=function(){browse(1)};
  nm.addEventListener('input',paintPrev);
  function open(r,isNew){row=r;document.getElementById('psht').textContent=isNew?'Add a player':'Edit player';document.getElementById('pdel').parentNode.hidden=!!isNew;document.getElementById('e5').textContent='';
