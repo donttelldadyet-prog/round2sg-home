@@ -110,6 +110,22 @@ body{margin:0;background:#16141b;color:#f4f1fb;font-family:CP,system-ui,sans-ser
 .tva{position:absolute;left:6px;right:6px;top:6px;height:124px;display:flex;align-items:center;justify-content:center;gap:7px;padding:0 10px;border-radius:14px;background:radial-gradient(circle,color-mix(in srgb,var(--ac) 30%,transparent),transparent 70%)}
 .tva img,.tva span{flex:none;width:34px;height:34px;font-size:11px;border-radius:50%;object-fit:cover;background:#2a2733;display:flex;align-items:center;justify-content:center;font-weight:600;box-shadow:0 0 0 2px color-mix(in srgb,var(--ac) 60%,#fff);animation:ppop .45s cubic-bezier(.2,1.6,.4,1) both}
 .tvb{position:absolute;inset:0;pointer-events:none}
+.tva{overflow:hidden}
+.tva::after{content:"";position:absolute;inset:0;border-radius:14px;pointer-events:none;background:repeating-linear-gradient(180deg,rgba(255,255,255,.06) 0 1px,transparent 1px 3px);animation:scanroll 6s linear infinite;mix-blend-mode:screen}
+@keyframes scanroll{to{background-position:0 60px}}
+#tvw.pwr .tva{animation:crt .6s cubic-bezier(.2,.8,.2,1) .15s both}
+@keyframes crt{0%{transform:scale(.04,.012);filter:brightness(5);opacity:1}40%{transform:scale(1,.012);filter:brightness(3.5)}70%{filter:brightness(1.6)}100%{transform:none;filter:none}}
+#tvw.pwr .tv{animation:tvon .6s ease-out .1s both,tvglow 1s ease-in-out 1.55s}
+@keyframes tvon{0%{opacity:.35}100%{opacity:1}}
+@keyframes tvglow{40%{filter:drop-shadow(0 0 16px currentColor)}}
+#tvw.pwr .tva img,#tvw.pwr .tva span{animation-name:drop,bobt;animation-duration:.55s,2.6s;animation-timing-function:cubic-bezier(.3,1.6,.5,1),ease-in-out;animation-iteration-count:1,infinite;animation-fill-mode:both,none}
+@keyframes drop{0%{transform:translateY(-90px) scale(.5);opacity:0}60%{opacity:1}100%{transform:none;opacity:1}}
+@keyframes bobt{50%{transform:translateY(-4px)}}
+#s-done.anim .dnh{animation:dnh .7s cubic-bezier(.2,1.3,.4,1) 1.45s both}
+@keyframes dnh{0%{opacity:0;transform:translateY(16px) scale(.92);letter-spacing:.2em;filter:blur(6px)}100%{opacity:1;transform:none;letter-spacing:normal;filter:none}}
+#s-done.anim .dnp{animation:dnp .6s ease-out 1.75s both}
+@keyframes dnp{0%{opacity:0;transform:translateY(8px)}100%{opacity:1;transform:none}}
+#s-done.anim .b1{animation:dnp .5s ease-out 2s both}
 .fly{position:fixed;z-index:50;border-radius:50%;pointer-events:none}
 .shb{position:absolute;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity .3s;z-index:20;border-radius:26px}
 .shb.on{opacity:1;pointer-events:auto}
@@ -430,8 +446,8 @@ body{margin:0;background:#16141b;color:#f4f1fb;font-family:CP,system-ui,sans-ser
 <section class="scr" id="s-done">
  <div class="dn">
   <div class="tvw" id="tvw"><svg class="tv" viewBox="0 0 220 150" aria-hidden="true"><rect x="6" y="6" width="208" height="124" rx="16" fill="none" stroke="currentColor" stroke-width="3"/><path d="M80 144h60" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg><div class="tva" id="tva"></div><div class="tvb" id="tvb"></div></div>
-  <h1 class="ttl c" style="font-size:34px;font-weight:600;margin-top:26px">Saves loaded</h1>
-  <p class="lead c">Go play, <span data-crewn>Night Owls</span>.<br>Your profiles are on the TV in <span data-rnn>Vale</span>.</p>
+  <h1 class="ttl c dnh" style="font-size:34px;font-weight:600;margin-top:26px">Saves loaded</h1>
+  <p class="lead c dnp">Go play, <span data-crewn>Night Owls</span>.<br>Your profiles are on the TV in <span data-rnn>Vale</span>.</p>
  </div>
  <div class="grow"></div><button class="b1" data-go="s-in">Done</button>
 </section>
@@ -632,11 +648,11 @@ document.getElementById('ldb').onclick=function(){var btn=this,s=[].slice.call(d
  function finale(){var tva=document.getElementById('tva');tva.innerHTML='';
   document.querySelectorAll('#pls .pl:not(.padd) .av').forEach(function(av,k){var r=av.getBoundingClientRect(),c=av.cloneNode(true);c.classList.add('fly');c.style.left=r.left+'px';c.style.top=r.top+'px';c.style.width=r.width+'px';c.style.height=r.height+'px';c.style.margin=0;document.body.appendChild(c);
    c.animate([{transform:'none',opacity:1},{transform:'translate('+((k-1)*40)+'px,'+(-r.top-60)+'px) scale(.6)',opacity:.2}],{duration:620,delay:k*90,easing:'cubic-bezier(.5,0,.2,1)',fill:'forwards'}).onfinish=function(){c.remove()};
-   var t=av.querySelector('img')?'<img src="'+av.querySelector('img').src+'" alt="">':'<span>'+av.textContent+'</span>';setTimeout(function(){tva.insertAdjacentHTML('beforeend',t);var last=tva.lastElementChild;last.style.animationDelay=(.15+k*.15)+'s'},0)});
-  setTimeout(function(){go('s-done');btn.disabled=false;btn.textContent='Load saves on the TV';
+   var t=av.querySelector('img')?'<img src="'+av.querySelector('img').src+'" alt="">':'<span>'+av.textContent+'</span>';setTimeout(function(){tva.insertAdjacentHTML('beforeend',t);var last=tva.lastElementChild;last.style.animationDelay=(.7+k*.17)+'s, '+(1.6+k*.17)+'s';if(navigator.vibrate)setTimeout(function(){navigator.vibrate(6)},(700+k*170+250)+300)},0)});
+  setTimeout(function(){var tw=document.getElementById('tvw'),sd=document.getElementById('s-done');tw.classList.remove('pwr');sd.classList.remove('anim');void tw.offsetWidth;tw.classList.add('pwr');sd.classList.add('anim');go('s-done');btn.disabled=false;btn.textContent='Load saves on the TV';
    if(navigator.vibrate)setTimeout(function(){navigator.vibrate([10,120,10,120,20])},250);
    var b=document.getElementById('tvb');b.innerHTML='';if(!matchMedia('(prefers-reduced-motion: reduce)').matches)for(var j=0;j<36;j++){var p=document.createElement('i'),a=Math.random()*Math.PI*2,d=70+Math.random()*90,z=4+Math.random()*5;p.style.cssText='position:absolute;left:110px;top:68px;width:'+z+'px;height:'+z+'px;border-radius:50%;background:'+(j%3?'var(--ac)':R[RN[j%7]])+';box-shadow:0 0 8px currentColor';b.appendChild(p);
-    p.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:'translate('+Math.cos(a)*d+'px,'+Math.sin(a)*d+'px) scale(0)',opacity:0}],{duration:900+Math.random()*600,delay:300,easing:'cubic-bezier(.2,.7,.3,1)',fill:'both'})}},700)}};
+    p.animate([{transform:'translate(0,0) scale(0)',opacity:0},{transform:'translate(0,0) scale(1)',opacity:1,offset:.05},{transform:'translate('+Math.cos(a)*d+'px,'+Math.sin(a)*d+'px) scale(0)',opacity:0}],{duration:900+Math.random()*600,delay:1650,easing:'cubic-bezier(.2,.7,.3,1)',fill:'both'})}},700)}};
 /* 6 pause the orb when it's off screen */
 document.getElementById('tvf').onclick=function(){window.tvFail=true;this.textContent='TV will not answer next time ✓'};
 window.orbAwake=function(){return cur==='s-wel'&&!document.hidden};
