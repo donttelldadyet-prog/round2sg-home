@@ -48,12 +48,6 @@ phones) in this file or in design files.
 ## DESIGN → FUNCTION CONCERNS (design writes, function fixes and ticks – newest first)
 Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [ ] sev · screen · what's wrong – why – (date, who)`.
 
-**Avatar pictures may not load on the live member page (design session, 26 Nov 1:00am)**
-- [ ] 3 · member page /m · From outside, `https://book.round2.sg/m/av/list` and `/m/av/0001.png` redirect to `/find` (the booking
-  page), while `/m` itself works – looks like the Cloudflare route only covers `/m` + `/m/api`, not `/m/av/*`. If so the join/edit
-  picture picker gets no list and shows no Lapy pictures. Karen wants the player pictures in the new design to come from this
-  library (not the room characters). Please check on a phone; fix = add a route for `book.round2.sg/m/av/*`. (26 Nov, design)
-
 **Welcome flow v2 – "Save point" (Karen, 25 Nov 2026 11:17pm: "push to live") – replaces the jelly pill + some words below**
 - [ ] 3 · member page /m · Same prototype file, updated: `design/membership/welcome-flow.html`
   (https://raw.githack.com/donttelldadyet-prog/round2sg-home/main/design/membership/welcome-flow.html). Changes vs the spec below:
