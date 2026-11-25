@@ -1245,19 +1245,20 @@ var q=0;new MutationObserver(function(){if(q)return;q=1;requestAnimationFrame(fu
 .r2-in>div>.r2-lo{position:relative;overflow:hidden}
 .r2-in>div>.r2-lo:after{content:"";position:absolute;inset:0;background:linear-gradient(110deg,transparent 40%,rgba(255,255,255,.1) 50%,transparent 60%);background-size:300% 100%;animation:r2mSw 5s ease-in-out 1s infinite;pointer-events:none}
 @keyframes r2mSw{0%{background-position:120% 0}40%,100%{background-position:-20% 0}}
-/* 25 Nov 2026 design (Karen): "soft and calm" – same motion as v3, just gentler: longer, smoother easing, smaller moves, no overshoot */
-.r2-in{animation-duration:.7s!important;animation-timing-function:cubic-bezier(.4,0,.2,1)!important}
-@keyframes r2mPage{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
-@keyframes r2mPageB{from{opacity:0;transform:translateX(-16px)}to{opacity:1;transform:none}}
-@keyframes r2mUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.r2-in>div>.r2-tile,.r2-in>div>.r2-lo,.r2-in ol>li,.r2-in>div:last-child>button,.r2-in>div:last-child>a{animation-duration:.8s!important;animation-timing-function:cubic-bezier(.4,0,.2,1)!important}
-.r2m button,.r2m a,.r2-in button,.r2-in a{transition:scale .26s cubic-bezier(.4,0,.2,1)}
-.r2m button:active,.r2m a:active,.r2-in button:active,.r2-in a:active{scale:.985}
-.r2m-rp{opacity:.16;animation-duration:.9s}
-.r2-tcard{transition:transform .6s cubic-bezier(.4,0,.2,1)}
-.r2-tile{transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .3s ease,filter .3s ease}
-.r2-tile:hover{transform:translateY(-2px) scale(1.03)}
-@keyframes r2mFl{0%,100%{translate:0 0}50%{translate:0 -3px}}
+/* 25 Nov 2026 design (Karen): "soft and calm" v2 – v1 felt stiff (slow-start easing, too little travel). Now: starts at once and
+   glides to a soft stop (ease-out-quint), fuller travel, buttons settle back with a tiny spring. */
+.r2-in{animation-duration:.75s!important;animation-timing-function:cubic-bezier(.22,1,.36,1)!important}
+@keyframes r2mPage{from{opacity:0;transform:translateX(28px)}to{opacity:1;transform:none}}
+@keyframes r2mPageB{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
+@keyframes r2mUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.r2-in>div>.r2-tile,.r2-in>div>.r2-lo,.r2-in ol>li,.r2-in>div:last-child>button,.r2-in>div:last-child>a{animation-duration:.8s!important;animation-timing-function:cubic-bezier(.22,1,.36,1)!important}
+.r2m button,.r2m a,.r2-in button,.r2-in a{transition:scale .45s cubic-bezier(.34,1.4,.64,1)}
+.r2m button:active,.r2m a:active,.r2-in button:active,.r2-in a:active{scale:.965;transition-duration:.12s}
+.r2m-rp{opacity:.22;animation-duration:.8s}
+.r2-tcard{transition:transform .5s cubic-bezier(.22,1,.36,1)}
+.r2-tile{transition:transform .45s cubic-bezier(.34,1.3,.64,1),opacity .3s ease,filter .3s ease}
+.r2-tile:hover{transform:translateY(-4px) scale(1.05)}
+@keyframes r2mFl{0%,100%{translate:0 0}50%{translate:0 -5px}}
 /* How to: the step numbers pop in one after another */
 .r2-in ol>li>span:first-child{display:inline-block;animation:r2mPop .5s cubic-bezier(.2,.8,.2,1) both}
 .r2-in ol>li:nth-child(1)>span:first-child{animation-delay:.3s}.r2-in ol>li:nth-child(2)>span:first-child{animation-delay:.36s}
