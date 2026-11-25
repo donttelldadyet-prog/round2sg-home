@@ -68,7 +68,7 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   app/registry/status-badge), dark variant, rebuilt in plain CSS + Lucide icons – the page isn't React, so copy the CSS from the prototype
   (`.bd`, `.ok/.wn/.er/.ld/.ex`), don't run their installer. Spectrum UI also has a Claude Code connector:
   `claude mcp add spectrum-ui -- npx -y @spectrumui/mcp` (needs spectrumhq.in reachable). Needs: member expiry date for the badges.
-- [ ] 1 · member page /m · Until the flow above is built: a CSS-only restyle of today's page is on preview branch `design-sheet7`
+- [x] (LIVE 25 Nov 1:40pm, member-v2.css) 1 · member page /m · Until the flow above is built: a CSS-only restyle of today's page (was preview `design-sheet7`) + the grown-up card type
   (`book.round2.sg/m?design=design-sheet7&room=vale` – card on the glow, slide-up panel, white main pill + dark "Log in"/"Join" pill).
   Not on main yet – Karen to say "live". Button word "Continue" would read better as "Join with phone number" (words are in the engine).
 
