@@ -160,7 +160,6 @@ body{background:linear-gradient(180deg,#0d0b13 0%,#08070c 55%,#060509 100%)}
   linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.35)) 0 35%/100% 1px no-repeat,
   linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.35)) 0 65%/100% 1px no-repeat,
   linear-gradient(135deg,#5a5962,#3a3940 55%,#4b4a52)}
-<<<<<<< ours
 
 /* ---- Status badge (25 Nov 2026) ------------------------------------------------------------------------------------------
    Look from Spectrum UI's "Status Badge", dark variant (ui.spectrumhq.in, github.com/arihantcodes/spectrum-ui, Apache-2.0),
@@ -180,14 +179,6 @@ body{background:linear-gradient(180deg,#0d0b13 0%,#08070c 55%,#060509 100%)}
 .bd[data-st=waiting],.bd:not([data-st]){--bd-i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 6v6l2 4'/%3E%3C/svg%3E")}
 @keyframes bd-spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.bd[data-st=loading]::before{animation:none}.bd{transition:none}}
-/* 25 Nov 2026 1:35pm design – card from the new welcome-flow prototype (owner: pixel name "looks like for toddler"):
-   fine metal type, slim chip, no dot grid. Same class names, look only. */
-.cd .dots{display:none}
-.tn{font:600 9px CP,'Chakra Petch',sans-serif;letter-spacing:.42em;color:rgba(255,255,255,.55)}
-.cp{width:30px;height:22px;border-radius:4px;opacity:.75}
-.cn{font-family:'Chakra Petch',system-ui,sans-serif!important;font-weight:600;font-size:16px;letter-spacing:.16em;text-transform:uppercase;background:linear-gradient(180deg,#fff,#b9b5c4);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
-.cs{font-size:8.5px;letter-spacing:.28em;opacity:.6}
-=======
 /* 25 Nov 2026 design – Join screen "hero + slide-up panel" (Karen's references): logo and the tilted crew card sit on the
    room-colour glow at the top; a rounded dark panel slides up with the headline, phone number and Continue; pill-shaped
    fields and buttons; the Join / Log in switch sits at the bottom of the panel. Layout only – no ids, words or order of
@@ -232,4 +223,10 @@ input.fld{border-radius:26px;padding:12px 18px}
 #j1 .ccard .cd{transform:none}
 #jnext,#lb{margin-top:40px}
 #out #jnext,#out #lb{margin-top:44px}
->>>>>>> theirs
+/* 25 Nov 2026 1:35pm design – card from the new welcome-flow prototype (owner: pixel name "looks like for toddler"):
+   fine metal type, slim chip, no dot grid. Same class names, look only. */
+.cd .dots{display:none}
+.tn{font:600 9px CP,'Chakra Petch',sans-serif;letter-spacing:.42em;color:rgba(255,255,255,.55)}
+.cp{width:30px;height:22px;border-radius:4px;opacity:.75}
+.cn{font-family:'Chakra Petch',system-ui,sans-serif!important;font-weight:600;font-size:16px;letter-spacing:.16em;text-transform:uppercase;background:linear-gradient(180deg,#fff,#b9b5c4);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.cs{font-size:8.5px;letter-spacing:.28em;opacity:.6}
