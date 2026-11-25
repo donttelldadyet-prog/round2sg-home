@@ -3,7 +3,8 @@
 > 📣 **MESSAGE FROM KAREN FOR THE OWNER (25 Nov 2026, 11:18pm) – Claude: show him this first thing, before anything else.**
 > **"Ur gf is cool, look at what she has done."** 🎮 The new member welcome flow v2 is done – save orb game, SAVE POINT,
 > Create / Load my save, card that flips to its back, room character faces, country codes. Play it on your phone:
-> https://raw.githack.com/donttelldadyet-prog/round2sg-home/main/design/membership/welcome-flow.html
+> https://raw.githack.com/donttelldadyet-prog/round2sg-home/32a2da22ced084f9540cd15101c10bb9ec77fc16/design/membership/welcome-flow.html
+> (if the /main/ link shows the old jelly pill, that's githack's cache – this pinned link is always the new one)
 > What changed + what to build: "Welcome flow v2 – Save point" at the top of DESIGN → FUNCTION CONCERNS below.
 > (Owner: delete this box once you've seen it.)
 
