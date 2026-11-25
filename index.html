@@ -1271,6 +1271,39 @@ document.addEventListener('pointermove',lean);document.addEventListener('pointer
 var lk='';new MutationObserver(function(){var c=document.querySelector('.r2-tcard');if(!c||!c.offsetParent)return;var k=(c.className.match(/r2-k-\w+/)||[''])[0];if(k&&lk&&k!==lk){c.classList.remove('r2m-swap');void c.offsetWidth;c.classList.add('r2m-swap')}lk=k}).observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['class'],childList:true});
 })();
 </script>
+<style id="r2-soft">
+/* Phone: soft, rounded "bubble" feel for buttons and cards to match the new menu bar (owner 25 Nov, test) */
+.r2m{--sf:#15111f;--sfb:rgba(255,255,255,.08)}
+/* every button and link button becomes a pill */
+.r2m section .r2-in button,.r2m section .r2-in a[style*="border"],.r2m section .r2-in a[style*="background"],.r2m button[style*="clip-path"],.r2m .r2-booknudge{border-radius:999px!important;clip-path:none!important}
+/* header BOOK: pill, a touch of glow */
+.r2m button[style*="clip-path"],.r2m .r2-booknudge{padding-left:20px!important;padding-right:20px!important;box-shadow:0 0 18px -4px rgba(244,241,251,.45)}
+/* outlined buttons: soft glass instead of a hard frame */
+.r2m section .r2-in button[style*="transparent"],.r2m section .r2-in a[style*="transparent"],.r2m section .r2-in button[style*="background: none"],.r2m section .r2-in a[style*="background: none"]{background:rgba(255,255,255,.05)!important;border-color:rgba(255,255,255,.14)!important;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.r2m .r2-cta{overflow:hidden}
+/* cards */
+.r2m .r2-in>button[aria-label^="Early bird"]{border-radius:20px!important;background:rgba(21,17,31,.82)!important;border:1px solid var(--sfb)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.r2m .r2-tcard{border-radius:22px!important;border-width:1px!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 10px 30px -14px color-mix(in srgb,var(--rc) 60%,transparent)}
+.r2m .r2-ttier{border-radius:999px!important;padding:2px 9px!important}
+.r2m .r2-photobtn{border-radius:18px!important}
+.r2m .r2-lo{border-radius:20px!important;border:1px solid var(--sfb)!important;background:var(--sf)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)}
+.r2m .r2-lo span[style*="border"]{border-radius:999px!important;padding-left:9px!important;padding-right:9px!important}
+.r2m section .r2-in span[style*="background: rgb(0, 150, 69)"],.r2m section .r2-in span[style*="#009645"]{border-radius:999px!important;padding-left:7px!important;padding-right:7px!important}
+/* sheets and pop-ups */
+.r2m .r2-gal button[style*="border"],.r2m .r2-gal>div>button{border-radius:999px!important}
+.r2m .r2-gal>button[aria-label^="Close"]{border-radius:50%!important}
+.r2m .r2-gal span[style*="background"]{border-radius:999px!important;padding-left:8px!important;padding-right:8px!important}
+.r2m .r2-gal div[style*="rgba(255, 255, 255, 0.06)"]{border-radius:16px!important}
+.r2m .r2-gal img[style*="border"],.r2m .r2-gal button>img{border-radius:12px}
+.r2m .r2-gal button[style]:has(img){border-radius:12px!important}
+.r2m .r2-scroll table{border-collapse:separate;border-spacing:0}
+#r2-st .bx{border-top:0!important;border-radius:26px 26px 0 0;box-shadow:0 -1px 0 rgba(255,255,255,.08),0 -20px 50px -20px rgba(242,194,27,.35)}
+#r2-st .bx:before{content:"";display:block;width:40px;height:4px;border-radius:4px;background:rgba(255,255,255,.2);margin:-10px auto 14px}
+#r2-st .x{border-radius:50%!important;background:rgba(255,255,255,.05)!important;border-color:rgba(255,255,255,.14)!important}
+#r2-st .pn{clip-path:none!important;border-radius:18px;overflow:hidden;border:1px solid rgba(255,255,255,.07)}
+#r2-st .pn:before{width:3px!important;top:14px!important;bottom:14px!important;border-radius:3px}
+#r2-st .lvb,#r2-st .lvb *{border-radius:999px}
+</style>
 <style id="r2-nav">
 /* Phone menu bar (owner 25 Nov, test): two looks to compare – "glow" (slim dark pill, each tab glows in its own colour, a dot slides under it)
    and "bubble" (solid bar, a round bubble rises out of the bar under the tab you're on and rolls to the next). Pick with ?nav=glow / ?nav=bubble. */
@@ -1305,7 +1338,7 @@ var lk='';new MutationObserver(function(){var c=document.querySelector('.r2-tcar
 </style>
 <script>
 /* Phone menu bar: pick the look, move the dot/bubble to the current tab, tint it (reads the page's own state, changes nothing else) */
-(function(){var v='glow';try{var q=new URLSearchParams(location.search).get('nav');if(q==='bubble'||q==='glow')v=q}catch(e){}
+(function(){var v='bubble';try{var q=new URLSearchParams(location.search).get('nav');if(q==='bubble'||q==='glow')v=q}catch(e){}
 var TC=['#F2C21B',null,'#9B7BFF','#2ED3B0','#FF5C7A'];
 function sync(){[].slice.call(document.querySelectorAll('.r2m nav[aria-label="Main menu"]')).forEach(function(nav){nav.classList.add('r2n-'+v);[].slice.call(nav.querySelectorAll(':scope>button')).forEach(function(b,i){if(b.getAttribute('aria-current')==='true'){nav.style.setProperty('--navi',i);var c=b.style.backgroundColor;if(c)nav.style.setProperty('--navc',c);nav.style.setProperty('--dc',TC[i]||c||'#fff')}})})}
 new MutationObserver(sync).observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['aria-current','style'],childList:true});sync();})();
