@@ -52,8 +52,8 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 
 **New member welcome flow (design, 25 Nov 2026 12:35am – Karen + owner agreed on Telegram: "before this page need clean UI, just 2 simple buttons; when join show the benefits; then login just focus login")**
 - [ ] 3 · member page /m · Build the new flow from the clickable prototype `design/membership/welcome-flow.html`
-  (open: https://raw.githack.com/donttelldadyet-prog/round2sg-home/main/design/membership/welcome-flow.html): **1 Welcome** – pixel swirl in the
-  room colour that reacts to touch (drag scatters/spins it, tap = burst; still with Reduce Motion), "Welcome", "Pick up where you left off, in
+  (open: https://raw.githack.com/donttelldadyet-prog/round2sg-home/main/design/membership/welcome-flow.html): **1 Welcome** – pixel GLOBE (Karen 25 Nov 12:35 – replaces the swirl): ~1100 dots
+  on a turning sphere, white at the front → room colour at the back; drag spins it, tap = dots ripple out (still with Reduce Motion), "Welcome", "Pick up where you left off, in
   any Round2 room.", white pill "Join Round2", dark pill "Log in", small "Don't want to save today? Press PS on the controller." → **2 Why join**
   (only after Join) – 4 benefit tiles (carry on any game / up to 4 players / crew card on the TV / scan and load), price line (draft: $20 for
   2 months, then $10 a month – Gold/Platinum still unset), white pill "Join for $20" → **3 Join** – phone only, "+65" shown in the field,
