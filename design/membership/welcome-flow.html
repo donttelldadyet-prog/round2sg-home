@@ -95,8 +95,9 @@ body{margin:0;background:#16141b;color:#f4f1fb;font-family:CP,system-ui,sans-ser
 .pp{margin-top:20px;padding:14px 14px 12px;border-radius:18px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
 .pph{display:flex;justify-content:space-between;align-items:baseline}
 .pph b{font-size:14px;font-weight:600;cursor:pointer}.pph span{font-size:12px;color:#8f88a3}
-.ppr{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;margin-top:12px}
-.ppi{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:0;padding:0;color:#8f88a3;font:inherit;font-size:9px;cursor:pointer;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ppr{overflow:visible;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;margin-top:12px}
+.ppi{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:0;padding:0;color:#8f88a3;font:inherit;font-size:9px;cursor:pointer;min-width:0;padding-top:6px}
+.ppi span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ppi i{width:22px;height:22px;border-radius:50%;border:1.5px dashed rgba(255,255,255,.22);transition:all .4s}
 .ppi.on i{border:0;background:radial-gradient(circle at 34% 30%,#fff 0 9%,color-mix(in srgb,var(--c) 55%,#fff) 22%,var(--c) 55%,color-mix(in srgb,var(--c) 60%,#000) 100%);box-shadow:0 0 10px var(--c)}
 .ppi.on{color:#cfc9de}
@@ -623,7 +624,7 @@ document.getElementById('lgo').onclick=function(){var e=document.getElementById(
   setCrew(v);memo(v);card.click();done=true;document.getElementById('mkhint').textContent='Saved! Tap the card to flip it back.';this.textContent='Load my save';if(navigator.vibrate)navigator.vibrate([10,60,16])}})();
 /* 2 room passport */
 (function(){var r=document.getElementById('ppr');
- function paint(pop){r.innerHTML='';var here=curRoom();RN.forEach(function(k){var b=document.createElement('button');b.className='ppi'+(VISITED.indexOf(k)>-1?' on':'')+(k===here?' here':'')+(pop===k?' pnew':'');b.style.setProperty('--c',R[k]);b.innerHTML='<i></i>'+cap(k);b.setAttribute('aria-label',cap(k)+(VISITED.indexOf(k)>-1?', played':', not played yet'));
+ function paint(pop){r.innerHTML='';var here=curRoom();RN.forEach(function(k){var b=document.createElement('button');b.className='ppi'+(VISITED.indexOf(k)>-1?' on':'')+(k===here?' here':'')+(pop===k?' pnew':'');b.style.setProperty('--c',R[k]);b.innerHTML='<i></i><span>'+cap(k)+'</span>';b.setAttribute('aria-label',cap(k)+(VISITED.indexOf(k)>-1?', played':', not played yet'));
   b.onclick=function(){document.getElementById('pps').textContent=VISITED.indexOf(k)>-1?'You\'ve played in '+cap(k)+'.':'Not played in '+cap(k)+' yet. Try it next time?'};r.appendChild(b)});
   document.getElementById('ppn').textContent=VISITED.length+' of 7 rooms';var all=VISITED.length===7,st=document.getElementById('stamp');
   if(all&&!st.classList.contains('on')){var sd=st.querySelector('.sdots');if(!sd.children.length)RN.forEach(function(k,i){var d=document.createElement('i'),a=i*Math.PI*2/7-Math.PI/2;d.style.setProperty('--c',R[k]);d.style.transform='translate('+(Math.cos(a)*27.5).toFixed(1)+'px,'+(Math.sin(a)*27.5).toFixed(1)+'px)';sd.appendChild(d)});st.classList.add('on');var cdd=document.getElementById('incard');setTimeout(function(){cdd.animate([{translate:'0 0'},{translate:'0 3px'},{translate:'0 -1px'},{translate:'0 0'}],{duration:260})},330);document.getElementById('pps').textContent='All 7 rooms played. Your card is stamped!';if(navigator.vibrate)navigator.vibrate([10,50,20])}
