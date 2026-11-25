@@ -55,8 +55,9 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   (open: https://raw.githack.com/donttelldadyet-prog/round2sg-home/main/design/membership/welcome-flow.html): **1 Welcome** – glossy JELLY PILL in the room colour with "II" (two white lines, like the logo) – Karen 25 Nov 12:50, replaces the swirl and
   the globe: centred in the space above "Welcome", gentle wobble + floor shadow, drag tilts it in 3D, tap squishes it (CSS only, no canvas; still with Reduce Motion); the whole welcome screen glows in the room colour from behind the globe, "ROUND2 MEMBERS" curves over it in the pixel font (SVG textPath), small kicker above "Welcome" removed, "Welcome" semi-bold (Karen 25 Nov 12:40), "Welcome", "Pick up where you left off, in
   any Round2 room.", white pill "Join Round2", dark pill "Log in", small "Don't want to save today? Press PS on the controller." → **2 Why join**
-  (only after Join) – 4 benefit tiles (carry on any game / up to 4 players / crew card on the TV / scan and load), price line (draft: $20 for
-  2 months, then $10 a month – Gold/Platinum still unset), white pill "Join for $20" → **3 Join** – phone only, "+65" shown in the field,
+  (only after Join; redesigned 25 Nov 12:55 – Karen: tiles looked AI-made) – room-colour glow with the crew card floating as the hero,
+  "Your games, saved in every room.", a numbered list 01–04 (pixel-font numbers, hairlines, no boxes/icons: carry on any game / up to 4
+  players / crew card on the TV / scan and load), then "$20 for 2 months, then $10 a month" (draft – Gold/Platinum unset) right above the white pill "Join for $20" → **3 Join** – phone only, "+65" shown in the field,
   claim-code link, Continue pinned at the bottom, "Already a member? Log in" → step 2 as today in the new look. **4 Log in** – phone + PIN,
   WhatsApp PIN link, Log in pinned at the bottom, "New here? Join Round2". Back buttons on 2–4. Owner thinks the swirl may exist as an
   open-source repo – fine to swap in if its licence allows. Words/prices are drafts. (25 Nov, design)
