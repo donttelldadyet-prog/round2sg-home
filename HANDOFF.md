@@ -49,6 +49,15 @@ phones) in this file or in design files.
 ## DESIGN → FUNCTION CONCERNS (design writes, function fixes and ticks – newest first)
 Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [ ] sev · screen · what's wrong – why – (date, who)`.
 
+**Booking confirmation alignment (Karen, 26 Nov 2026 6:40pm, phone screenshot of a Maximillion booking)**
+- [ ] 1 · "You're booked!" page (book.round2.sg, `worker/round2-book.js` ~line 3250 and the same card in `move/index.html` line 8) ·
+  The Name / Date / Time / Length / Guests / Paid / Ref rows look crooked: the small grey labels (13px) sit at the top of each
+  row while the values are bigger (Time is extra big, Ref is pixel font), so labels and values don't line up. Owner asked to align
+  them. Suggested CSS (both files): `dl{align-items:baseline;grid-template-columns:72px 1fr;row-gap:10px}` and give `.ref` a
+  line-height like the other values (`line-height:1.4`). Also: the three chips under it (FREE CHANGE / MOVES USED / STARTS IN)
+  wrap unevenly – `display:flex;flex-wrap:wrap;gap:8px` with equal heights would tidy them. – looks unpolished on the page
+  every guest sees right after paying – (26 Nov, design)
+
 **Welcome flow v3 extras (Karen, 26 Nov 2026 5:40pm; tilt light, easter eggs, NEW-room pop and shake-to-shuffle dropped 6pm)**
 - [ ] 3 · member page /m · Same file. **Long-press the orb** (0.5 s) = all marbles dive in at once. **Pull down to refresh**
   on the logged-in screen: a mini orb fills, badges re-check → FUNCTION: re-fetch status. **Card back** shows the crew's
