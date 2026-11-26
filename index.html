@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
-html,body{margin:0;height:100%;background:#06050a;overflow:hidden}
+html,body{margin:0;height:100%;background:#06050a;overflow:hidden;overscroll-behavior-y:none}
 #r2-stage{position:relative}
 .r2-desktop #r2-stage{position:absolute;left:50%;top:50%;width:1440px;height:900px;transform-origin:50% 50%}
 .r2-mobile body{overflow-x:hidden;overflow-y:auto}
@@ -197,10 +197,10 @@ html:not(.r2-picked) #r2-stage div[role="group"]{animation:r2pillglow 1.8s ease-
  function reset(){po.style.marginTop='-40px';po.style.opacity=0;fl.style.height=0}
  addEventListener('touchstart',function(e){if(busy||e.touches.length>1||!top()||e.target.closest('#r2-gp,[role="dialog"],input,textarea,select,video'))return;y0=e.touches[0].clientY;x0=e.touches[0].clientX;d=0;po.style.setProperty('--pc',C[Math.floor(Math.random()*7)])},{passive:true});
  addEventListener('touchmove',function(e){if(y0===null||busy)return;var t=e.touches[0];d=t.clientY-y0;
-  if(d<=0||!top()||Math.abs(t.clientX-x0)>d){y0=null;reset();return}
-  if(e.cancelable)e.preventDefault();var p=Math.min(1,d/90);po.style.marginTop=(-40+p*70)+'px';po.style.opacity=p;fl.style.height=(p*100)+'%';
+  if(d<=0||!top()||Math.abs(t.clientX-x0)>d+4){y0=null;reset();return}
+  if(e.cancelable)e.preventDefault();var p=Math.min(1,d/50);po.style.marginTop=(-40+p*70)+'px';po.style.opacity=p;fl.style.height=(p*100)+'%';
   if(p===1&&!po._b){po._b=1;if(navigator.vibrate)navigator.vibrate(6)}},{passive:false});
- addEventListener('touchend',function(){if(y0===null)return;y0=null;var ok=d>=90;po._b=0;d=0;
+ addEventListener('touchend',function(){if(y0===null)return;y0=null;var ok=d>=50;po._b=0;d=0;
   if(!ok){po.animate([{marginTop:po.style.marginTop,opacity:po.style.opacity},{marginTop:'-40px',opacity:0}],{duration:250});reset();return}
   busy=true;po.classList.add('spin');
   setTimeout(function(){try{dispatchEvent(new Event('resize'))}catch(_){}
