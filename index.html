@@ -176,10 +176,32 @@ html:not(.r2-picked) #r2-stage div[role="group"]{animation:r2pillglow 1.8s ease-
 .r2-where{position:absolute;left:6px;top:6px;z-index:2;padding:3px 7px;background:var(--r2-accent);color:#0b0914;font:700 10px/1.1 'Chakra Petch',sans-serif;letter-spacing:.03em;pointer-events:none;max-width:calc(100% - 12px)}
 .r2-else>.r2-gt{filter:saturate(.75) brightness(.85)}
 .r2-resg>.r2-gw>div:nth-child(2){min-height:0!important;margin-top:8px!important;font-size:13px!important}
+
+/* LOADING SCREEN (Karen 27 Nov): same glass orb as the member page's save point, with a 7-room loading ring instead of gems */
+#r2-ld{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:radial-gradient(70% 50% at 50% 45%,#16111f 0%,#06050a 70%);transition:opacity .5s ease,visibility .5s;font-family:'Chakra Petch',system-ui,sans-serif}
+#r2-ld.out{opacity:0;visibility:hidden;pointer-events:none}
+#r2-ld .w{position:relative;width:300px;height:300px;display:flex;align-items:center;justify-content:center}
+#r2-ld .gl{position:absolute;left:50%;top:50%;width:230px;height:230px;margin:-115px;border-radius:50%;filter:blur(46px);opacity:.38;animation:r2ldc 7s linear infinite}
+@keyframes r2ldc{0%,100%{background:#E8436A}14%{background:#4DB848}28%{background:#F2C21B}43%{background:#7A5BE0}57%{background:#24B49A}71%{background:#E9E7EF}86%{background:#E0402F}}
+#r2-ld .orb{position:relative;width:164px;height:164px;border-radius:50%;overflow:hidden;background:linear-gradient(160deg,rgba(255,255,255,.16),rgba(255,255,255,.03) 60%);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.7),inset 0 0 0 1px rgba(255,255,255,.18),inset 0 -10px 30px rgba(0,0,0,.35),0 30px 60px -20px rgba(0,0,0,.7);animation:r2ldb 2.4s ease-in-out infinite}
+@keyframes r2ldb{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}
+#r2-ld .sh{position:absolute;left:24px;top:16px;width:56px;height:24px;border-radius:50%;background:rgba(255,255,255,.42);filter:blur(5px);transform:rotate(-28deg)}
+#r2-ld .sp{position:absolute;inset:0}
+#r2-ld .sp i{position:absolute;left:50%;top:50%;width:12px;height:12px;margin:-6px;border-radius:50%;background:var(--c);box-shadow:0 0 12px var(--c);transform:rotate(calc(var(--n) * 51.43deg)) translateY(-40px);opacity:.28;animation:r2ldd 1.05s linear infinite;animation-delay:calc(var(--n) * .15s - 1.05s)}
+@keyframes r2ldd{0%{opacity:1;scale:1.15}60%{opacity:.28;scale:.8}100%{opacity:.28;scale:.8}}
+#r2-ld .arc{position:absolute;inset:0;width:300px;height:300px;overflow:visible}
+#r2-ld .arc text{font-family:'Press Start 2P',monospace;font-size:10px;letter-spacing:.32em;fill:#f4f1fb;opacity:.85}
+#r2-ld.done .sp i{animation:none;opacity:1;scale:1}
+#r2-ld.done .orb{animation:r2ldp .7s cubic-bezier(.3,1.6,.5,1);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.7),inset 0 0 0 1px rgba(255,255,255,.25),inset 0 -10px 30px rgba(0,0,0,.3),0 0 60px rgba(255,255,255,.2),0 30px 60px -20px rgba(0,0,0,.7)}
+@keyframes r2ldp{0%{transform:scale(1)}35%{transform:scale(1.12)}65%{transform:scale(.97)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){#r2-ld .gl,#r2-ld .orb,#r2-ld .sp i{animation:none}#r2-ld .sp i{opacity:.6}}
 </style>
 <style id="r2-css"></style>
 </head>
 <body>
+<div id="r2-ld" role="status" aria-label="Loading Round2"><div class="w"><div class="gl"></div><svg class="arc" viewBox="0 0 300 300" aria-hidden="true"><path id="r2ldp" d="M 16 150 A 134 134 0 0 1 284 150" fill="none"/><text><textPath href="#r2ldp" startOffset="50%" text-anchor="middle">NOW LOADING</textPath></text></svg><div class="orb"><div class="sp"><i style="--n:0;--c:#E8436A"></i><i style="--n:1;--c:#4DB848"></i><i style="--n:2;--c:#F2C21B"></i><i style="--n:3;--c:#7A5BE0"></i><i style="--n:4;--c:#24B49A"></i><i style="--n:5;--c:#E9E7EF"></i><i style="--n:6;--c:#E0402F"></i></div><div class="sh"></div></div></div></div>
+<script>/* loading screen: stays at least 1.2s, goes when the page has loaded (or after 7s at most) */
+(function(){var t0=Date.now(),gone=0;function go(){if(gone)return;gone=1;var l=document.getElementById('r2-ld');if(!l)return;setTimeout(function(){l.classList.add('done');setTimeout(function(){l.classList.add('out');setTimeout(function(){l.remove()},600)},650)},Math.max(0,1200-(Date.now()-t0)))}if(document.readyState==='complete')go();else addEventListener('load',go);setTimeout(go,7000)})();</script>
 <div id="r2-stage"></div>
 <script>
 /* ===== ROUND2 COLOURS: change these to match your LEDs ===== */
