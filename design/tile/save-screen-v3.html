@@ -68,7 +68,7 @@ body{margin:0;background:#0b0a0f;color:#f4f1fb;font-family:CP,system-ui,sans-ser
 /* signed in */
 #s2 .L,#s3 .L{position:absolute;left:130px;top:330px;width:620px}
 .cw{position:absolute;left:770px;top:360px;width:560px;height:353px;perspective:1600px}
-.card{position:absolute;left:0;top:0;transform-style:preserve-3d;animation:float 6s ease-in-out infinite;width:560px;height:353px;border-radius:30px;padding:30px 34px;display:flex;flex-direction:column;justify-content:space-between;
+.card{position:absolute;left:0;top:0;width:560px;height:353px;border-radius:30px;padding:30px 34px;display:flex;flex-direction:column;justify-content:space-between;
  background:radial-gradient(120% 80% at 100% 0%,color-mix(in srgb,var(--ac) 18%,transparent),transparent 55%),linear-gradient(135deg,rgba(255,255,255,.08) 0%,transparent 40%),linear-gradient(160deg,#2b2a31,#18171c 55%,#0f0e12);
  border:2px solid rgba(255,255,255,.09);box-shadow:0 40px 90px -30px color-mix(in srgb,var(--ac) 50%,transparent)}
 .card .t{display:flex;justify-content:space-between;align-items:center;font-size:17px;letter-spacing:.34em;color:#bdb8c9}
@@ -86,11 +86,11 @@ body{margin:0;background:#0b0a0f;color:#f4f1fb;font-family:CP,system-ui,sans-ser
 .card .edge{position:absolute;left:10%;right:10%;bottom:0;height:3px;border-radius:3px;background:linear-gradient(90deg,transparent,var(--ac),transparent);box-shadow:0 0 18px var(--ac)}
 .cshadow{position:absolute;left:8%;right:8%;bottom:-40px;height:40px;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--ac) 45%,transparent),transparent);filter:blur(10px)}
 .fc{position:absolute;right:34px;bottom:34px;display:flex;flex-direction:row-reverse}
-.fc .f{width:46px;height:46px;border-radius:50%;margin-left:-12px;display:flex;align-items:center;justify-content:center;font-family:PS;font-size:15px;color:#fff;box-shadow:0 0 0 3px #17161b,0 0 14px color-mix(in srgb,var(--ac) 50%,transparent);overflow:hidden;animation:fin .6s cubic-bezier(.2,1.6,.4,1) both}
+.fc .f{width:46px;height:46px;border-radius:50%;margin-left:-12px;display:flex;align-items:center;justify-content:center;font-family:PS;font-size:15px;color:#fff;box-shadow:0 0 0 3px #17161b,0 0 14px color-mix(in srgb,var(--ac) 50%,transparent);overflow:hidden;animation:fin .8s ease both}
 .fc .f img{width:100%;height:100%;object-fit:cover}
-@keyframes fin{0%{transform:translateY(-80px) scale(.3);opacity:0}100%{transform:none;opacity:1}}
-.card.hit{animation:float 6s ease-in-out infinite,hit .5s cubic-bezier(.2,1.6,.4,1)}
-@keyframes hit{30%{scale:1.04}}
+@keyframes fin{0%{opacity:0;transform:scale(.85)}100%{opacity:1;transform:none}}
+.card.hit{animation:hit .9s ease}
+@keyframes hit{40%{box-shadow:0 40px 90px -30px color-mix(in srgb,var(--ac) 70%,transparent),0 0 0 2px color-mix(in srgb,var(--ac) 40%,transparent)}}
 .fly{position:absolute;z-index:20;border-radius:50%;pointer-events:none;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:PS;color:#fff}
 .fly img{width:100%;height:100%;object-fit:cover}
 /* scan: QR scan line + waiting dots */
@@ -146,7 +146,7 @@ body{margin:0;background:#0b0a0f;color:#f4f1fb;font-family:CP,system-ui,sans-ser
  <section class="scr on" id="s1">
   <div class="L"><div class="kick">SAVE POINT</div><h1 class="h1">Pick up where<br>you left off.</h1><p class="sub">7 rooms. One save. Carry on in any of them.</p></div>
   <div class="ow" id="ow1"><svg class="arc" viewBox="0 0 640 640"><path id="ap" d="M 60 320 A 260 260 0 0 1 580 320" fill="none"/><text><textPath href="#ap" startOffset="50%" text-anchor="middle">SAVE POINT</textPath></text></svg><div class="orb" id="orb1"><div class="fill"></div><div class="shine"></div></div></div>
-  <div class="Q"><div class="qr"><svg viewBox="0 0 29 29" id="qr" shape-rendering="crispEdges"></svg><i class="scanl"></i></div><div class="qa">Scan to load your save</div><div class="qb">New here? Scan to <em>create one</em></div><div class="wt"><i></i><i></i><i></i>Waiting for your phone</div></div>
+  <div class="Q"><div class="qr"><svg viewBox="0 0 29 29" id="qr" shape-rendering="crispEdges"></svg></div><div class="qa">Scan to load your save</div><div class="qb">New here? Scan to <em>create one</em></div><div class="wt"><i></i><i></i><i></i>Waiting for your phone</div></div>
   <div class="ps">Not saving today? Press <b>PS</b> to play.</div><div class="url">book.round2.sg/m</div>
  </section>
 
@@ -194,9 +194,7 @@ var G1=marbles('ow1');
  var orb=document.getElementById('orb1');orb.style.zIndex=2;requestAnimationFrame(loop)})(0);
 /* rows */
 var P=[{n:'Vale profile',room:1},{n:'Jay',c:'#4aa8ff'},{n:'Kim',c:'#9b7cff'}];
-function flyTo(i){var row=document.querySelectorAll('#rows .pr')[i],av=row.querySelector('.av'),tvr=tv.getBoundingClientRect(),k=1920/tvr.width,a=av.getBoundingClientRect(),fc=document.getElementById('fc'),c=fc.getBoundingClientRect();
- row.classList.add('done');var f=av.cloneNode(true);f.className='fly';f.style.cssText='left:'+(a.left-tvr.left)*k+'px;top:'+(a.top-tvr.top)*k+'px;width:56px;height:56px;background:'+(av.style.background||'var(--ac)');tv.appendChild(f);
- var tx=(c.right-tvr.left)*k-46-(f.offsetLeft),ty=(c.top-tvr.top)*k-f.offsetTop;f.animate([{transform:'none'},{transform:'translate('+tx*.5+'px,'+(ty-160)+'px) scale(1.2)',offset:.5},{transform:'translate('+tx+'px,'+ty+'px) scale(.8)'}],{duration:700,easing:'cubic-bezier(.5,0,.3,1)'}).onfinish=function(){f.remove();var d=document.createElement('div');d.className='f';d.innerHTML=av.innerHTML;d.style.background=av.style.background||'var(--ac)';fc.appendChild(d);var cd=document.getElementById('card');cd.classList.remove('hit');void cd.offsetWidth;cd.classList.add('hit');document.getElementById('pc').textContent=fc.children.length+'/3'}}
+function flyTo(i){var row=document.querySelectorAll('#rows .pr')[i],av=row.querySelector('.av'),fc=document.getElementById('fc');row.classList.add('done');var d=document.createElement('div');d.className='f';d.innerHTML=av.innerHTML;d.style.background=av.style.background||'var(--ac)';fc.appendChild(d);var cd=document.getElementById('card');cd.classList.remove('hit');void cd.offsetWidth;cd.classList.add('hit');document.getElementById('pc').textContent=fc.children.length+'/3'}
 function rows(el,st){el.innerHTML=P.map(function(p,i){var n=p.room?(room.charAt(0).toUpperCase()+room.slice(1))+' profile':p.n;
   var av=p.room?'<div class="av avr"><img src="'+AVR[room]+'" alt=""></div>':'<div class="av" style="background:'+p.c+'">'+p.n[0]+'</div>';
   var s=st[i],lab={w:'Waiting',l:'Loading',r:'Ready'}[s];return '<div class="pr">'+av+'<b>'+n+'</b><span class="bd" data-s="'+s+'"><i></i>'+lab+'</span></div>'}).join('')}
