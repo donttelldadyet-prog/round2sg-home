@@ -510,13 +510,11 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .more .ohelp b{font-size:14px;font-weight:600;color:#cfc9de}
 .more .ohelp small{font-size:14px;color:#3fe0a0;font-weight:600}
 
-/* Signed-in row (Karen 27 Nov): the phone number as a quiet account chip instead of a loose grey line */
-.more .acct{display:flex;align-items:center;gap:12px;width:max-content;max-width:100%;margin:20px auto 0;padding:8px 18px 8px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
-.more .aci{flex:none;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ac);background:color-mix(in srgb,var(--ac) 14%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ac) 35%,transparent)}
-.more .aci svg{width:17px;height:17px}
-.more .act{display:flex;flex-direction:column;gap:1px;text-align:left;line-height:1.2}
-.more .act small{font-size:11px;color:#8f88a3}
-.more .acct #ph{margin:0;font-size:14px;font-weight:600;color:#f4f1fb;text-align:left;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+/* Signed-in line (Karen 27 Nov): number and Log out on one quiet line at the very bottom */
+.acf{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:18px;font-size:12px;color:#6f6880}
+.acf #ph{margin:0;font-variant-numeric:tabular-nums;letter-spacing:.02em}
+.acf .acd{width:3px;height:3px;border-radius:50%;background:#4a4458}
+.acf #ph:empty+.acd{display:none}
 
 /* Player badges (Karen 27 Nov): smaller, softer – thin tinted outline, light fill, no bright white ring */
 .pl .bd,.pl button.bd{display:inline-flex;align-items:center;gap:6px;flex:none;height:28px;padding:0 11px 0 9px;border:0;border-radius:999px;font-size:12.5px;font-weight:600;letter-spacing:.01em;line-height:1;color:var(--bd-c,#c9c3d6);background:var(--bd-b,rgba(255,255,255,.05));box-shadow:inset 0 0 0 1px var(--bd-r,rgba(255,255,255,.12))}
