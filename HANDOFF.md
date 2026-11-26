@@ -275,6 +275,22 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 - Deployed from live b3fa9e9cd019 → **live 4ff3f14dd26b** (27 bindings, 3 crons checked). **Next deploy starts from live 4ff3f14dd26b.**
 - System check not run (needs the staff code) – nothing that books, pays or sends was touched.
 
+## ⭐ 27 Nov 2026, 12:55am – Atlas + Bella network check (owner: "pull the logs from atlas and bella, check if network dropped")
+Both PS4s were silent (not checking in), so no look job could run; read the log lines each one last sent the engine (ps4list
+`log`: netfail / slow / boot / stopped – rest.log isn't in the report). Atlas clock ~8 min fast (stamps = PS4 time).
+- **Atlas** (1.1.114, round2-ps4 ch6, 74 %, 192.168.120.2): session Tue 24 Nov 11am–2pm, hourly "helper running" 10:51–13:51,
+  last report 2:36pm real, silent since. **No network failure logged since 20 Nov 06:40** (3 sessions). Rest/wake lines: rested
+  21 Nov ~5:45pm → woke 23 Nov 10:49; rested 23 Nov ~11:22am → woke 24 Nov 10:51. Silence after the session with no fail = the
+  usual rest (TV off → PS4 rest over HDMI), not a drop; no Atlas booking since, so nobody turned it on. Not confirmed until it
+  starts again (its next slow.log start line says "woke from rest").
+- **Bella** (1.1.114, round2-ps4 ch6, 84 %, 192.168.120.2): rested Mon 23 Nov ~2pm → woke Wed 25 Nov 5:20pm with ONE check-in fail
+  (60 s, at the moment of waking = Wi-Fi reconnecting, normal), then fine through the 7:30–10:30pm session; last report 10:34pm,
+  silent since = rest after the session. Before that only 21 Nov 10:55–11:09 (3 fails, back within 2.5 min). "stuck 30481 s in
+  'loop'" at the wake = rest time counted by the watchdog, not a hang.
+- **Note:** both last reported the same address 192.168.120.2 (Atlas on Tue, Bella on Wed – never at the same time). Fine while
+  only one is on; if both are on together the router should give different ones, but a fixed address per PS4 (router IP+MAC
+  binding, owner's OK) would rule out a clash – the old Bella "Wi-Fi up, no internet" suspect was an address clash.
+
 ## ⭐ 24 Nov 2026, 5:22pm – NEW MEMBER PAGE LIVE FOR EVERY ROOM
 Owner 5:21pm: "ok release them live". `/m` now serves `memPage2` (the new page) for every room; `/m?v=1` = the old `memPage`
 (fallback; one line in the route to swap back). Engine b3fa9e9c (27 bindings, 3 timers), Light check 20/3/0 before and after,
