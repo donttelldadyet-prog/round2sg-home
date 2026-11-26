@@ -54,6 +54,12 @@ phones) in this file or in design files.
 ## DESIGN → FUNCTION CONCERNS (design writes, function fixes and ticks – newest first)
 Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [ ] sev · screen · what's wrong – why – (date, who)`.
 
+**Member page signed-in chip (Karen, 27 Nov 2026 3:15am)**
+- [ ] 1 · Member page › crew settings, bottom (`#ph`) · Design now shows the phone number as a small "Signed in with" chip with a
+  phone icon (`design/member-v3.html` + `.css`, live). The engine still writes `'Phone '+M.phone` into `#ph`, so it reads
+  "Signed in with / Phone 8408 3147". Please write just the number (`$('ph').textContent=M.phone`, the 3 places in
+  `worker/round2-book.js`) so it reads "Signed in with / 8408 3147". Nothing else needed.
+
 **Booking confirmation alignment (Karen, 26 Nov 2026 6:40pm, phone screenshot of a Maximillion booking)**
 - [ ] 1 · "You're booked!" page (book.round2.sg, `worker/round2-book.js` ~line 3250 and the same card in `move/index.html` line 8) ·
   The Name / Date / Time / Length / Guests / Paid / Ref rows look crooked: the small grey labels (13px) sit at the top of each

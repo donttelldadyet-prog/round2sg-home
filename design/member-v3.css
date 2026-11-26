@@ -509,3 +509,11 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .more .ohelp .bx{width:auto;height:auto;background:none;box-shadow:none;border-radius:0}
 .more .ohelp b{font-size:14px;font-weight:600;color:#cfc9de}
 .more .ohelp small{font-size:14px;color:#3fe0a0;font-weight:600}
+
+/* Signed-in row (Karen 27 Nov): the phone number as a quiet account chip instead of a loose grey line */
+.more .acct{display:flex;align-items:center;gap:12px;width:max-content;max-width:100%;margin:20px auto 0;padding:8px 18px 8px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+.more .aci{flex:none;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--ac);background:color-mix(in srgb,var(--ac) 14%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ac) 35%,transparent)}
+.more .aci svg{width:17px;height:17px}
+.more .act{display:flex;flex-direction:column;gap:1px;text-align:left;line-height:1.2}
+.more .act small{font-size:11px;color:#8f88a3}
+.more .acct #ph{margin:0;font-size:14px;font-weight:600;color:#f4f1fb;text-align:left;font-variant-numeric:tabular-nums;letter-spacing:.02em}
