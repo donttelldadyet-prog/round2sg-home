@@ -394,22 +394,42 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .pl.rm .av img,.pl .av img{width:100%;height:100%;object-fit:cover}
 #s-next>*,#s-in>*{flex-shrink:0}#s-next>.grow,#s-in>.grow{flex-shrink:1}
 
-/* Crew settings (27 Nov, Karen): one pill to open, each setting its own soft card, link rows with a chevron */
+/* Crew settings = a game OPTIONS menu (27 Nov, Karen): icon tiles, two-line rows, PIN + claim code fold open, room-colour cursor */
 .more{margin-top:22px;border-top:0;padding-top:0}
-.more summary{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 auto;width:max-content;padding:11px 18px;border-radius:999px;
+.more>summary{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 auto;width:max-content;padding:11px 18px;border-radius:999px;
  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#cfc9de;font-size:14px;font-weight:600;transition:background .2s,border-color .2s,color .2s}
-.more[open] summary{background:transparent;border-color:transparent;color:#8f88a3}
-.more summary::after{margin:0}
-.more .mi{margin-top:10px;padding:16px;border:1px solid rgba(255,255,255,.07);border-radius:18px;background:rgba(255,255,255,.03)}
+.more[open]>summary{background:transparent;border-color:transparent;color:#8f88a3}
+.more>summary::after{margin:0}
+.more .okick{font-family:'Press Start 2P',monospace;font-size:9px;letter-spacing:.2em;color:var(--ac);margin:14px 4px 10px;opacity:.9}
+.more .mi{position:relative;margin-top:8px;padding:0;border:1px solid rgba(255,255,255,.07);border-radius:18px;background:rgba(255,255,255,.03);overflow:hidden;transition:border-color .25s,background .25s}
 .more[open] .mi{animation:up .45s cubic-bezier(0,0,.2,1) both}
-.more[open] .mi:nth-of-type(2){animation-delay:.04s}.more[open] .mi:nth-of-type(3){animation-delay:.08s}.more[open] .mi:nth-of-type(4){animation-delay:.12s}.more[open] .mi:nth-of-type(5){animation-delay:.16s}
-.more .mi b{display:block;font-size:15px;font-weight:600;color:#f4f1fb}
-.more .mi .sm{margin-top:6px;line-height:1.45}
-.more .mi .fd{height:50px;margin-top:10px}
-.more .mi .b2.sb{height:46px;margin-top:12px;border-radius:23px}
-.more .mi .lk{display:flex;align-items:center;justify-content:space-between;color:#f4f1fb;font-size:15px;font-weight:600}
-.more .mi .lk::after{content:"";width:8px;height:8px;border-right:2px solid #6f6880;border-top:2px solid #6f6880;transform:rotate(45deg);margin-right:4px}
-.more #routw .lk{color:#ff7a8a}
-.more #routw .lk::after{border-color:rgba(255,122,138,.6)}
-.more #ph{margin:14px 0 0;text-align:center;font-size:12px;color:#6f6880}
-.more .err:empty{display:none}
+.more[open] .mi:nth-of-type(2){animation-delay:.05s}.more[open] .mi:nth-of-type(3){animation-delay:.1s}.more[open] .mi:nth-of-type(4){animation-delay:.15s}.more[open] .mi:nth-of-type(5){animation-delay:.2s}
+.more .mi::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:3px;border-radius:0 3px 3px 0;background:var(--ac);transform:scaleY(0);transition:transform .3s cubic-bezier(.22,1,.36,1)}
+.more .mi:hover::before,.more .oacc[open]::before{transform:scaleY(1)}
+.more .oacc[open]{border-color:color-mix(in srgb,var(--ac) 35%,transparent);background:color-mix(in srgb,var(--ac) 5%,rgba(255,255,255,.03))}
+.more .lk,.more .oacc>summary,.more .oh{display:flex;align-items:center;gap:14px;padding:14px 16px;color:#f4f1fb;text-decoration:none;cursor:pointer;list-style:none}
+.more .oacc>summary::-webkit-details-marker{display:none}
+.more .oi{flex:none;width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--ac);background:color-mix(in srgb,var(--ac) 14%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ac) 25%,transparent)}
+.more .oi svg{width:19px;height:19px}
+.more .ot{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.more .ot b{font-size:15px;font-weight:600;color:#f4f1fb}
+.more .ot small{font-size:12px;color:#8f88a3}
+.more .lk::after,.more .oacc>summary::after{content:"";flex:none;width:8px;height:8px;border-right:2px solid #6f6880;border-top:2px solid #6f6880;transform:rotate(45deg);margin-right:4px;transition:transform .3s cubic-bezier(.22,1,.36,1)}
+.more .oacc>summary::after{transform:rotate(135deg)}
+.more .oacc[open]>summary::after{transform:rotate(-45deg)}
+.more .ob{padding:0 16px 16px}
+.more .ob .sm,.more .ocard .sm{margin:0 0 4px;line-height:1.45}
+.more .ocard .sm,.more #gonel{padding:0 16px}.more #gonel{padding-bottom:14px}
+.more .oacc[open] .ob{animation:up .35s cubic-bezier(0,0,.2,1) both}
+.more .fd{height:50px;margin-top:10px}
+.more .b2.sb{height:46px;margin-top:12px;border-radius:23px;background:var(--ac);color:var(--ink);border:0;font-weight:600}
+.more .odanger .oi{color:#ff7a8a;background:rgba(255,122,138,.12);box-shadow:inset 0 0 0 1px rgba(255,122,138,.25)}
+.more .odanger .ot b{color:#ff9aa6}
+.more .odanger::before{background:#ff7a8a}
+.more .orow .err:empty,.more .err:empty{display:none}
+.more .orow .err{padding:0 16px 12px}
+.more #ph{margin:16px 0 0;text-align:center;font-size:12px;color:#6f6880}
+.more .oacc>summary{text-align:left;font-size:inherit;font-weight:400;padding:14px 16px;background:none;border:0;border-radius:0;width:auto;margin:0;justify-content:flex-start}
+.more .oacc>summary::after,.more .lk::after{border-bottom:0;border-left:0;display:block}
+.more .ot small{font-weight:400}
+.more .lk{font-weight:400}
