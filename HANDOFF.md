@@ -294,7 +294,14 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   country codes (store full numbers first), the room profile's face uses the room's character art from Wix (top crop), not
   Karen's hand crops.
 - Tested headless (iPhone 13 size) with a pretend engine: join → created → in → add player → skip → load → done → welcome back
-  → straight in → log out → wrong PIN. Engine deployed from live 4ff3f14dd26b (see below for the new hash).
+  → straight in → log out → wrong PIN. Checked live 1:55am in the owner's browser: page, fonts, orb + 7 marbles, room colour,
+  1200 pictures, all images load; ?v=2 and ?v=1 still open.
+- **Engine:** live 4ff3f14dd26b → 2491b1c6f1b4 (e1fa634) → **live 99ccce5a0fa1** (d217f9a, card-logo placeholder fix); 27 bindings,
+  3 crons both times. **Next deploy starts from live 99ccce5a0fa1.** Deploy route used: KV deploy:want = commit → r2-deploy-helper
+  opened in the owner's built-in browser with a ONE-TIME deploy:key (set just before, replaced with a new random one right after –
+  any old saved helper link no longer works; read deploy:key from KV next time) → deploy:src SHA-256 checked → PUT keep_bindings.
+- System check: not run (needs the staff code). This touched the member page and the Load call's write (adds `rooms` to the
+  member record) – no bookings, payments or messages; a Full check isn't needed, a Light check is.
 
 ## ⭐ 27 Nov 2026, 1:05am – PS4 TILE 0.16: Karen's save screen v2 released (owner 12:38am: "my gf just pushed a new design, make it live")
 - **What:** the four screens of `design/tile/save-screen-v2.html` in the tile's own drawing code (round2-tv-launcher
