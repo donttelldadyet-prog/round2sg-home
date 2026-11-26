@@ -175,7 +175,6 @@ body{margin:0;background:#16141b;color:#f4f1fb;font-family:CP,system-ui,sans-ser
 .cd .cf b:last-of-type{margin-left:0}
 .cd .cf b img{width:100%;height:100%;object-fit:cover}
 .cd .cf i{display:none}
-.shk{font-weight:400;opacity:.6;font-size:12px}
 .ptr{position:sticky;top:0;height:0;display:flex;justify-content:center;z-index:5;pointer-events:none}
 .ptr .po{width:30px;height:30px;margin-top:-40px;border-radius:50%;overflow:hidden;position:relative;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.3),0 0 18px color-mix(in srgb,var(--ac) 40%,transparent);opacity:0}
 .ptr .po i{position:absolute;left:0;right:0;bottom:0;height:0;background:var(--ac)}
@@ -487,7 +486,7 @@ body{margin:0;background:#16141b;color:#f4f1fb;font-family:CP,system-ui,sans-ser
  <div class="fd"><input id="pnm" maxlength="12" autocomplete="off" placeholder="e.g. Jay"></div><div class="err" id="e5" aria-live="polite"></div>
  <div class="lb">Picture on the PS4</div>
  <div class="pgrid" id="pgrid"></div>
- <div class="pbar"><button type="button" id="pshuf">🎲 Shuffle<small class="shk"> or shake</small></button><button type="button" id="pbrw">Browse all 1200</button></div>
+ <div class="pbar"><button type="button" id="pshuf">🎲 Shuffle</button><button type="button" id="pbrw">Browse all 1200</button></div>
  <div class="pnav" id="pnav" hidden><button type="button" id="pprv" aria-label="Previous page">‹</button><span id="ppg">Page 1 of 50</span><button type="button" id="pnxt" aria-label="Next page">›</button></div>
  <div class="pfoot"><button class="b1" id="psave">Save</button>
  <p class="fine" style="margin:8px 0 0"><a id="pdel">Remove from crew</a></p></div>
@@ -756,12 +755,6 @@ window.orbAwake=function(){return cur==='s-wel'&&!document.hidden};
 function faces(c){var f=c.querySelector('.cf');if(!f)return;f.innerHTML='';var av=document.querySelectorAll('#pls .pl:not(.padd) .av'),n=0;
  [].slice.call(av,0,5).reverse().forEach(function(a){n++;var b=document.createElement('b'),im=a.querySelector('img');if(im)b.innerHTML='<img src="'+im.src+'" alt="">';else{b.textContent=a.textContent;if(a.style.background)b.style.background=a.style.background}f.appendChild(b)});
  var i=document.createElement('i');i.textContent=n+' PLAYERS';f.appendChild(i)}
-/* 4 shake to shuffle while the picture picker is open (iPhone asks for motion access the first time the picker opens) */
-(function(){var asked=false;document.addEventListener('click',function(e){if(asked||!e.target.closest('.pl.pe,#padd'))return;asked=true;try{if(window.DeviceMotionEvent&&DeviceMotionEvent.requestPermission)DeviceMotionEvent.requestPermission().catch(function(){})}catch(_){}},true);
- var last=0;window.addEventListener('devicemotion',function(e){var a=e.accelerationIncludingGravity||e.acceleration;if(!a||a.x==null)return;var m=Math.abs(a.x)+Math.abs(a.y)+Math.abs(a.z);
-  if(!e.acceleration||e.acceleration.x==null){m-=9.8}else{m=Math.abs(e.acceleration.x)+Math.abs(e.acceleration.y)+Math.abs(e.acceleration.z)}
-  if(m>22&&Date.now()-last>900&&document.getElementById('psh').classList.contains('on')&&window.pShuffle){last=Date.now();if(navigator.vibrate)navigator.vibrate([15,40,15]);pShuffle()}});
- if(!('ontouchstart' in window))document.querySelectorAll('.shk').forEach(function(e){e.remove()})})();
 function toast(t){var ph=document.querySelector('.ph'),e=document.createElement('div');e.className='toast';e.textContent=t;ph.appendChild(e);e.animate([{opacity:0,transform:'translate(-50%,-8px)'},{opacity:1,transform:'translate(-50%,0)',offset:.12},{opacity:1,offset:.85},{opacity:0}],{duration:2600}).onfinish=function(){e.remove()}}
 /* 3 pull down to refresh on the logged-in screen: a mini save orb fills up */
 (function(){var sc=document.getElementById('s-in'),po=document.getElementById('po'),fl=po.querySelector('i'),y0=null,d=0,busy=false;
