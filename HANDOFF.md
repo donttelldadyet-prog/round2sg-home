@@ -7,6 +7,7 @@
 > all 1200), and a "Saves loaded" TV that switches on and drops the profiles in. Play it on your phone:
 > https://raw.githack.com/donttelldadyet-prog/round2sg-home/ec135e374a42cd4fb97f2ea5951202ab0315cbe7/design/membership/welcome-flow.html
 > What changed + what to build: "Welcome flow v3" and "v2" at the top of DESIGN → FUNCTION CONCERNS below.
+> **NEW 27 Nov 12:40am – the PS4 save screen redesigned to match:** https://raw.githack.com/donttelldadyet-prog/round2sg-home/76f70c36bcc5ee4221563f809e746c741f329cd5/design/tile/save-screen-v2.html
 > (Owner: delete this box once you've seen it.)
 
 ## READ FIRST – rules for everyone (owner, design, every Claude)
@@ -57,6 +58,23 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   line-height like the other values (`line-height:1.4`). Also: the three chips under it (FREE CHANGE / MOVES USED / STARTS IN)
   wrap unevenly – `display:flex;flex-wrap:wrap;gap:8px` with equal heights would tidy them. – looks unpolished on the page
   every guest sees right after paying – (26 Nov, design)
+
+**PS4 save screen v2 – same look as the member page (Karen, 27 Nov 2026 12:40am: "push to my bf")**
+- [ ] 3 · PS4 tile · Mockup (1920x1080, tabs + room colours): `design/tile/save-screen-v2.html` (picture: `save-screen-v2.png`).
+  Layout/look lives in round2-tv-launcher `ps4/tile/tile/draw.h`, so this needs building there (tile.json words NOT changed yet,
+  so the live Kaeden tile keeps today's words until the new layout ships). Screens:
+  **1 Scan:** left "SAVE POINT" / "Pick up where you left off." / "7 rooms. One save. Carry on in any of them."; middle glass
+  orb with "SAVE POINT" curved over it and the 7 room-colour marbles orbiting (behind/in front); right QR with room-colour
+  corners, "Scan to load your save" / "New here? Scan to create one"; footer "Not saving today? Press PS to play." + url.
+  **2 Loading:** "ROUND2 CREW / Hey, {crew}!" / "Loading your saves onto this PS4. Please don't start a game yet."; crew card
+  (CREW SINCE / VALID TO blocks, light sweep) in the middle; right "Who's playing in {room}" rows with the room face first,
+  Waiting -> Loading -> Ready badges, progress bar + "2 of 3 profiles ready".
+  **3 Ready:** "SAVES LOADED / {crew} is all set." / "Press PS on your controller and pick your profile."; full orb in the room
+  colour with "GAME SAVED" curved over it, blop-blop bounce, sparkle burst, two rippling rings; rows all Ready.
+  **4 What happens next:** "Ready, player one." + 4 steps with room-colour marble numbers sliding in; countdown ring "Closing in 6".
+  **PS4 drawing is software and slow:** fine to simplify – no blur, fewer marbles/sparkles, pre-rendered orb/marble/card PNGs
+  per room colour, lower frame rate for the orbit. Plain ASCII text only. Words go into tile.json when the layout is built.
+  (27 Nov, design)
 
 **Welcome flow v3 extras (Karen, 26 Nov 2026 5:40pm; tilt light, easter eggs, NEW-room pop and shake-to-shuffle dropped 6pm)**
 - [ ] 3 · member page /m · Same file. **Long-press the orb** (0.5 s) = all marbles dive in at once. **Pull down to refresh**
