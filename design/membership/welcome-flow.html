@@ -168,11 +168,13 @@ body{margin:0;background:#16141b;color:#f4f1fb;font-family:CP,system-ui,sans-ser
 .pfoot{position:sticky;bottom:0;margin:10px -22px 0;padding:12px 22px 16px;background:linear-gradient(180deg,rgba(20,18,25,0),#141219 22%)}
 .orb.chg{animation:chg .48s ease-in forwards}
 @keyframes chg{to{scale:1.1;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.8),0 0 70px color-mix(in srgb,var(--ac) 80%,transparent)}}
-.cd .cf{display:flex;padding:0 7%;margin-top:9px}
-.cd .cf b{width:22px;height:22px;border-radius:50%;margin-left:-6px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:PS;font-size:8px;font-weight:400;color:#fff;background:#2b2933;box-shadow:0 0 0 2px #17161b}
-.cd .cf b:first-child{margin-left:0;box-shadow:0 0 0 2px #17161b,0 0 0 3px color-mix(in srgb,var(--ac) 60%,transparent)}
+
+.cd .cf{position:absolute;right:7%;bottom:8%;display:flex;align-items:center;flex-direction:row-reverse}
+.cd .cf:not(:empty)~.fp img{display:none}
+.cd .cf b{width:20px;height:20px;border-radius:50%;margin-left:-5px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:PS;font-size:8px;font-weight:400;color:#fff;background:#2b2933;box-shadow:0 0 0 2px #17161b}
+.cd .cf b:last-of-type{margin-left:0}
 .cd .cf b img{width:100%;height:100%;object-fit:cover}
-.cd .cf i{font-style:normal;font-size:7px;letter-spacing:.2em;color:rgba(255,255,255,.45);align-self:center;margin-left:9px}
+.cd .cf i{display:none}
 .shk{font-weight:400;opacity:.6;font-size:12px}
 .ptr{position:sticky;top:0;height:0;display:flex;justify-content:center;z-index:5;pointer-events:none}
 .ptr .po{width:30px;height:30px;margin-top:-40px;border-radius:50%;overflow:hidden;position:relative;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.3),0 0 18px color-mix(in srgb,var(--ac) 40%,transparent);opacity:0}
@@ -752,7 +754,7 @@ window.orbAwake=function(){return cur==='s-wel'&&!document.hidden};
 /* ===== 26 Nov extras ===== */
 /* 6 the crew's faces on the back of the card */
 function faces(c){var f=c.querySelector('.cf');if(!f)return;f.innerHTML='';var av=document.querySelectorAll('#pls .pl:not(.padd) .av'),n=0;
- [].forEach.call(av,function(a){if(n>=5)return;n++;var b=document.createElement('b'),im=a.querySelector('img');if(im)b.innerHTML='<img src="'+im.src+'" alt="">';else{b.textContent=a.textContent;if(a.style.background)b.style.background=a.style.background}f.appendChild(b)});
+ [].slice.call(av,0,5).reverse().forEach(function(a){n++;var b=document.createElement('b'),im=a.querySelector('img');if(im)b.innerHTML='<img src="'+im.src+'" alt="">';else{b.textContent=a.textContent;if(a.style.background)b.style.background=a.style.background}f.appendChild(b)});
  var i=document.createElement('i');i.textContent=n+' PLAYERS';f.appendChild(i)}
 /* 4 shake to shuffle while the picture picker is open (iPhone asks for motion access the first time the picker opens) */
 (function(){var asked=false;document.addEventListener('click',function(e){if(asked||!e.target.closest('.pl.pe,#padd'))return;asked=true;try{if(window.DeviceMotionEvent&&DeviceMotionEvent.requestPermission)DeviceMotionEvent.requestPermission().catch(function(){})}catch(_){}},true);
