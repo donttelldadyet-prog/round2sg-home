@@ -64,7 +64,7 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   every guest sees right after paying – (26 Nov, design)
 
 **PS4 save screen v3 – more premium card + more alive (Karen, 27 Nov 2026 2:52am: "the one on the tv looks plain")**
-- [ ] 3 · PS4 tile (draw.h) · Mockup: `design/tile/save-screen-v3.html` (+ .png), open
+- [x] (DONE 27 Nov 3:15am – tile 0.18, round2-tv-launcher ps4-helper 4022221, released to ps4-tile, on Kaeden. Room profile's face = room letter in the room colour (the tile has no room pictures); a ready row tints green but doesn't nudge sideways. "Waiting for your phone" is fixed in the tile for now – to make it editable it needs a key in the engine's TILE_CFG. s_sub: a '|' now breaks the line; without one the tile breaks after the sentence nearest the middle.) 3 · PS4 tile (draw.h) · Mockup: `design/tile/save-screen-v3.html` (+ .png), open
   https://raw.githack.com/donttelldadyet-prog/round2sg-home/34f8b7fe782341b40a1af35f77563305f92c85ad/design/tile/save-screen-v3.html (tabs 1-4, room colours).
   Changes vs v2 (0.16): **Crew card = the phone's card**: brushed-metal dark gradient + room-colour glow top-right and bottom-left,
   **gold chip with contact lines**, Round2 logo top-right, bigger name, room-colour light line along the bottom edge + soft
@@ -368,6 +368,14 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 - **Simulator:** `ps4/tile/sim` (`ROOM=vale ./sim`) draws every screen; the design preview kit's tile tab is still the 0.13 copy.
 - **Not done:** System check (needs the staff code – Light check is enough, the tile can't touch bookings). Not yet seen on a real
   TV: watch Kaeden's first scan screen + a member load (speed of the orbit/rows on the PS4's CPU is the unknown).
+
+## ⭐ 27 Nov 2026, 3:15am – tile 0.18 = Karen's save screen v3 (owner: "my gf pushed a updated design u didnt pick up")
+Owner 3:04am: "everytime a new version is pushed, check design if there are updates". Karen pushed save-screen-v3 at 2:53-2:59am,
+just after tile 0.17 was built (2:47am). **New standing rule in both CLAUDE.md files: before every release, read design/ + index.html
+git log and the concerns list since the last release.** Tile 0.18 (draw.h + main.cpp, sim updated; CI build from ps4-helper 4022221 →
+ps4-tile; Kaeden installed 3:14am via /_tile.now): v3 crew card (brushed metal, gold chip with contact lines, room glow top-right +
+bottom-left, edge light, shadow pool, card at x748 y389), card_live() = faces fade onto the card as profiles turn ready + PLAYERS n/m
++ a short edge glow; ready rows green; scan sub-line in two lines; "Waiting for your phone" + 3 pulsing dots under the QR. Concern ticked.
 
 ## ⭐ 27 Nov 2026, 2:55am – Kaeden on helper 1.1.156 + tile 0.17 (ps4-tile)
 Owner 2:43am: "A [the countdown is cut ~2 s in], and it doesnt close the tile after relogin. how can karens profile be still
