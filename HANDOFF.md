@@ -65,11 +65,11 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 
 **PS4 save screen v3 – more premium card + more alive (Karen, 27 Nov 2026 2:52am: "the one on the tv looks plain")**
 - [ ] 3 · PS4 tile (draw.h) · Mockup: `design/tile/save-screen-v3.html` (+ .png), open
-  https://raw.githack.com/donttelldadyet-prog/round2sg-home/3f0d4052ef75daa862d49b3d25bb7487dcce913c/design/tile/save-screen-v3.html (tabs 1-4, room colours).
+  https://raw.githack.com/donttelldadyet-prog/round2sg-home/34f8b7fe782341b40a1af35f77563305f92c85ad/design/tile/save-screen-v3.html (tabs 1-4, room colours).
   Changes vs v2 (0.16): **Crew card = the phone's card**: brushed-metal dark gradient + room-colour glow top-right and bottom-left,
   **gold chip with contact lines**, Round2 logo top-right, bigger name, room-colour light line along the bottom edge + soft
   coloured shadow under the card, light sweep – the card STAYS STILL (Karen 2:56am: no float). Position at 1920x1080: words x130-690, card x748-1308 y384-737, list x1370-1790 (even ~60 px gaps, card top = first row). Second date block = **PLAYERS n/m**.
-  **Loading:** each time a profile turns Ready its avatar **fades in on the card** (stacked faces bottom-right, no flying – Karen),
+  **Loading:** each time a profile turns Ready its avatar **fades in on the card** (stacked faces bottom-right in player order, room face first/left, no flying – Karen); scan sub-line on two lines "7 rooms. One save." / "Carry on in any of them.",
   the card's glow brightens briefly, PLAYERS counts up, the row tints green. **Scan:** NO scan line over the QR (it could block scanning – Karen); under it "Waiting for your phone" with three pulsing dots. Ready + What's next as v2.
   PS4 drawing is slow: pre-render the card per room colour as a PNG (gradient, chip, edge) and draw name/dates/faces on top;
   avatars just fade in. Plain ASCII words. (27 Nov, design)
