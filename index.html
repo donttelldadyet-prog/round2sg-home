@@ -1319,7 +1319,7 @@ var lk='';new MutationObserver(function(){var c=document.querySelector('.r2-tcar
 .r2m nav[aria-label="Main menu"]>button:nth-of-type(5)>span:first-child{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s-7-6.1-7-11.5a7 7 0 0 1 14 0C19 14.9 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 21s-7-6.1-7-11.5a7 7 0 0 1 14 0C19 14.9 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z'/%3E%3C/svg%3E")}
 
 /* GLOW */
-.r2m nav[aria-label="Main menu"].r2n-glow{left:50%!important;right:auto!important;width:min(352px,calc(100% - 32px));transform:translateX(-50%);bottom:max(16px,env(safe-area-inset-bottom))!important;height:58px;border-radius:999px;
+.r2m nav[aria-label="Main menu"].r2n-glow{left:50%!important;right:auto!important;width:min(352px,calc(100% - 32px));transform:translateX(-50%);bottom:max(16px,env(safe-area-inset-bottom))!important;height:58px;border-radius:14px;
  background:rgba(14,11,26,.78);-webkit-backdrop-filter:blur(16px) saturate(140%);backdrop-filter:blur(16px) saturate(140%);border:1px solid rgba(255,255,255,.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 14px 34px -10px rgba(0,0,0,.9)}
 .r2m nav[aria-label="Main menu"].r2n-glow>button{height:58px!important;gap:5px!important}
 .r2m nav[aria-label="Main menu"].r2n-glow>button[aria-current="true"]{color:#fff!important}
@@ -1338,7 +1338,7 @@ var lk='';new MutationObserver(function(){var c=document.querySelector('.r2-tcar
 </style>
 <script>
 /* Phone menu bar: pick the look, move the dot/bubble to the current tab, tint it (reads the page's own state, changes nothing else) */
-(function(){var v='bubble';try{var q=new URLSearchParams(location.search).get('nav');if(q==='bubble'||q==='glow')v=q}catch(e){}
+(function(){var v='glow';try{var q=new URLSearchParams(location.search).get('nav');if(q==='bubble'||q==='glow')v=q}catch(e){}
 var TC=['#F2C21B',null,'#9B7BFF','#2ED3B0','#FF5C7A'];
 function sync(){[].slice.call(document.querySelectorAll('.r2m nav[aria-label="Main menu"]')).forEach(function(nav){nav.classList.add('r2n-'+v);[].slice.call(nav.querySelectorAll(':scope>button')).forEach(function(b,i){if(b.getAttribute('aria-current')==='true'){nav.style.setProperty('--navi',i);var c=b.style.backgroundColor;if(c)nav.style.setProperty('--navc',c);nav.style.setProperty('--dc',TC[i]||c||'#fff')}})})}
 new MutationObserver(sync).observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['aria-current','style'],childList:true});sync();})();
