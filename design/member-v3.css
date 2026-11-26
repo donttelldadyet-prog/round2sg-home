@@ -469,6 +469,13 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .more .it .bx svg{width:20px;height:20px}
 .more .it b{font-size:13px}.more .it small{font-size:10.5px;line-height:1.25}
 .more .it b,.more .it small{white-space:nowrap}
-.more .inv:has(#routw:not([hidden])) .it b{font-size:12px}
-.more .inv:has(#routw:not([hidden])) .it small{display:none}
 .more .inv{grid-auto-columns:minmax(0,1fr)}.more .it b{overflow:hidden;text-overflow:ellipsis;max-width:100%}
+
+/* always the 3-tile look (Karen 27 Nov "first one"); "Log out of this room" becomes a slim full-width row under the tiles */
+.more .inv{grid-auto-flow:row;grid-template-columns:repeat(3,minmax(0,1fr))}
+.more #routw{grid-column:1/-1}
+.more #routw>a{aspect-ratio:auto;flex-direction:row;justify-content:center;gap:10px;padding:12px}
+.more #routw .bx{width:32px;height:32px;border-radius:10px;margin:0}
+.more #routw .bx svg{width:16px;height:16px}
+.more #routw small{font-size:12px}
+.more #routw b{color:#ff9aa6}
