@@ -451,3 +451,14 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 @keyframes avring{0%{opacity:.8;transform:scale(1)}100%{opacity:0;transform:scale(1.7)}}
 @keyframes avletter{0%,100%{text-shadow:0 0 0 transparent}50%{text-shadow:0 0 14px var(--ac),0 0 4px #fff}}
 @media (prefers-reduced-motion:reduce){.pprev .av,.pprev .av::before,.pprev .av::after{animation:none}}
+/* avatar preview: a light that races round the ring like a flash (27 Nov, Karen) */
+.pprev::before{content:"";position:absolute;left:50%;top:50%;width:72px;height:72px;margin:-36px 0 0 -36px;border-radius:50%;pointer-events:none;z-index:2;
+ background:conic-gradient(from 0deg,transparent 0 62%,color-mix(in srgb,var(--ac) 40%,transparent) 76%,#fff 88%,var(--ac) 90%,transparent 92%);
+ -webkit-mask:radial-gradient(circle,transparent 31px,#000 32px,#000 35px,transparent 36px);mask:radial-gradient(circle,transparent 31px,#000 32px,#000 35px,transparent 36px);
+ filter:drop-shadow(0 0 6px var(--ac)) drop-shadow(0 0 2px #fff);animation:avflash 1.6s linear infinite}
+.pprev::after{content:"";position:absolute;left:50%;top:50%;width:72px;height:72px;margin:-36px 0 0 -36px;border-radius:50%;pointer-events:none;z-index:2;
+ background:conic-gradient(from 180deg,transparent 0 80%,rgba(255,255,255,.7) 90%,transparent 93%);
+ -webkit-mask:radial-gradient(circle,transparent 31px,#000 32px,#000 35px,transparent 36px);mask:radial-gradient(circle,transparent 31px,#000 32px,#000 35px,transparent 36px);
+ animation:avflash 2.4s linear infinite reverse;opacity:.6}
+@keyframes avflash{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.pprev::before,.pprev::after{animation:none}}
