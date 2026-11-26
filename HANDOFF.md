@@ -321,6 +321,14 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 - **Not done:** System check (needs the staff code – Light check is enough, the tile can't touch bookings). Not yet seen on a real
   TV: watch Kaeden's first scan screen + a member load (speed of the orbit/rows on the PS4's CPU is the unknown).
 
+## ⭐ 27 Nov 2026, 1:20am – GTA V save copied to staff Ryan's new member (owner: "copy karen's gta5 save file into this new member hipponips, that is our staff ryan")
+From crew "ROUND2_" (m7xbafbe3) player p1 "Karen bozz" → crew "ryan mar" (me956uzp0, joined 27 Nov) player p1 "hipponips".
+Done straight in R2 (Cloudflare API): wrote `saves/members/me956uzp0/p1/index.txt` (it didn't exist – checked, nothing
+overwritten) with Karen's 5 GTA V lines only (CUSA00419: SAVEDATAPROFILE, SAVEDATASGTA50000, SAVEDATASBGTA50000, sce_sdmemory,
+sce_bu_sce_sdmemory; versions 21–22 Nov). The lines point at Karen's stored pieces (7 found under each – nothing copied or
+moved); Karen's own list unchanged. Ryan's next load puts them on his profile; his own later uploads go to his own folder.
+Undo = delete that index.txt. Note: Ryan's crew isn't marked staff in the member list (memstaff) – ask the owner if it should be.
+
 ## ⭐ 27 Nov 2026, 12:55am – Atlas + Bella network check (owner: "pull the logs from atlas and bella, check if network dropped")
 Both PS4s were silent (not checking in), so no look job could run; read the log lines each one last sent the engine (ps4list
 `log`: netfail / slow / boot / stopped – rest.log isn't in the report). Atlas clock ~8 min fast (stamps = PS4 time).
