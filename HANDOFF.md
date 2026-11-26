@@ -77,12 +77,12 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   (27 Nov, design)
 
 **Welcome flow v3 extras (Karen, 26 Nov 2026 5:40pm; tilt light, easter eggs, NEW-room pop and shake-to-shuffle dropped 6pm)**
-- [ ] 3 · member page /m · Same file. **Long-press the orb** (0.5 s) = all marbles dive in at once. **Pull down to refresh**
+- [x] (27 Nov, v3: long-press orb + pull to refresh (= re-check with the engine) + faces on the card back) 3 · member page /m · Same file. **Long-press the orb** (0.5 s) = all marbles dive in at once. **Pull down to refresh**
   on the logged-in screen: a mini orb fills, badges re-check → FUNCTION: re-fetch status. **Card back** shows the crew's
   player faces (small stack, bottom-right, replacing the back logo). (26 Nov, design)
 
 **Welcome flow v3 (Karen, 26 Nov 2026 1:15am: "send this latest design to my bf") – adds to v2 below**
-- [ ] 3 · member page /m · Same file `design/membership/welcome-flow.html`. New since v2:
+- [x] (LIVE 27 Nov ~1:40am as member page v3 – see "27 Nov – MEMBER PAGE v3 LIVE"; left out: prices/Renew, expiry badges, non-SG numbers, room character face is the room's art) 3 · member page /m · Same file `design/membership/welcome-flow.html`. New since v2:
   **Orb:** marbles burst out of the orb, comet tails, lean toward the finger, charge-up before diving, shockwave on landing,
   ring speeds up per catch, last marble = slow big arc; full orb does 3 jelly "blop" bounces + liquid slosh, bubbles and a
   holo scan line, then the breathing pulse (inner layer clipped with clip-path – iOS square-clip bug). Paused off-screen.
@@ -98,7 +98,7 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   your save" title/button; wrong PIN shakes. **Phone:** SG = 8 digits, overseas = any length. (26 Nov, design)
 
 **Welcome flow v2 – "Save point" (Karen, 25 Nov 2026 11:17pm: "push to live") – replaces the jelly pill + some words below**
-- [ ] 3 · member page /m · Same prototype file, updated: `design/membership/welcome-flow.html`
+- [x] (LIVE 27 Nov as member page v3) 3 · member page /m · Same prototype file, updated: `design/membership/welcome-flow.html`
   (https://raw.githack.com/donttelldadyet-prog/round2sg-home/main/design/membership/welcome-flow.html). Changes vs the spec below:
   **Welcome:** the jelly pill is gone (owner didn't like it). Now a glass **save orb**: 7 glossy marbles, one per room colour
   (R map), orbit it like a planet ring (behind/in front); one by one each arcs in like a drop (stretches, sparkle trail), lands
@@ -274,6 +274,27 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   (`__LIST__`, read only). No new SimplyBook or Firebase requests; appears after the next widget snapshot (≤10 min).
 - Deployed from live b3fa9e9cd019 → **live 4ff3f14dd26b** (27 bindings, 3 crons checked). **Next deploy starts from live 4ff3f14dd26b.**
 - System check not run (needs the staff code) – nothing that books, pays or sends was touched.
+
+## ⭐ 27 Nov 2026, 1:40am – MEMBER PAGE v3 LIVE: Karen's welcome flow (owner 1:02am: "use my gf latest design for member save for the website and make it live")
+- **book.round2.sg/m is now v3** for every room (also the Kaeden tile's QR, which no longer adds &v=2). Fallbacks: `?v=2` (24 Nov
+  page), `?v=1` (first page). Built from `design/membership/welcome-flow.html` (orb game, card flip/swipe, sheets, TV finale, pull
+  to refresh, badges – her code, kept) + v2's real calls (join, login, me, crew, player, addp, delp, claim, pin, play, loadst,
+  roomout). Look = **design/member-v3.css** (her CSS minus the inlined fonts → Google Fonts Chakra Petch / Press Start 2P /
+  Caveat), built-in copy `MEM3_CSS`; markup + script = `MEM3_HTML` in the engine (`memPage3`, placeholders %%AC%% etc.).
+- **What works for real:** Welcome back (a phone with a saved login: "Hey, <crew>! Your save is ready", Load my save goes straight
+  in; "Not <crew>? Use another number" = log out) · join = phone (+65 only) + claim code → crew name + first player name +
+  picture (tap the circle) + PIN twice → card flips → Load my save · log in (wrong PIN shakes, "no account" → join) · logged in:
+  Member / Staff badge, card with CREW SINCE, **room passport** (new: `rooms` in the member record, added at each Load in the
+  same write as the load – no extra storage call; Kaeden always stamped; 7 = Black edition), rows with avatar/name, tap = edit
+  sheet (name + picture: Shuffle / Browse all), **tap the badge = skip that profile** (Waiting ↔ Skip; the owner's 20 Nov
+  "tick which profiles to load"), Add a player, Remove (asks the PIN, then the claim code shows under More), Load → badges
+  follow the PS4 board (Waiting → Loading/Clearing → Ready, "Ask staff" on a failed one) → the TV finale → Saves loaded.
+  More: rename crew, removed players' codes, claim code, change PIN, log out of this room.
+- **Left out (owners/data):** prices + Renew sheet (pricing on hold), Active/Expires badges + VALID TO (no expiry data),
+  country codes (store full numbers first), the room profile's face uses the room's character art from Wix (top crop), not
+  Karen's hand crops.
+- Tested headless (iPhone 13 size) with a pretend engine: join → created → in → add player → skip → load → done → welcome back
+  → straight in → log out → wrong PIN. Engine deployed from live 4ff3f14dd26b (see below for the new hash).
 
 ## ⭐ 27 Nov 2026, 1:05am – PS4 TILE 0.16: Karen's save screen v2 released (owner 12:38am: "my gf just pushed a new design, make it live")
 - **What:** the four screens of `design/tile/save-screen-v2.html` in the tile's own drawing code (round2-tv-launcher
