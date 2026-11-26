@@ -462,3 +462,13 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
  animation:avflash 2.4s linear infinite reverse;opacity:.6}
 @keyframes avflash{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.pprev::before,.pprev::after{animation:none}}
+/* tiles side by side in one row (3, or 4 when "Log out of this room" shows) – Karen 27 Nov */
+.more .inv{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}
+.more .it>a,.more .it>summary{aspect-ratio:auto;padding:16px 6px 14px;gap:3px}
+.more .it .bx{width:44px;height:44px;border-radius:14px;margin-bottom:6px}
+.more .it .bx svg{width:20px;height:20px}
+.more .it b{font-size:13px}.more .it small{font-size:10.5px;line-height:1.25}
+.more .it b,.more .it small{white-space:nowrap}
+.more .inv:has(#routw:not([hidden])) .it b{font-size:12px}
+.more .inv:has(#routw:not([hidden])) .it small{display:none}
+.more .inv{grid-auto-columns:minmax(0,1fr)}.more .it b{overflow:hidden;text-overflow:ellipsis;max-width:100%}
