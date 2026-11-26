@@ -63,6 +63,13 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   wrap unevenly – `display:flex;flex-wrap:wrap;gap:8px` with equal heights would tidy them. – looks unpolished on the page
   every guest sees right after paying – (26 Nov, design)
 
+**PIN = 6 numbers (Karen, 27 Nov 2026 2:24am: "for pin just make it 6 digit number")**
+- [ ] 2 · member page v3 + engine · Design done (design/member-v3.html): new-PIN boxes (join jk/jk2, change pin2/pin3) take 6 numbers
+  max with "6 numbers" hints; the log-in box stays 8 long with "Your PIN". Engine still to do: **new PINs must be exactly 6
+  numbers** (join, change PIN, staff reset) – script check + server check, messages "Your PIN is 6 numbers." / "Pick 6 numbers,
+  not 123456 or all the same number." **Existing members keep their old 4-8 number PIN** for logging in (no forced change);
+  they move to 6 only when they change it. (27 Nov, design)
+
 **Member page v3 – two small changes (Karen, 27 Nov 2026 2:15am, from the live page)**
 - [x] (27 Nov 2:35am: "Crew settings" ⌄ / "Hide crew settings" ⌃, engine + design/member-v3.html/.css) 3 · member page v3 (MEM3_HTML in worker) · **"More –" is unclear** – rename the toggle to **"Crew settings"** with a
   chevron (closed: "Crew settings" + down arrow; open: "Hide crew settings" + up arrow), same muted style, centred.
