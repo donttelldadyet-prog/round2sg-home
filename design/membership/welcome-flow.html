@@ -634,7 +634,7 @@ document.querySelectorAll('.tilt').forEach(function(c){function m(e){var r=c.get
   c.addEventListener('click',function(e){if(c._sw&&Date.now()-c._sw<350)return;flip()});c.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();flip()}})})})();
 
 /* ===== 25-26 Nov improvements ===== */
-var CREW='Night Owls',VISITED=['vale','kai','bella','scarlett'],RN=['vale','atlas','kai','bella','scarlett','kaeden','max'];
+var CREW='Night Owls',VISITED=['vale','kai','bella','scarlett','kaeden'],RN=['vale','atlas','kai','bella','scarlett','kaeden','max'];
 function nice(n){return n.replace(/(^|\s)(\S)/g,function(m,a,b){return a+b.toUpperCase()})}
 function setCrew(n){CREW=n;var t=nice(n);document.querySelectorAll('[data-crewn]').forEach(function(e){e.textContent=t});document.querySelectorAll('[data-crewu]').forEach(function(e){e.textContent=n.toUpperCase()})}
 function curRoom(){var c=document.querySelector('#rooms button.on');return c?c.title:'vale'}
@@ -666,7 +666,7 @@ document.getElementById('lgo').onclick=function(){var e=document.getElementById(
 /* 2 room passport */
 (function(){var r=document.getElementById('ppr');
  function paint(pop){r.innerHTML='';var here=curRoom();RN.forEach(function(k){var b=document.createElement('button');b.className='ppi'+(VISITED.indexOf(k)>-1?' on':'')+(k===here?' here':'')+(pop===k?' pnew':'');b.style.setProperty('--c',R[k]);b.innerHTML='<i></i><span>'+cap(k)+'</span>';b.setAttribute('aria-label',cap(k)+(VISITED.indexOf(k)>-1?', played':', not played yet'));
-  b.onclick=function(){document.getElementById('pps').textContent=VISITED.indexOf(k)>-1?'You\'ve played in '+cap(k)+'.':'Not played in '+cap(k)+' yet. Try it next time?'};r.appendChild(b)});
+  b.onclick=function(){document.getElementById('pps').textContent=k==='kaeden'?'Kaeden is closed for a makeover, so it\'s stamped for you.':VISITED.indexOf(k)>-1?'You\'ve played in '+cap(k)+'.':'Not played in '+cap(k)+' yet. Try it next time?'};r.appendChild(b)});
   document.getElementById('ppn').textContent=VISITED.length+' of 7 rooms';var all=VISITED.length===7,st=document.getElementById('stamp');
   if(all&&!st.classList.contains('on')){var sd=st.querySelector('.sdots');if(!sd.children.length)RN.forEach(function(k){var d=document.createElement('i');d.style.setProperty('--c',R[k]);sd.appendChild(d)});st.classList.add('on');
    var cdd=document.getElementById('incard');if(cdd.classList.contains('back'))cdd.classList.remove('back');
@@ -678,7 +678,7 @@ document.getElementById('lgo').onclick=function(){var e=document.getElementById(
   if(!all){st.classList.remove('on');document.getElementById('incard').classList.remove('ed')}}
  window.paintPassport=paint;paint();
  /* demo: tap the title to visit the next room */
- document.getElementById('ppt').onclick=function(){var nx=RN.filter(function(k){return VISITED.indexOf(k)<0})[0];if(nx){VISITED.push(nx);paint(nx);if(VISITED.length<7)document.getElementById('pps').textContent='New room: '+cap(nx)+'!'}else{VISITED=['vale','kai','bella','scarlett'];paint()}};
+ document.getElementById('ppt').onclick=function(){var nx=RN.filter(function(k){return VISITED.indexOf(k)<0})[0];if(nx){VISITED.push(nx);paint(nx);if(VISITED.length<7)document.getElementById('pps').textContent='New room: '+cap(nx)+'!'}else{VISITED=['vale','kai','bella','scarlett','kaeden'];paint()}};
  document.getElementById('rooms').addEventListener('click',function(){setTimeout(function(){paint()},30)})})();
 /* 5 renew sheet */
 (function(){var sh=document.getElementById('rsh'),bd=document.getElementById('shb'),go2=document.getElementById('rgo'),pick={m:1,p:10};
