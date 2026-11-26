@@ -383,6 +383,7 @@ minute (outer main loop) and missed the 22 s. The menu Log Out leaves the tile a
   helper's tile-live file says done → 3 + 4 + 6 s fits inside the add-on's 20 s. Makefile VERSION must be bumped with TILE_V (CI
   takes the json version from the Makefile – first 0.17 staging build said "0.16").
 - No add-on change. Kept-player reload with the profile signed in: picture goes on at the add-on's log-out now.
+- Installed 2:59am via /_tile.now (first try: "download size 6619147, expected 6619136" – 11 bytes extra with a 200, cause unknown; the retry a minute later went fine). Kaeden: helper 1.1.156, tile 0.17.
 
 ## ⭐ 27 Nov 2026, 2:40am – Kaeden on helper 1.1.155 (tile closed for real after a load)
 Owner 2:34am: "loaded karen's profile again.... doesn't change the profile and ps4 tile doesn't close after 5 sec, it closes only
