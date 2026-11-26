@@ -494,7 +494,7 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .pgrid button.on{outline-width:1.5px;transform:none}
 
 /* the open settings stay above the page's Log out link (it was showing through the PIN panel) */
-.more[open]{position:relative;z-index:60}
+.more[open]{position:relative;z-index:15}
 /* Help row – same slim full-width style as the room log-out */
 .more .ohelp{grid-column:1/-1}
 .more .ohelp>a{aspect-ratio:auto;flex-direction:row;justify-content:center;gap:10px;padding:12px}
