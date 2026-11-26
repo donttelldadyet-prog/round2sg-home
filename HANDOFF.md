@@ -60,7 +60,7 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   every guest sees right after paying – (26 Nov, design)
 
 **PS4 save screen v2 – same look as the member page (Karen, 27 Nov 2026 12:40am: "push to my bf")**
-- [ ] 3 · PS4 tile · Mockup (1920x1080, tabs + room colours): `design/tile/save-screen-v2.html` (picture: `save-screen-v2.png`).
+- [x] (built 27 Nov 1:05am: tile 0.16 – round2-tv-launcher ps4-helper 1bf4331, released ps4-tile 2615b05; design/tile.json words filled in. See "27 Nov 1:05am – PS4 TILE 0.16") 3 · PS4 tile · Mockup (1920x1080, tabs + room colours): `design/tile/save-screen-v2.html` (picture: `save-screen-v2.png`).
   Layout/look lives in round2-tv-launcher `ps4/tile/tile/draw.h`, so this needs building there (tile.json words NOT changed yet,
   so the live Kaeden tile keeps today's words until the new layout ships). Screens:
   **1 Scan:** left "SAVE POINT" / "Pick up where you left off." / "7 rooms. One save. Carry on in any of them."; middle glass
@@ -274,6 +274,30 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   (`__LIST__`, read only). No new SimplyBook or Firebase requests; appears after the next widget snapshot (≤10 min).
 - Deployed from live b3fa9e9cd019 → **live 4ff3f14dd26b** (27 bindings, 3 crons checked). **Next deploy starts from live 4ff3f14dd26b.**
 - System check not run (needs the staff code) – nothing that books, pays or sends was touched.
+
+## ⭐ 27 Nov 2026, 1:05am – PS4 TILE 0.16: Karen's save screen v2 released (owner 12:38am: "my gf just pushed a new design, make it live")
+- **What:** the four screens of `design/tile/save-screen-v2.html` in the tile's own drawing code (round2-tv-launcher
+  `ps4/tile/tile/draw.h`, main.cpp loop): 1 Scan (glass orb + 7 room marbles orbiting, "SAVE POINT" curved over it, QR with
+  room-colour corners top-left/bottom-right, "Not saving today? Press (PS) to play."), 2 Loading ("Hey, <crew>!", crew card with
+  CREW SINCE (+ VALID TO when the engine sends `valid` – it doesn't yet), "Who's playing in <room>" rows with Waiting / Loading /
+  Ready / Next / Clearing / Ask staff badges, bar + "n of m profiles ready"), 3 Ready ("<crew> is all set.", full orb in the room
+  colour – bounce, 40 sparkles, two rings – rows all Ready), 4 What happens next ("Ready, player one.", 4 steps with marble numbers
+  sliding in, "Closing in N" ring) → the tile closes. Same load/close rules as 0.15 (seen_loading/seen_bar/done_since); the ready
+  screen now stays `t_burst` (4 s, was a 1.5 s burst). Simplified for the PS4's software drawing: no blur, the glass/full orb cached
+  as a picture per room colour, avatars are coloured circles with the first letter (room row = room colour + its letter, no
+  character face yet). Positions measured from the mockup at 1920x1080 (Playwright) and checked side by side with the simulator.
+- **Built on GitHub now** (no build box needed): workflow `.github/workflows/ps4-tile.yml` on branches tile-v2 / ps4-helper – OpenOrbis
+  toolchain v0.5.4 `toolchain-llvm-18`, clang/lld 18, OpenSSL 1.1.1w built for PkgTool.Core (a self-contained .NET Core 3.1 app),
+  then it force-pushes the package + json to branch **ps4-tile-staging**. Releasing = check the staging build, copy
+  `round2_tile.pkg` + `round2_tile.json` to branch **ps4-tile** (done for 0.16: sha256 7d289114…, 6,619,136 bytes, same PKG layout
+  as 0.15). This workspace can't download Actions artifacts (blob storage blocked) – hence the staging branch.
+- **Words:** `design/tile.json` rewritten in Karen's words; 0.16 reuses the engine's existing keys (no engine deploy): c1 = word over
+  the scan orb, c2 = word over the full orb, c3 = card label, c1n = "SAVES LOADED", c2n = "Ready, player one.", c3n = rows heading
+  (empty = "Who's playing in {room}"), n1–n4 = steps "main|small", n5 unused, `[PS]` = round PS button. Checked with the engine's own
+  ps4TileCfg code. Kaeden's 0.15 shows these words in its old layout until it updates (≤ 30 min, only when no game is open).
+- **Simulator:** `ps4/tile/sim` (`ROOM=vale ./sim`) draws every screen; the design preview kit's tile tab is still the 0.13 copy.
+- **Not done:** System check (needs the staff code – Light check is enough, the tile can't touch bookings). Not yet seen on a real
+  TV: watch Kaeden's first scan screen + a member load (speed of the orbit/rows on the PS4's CPU is the unknown).
 
 ## ⭐ 27 Nov 2026, 12:55am – Atlas + Bella network check (owner: "pull the logs from atlas and bella, check if network dropped")
 Both PS4s were silent (not checking in), so no look job could run; read the log lines each one last sent the engine (ps4list

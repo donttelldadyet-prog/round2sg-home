@@ -1,40 +1,44 @@
 {
-  "_about": "Words and timings of the Round2 PS4 tile (tile 0.14+). Plain letters only (A-Z, numbers, ' \" - . , ! ?) - anything else is dropped because the TV can't draw it. {crew} = the crew's name. Empty card notes / foot = not drawn (prices on hold, 24 Nov). Times in seconds: ready burst 0.5-5, closing screen 3-20. A wrong file = the tile keeps its own words.",
+  "_about": "Words and timings of the Round2 PS4 tile (tile 0.16+, Karen's save screen v2, 27 Nov). Plain letters only (A-Z, numbers, ' \" - . , ! ? | [ ]) - anything else is dropped because the TV can't draw it. {crew} = the crew's name, {room} = the room's name, [PS] = the round PS button. In a title with {crew}, the crew's name is bright and the words around it are dim on their own line. Steps: 'main line|small line'. Times in seconds: all-set screen 0.5-5, what-happens-next screen 3-20. A wrong file = the tile keeps its own words. Some keys have old names from tile 0.15 - the group they're in says what they do now.",
   "scan": {
-    "s_kick": "ROUND2 MEMBERS",
+    "s_kick": "SAVE POINT",
     "s_title": "Pick up where you left off.",
-    "s_sub": "Save your game here and carry on from any Round2 room.",
-    "s_foot": "",
-    "s_qr1": "Members scan to log in",
-    "s_qr2": "New guests scan to join",
+    "s_sub": "7 rooms. One save. Carry on in any of them.",
+    "c1": "SAVE POINT",
+    "s_qr1": "Scan to load your save",
+    "s_qr2": "New here? Scan to create one",
     "s_ps": "Not saving today? Press [PS] to play.",
-    "s_url": "book.round2.sg/m"
+    "s_url": "book.round2.sg/m",
+    "s_foot": "",
+    "_c1": "c1 = the word curved over the orb. s_qr2: the words after the last 'to' are in the room colour. s_foot = an extra line under the words (empty = none)."
   },
-  "cards": {
-    "c1": "ROUND2",
-    "c1n": "",
-    "c2": "ROUND2",
-    "c2n": "",
-    "c3": "ROUND2 CREW",
-    "c3n": ""
-  },
-  "signed_in": {
+  "loading": {
     "w_kick": "ROUND2 CREW",
-    "w_title": "Welcome back, {crew}.",
-    "w_sub": "Your saves are loading onto this PS4. Please don't start a game yet.",
+    "w_title": "Hey, {crew}!",
+    "w_sub": "Loading your saves onto this PS4. Please don't start a game yet.",
+    "c3": "ROUND2 CREW",
+    "c3n": "",
+    "_c3": "c3 = the label on the crew card. c3n = the heading over the players (empty = Who's playing in {room}; max 22 letters)."
+  },
+  "ready": {
+    "c1n": "SAVES LOADED",
     "w_ready": "{crew} is all set.",
-    "w_ready2": "Press PS on your controller and pick your profile."
+    "w_ready2": "Press [PS] on your controller and pick your profile.",
+    "c2": "GAME SAVED",
+    "_c2": "c1n = the small heading, c2 = the word curved over the full orb."
   },
   "what_happens_next": {
-    "n_title": "What happens next",
-    "n1": "1.  This screen closes by itself.",
-    "n2": "2.  Your TV shows \"Press PS button\".",
-    "n3": "3.  Press the PS button on your controller.",
-    "n4": "4.  Pick your profile - it has your name and picture.",
-    "n5": "5.  More players? Each one presses PS on their own controller and picks theirs."
+    "n_title": "WHAT HAPPENS NEXT",
+    "c2n": "Ready, player one.",
+    "n1": "This screen closes by itself.",
+    "n2": "Your TV shows \"Press PS button\".",
+    "n3": "Press [PS] on your controller.|Pick your profile - it has your name and picture.",
+    "n4": "More players?|Each one presses PS on their own controller and picks theirs.",
+    "n5": "-",
+    "_next": "c2n = the big line. n5 is not used by tile 0.16 (4 steps)."
   },
   "times": {
-    "t_burst": 1.5,
+    "t_burst": 4,
     "t_next": 6
   }
 }
