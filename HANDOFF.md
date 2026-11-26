@@ -71,7 +71,7 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   nothing sent). Same rule wherever a PIN is first set (join step) if it isn't there already. (27 Nov, design)
 
 **Member page v3 – softer card swipe (Karen, 27 Nov 2026 2:20am: "when i swipe the card can we make animation less harsh")**
-- [ ] 3 · member page v3 (MEM3_HTML script, card swipe) · Copy the new swipe from `design/membership/welcome-flow.html`
+- [x] (27 Nov 2:40am: copied into the live page) 3 · member page v3 (MEM3_HTML script, card swipe) · Copy the new swipe from `design/membership/welcome-flow.html`
   (search "swipe left or right"): finger moves the card less (dx*.4, max 80deg, perspective 1200px, no scale-down), flip
   needs 70px (was 55), half-turn 140-320 ms cubic-bezier(.4,0,.6,1), landing 560 ms cubic-bezier(.22,1,.36,1) with NO
   overshoot wobble, spring-back 450 ms same ease. Tap-to-flip unchanged. (27 Nov, design)
