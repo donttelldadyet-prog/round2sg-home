@@ -352,6 +352,16 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 - **Not done:** System check (needs the staff code – Light check is enough, the tile can't touch bookings). Not yet seen on a real
   TV: watch Kaeden's first scan screen + a member load (speed of the orbit/rows on the PS4's CPU is the unknown).
 
+## ⭐ 27 Nov 2026, 2:35am – Kaeden on helper 1.1.154 (owner OK 2:21am "ok install now")
+1.1.153 installed 2:22am, then owner 2:24am: "the ps4 tile closes before the 5 sec timer is up … and the profile picture didn't
+change, i just relogged in in karen's profile". save.log: **02:24:06 "close done: RTWO00001"** = the helper's tile-update check
+(runs 2 min after the helper starts, then every 30 loops) closed the open tile BEFORE asking if a new tile exists (since 1.1.90)
+– the fresh install restarted the helper, so it hit mid-countdown. And **"Karen bozz already on profile 16c45cc7 with the newest
+saves - nothing copied"** = kept players never got av_apply. **1.1.154** (ps4-helper, installed 2:34am via ps4-test): tile closed
+only when a new tile version is really waiting and not while tile-live.txt changed in the last 10 min; kept players get their
+picture too (profile stamp /data/round2/prep/av_<user>.txt = member/slot + bundle size, same = skipped; signed in = waits).
+Two crews side by side (1.1.152 add mode) not yet tried on the TV.
+
 ## ⭐ 27 Nov 2026, 2:25am – Bug: member picture not changed when the profile was still signed in → helper 1.1.153 (test, not installed)
 Owner 2:16am (Kaeden, photo): loaded Karen bozz + Aliff Bozz after Ryan (hipponips) had played; Player 1 became "Karen bozz" but
 kept Ryan's picture (Ezio). Cause (code, 1.1.98): `av_apply` refuses on a SIGNED-IN profile ("picture not changed") – the name
