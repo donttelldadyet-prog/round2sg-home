@@ -64,9 +64,9 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   every guest sees right after paying – (26 Nov, design)
 
 **Member page v3 – two small changes (Karen, 27 Nov 2026 2:15am, from the live page)**
-- [ ] 3 · member page v3 (MEM3_HTML in worker) · **"More –" is unclear** – rename the toggle to **"Crew settings"** with a
+- [x] (27 Nov 2:35am: "Crew settings" ⌄ / "Hide crew settings" ⌃, engine + design/member-v3.html/.css) 3 · member page v3 (MEM3_HTML in worker) · **"More –" is unclear** – rename the toggle to **"Crew settings"** with a
   chevron (closed: "Crew settings" + down arrow; open: "Hide crew settings" + up arrow), same muted style, centred.
-- [ ] 3 · member page v3 · **Change PIN: confirm the new PIN** – fields: "Current PIN" / "New PIN (4 to 8 numbers)" /
+- [x] (27 Nov 2:35am: "New PIN again" box, "The new PINs don't match." + shake, nothing sent; join already asks the PIN twice) 3 · member page v3 · **Change PIN: confirm the new PIN** – fields: "Current PIN" / "New PIN (4 to 8 numbers)" /
   **"New PIN again"**, then Change PIN. If the two new PINs differ: inline error "The new PINs don't match." (field shakes,
   nothing sent). Same rule wherever a PIN is first set (join step) if it isn't there already. (27 Nov, design)
 
