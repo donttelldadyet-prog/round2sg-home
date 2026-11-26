@@ -8,6 +8,10 @@
   **Design finds a functional problem → it goes in HANDOFF "DESIGN → FUNCTION CONCERNS" (owner, 22 Nov 2026); function work
   reads that list before touching a screen it names, and ticks items off with date + commit when fixed.**
 
+- **Before every release (owner, 27 Nov 2026 3:04am: "everytime a new version is pushed, check design if there are updates"):** before
+  building/pushing a new tile, helper, member page or engine version, pull round2sg-home and read `git log` of `design/` + `index.html`
+  and HANDOFF "DESIGN → FUNCTION CONCERNS" since the last release – build in anything new for the screens you touch (e.g. a new
+  `design/tile/save-screen-v*.html` mockup → the tile), or say in HANDOFF why not.
 - **Run the System check before and after any change** (control centre at staff.round2.sg › Tests & systems › System
   check; code: round2-tv-launcher `manager/index.html`, `SysCheck`). Add a step for every new feature that touches another
   part. Why and how: round2-tv-launcher `docs/system-check.md`. This is the owner's standing rule.
