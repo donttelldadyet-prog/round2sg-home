@@ -1272,30 +1272,34 @@ var lk='';new MutationObserver(function(){var c=document.querySelector('.r2-tcar
 })();
 </script>
 <style id="r2-gamelib-top">
-/* Game library header, phone (owner 26 Nov, test): one clear hierarchy – underline tabs for the game type, a quiet room-type switch,
-   squarish controls with small rounded corners, no slants, no heavy glow */
+/* Game library header, phone (owner 26 Nov, test v2): game type as three "item select" tiles with icons;
+   room type as level chips in the room-type colours (Netflix pink LV1, Deluxe purple LV2, VIP red LV3) like the Room types sheet */
 .r2m .r2-gal>div:first-child>button[style*="position: absolute"]{top:16px!important;width:40px;height:40px!important;padding:0!important;justify-content:center;font-size:0!important;gap:0!important;border-radius:10px;border-color:rgba(255,255,255,.14)!important;background:rgba(255,255,255,.05)!important}
 .r2m .r2-gal>div:first-child>button[style*="position: absolute"] svg{width:14px;height:14px}
-.r2m .r2-gal>div:first-child>h2{margin:8px 56px 4px 0!important;font-size:26px!important;letter-spacing:.01em}
+.r2m .r2-gal>div:first-child>h2{margin:8px 56px 4px 0!important;font-size:26px!important}
 .r2m .r2-gal>div:first-child>p{margin-bottom:14px!important;color:#a79fbd!important}
-/* game type: underline tabs */
-.r2m .r2-gal [role=tablist][aria-label="Game type"]{gap:0!important;margin:0 -16px 14px!important;padding:0 16px;border-bottom:1px solid rgba(255,255,255,.08)}
-.r2m .r2-gal [role=tablist][aria-label="Game type"]>button{clip-path:none!important;border:0!important;background:transparent!important;color:rgba(244,241,251,.55)!important;height:42px!important;font-size:11px!important;letter-spacing:.05em!important;white-space:nowrap;position:relative;gap:5px!important;padding:0 2px!important}
-.r2m .r2-gal [role=tablist][aria-label="Game type"]>button[aria-selected="true"]{color:#fff!important}
-.r2m .r2-gal [role=tablist][aria-label="Game type"]>button[aria-selected="true"]:after{content:"";position:absolute;left:14%;right:14%;bottom:-1px;height:2px;border-radius:2px;background:var(--r2-accent);box-shadow:0 0 10px color-mix(in srgb,var(--r2-accent) 60%,transparent)}
-.r2m .r2-gal [role=tablist][aria-label="Game type"]>button>span{font-family:inherit!important;font-size:9.5px!important;font-weight:700;opacity:1!important;padding:2px 5px;border-radius:4px;background:rgba(255,255,255,.08);color:rgba(244,241,251,.7)}
-.r2m .r2-gal [role=tablist][aria-label="Game type"]>button[aria-selected="true"]>span{background:color-mix(in srgb,var(--r2-accent) 22%,transparent);color:var(--r2-accent)}
-/* room type: quiet segmented switch */
-.r2m .r2-gal [role=group]{max-width:none!important;padding:3px!important;border-radius:10px!important;box-shadow:none!important;border-color:rgba(255,255,255,.1)!important;background:rgba(255,255,255,.04)!important}
-.r2m .r2-gal [role=group]>div[aria-hidden]{top:3px!important;bottom:3px!important;border-radius:8px!important;box-shadow:none!important}
-.r2m .r2-gal [role=group]>button{min-height:36px!important;border-radius:8px!important;font-size:11.5px!important;letter-spacing:.08em!important}
-.r2m .r2-gal [role=group]>button[aria-pressed="false"]{color:rgba(244,241,251,.6)!important}
+/* game type tiles */
+.r2m .r2-gal [role=tablist][aria-label="Game type"]{gap:8px!important;margin-bottom:16px!important}
+.r2m .r2-gal [role=tablist][aria-label="Game type"]>button{clip-path:none!important;height:auto!important;min-height:76px;flex-direction:column;gap:4px!important;padding:10px 4px 9px!important;border-radius:12px;border:1px solid rgba(255,255,255,.1)!important;background:rgba(255,255,255,.04)!important;color:rgba(244,241,251,.7)!important;font-size:10.5px!important;letter-spacing:.06em!important;white-space:nowrap;transition:border-color .25s,background .25s,transform .15s}
+.r2m .r2-gal [role=tablist][aria-label="Game type"]>button:before{content:"";width:24px;height:24px;margin-bottom:2px;background:currentColor;-webkit-mask:center/contain no-repeat;mask:center/contain no-repeat}
+.r2m .r2-gal [role=tablist][aria-label="Game type"]>button:nth-of-type(1):before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7.5 7.5h9a5 5 0 0 1 4.8 6.4l-.7 2.3a2.4 2.4 0 0 1-4.3.6L15 15H9l-1.3 1.8a2.4 2.4 0 0 1-4.3-.6l-.7-2.3a5 5 0 0 1 4.8-6.4zM8 10.5v3M6.5 12h3M15.5 11h.01M17.5 13h.01'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7.5 7.5h9a5 5 0 0 1 4.8 6.4l-.7 2.3a2.4 2.4 0 0 1-4.3.6L15 15H9l-1.3 1.8a2.4 2.4 0 0 1-4.3-.6l-.7-2.3a5 5 0 0 1 4.8-6.4zM8 10.5v3M6.5 12h3M15.5 11h.01M17.5 13h.01'/%3E%3C/svg%3E")}
+.r2m .r2-gal [role=tablist][aria-label="Game type"]>button:nth-of-type(2):before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='4' width='16' height='16' rx='3'/%3E%3Cpath d='M8.5 8.5h.01M15.5 8.5h.01M12 12h.01M8.5 15.5h.01M15.5 15.5h.01'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='4' width='16' height='16' rx='3'/%3E%3Cpath d='M8.5 8.5h.01M15.5 8.5h.01M12 12h.01M8.5 15.5h.01M15.5 15.5h.01'/%3E%3C/svg%3E")}
+.r2m .r2-gal [role=tablist][aria-label="Game type"]>button:nth-of-type(3):before{-webkit-mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='6' width='10' height='14' rx='2' transform='rotate%28-10 8.5 13%29'/%3E%3Crect x='10' y='4' width='10' height='14' rx='2' transform='rotate%288 15 11%29'/%3E%3C/svg%3E");mask-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3.5' y='6' width='10' height='14' rx='2' transform='rotate%28-10 8.5 13%29'/%3E%3Crect x='10' y='4' width='10' height='14' rx='2' transform='rotate%288 15 11%29'/%3E%3C/svg%3E")}
+.r2m .r2-gal [role=tablist][aria-label="Game type"]>button[aria-selected="true"]{color:#fff!important;border-color:var(--r2-accent)!important;background:linear-gradient(180deg,color-mix(in srgb,var(--r2-accent) 16%,transparent),rgba(255,255,255,.02))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 0 16px -6px var(--r2-accent)}
+.r2m .r2-gal [role=tablist][aria-label="Game type"]>button[aria-selected="true"]:before{background:var(--r2-accent)}
+.r2m .r2-gal [role=tablist][aria-label="Game type"]>button>span{font-family:"Press Start 2P",monospace!important;font-size:7px!important;opacity:.6!important}
+.r2m .r2-gal [role=tablist][aria-label="Game type"]>button[aria-selected="true"]>span{opacity:1!important;color:var(--r2-accent)}
+/* room type: level chips */
+.r2m .r2-gal [role=group]{max-width:none!important;gap:8px;padding:0!important;border:0!important;background:none!important;box-shadow:none!important;animation:none!important}
+.r2m .r2-gal [role=group]>div[aria-hidden]{display:none}
+.r2m .r2-gal [role=group]>button{min-height:44px!important;border-radius:10px!important;border:1px solid color-mix(in srgb,var(--lv) 40%,transparent)!important;background:color-mix(in srgb,var(--lv) 8%,transparent)!important;color:var(--lv)!important;font-size:12px!important;letter-spacing:.08em!important;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:background .25s,color .25s,box-shadow .25s!important}
+.r2m .r2-gal [role=group]>button:before{font:6.5px/1 "Press Start 2P",monospace;letter-spacing:.1em;opacity:.8}
+.r2m .r2-gal [role=group]>button:nth-of-type(1){--lv:#FF5A6E}.r2m .r2-gal [role=group]>button:nth-of-type(1):before{content:"LV 1"}
+.r2m .r2-gal [role=group]>button:nth-of-type(2){--lv:#B48CFF}.r2m .r2-gal [role=group]>button:nth-of-type(2):before{content:"LV 2"}
+.r2m .r2-gal [role=group]>button:nth-of-type(3){--lv:#FF4A35}.r2m .r2-gal [role=group]>button:nth-of-type(3):before{content:"LV 3"}
+.r2m .r2-gal [role=group]>button[aria-pressed="true"]{background:var(--lv)!important;border-color:var(--lv)!important;color:#0b0914!important;box-shadow:0 6px 18px -8px var(--lv)}
 .r2m .r2-gal div[style*="min-height: 18px"]>span{font-size:7px!important;color:#8f88a6!important}
-/* search */
-.r2m .r2-gal .r2-scroll input,.r2m .r2-gal input[type="search"]{border-radius:10px!important}
-.r2m .r2-gal .r2-scroll div:has(>input),.r2m .r2-gal label:has(>input){border-radius:10px!important}
-.r2m .r2-gal [role=group]{animation-name:r2glHint!important}
-@keyframes r2glHint{0%,100%{border-color:rgba(255,255,255,.1)}50%{border-color:color-mix(in srgb,var(--r2-accent) 55%,transparent);box-shadow:0 0 10px -2px color-mix(in srgb,var(--r2-accent) 35%,transparent)}}
+.r2m .r2-gal .r2-scroll input,.r2m .r2-gal .r2-scroll div:has(>input),.r2m .r2-gal label:has(>input){border-radius:10px!important}
 </style>
 </body>
 </html>
