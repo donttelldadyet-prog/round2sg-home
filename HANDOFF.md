@@ -63,6 +63,12 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   wrap unevenly – `display:flex;flex-wrap:wrap;gap:8px` with equal heights would tidy them. – looks unpolished on the page
   every guest sees right after paying – (26 Nov, design)
 
+**Crew settings panels: pull down to close (Karen, 27 Nov 2026 2:42am)**
+- [ ] 3 · member page v3 script · The Claim code and PIN tiles (`.more .it` = `<details>`) open a bottom panel (`.osh`); today
+  it closes by tapping outside (the summary's ::before cover). Karen wants it to also close by **pulling the panel down**,
+  like the edit-player sheet: drag .osh down → follows the finger, fade the cover, past ~110 px or a quick flick → set the
+  parent details `open=false`; short pull springs back. Don't start the drag from inside an input. (27 Nov, design)
+
 **PIN = 6 numbers (Karen, 27 Nov 2026 2:24am: "for pin just make it 6 digit number")**
 - [ ] 2 · member page v3 + engine · Design done (design/member-v3.html): new-PIN boxes (join jk/jk2, change pin2/pin3) take 6 numbers
   max with "6 numbers" hints; the log-in box stays 8 long with "Your PIN". Engine still to do: **new PINs must be exactly 6

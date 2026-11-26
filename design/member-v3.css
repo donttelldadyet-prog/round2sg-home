@@ -434,3 +434,7 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .more .it{position:relative;z-index:0}
 .more .it[open]{z-index:62}
 .more[open] .it{animation-fill-mode:backwards}
+
+/* panel fix: the page's entrance animation moved .more on its own layer, so the panel and its dark cover sat inside the
+   settings area instead of the whole screen. Fade it in instead (no movement) so the panel covers the full screen. */
+.scr.show .more.ent{animation:itin .45s ease both;transform:none}
