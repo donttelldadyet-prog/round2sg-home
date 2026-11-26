@@ -358,6 +358,21 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 - **Not done:** System check (needs the staff code – Light check is enough, the tile can't touch bookings). Not yet seen on a real
   TV: watch Kaeden's first scan screen + a member load (speed of the orbit/rows on the PS4's CPU is the unknown).
 
+## ⭐ 27 Nov 2026, 2:55am – Kaeden on helper 1.1.156 + tile 0.17 (ps4-tile)
+Owner 2:43am: "A [the countdown is cut ~2 s in], and it doesnt close the tile after relogin. how can karens profile be still
+signed in when the ps button stage logs everyone out?" **round2_shell12.txt** (menu add-on log) explains all three:
+02:33:00 load finished → add-on waits for the tile to close, **max 20 s** → 02:33:20 "tile still open after 20 s" → 02:33:21 menu
+Log Out for everyone (this cut the tile's countdown: a nothing-to-copy load waited 10 s before "ready", + 4 s ready + 6 s next =
+past 20 s). Karen WAS logged out at 02:33:21; owner signed her back in at 02:33:43 – the waiting picture was only checked once a
+minute (outer main loop) and missed the 22 s. The menu Log Out leaves the tile app open behind the picker.
+- **helper 1.1.156**: waiting picture checked every 2 s (inner loop); after a member load, as soon as nobody is signed in (add-on
+  log-out) + tile still open + no load on → helper closes the tile for real (log "tile: everyone was logged out after the member
+  load - tile closed for real"); 1.1.155's 40-s fallback stays.
+- **tile 0.17** (main.cpp only, CI build from ps4-helper 3d78378, released to ps4-tile): ready after 3 s instead of 10 when the
+  helper's tile-live file says done → 3 + 4 + 6 s fits inside the add-on's 20 s. Makefile VERSION must be bumped with TILE_V (CI
+  takes the json version from the Makefile – first 0.17 staging build said "0.16").
+- No add-on change. Kept-player reload with the profile signed in: picture goes on at the add-on's log-out now.
+
 ## ⭐ 27 Nov 2026, 2:40am – Kaeden on helper 1.1.155 (tile closed for real after a load)
 Owner 2:34am: "loaded karen's profile again.... doesn't change the profile and ps4 tile doesn't close after 5 sec, it closes only
 after 2 sec, and after press ps button to log into karen the ps4 tile is still running". Logs: no helper close this time (1.1.154
