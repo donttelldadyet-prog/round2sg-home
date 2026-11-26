@@ -70,6 +70,12 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   **"New PIN again"**, then Change PIN. If the two new PINs differ: inline error "The new PINs don't match." (field shakes,
   nothing sent). Same rule wherever a PIN is first set (join step) if it isn't there already. (27 Nov, design)
 
+**Member page v3 – softer card swipe (Karen, 27 Nov 2026 2:20am: "when i swipe the card can we make animation less harsh")**
+- [ ] 3 · member page v3 (MEM3_HTML script, card swipe) · Copy the new swipe from `design/membership/welcome-flow.html`
+  (search "swipe left or right"): finger moves the card less (dx*.4, max 80deg, perspective 1200px, no scale-down), flip
+  needs 70px (was 55), half-turn 140-320 ms cubic-bezier(.4,0,.6,1), landing 560 ms cubic-bezier(.22,1,.36,1) with NO
+  overshoot wobble, spring-back 450 ms same ease. Tap-to-flip unchanged. (27 Nov, design)
+
 **PS4 save screen v2 – same look as the member page (Karen, 27 Nov 2026 12:40am: "push to my bf")**
 - [x] (built 27 Nov 1:05am: tile 0.16 – round2-tv-launcher ps4-helper 1bf4331, released ps4-tile 2615b05; design/tile.json words filled in. See "27 Nov 1:05am – PS4 TILE 0.16") 3 · PS4 tile · Mockup (1920x1080, tabs + room colours): `design/tile/save-screen-v2.html` (picture: `save-screen-v2.png`).
   Layout/look lives in round2-tv-launcher `ps4/tile/tile/draw.h`, so this needs building there (tile.json words NOT changed yet,
