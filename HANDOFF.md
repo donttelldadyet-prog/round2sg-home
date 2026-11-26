@@ -314,7 +314,7 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   → straight in → log out → wrong PIN. Checked live 1:55am in the owner's browser: page, fonts, orb + 7 marbles, room colour,
   1200 pictures, all images load; ?v=2 and ?v=1 still open.
 - **Engine:** live 4ff3f14dd26b → 2491b1c6f1b4 (e1fa634) → **live 99ccce5a0fa1** (d217f9a, card-logo placeholder fix); 27 bindings,
-  3 crons both times. **Next deploy starts from live 99ccce5a0fa1.** Deploy route used: KV deploy:want = commit → r2-deploy-helper
+  3 crons both times. ~~Next deploy starts from live 99ccce5a0fa1.~~ 27 Nov 2:45am → **live 82b27b4cf059** (c9b07ea: screens + words from design/member-v3.html, Crew settings, confirm new PIN, softer swipe; 27 bindings, 3 crons). **Next deploy starts from live 82b27b4cf059.** Deploy route used: KV deploy:want = commit → r2-deploy-helper
   opened in the owner's built-in browser with a ONE-TIME deploy:key (set just before, replaced with a new random one right after –
   any old saved helper link no longer works; read deploy:key from KV next time) → deploy:src SHA-256 checked → PUT keep_bindings.
 - System check: not run (needs the staff code). This touched the member page and the Load call's write (adds `rooms` to the
