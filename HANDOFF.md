@@ -352,6 +352,16 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 - **Not done:** System check (needs the staff code – Light check is enough, the tile can't touch bookings). Not yet seen on a real
   TV: watch Kaeden's first scan screen + a member load (speed of the orbit/rows on the PS4's CPU is the unknown).
 
+## ⭐ 27 Nov 2026, 2:40am – Kaeden on helper 1.1.155 (tile closed for real after a load)
+Owner 2:34am: "loaded karen's profile again.... doesn't change the profile and ps4 tile doesn't close after 5 sec, it closes only
+after 2 sec, and after press ps button to log into karen the ps4 tile is still running". Logs: no helper close this time (1.1.154
+fix holds). **Picture:** 02:32:59 "avatar: 16c45cc7 is signed in - picture waits until it signs out" – Karen's profile has stayed
+signed in all night, so it waits (Aliff's, signed out, went on at 02:33:00). Normal guests aren't hit: a new load signs the profile
+out first. **Tile still running:** ps4list 2:36am running = RTWO00001 with Karen signed in – the tile's own close
+(sceSystemServiceLoadExec "exit") only goes to the home screen and leaves the app open (and never runs if PS is pressed mid-
+countdown). 1.1.155: 40 s after a member load finishes (kept or loaded), no new load on and the tile still open → helper closes it
+(close_game, log "tile: still open 40 s after the member load - closed for real"). "Closes after 2 sec" – asked owner what he means.
+
 ## ⭐ 27 Nov 2026, 2:35am – Kaeden on helper 1.1.154 (owner OK 2:21am "ok install now")
 1.1.153 installed 2:22am, then owner 2:24am: "the ps4 tile closes before the 5 sec timer is up … and the profile picture didn't
 change, i just relogged in in karen's profile". save.log: **02:24:06 "close done: RTWO00001"** = the helper's tile-update check
