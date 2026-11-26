@@ -369,6 +369,16 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 - **Not done:** System check (needs the staff code – Light check is enough, the tile can't touch bookings). Not yet seen on a real
   TV: watch Kaeden's first scan screen + a member load (speed of the orbit/rows on the PS4's CPU is the unknown).
 
+## ⭐ 27 Nov 2026, 3:42am – engine: a room reset ends the crew's room session; Kaeden silent since 3:34
+- Owner 3:34am: "now both profile pictures are not in. also is it normal that ready aliff bozz + karen bozz shows up at the first
+  tile in the ps4 tile after a clean slate". Pictures = the 1.1.156 stamp bug (both stamps matched after a reset) – fixed in 1.1.157,
+  still NOT installed: Kaeden's helper restarted 3:29:48 (PS4 restart), a load ran ~3:30, last poll 3:34:21, then nothing (ps4update
+  → "The PS4 isn't answering"). Install 1.1.157 (ps4update ch=test) once it's back.
+- "Ready" after a clean slate: ps4Tile kept mp.fin ("Ready, Karen bozz + Aliff Bozz!") for the whole session; a reset didn't end it.
+  **Engine fb8acb2 (deployed 3:40am, live = repo, 27 bindings, 3 crons, light check 19/4/0 – old warnings):** in ps4In, when a
+  report shows a reset/clean/purge clean slate STARTING (kind changed, or done → running), memplay:<id> gets out = now
+  (outWhy "room reset (…)") – the tile shows the plain QR screen, the phone asks to load again. One extra DO read only then.
+
 ## ⭐ 27 Nov 2026, 3:25am – tile 0.19 (lag) on Kaeden; helper 1.1.157 (picture after a clean slate) waits for a PS4 restart
 - Owner 3:14am: "ps4 tile seems laggy … is it cpu encoded … any hardware acceleration available for gpu??" Everything on the tile
   is drawn by the CPU, pixel by pixel. The screen memory (Scene2D, sceKernelAllocateDirectMemory type 3 = WC_GARLIC) is
