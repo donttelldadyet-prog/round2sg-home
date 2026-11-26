@@ -369,6 +369,20 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 - **Not done:** System check (needs the staff code – Light check is enough, the tile can't touch bookings). Not yet seen on a real
   TV: watch Kaeden's first scan screen + a member load (speed of the orbit/rows on the PS4's CPU is the unknown).
 
+## ⭐ 27 Nov 2026, 3:25am – tile 0.19 (lag) on Kaeden; helper 1.1.157 (picture after a clean slate) waits for a PS4 restart
+- Owner 3:14am: "ps4 tile seems laggy … is it cpu encoded … any hardware acceleration available for gpu??" Everything on the tile
+  is drawn by the CPU, pixel by pixel. The screen memory (Scene2D, sceKernelAllocateDirectMemory type 3 = WC_GARLIC) is
+  write-combined: fine to write, very slow to READ – and every soft edge/glow/text pixel reads the pixel under it (blend). **Tile
+  0.19:** each frame is drawn in a malloc'd buffer (WORK) and copied to the screen once (main.cpp only; CI build from ps4-helper
+  f5822e3 → ps4-tile; Kaeden 3:23am). Not tried yet: the intro still re-draws the whole card each frame for 1.2 s; GPU drawing
+  (Gnm) needs Sony's shader compiler, not in the homebrew toolchain – not worth it for a 2D screen.
+- Owner 3:16am: "i loaded karen's save file, and aliff bozz profile picture didnt load instead?" Log: a session reset ran at
+  03:05 (default pictures back on all spares); at the 03:13 load Karen's picture went on (03:13:51), **Aliff got no avatar line**:
+  1.1.154's stamp prep/av_16c45cc8.txt still said "m7xbafbe3/p2 <size>" from 02:33 → skipped. **1.1.157** (ps4-helper 0bdd453,
+  ps4-test): stamps removed at a clean slate + by /_avreset//_avcopy, and a matching stamp only skips if the picture files are
+  really there. Install was REFUSED by the helper's guard: "waits for the next PS4 restart (5 switches since it started)" – owner
+  to restart Kaeden, then ps4update ch=test again.
+
 ## ⭐ 27 Nov 2026, 3:15am – tile 0.18 = Karen's save screen v3 (owner: "my gf pushed a updated design u didnt pick up")
 Owner 3:04am: "everytime a new version is pushed, check design if there are updates". Karen pushed save-screen-v3 at 2:53-2:59am,
 just after tile 0.17 was built (2:47am). **New standing rule in both CLAUDE.md files: before every release, read design/ + index.html
