@@ -63,6 +63,18 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   wrap unevenly – `display:flex;flex-wrap:wrap;gap:8px` with equal heights would tidy them. – looks unpolished on the page
   every guest sees right after paying – (26 Nov, design)
 
+**PS4 save screen v3 – more premium card + more alive (Karen, 27 Nov 2026 2:52am: "the one on the tv looks plain")**
+- [ ] 3 · PS4 tile (draw.h) · Mockup: `design/tile/save-screen-v3.html` (+ .png), open
+  https://raw.githack.com/donttelldadyet-prog/round2sg-home/9d5eb87d644f3c79828003110b94a8fdc918896a/design/tile/save-screen-v3.html (tabs 1-4, room colours).
+  Changes vs v2 (0.16): **Crew card = the phone's card**: brushed-metal dark gradient + room-colour glow top-right and bottom-left,
+  **gold chip with contact lines**, Round2 logo top-right, bigger name, room-colour light line along the bottom edge + soft
+  coloured shadow under the card, slow float (tilts a few degrees), light sweep. Second date block = **PLAYERS n/m**.
+  **Loading:** each time a profile turns Ready its avatar **flies from its row onto the card** (stacked faces bottom-right),
+  the card does a small bump, PLAYERS counts up, the row tints green. **Scan:** a room-colour **scan line moves up and down
+  the QR**, and under it "Waiting for your phone" with three pulsing dots. Ready + What's next as v2.
+  PS4 drawing is slow: pre-render the card per room colour as a PNG (gradient, chip, edge) and draw name/dates/faces on top;
+  the float can be 2-3 px up/down instead of a 3D tilt; the avatar flight = 8-10 frames. Plain ASCII words. (27 Nov, design)
+
 **Crew settings panels: pull down to close (Karen, 27 Nov 2026 2:42am)**
 - [ ] 3 · member page v3 script · The Claim code and PIN tiles (`.more .it` = `<details>`) open a bottom panel (`.osh`); today
   it closes by tapping outside (the summary's ::before cover). Karen wants it to also close by **pulling the panel down**,
