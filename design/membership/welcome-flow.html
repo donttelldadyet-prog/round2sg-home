@@ -168,17 +168,11 @@ body{margin:0;background:#16141b;color:#f4f1fb;font-family:CP,system-ui,sans-ser
 .pfoot{position:sticky;bottom:0;margin:10px -22px 0;padding:12px 22px 16px;background:linear-gradient(180deg,rgba(20,18,25,0),#141219 22%)}
 .orb.chg{animation:chg .48s ease-in forwards}
 @keyframes chg{to{scale:1.1;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.8),0 0 70px color-mix(in srgb,var(--ac) 80%,transparent)}}
-.glare{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:4;mix-blend-mode:screen;background:radial-gradient(circle at var(--gx,30%) var(--gy,20%),rgba(255,255,255,.22),rgba(255,255,255,.05) 30%,transparent 55%);transition:background .15s}
-.shine{translate:calc((var(--gxn,0) * 14px)) calc((var(--gyn,0) * 10px))}
 .cd .cf{display:flex;padding:0 7%;margin-top:9px}
 .cd .cf b{width:22px;height:22px;border-radius:50%;margin-left:-6px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:PS;font-size:8px;font-weight:400;color:#fff;background:#2b2933;box-shadow:0 0 0 2px #17161b}
 .cd .cf b:first-child{margin-left:0;box-shadow:0 0 0 2px #17161b,0 0 0 3px color-mix(in srgb,var(--ac) 60%,transparent)}
 .cd .cf b img{width:100%;height:100%;object-fit:cover}
 .cd .cf i{font-style:normal;font-size:7px;letter-spacing:.2em;color:rgba(255,255,255,.45);align-self:center;margin-left:9px}
-.egg{position:absolute;left:62px;top:50%;margin-top:-22px;width:26px;height:26px;z-index:2;pointer-events:none}
-.egg .ey{transform-origin:50% 45%;animation:blink 4s infinite}
-@keyframes blink{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
-.cd.back .egg{display:none}
 .shk{font-weight:400;opacity:.6;font-size:12px}
 .ptr{position:sticky;top:0;height:0;display:flex;justify-content:center;z-index:5;pointer-events:none}
 .ptr .po{width:30px;height:30px;margin-top:-40px;border-radius:50%;overflow:hidden;position:relative;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.3),0 0 18px color-mix(in srgb,var(--ac) 40%,transparent);opacity:0}
@@ -186,9 +180,7 @@ body{margin:0;background:#16141b;color:#f4f1fb;font-family:CP,system-ui,sans-ser
 .ptr .po.spin{animation:pospin .9s ease-in-out}
 @keyframes pospin{50%{scale:1.2}}
 .toast{position:absolute;left:50%;top:70px;transform:translateX(-50%);z-index:30;padding:8px 14px;border-radius:999px;background:rgba(30,28,36,.95);border:1px solid rgba(255,255,255,.1);font-size:13px;white-space:nowrap;pointer-events:none}
-.ppi.pnew::after{content:"NEW";position:absolute;top:-4px;font-family:PS;font-size:5px;color:#111;background:#ffe08a;padding:2px 3px;border-radius:3px;animation:ppop .5s cubic-bezier(.2,1.6,.4,1)}
 .ppi{position:relative}
-.conf{position:absolute;top:-10px;width:7px;height:10px;z-index:40;pointer-events:none;border-radius:1px}
 .oin{position:absolute;inset:0;border-radius:50%;overflow:hidden;clip-path:circle(50% at 50% 50%);-webkit-mask-image:-webkit-radial-gradient(white,black);transform:translateZ(0)}
 .tl{position:absolute;inset:0;width:300px;height:300px;z-index:2;pointer-events:none}
 .shock{position:absolute;left:68px;top:68px;width:164px;height:164px;border-radius:50%;border:2px solid color-mix(in srgb,var(--ac) 60%,#fff);box-shadow:0 0 18px color-mix(in srgb,var(--ac) 50%,transparent);pointer-events:none}
@@ -514,7 +506,7 @@ var AVR={"vale": "data:image/webp;base64,UklGRoARAABXRUJQVlA4WAoAAAAQAAAAdwAAdwA
 var R={vale:'#E8436A',atlas:'#E9E7EF',kai:'#24B49A',bella:'#7A5BE0',scarlett:'#F2C21B',kaeden:'#4DB848',max:'#E0402F'};
 var cur='s-wel',rbar=document.getElementById('rooms');
 Object.keys(R).forEach(function(k,i){var b=document.createElement('button');b.style.background=R[k];b.title=k;if(!i)b.className='on';b.onclick=function(){document.documentElement.style.setProperty('--ac',R[k]);document.querySelectorAll('[data-rn]').forEach(function(e){e.textContent=k.toUpperCase()});document.querySelectorAll('[data-rnn]').forEach(function(e){e.textContent=k.charAt(0).toUpperCase()+k.slice(1)});document.getElementById('rav').src=AVR[k];rbar.querySelectorAll('button').forEach(function(x){x.className=''});b.className='on'};rbar.appendChild(b)});
-function go(id,back){if(id===cur)return;if(id==='s-in'&&!window._ppNew&&window.newRoom){window._ppNew=1;setTimeout(newRoom,900)}if(id==='s-in'&&window.eggs)setTimeout(function(){eggs(CREW,1)},700);if(id==='s-wel'&&window.welcome)setTimeout(welcome,0);var a=document.getElementById(cur),b=document.getElementById(id);a.classList.remove('show');a.classList.toggle('back',!back);b.classList.remove('back');if(back)b.classList.add('back');b.offsetWidth;b.classList.add('show');b.classList.remove('back');b.querySelectorAll('.a').forEach(function(e){e.style.animation='none';e.offsetWidth;e.style.animation=''});cur=id}
+function go(id,back){if(id===cur)return;if(id==='s-wel'&&window.welcome)setTimeout(welcome,0);var a=document.getElementById(cur),b=document.getElementById(id);a.classList.remove('show');a.classList.toggle('back',!back);b.classList.remove('back');if(back)b.classList.add('back');b.offsetWidth;b.classList.add('show');b.classList.remove('back');b.querySelectorAll('.a').forEach(function(e){e.style.animation='none';e.offsetWidth;e.style.animation=''});cur=id}
 document.addEventListener('click',function(e){var t=e.target.closest('[data-go],[data-back]');if(!t)return;e.preventDefault();if(t.dataset.go)go(t.dataset.go);else go(t.dataset.back,true)});
 document.getElementById('jgo').onclick=function(){var e=document.getElementById('e1');if(!phoneOK('jp')){e.textContent=document.getElementById('jpc').value==='+65'?'Enter your 8-digit phone number.':'Enter your full phone number.';return}e.textContent='';go('s-next')};
 document.getElementById('jp').oninput=function(){document.getElementById('e1').textContent=''};
@@ -643,7 +635,7 @@ document.querySelectorAll('.tilt').forEach(function(c){function m(e){var r=c.get
 /* ===== 25-26 Nov improvements ===== */
 var CREW='Night Owls',VISITED=['vale','kai','bella','scarlett'],RN=['vale','atlas','kai','bella','scarlett','kaeden','max'];
 function nice(n){return n.replace(/(^|\s)(\S)/g,function(m,a,b){return a+b.toUpperCase()})}
-function setCrew(n){CREW=n;var t=nice(n);if(window.eggs)setTimeout(function(){eggs(n)},0);document.querySelectorAll('[data-crewn]').forEach(function(e){e.textContent=t});document.querySelectorAll('[data-crewu]').forEach(function(e){e.textContent=n.toUpperCase()})}
+function setCrew(n){CREW=n;var t=nice(n);document.querySelectorAll('[data-crewn]').forEach(function(e){e.textContent=t});document.querySelectorAll('[data-crewu]').forEach(function(e){e.textContent=n.toUpperCase()})}
 function curRoom(){var c=document.querySelector('#rooms button.on');return c?c.title:'vale'}
 function cap(k){return k.charAt(0).toUpperCase()+k.slice(1)}
 /* 4 welcome back: remember the last crew on this phone */
@@ -762,33 +754,13 @@ window.orbAwake=function(){return cur==='s-wel'&&!document.hidden};
 function faces(c){var f=c.querySelector('.cf');if(!f)return;f.innerHTML='';var av=document.querySelectorAll('#pls .pl:not(.padd) .av'),n=0;
  [].forEach.call(av,function(a){if(n>=5)return;n++;var b=document.createElement('b'),im=a.querySelector('img');if(im)b.innerHTML='<img src="'+im.src+'" alt="">';else{b.textContent=a.textContent;if(a.style.background)b.style.background=a.style.background}f.appendChild(b)});
  var i=document.createElement('i');i.textContent=n+' PLAYERS';f.appendChild(i)}
-/* 1 tilt the phone (or move the mouse) and the light moves across the cards and the orb */
-(function(){document.querySelectorAll('.cd').forEach(function(c){var g=document.createElement('span');g.className='glare';g.setAttribute('aria-hidden','true');c.appendChild(g)});
- var R=document.documentElement;function set(nx,ny){nx=Math.max(-1,Math.min(1,nx));ny=Math.max(-1,Math.min(1,ny));R.style.setProperty('--gx',(50+nx*45)+'%');R.style.setProperty('--gy',(40+ny*45)+'%');R.style.setProperty('--gxn',nx);R.style.setProperty('--gyn',ny)}
- var dev=false;window.addEventListener('deviceorientation',function(e){if(e.gamma==null)return;dev=true;set(e.gamma/30,(e.beta-45)/30)});
- document.addEventListener('pointermove',function(e){if(dev||e.pointerType!=='mouse')return;set(e.clientX/innerWidth*2-1,e.clientY/innerHeight*2-1)});
- /* iPhone asks once for motion access, on the first tap */
- function ask(){document.removeEventListener('click',ask,true);try{if(window.DeviceOrientationEvent&&DeviceOrientationEvent.requestPermission)DeviceOrientationEvent.requestPermission().catch(function(){});if(window.DeviceMotionEvent&&DeviceMotionEvent.requestPermission)DeviceMotionEvent.requestPermission().catch(function(){})}catch(_){}}
- document.addEventListener('click',ask,true);
- /* 4 shake to shuffle while the picture picker is open */
+/* 4 shake to shuffle while the picture picker is open (iPhone asks for motion access the first time the picker opens) */
+(function(){var asked=false;document.addEventListener('click',function(e){if(asked||!e.target.closest('.pl.pe,#padd'))return;asked=true;try{if(window.DeviceMotionEvent&&DeviceMotionEvent.requestPermission)DeviceMotionEvent.requestPermission().catch(function(){})}catch(_){}},true);
  var last=0;window.addEventListener('devicemotion',function(e){var a=e.accelerationIncludingGravity||e.acceleration;if(!a||a.x==null)return;var m=Math.abs(a.x)+Math.abs(a.y)+Math.abs(a.z);
   if(!e.acceleration||e.acceleration.x==null){m-=9.8}else{m=Math.abs(e.acceleration.x)+Math.abs(e.acceleration.y)+Math.abs(e.acceleration.z)}
   if(m>22&&Date.now()-last>900&&document.getElementById('psh').classList.contains('on')&&window.pShuffle){last=Date.now();if(navigator.vibrate)navigator.vibrate([15,40,15]);pShuffle()}});
  if(!('ontouchstart' in window))document.querySelectorAll('.shk').forEach(function(e){e.remove()})})();
-/* 5 crew-name easter eggs: owls get a blinking owl on the card, birthdays get confetti */
-var OWL='<svg class="egg" viewBox="0 0 26 26" aria-hidden="true"><path d="M5 9l3 3 5-2 5 2 3-3v9c0 4-4 6-8 6s-8-2-8-6z" fill="#d9c48a" opacity=".9"/><g class="ey"><circle cx="9.5" cy="14" r="3" fill="#1a1820"/><circle cx="16.5" cy="14" r="3" fill="#1a1820"/><circle cx="10.3" cy="13.2" r="1" fill="#fff"/><circle cx="17.3" cy="13.2" r="1" fill="#fff"/></g><path d="M12 17l1 1.6 1-1.6z" fill="#e8a33a"/></svg>';
-function eggs(n,arrive){n=(n||'').toLowerCase();document.querySelectorAll('.cd .egg').forEach(function(e){e.remove()});
- if(/owl/.test(n))document.querySelectorAll('#incard,#mkcard').forEach(function(c){c.insertAdjacentHTML('beforeend',OWL)});
- if(arrive&&/birthday|bday|b-day|hbd/.test(n)){var ph=document.querySelector('.ph');for(var i=0;i<60;i++){var p=document.createElement('i');p.className='conf';p.style.left=(Math.random()*100)+'%';p.style.background=['#ff6fb0','#ffd36e','#7dffc9','#6ecbff','#b48cff'][i%5];ph.appendChild(p);
-  p.animate([{transform:'translateY(0) rotate(0)',opacity:1},{transform:'translate('+((Math.random()-.5)*80)+'px,'+(500+Math.random()*350)+'px) rotate('+(Math.random()*720)+'deg)',opacity:.9}],{duration:1600+Math.random()*1200,delay:Math.random()*400,easing:'cubic-bezier(.2,.6,.4,1)'}).onfinish=function(){this.effect.target.remove()}}
-  toast('🎂 Happy birthday, '+nice(CREW)+'!')}}
-eggs(CREW);
 function toast(t){var ph=document.querySelector('.ph'),e=document.createElement('div');e.className='toast';e.textContent=t;ph.appendChild(e);e.animate([{opacity:0,transform:'translate(-50%,-8px)'},{opacity:1,transform:'translate(-50%,0)',offset:.12},{opacity:1,offset:.85},{opacity:0}],{duration:2600}).onfinish=function(){e.remove()}}
-/* 8 a room you just played pops into the passport next time you log in */
-function newRoom(){var k=VISITED[VISITED.length-1];paintPassport(k);var b=[].filter.call(document.querySelectorAll('.ppi'),function(x){return x.textContent.toLowerCase()===k})[0];
- document.getElementById('pps').textContent='New room stamped: '+cap(k)+'!';if(navigator.vibrate)navigator.vibrate([8,40,12]);
- if(b&&!matchMedia('(prefers-reduced-motion: reduce)').matches){var r=b.querySelector('i');for(var j=0;j<10;j++){var s=document.createElement('span'),a=j*Math.PI/5;s.style.cssText='position:absolute;left:50%;top:11px;width:4px;height:4px;border-radius:50%;background:'+R[k]+';box-shadow:0 0 6px '+R[k];b.appendChild(s);
-   s.animate([{transform:'translate(-50%,-50%)',opacity:1},{transform:'translate(calc(-50% + '+Math.cos(a)*22+'px),calc(-50% + '+Math.sin(a)*22+'px)) scale(0)',opacity:0}],{duration:700,easing:'ease-out'}).onfinish=function(){this.effect.target.remove()}}}}
 /* 3 pull down to refresh on the logged-in screen: a mini save orb fills up */
 (function(){var sc=document.getElementById('s-in'),po=document.getElementById('po'),fl=po.querySelector('i'),y0=null,d=0,busy=false;
  function mv(y,e){if(y0===null||busy)return;d=y-y0;if(d<=0||sc.scrollTop>0){po.style.opacity=0;return}if(e&&e.cancelable)e.preventDefault();var p=Math.min(1,d/90);po.style.marginTop=(-40+p*70)+'px';po.style.opacity=p;fl.style.height=(p*100)+'%';if(p===1&&!po._b){po._b=1;if(navigator.vibrate)navigator.vibrate(6)}}
