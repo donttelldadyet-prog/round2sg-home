@@ -479,3 +479,16 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .more #routw .bx svg{width:16px;height:16px}
 .more #routw small{font-size:12px}
 .more #routw b{color:#ff9aa6}
+/* calmer, premium avatar (Karen 27 Nov: "slightly too much") – thin ring, soft slow glow, one faint ripple, gentle flash */
+.pprev .av{animation:avglow2 3.6s ease-in-out infinite}
+.pprev .av:not(:has(img)){animation:avglow2 3.6s ease-in-out infinite}
+@keyframes avglow2{0%,100%{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--ac) 55%,transparent),0 0 12px color-mix(in srgb,var(--ac) 18%,transparent)}
+ 50%{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--ac) 80%,transparent),0 0 22px color-mix(in srgb,var(--ac) 32%,transparent)}}
+.pprev .av::before{border-width:1px;animation:avring2 3.6s cubic-bezier(.2,.6,.3,1) infinite}
+.pprev .av::after{display:none}
+@keyframes avring2{0%{opacity:.35;transform:scale(1)}100%{opacity:0;transform:scale(1.35)}}
+.pprev::before{filter:drop-shadow(0 0 3px color-mix(in srgb,var(--ac) 60%,transparent));opacity:.55;animation-duration:3.2s;
+ background:conic-gradient(from 0deg,transparent 0 78%,color-mix(in srgb,var(--ac) 30%,transparent) 88%,rgba(255,255,255,.9) 94%,transparent 96%);
+ -webkit-mask:radial-gradient(circle,transparent 32.5px,#000 33px,#000 34.5px,transparent 35px);mask:radial-gradient(circle,transparent 32.5px,#000 33px,#000 34.5px,transparent 35px)}
+.pprev::after{display:none}
+.pgrid button.on{outline-width:1.5px;transform:none}
