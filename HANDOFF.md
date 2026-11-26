@@ -5,7 +5,7 @@
 > marble game with a blop-blop finish, SAVE POINT, Create / Load my save, card that flips (+ a Black edition card after all 7 rooms),
 > room passport, renew sheet, crew name that types onto the card, player edit with YOUR avatar library (Shuffle + Browse
 > all 1200), and a "Saves loaded" TV that switches on and drops the profiles in. Play it on your phone:
-> https://raw.githack.com/donttelldadyet-prog/round2sg-home/06587a7120c1707c4493ecf32ad86c7845526209/design/membership/welcome-flow.html
+> https://raw.githack.com/donttelldadyet-prog/round2sg-home/fda41850a12dcf36c18f2f43d96be4fd7a284a9a/design/membership/welcome-flow.html
 > What changed + what to build: "Welcome flow v3" and "v2" at the top of DESIGN → FUNCTION CONCERNS below.
 > (Owner: delete this box once you've seen it.)
 
@@ -58,7 +58,7 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   **Logged in:** "Hey, <Crew>!" (names title-cased); room passport (7 marbles = rooms played, current room ringed; all 7 =
   the card unlocks as the BLACK EDITION (matte black, gold name + chip, engraved gold laurel crest "VII"; flips over with a gold burst)) → FUNCTION: needs rooms-played per crew. **Renew** opens a sheet (1 month
   $10 / 3 months $30 – drafts) → real payment. **Players:** tap a row (✏️) to edit name + picture; "Add a player" (max 4
-  players + the room profile = 5); "Remove from crew" asks first. Pictures = your avatar library (7 Lapy + 5 pack, Shuffle,
+  players + the room profile = 5); "Remove from crew" asks first. **Sheets** (edit player, renew) close by pulling them down (handle/title, or anywhere when scrolled to the top). Pictures = your avatar library (7 Lapy + 5 pack, Shuffle,
   Browse all 1200; prototype loads them from round2-book.donttelldadyet.workers.dev/m/av/NNNN.png); no room characters for
   players. **Load saves:** profiles fly off, then "Saves loaded" – TV powers on (CRT line), profiles drop in (5 fit), sparkle
   burst, title reveal. TV not answering → message + Try again (needs a timeout from the TV). **Welcome back:** phone that
@@ -79,7 +79,7 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   your save"; **country-code dropdown** (SG first, region, CN/HK/TW/JP/KR/IN/AU/NZ/UK/US/FR/DE/AE; box shows only "+65") –
   SG = 8 digits, others 6–14 → FUNCTION: member accounts + WhatsApp PIN reset assume +65; store full E.164 numbers before
   enabling non-SG codes. Same dropdown on Log in. **All screens:** one soft top glow in the room colour (dot grid removed).
-  **Crew card:** "CREW SINCE" and "VALID TO" as two label-over-date blocks; **tap the card → it flips** (WAAPI half-turns,
+  **Crew card:** "CREW SINCE" and "VALID TO" as two label-over-date blocks; **tap the card → it flips** (also by swiping left/right – it follows the finger; WAAPI half-turns,
   content swap) to a back with magnetic stripe, signature strip with a random handwritten line (Caveat font, OFL, inlined;
   list in the file: "Sup homie", "GG, see you next round", "Press start to continue"…), "If found, return to 20 Haji Lane
   #02-00" + logo. **Logged in:** "Hey, <crew name>"; the room's profile row shows that room's character face (crops of the
