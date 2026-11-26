@@ -295,6 +295,7 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   the scan orb, c2 = word over the full orb, c3 = card label, c1n = "SAVES LOADED", c2n = "Ready, player one.", c3n = rows heading
   (empty = "Who's playing in {room}"), n1–n4 = steps "main|small", n5 unused, `[PS]` = round PS button. Checked with the engine's own
   ps4TileCfg code. Kaeden's 0.15 shows these words in its old layout until it updates (≤ 30 min, only when no game is open).
+- **Installed on Kaeden 27 Nov 1:01am** (owner: "push the update now"): `/_tile.now` via the control centre's ps4look → "install started (task 372)", Kaeden reports tile 0.16. (A clean slate had run on Kaeden at 12:53am, done before the install.)
 - **Simulator:** `ps4/tile/sim` (`ROOM=vale ./sim`) draws every screen; the design preview kit's tile tab is still the 0.13 copy.
 - **Not done:** System check (needs the staff code – Light check is enough, the tile can't touch bookings). Not yet seen on a real
   TV: watch Kaeden's first scan screen + a member load (speed of the orbit/rows on the PS4's CPU is the unknown).
