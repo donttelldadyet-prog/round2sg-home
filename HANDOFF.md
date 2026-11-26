@@ -335,6 +335,17 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 - **Not done:** System check (needs the staff code – Light check is enough, the tile can't touch bookings). Not yet seen on a real
   TV: watch Kaeden's first scan screen + a member load (speed of the orbit/rows on the PS4's CPU is the unknown).
 
+## ⭐ 27 Nov 2026, 2:25am – Bug: member picture not changed when the profile was still signed in → helper 1.1.153 (test, not installed)
+Owner 2:16am (Kaeden, photo): loaded Karen bozz + Aliff Bozz after Ryan (hipponips) had played; Player 1 became "Karen bozz" but
+kept Ryan's picture (Ezio). Cause (code, 1.1.98): `av_apply` refuses on a SIGNED-IN profile ("picture not changed") – the name
+changes, the picture can't. Ryan's profile was still signed in. Fix 1.1.153 (ps4-helper, on ps4-test): the picture waits in
+/data/round2/av-pending.txt and goes on at the first check-in after that profile signs out (only if the profile still belongs to
+that member). 1.1.153 also carries 1.1.151 (tile first) + 1.1.152 (two crews + "a profile taking a new player is released first
+if it holds someone else's games"). Kaeden still 1.1.150 – install needs the owner's OK.
+- Checked: neither Karen's nor Ryan's cloud list changed tonight. What was on Ryan's profile before Karen's load (GTA V) went to
+  the deferred room backup (save.log 02:14:32 "deferred backup sent … 16c45cc7-CUSA00419") – NOT into Ryan's member saves; that
+  is exactly the 1.1.152 release-first fix. If Ryan played GTA tonight, that progress is only in the room backup.
+
 ## ⭐ 27 Nov 2026, 1:20am – GTA V save copied to staff Ryan's new member (owner: "copy karen's gta5 save file into this new member hipponips, that is our staff ryan")
 From crew "ROUND2_" (m7xbafbe3) player p1 "Karen bozz" → crew "ryan mar" (me956uzp0, joined 27 Nov) player p1 "hipponips".
 Done straight in R2 (Cloudflare API): wrote `saves/members/me956uzp0/p1/index.txt` (it didn't exist – checked, nothing
