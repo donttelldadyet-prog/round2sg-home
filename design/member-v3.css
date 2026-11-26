@@ -501,3 +501,11 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .more .ohelp .bx{width:32px;height:32px;border-radius:10px;margin:0;color:#3fe0a0;background:rgba(63,224,160,.12);box-shadow:inset 0 0 0 1px rgba(63,224,160,.3)}
 .more .ohelp .bx svg{width:16px;height:16px}
 .more .ohelp small{font-size:12px}
+/* Karen 27 Nov: one Log out only (the page's) – hide "Log out of this room"; Need help? as a plain link, no box */
+.more #routw{display:none!important}
+.more .ohelp{border:0!important;background:none!important;box-shadow:none!important;margin-top:4px}
+.more .ohelp::before{display:none}
+.more .ohelp>a{padding:8px 0;gap:8px}
+.more .ohelp .bx{width:auto;height:auto;background:none;box-shadow:none;border-radius:0}
+.more .ohelp b{font-size:14px;font-weight:600;color:#cfc9de}
+.more .ohelp small{font-size:14px;color:#3fe0a0;font-weight:600}
