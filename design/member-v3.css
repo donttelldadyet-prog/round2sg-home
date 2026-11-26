@@ -393,3 +393,25 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .code{font-family:'Press Start 2P';font-size:10px;letter-spacing:.08em;color:var(--ac)}
 .pl.rm .av img,.pl .av img{width:100%;height:100%;object-fit:cover}
 #s-next>*,#s-in>*{flex-shrink:0}#s-next>.grow,#s-in>.grow{flex-shrink:1}
+
+/* Crew settings (27 Nov, Karen): one pill to open, each setting its own soft card, link rows with a chevron */
+.more{margin-top:22px;border-top:0;padding-top:0}
+.more summary{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 auto;width:max-content;padding:11px 18px;border-radius:999px;
+ background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#cfc9de;font-size:14px;font-weight:600;transition:background .2s,border-color .2s}
+.more summary:hover{background:rgba(255,255,255,.07)}
+.more summary::after{content:"";width:7px;height:7px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:translateY(-2px) rotate(45deg);transition:transform .3s cubic-bezier(.22,1,.36,1)}
+.more[open] summary::after{content:"";transform:translateY(2px) rotate(-135deg)}
+.more[open] summary{background:transparent;border-color:transparent;color:#8f88a3}
+.more .mi{margin-top:10px;padding:16px;border:1px solid rgba(255,255,255,.07);border-radius:18px;background:rgba(255,255,255,.03)}
+.more[open] .mi{animation:up .45s cubic-bezier(0,0,.2,1) both}
+.more[open] .mi:nth-of-type(2){animation-delay:.04s}.more[open] .mi:nth-of-type(3){animation-delay:.08s}.more[open] .mi:nth-of-type(4){animation-delay:.12s}.more[open] .mi:nth-of-type(5){animation-delay:.16s}
+.more .mi b{display:block;font-size:15px;font-weight:600;color:#f4f1fb}
+.more .mi .sm{margin-top:6px;line-height:1.45}
+.more .mi .fd{height:50px;margin-top:10px}
+.more .mi .b2.sb{height:46px;margin-top:12px;border-radius:23px}
+.more .mi .lk{display:flex;align-items:center;justify-content:space-between;color:#f4f1fb;font-size:15px;font-weight:600}
+.more .mi .lk::after{content:"";width:8px;height:8px;border-right:2px solid #6f6880;border-top:2px solid #6f6880;transform:rotate(45deg);margin-right:4px}
+.more #routw .lk{color:#ff7a8a}
+.more #routw .lk::after{border-color:rgba(255,122,138,.6)}
+.more #ph{margin:14px 0 0;text-align:center;font-size:12px;color:#6f6880}
+.more .err:empty{display:none}
