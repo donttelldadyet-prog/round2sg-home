@@ -177,31 +177,35 @@ html:not(.r2-picked) #r2-stage div[role="group"]{animation:r2pillglow 1.8s ease-
 .r2-else>.r2-gt{filter:saturate(.75) brightness(.85)}
 .r2-resg>.r2-gw>div:nth-child(2){min-height:0!important;margin-top:8px!important;font-size:13px!important}
 
-/* LOADING SCREEN (Karen 27 Nov): same glass orb as the member page's save point, with a 7-room loading ring instead of gems */
-#r2-ld{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;background:radial-gradient(70% 50% at 50% 45%,#16111f 0%,#06050a 70%);transition:opacity .5s ease,visibility .5s;font-family:'Chakra Petch',system-ui,sans-serif}
-#r2-ld.out{opacity:0;visibility:hidden;pointer-events:none}
-#r2-ld .w{position:relative;width:300px;height:300px;display:flex;align-items:center;justify-content:center}
-#r2-ld .gl{position:absolute;left:50%;top:50%;width:230px;height:230px;margin:-115px;border-radius:50%;filter:blur(46px);opacity:.38;animation:r2ldc 7s linear infinite}
-@keyframes r2ldc{0%,100%{background:#E8436A}14%{background:#4DB848}28%{background:#F2C21B}43%{background:#7A5BE0}57%{background:#24B49A}71%{background:#E9E7EF}86%{background:#E0402F}}
-#r2-ld .orb{position:relative;width:164px;height:164px;border-radius:50%;overflow:hidden;background:linear-gradient(160deg,rgba(255,255,255,.16),rgba(255,255,255,.03) 60%);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.7),inset 0 0 0 1px rgba(255,255,255,.18),inset 0 -10px 30px rgba(0,0,0,.35),0 30px 60px -20px rgba(0,0,0,.7);animation:r2ldb 2.4s ease-in-out infinite}
-@keyframes r2ldb{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}
-#r2-ld .sh{position:absolute;left:24px;top:16px;width:56px;height:24px;border-radius:50%;background:rgba(255,255,255,.42);filter:blur(5px);transform:rotate(-28deg)}
-#r2-ld .sp{position:absolute;inset:0}
-#r2-ld .sp i{position:absolute;left:50%;top:50%;width:12px;height:12px;margin:-6px;border-radius:50%;background:var(--c);box-shadow:0 0 12px var(--c);transform:rotate(calc(var(--n) * 51.43deg)) translateY(-40px);opacity:.28;animation:r2ldd 1.05s linear infinite;animation-delay:calc(var(--n) * .15s - 1.05s)}
-@keyframes r2ldd{0%{opacity:1;scale:1.15}60%{opacity:.28;scale:.8}100%{opacity:.28;scale:.8}}
-#r2-ld .arc{position:absolute;inset:0;width:300px;height:300px;overflow:visible}
-#r2-ld .arc text{font-family:'Press Start 2P',monospace;font-size:10px;letter-spacing:.32em;fill:#f4f1fb;opacity:.85}
-#r2-ld.done .sp i{animation:none;opacity:1;scale:1}
-#r2-ld.done .orb{animation:r2ldp .7s cubic-bezier(.3,1.6,.5,1);box-shadow:inset 0 1.5px 0 rgba(255,255,255,.7),inset 0 0 0 1px rgba(255,255,255,.25),inset 0 -10px 30px rgba(0,0,0,.3),0 0 60px rgba(255,255,255,.2),0 30px 60px -20px rgba(0,0,0,.7)}
-@keyframes r2ldp{0%{transform:scale(1)}35%{transform:scale(1.12)}65%{transform:scale(.97)}100%{transform:scale(1)}}
-@media (prefers-reduced-motion:reduce){#r2-ld .gl,#r2-ld .orb,#r2-ld .sp i{animation:none}#r2-ld .sp i{opacity:.6}}
+
+/* PULL DOWN TO REFRESH (Karen 27 Nov): same mini save orb as the member page – fills as you pull, a little bounce, then "Up to date" */
+#r2-ptr{position:fixed;left:50%;top:0;z-index:99990;width:30px;height:30px;margin:-40px 0 0 -15px;border-radius:50%;overflow:hidden;background:rgba(255,255,255,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.3),0 0 18px color-mix(in srgb,var(--pc,#F2C21B) 40%,transparent);opacity:0;pointer-events:none}
+#r2-ptr i{position:absolute;left:0;right:0;bottom:0;height:0;background:var(--pc,#F2C21B)}
+#r2-ptr.spin{animation:r2pspin .9s ease-in-out}
+@keyframes r2pspin{50%{scale:1.2}}
+#r2-toast{position:fixed;left:50%;top:70px;transform:translate(-50%,-6px);z-index:99991;padding:8px 14px;border-radius:999px;background:rgba(30,28,36,.95);border:1px solid rgba(255,255,255,.1);color:#f4f1fb;font:13px 'Chakra Petch',system-ui,sans-serif;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .25s,transform .25s}
+#r2-toast.on{opacity:1;transform:translate(-50%,0)}
 </style>
 <style id="r2-css"></style>
 </head>
 <body>
-<div id="r2-ld" role="status" aria-label="Loading Round2"><div class="w"><div class="gl"></div><svg class="arc" viewBox="0 0 300 300" aria-hidden="true"><path id="r2ldp" d="M 16 150 A 134 134 0 0 1 284 150" fill="none"/><text><textPath href="#r2ldp" startOffset="50%" text-anchor="middle">NOW LOADING</textPath></text></svg><div class="orb"><div class="sp"><i style="--n:0;--c:#E8436A"></i><i style="--n:1;--c:#4DB848"></i><i style="--n:2;--c:#F2C21B"></i><i style="--n:3;--c:#7A5BE0"></i><i style="--n:4;--c:#24B49A"></i><i style="--n:5;--c:#E9E7EF"></i><i style="--n:6;--c:#E0402F"></i></div><div class="sh"></div></div></div></div>
-<script>/* loading screen: stays at least 1.2s, goes when the page has loaded (or after 7s at most) */
-(function(){var t0=Date.now(),gone=0;function go(){if(gone)return;gone=1;var l=document.getElementById('r2-ld');if(!l)return;setTimeout(function(){l.classList.add('done');setTimeout(function(){l.classList.add('out');setTimeout(function(){l.remove()},600)},650)},Math.max(0,1200-(Date.now()-t0)))}if(document.readyState==='complete')go();else addEventListener('load',go);setTimeout(go,7000)})();</script>
+<div id="r2-ptr" aria-hidden="true"><i></i></div><div id="r2-toast" role="status" aria-live="polite"></div>
+<script>/* pull down to refresh (phones): mini orb in a random room colour fills, bounces, then "Up to date" – no page reload */
+(function(){var C=['#E8436A','#4DB848','#F2C21B','#7A5BE0','#24B49A','#E9E7EF','#E0402F'],po=document.getElementById('r2-ptr'),fl=po.querySelector('i'),ts=document.getElementById('r2-toast'),y0=null,x0=0,d=0,busy=false,tt;
+ function top(){return (document.body.scrollTop||0)<=0&&(document.documentElement.scrollTop||0)<=0&&(window.scrollY||0)<=0}
+ function toast(t){ts.textContent=t;ts.classList.add('on');clearTimeout(tt);tt=setTimeout(function(){ts.classList.remove('on')},1600)}
+ function reset(){po.style.marginTop='-40px';po.style.opacity=0;fl.style.height=0}
+ addEventListener('touchstart',function(e){if(busy||e.touches.length>1||!top()||e.target.closest('#r2-gp,[role="dialog"],input,textarea,select,video'))return;y0=e.touches[0].clientY;x0=e.touches[0].clientX;d=0;po.style.setProperty('--pc',C[Math.floor(Math.random()*7)])},{passive:true});
+ addEventListener('touchmove',function(e){if(y0===null||busy)return;var t=e.touches[0];d=t.clientY-y0;
+  if(d<=0||!top()||Math.abs(t.clientX-x0)>d){y0=null;reset();return}
+  if(e.cancelable)e.preventDefault();var p=Math.min(1,d/90);po.style.marginTop=(-40+p*70)+'px';po.style.opacity=p;fl.style.height=(p*100)+'%';
+  if(p===1&&!po._b){po._b=1;if(navigator.vibrate)navigator.vibrate(6)}},{passive:false});
+ addEventListener('touchend',function(){if(y0===null)return;y0=null;var ok=d>=90;po._b=0;d=0;
+  if(!ok){po.animate([{marginTop:po.style.marginTop,opacity:po.style.opacity},{marginTop:'-40px',opacity:0}],{duration:250});reset();return}
+  busy=true;po.classList.add('spin');
+  setTimeout(function(){try{dispatchEvent(new Event('resize'))}catch(_){}
+   po.classList.remove('spin');po.animate([{marginTop:'30px',opacity:1},{marginTop:'-40px',opacity:0}],{duration:300});reset();busy=false;toast('Up to date')},900)});
+})();</script>
 <div id="r2-stage"></div>
 <script>
 /* ===== ROUND2 COLOURS: change these to match your LEDs ===== */
