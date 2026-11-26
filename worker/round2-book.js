@@ -4067,6 +4067,12 @@ async function ps4In(env, req) {
   r.games = Array.isArray(r.games) ? r.games.slice(0, 400) : prev && prev.games || [];   /* the helper sends games only when they change */
   const rep = Object.assign({}, r, { id, room, t: now, ip: req.headers.get('cf-connecting-ip') || '' });
   await hb.kvSet('ps4:' + id, rep);
+  /* 27 Nov 3:34am (owner: "is it normal that ready aliff bozz + karen bozz shows up at the first tile in the ps4 tile after a clean
+     slate"): a room reset that STARTS while a crew is loaded wipes their profiles, so it ends that crew's room session – the tile goes
+     back to the plain QR screen and the phone asks them to load again. One extra storage call, only when a reset starts. */
+  { const pc = (prev && prev.clean) || {}, nc = r.clean || {}, RK = ['reset', 'clean', 'purge'];
+    if (RK.includes(nc.kind) && (pc.kind !== nc.kind || (pc.state === 'done' && nc.state !== 'done'))) {
+      const mp = await hb.kvGet('memplay:' + id); if (mp && !mp.out) { mp.out = now; mp.outWhy = 'room reset (' + nc.kind + ')'; await hb.kvSet('memplay:' + id, mp); } } }
   const uc = await hb.kvGet('ps4cmd:' + id);   /* an update: did the new version arrive, or was it rolled back? */
   if (uc && uc.do === 'update' && (uc.state === 'taken' || uc.state === 'done')) {
     if (r.v === uc.v) { uc.state = 'updated'; uc.doneAt = now; await hb.kvSet('ps4cmd:' + id, uc); }
