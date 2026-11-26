@@ -5,7 +5,7 @@
 > marble game with a blop-blop finish, SAVE POINT, Create / Load my save, card that flips (+ a Black edition card after all 7 rooms),
 > room passport, renew sheet, crew name that types onto the card, player edit with YOUR avatar library (Shuffle + Browse
 > all 1200), and a "Saves loaded" TV that switches on and drops the profiles in. Play it on your phone:
-> https://raw.githack.com/donttelldadyet-prog/round2sg-home/76d99281a65e925418bfe78afa3a727e81db5196/design/membership/welcome-flow.html
+> https://raw.githack.com/donttelldadyet-prog/round2sg-home/bfb9098d782fcb14ee8153ea1560fad790fe1da9/design/membership/welcome-flow.html
 > What changed + what to build: "Welcome flow v3" and "v2" at the top of DESIGN → FUNCTION CONCERNS below.
 > (Owner: delete this box once you've seen it.)
 
@@ -53,7 +53,7 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 - [ ] 3 · member page /m · Same file. **Long-press the orb** (0.5 s) = all marbles dive in at once. **Pull down to refresh**
   on the logged-in screen: a mini orb fills, badges re-check → FUNCTION: re-fetch status. **Shake to shuffle** pictures while
   the player picker is open (devicemotion; iPhone asks once when a player row is first tapped). **Card back** shows the crew's
-  player faces ("3 PLAYERS"). (26 Nov, design)
+  player faces (small stack, bottom-right, replacing the back logo). (26 Nov, design)
 
 **Welcome flow v3 (Karen, 26 Nov 2026 1:15am: "send this latest design to my bf") – adds to v2 below**
 - [ ] 3 · member page /m · Same file `design/membership/welcome-flow.html`. New since v2:
