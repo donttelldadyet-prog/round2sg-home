@@ -5,7 +5,7 @@
 > marble game with a blop-blop finish, SAVE POINT, Create / Load my save, card that flips (+ a Black edition card after all 7 rooms),
 > room passport, renew sheet, crew name that types onto the card, player edit with YOUR avatar library (Shuffle + Browse
 > all 1200), and a "Saves loaded" TV that switches on and drops the profiles in. Play it on your phone:
-> https://raw.githack.com/donttelldadyet-prog/round2sg-home/fae110aa8c06d9a961099f824ff545fe997917da/design/membership/welcome-flow.html
+> https://raw.githack.com/donttelldadyet-prog/round2sg-home/ec135e374a42cd4fb97f2ea5951202ab0315cbe7/design/membership/welcome-flow.html
 > What changed + what to build: "Welcome flow v3" and "v2" at the top of DESIGN → FUNCTION CONCERNS below.
 > (Owner: delete this box once you've seen it.)
 
@@ -61,7 +61,7 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   holo scan line, then the breathing pulse (inner layer clipped with clip-path – iOS square-clip bug). Paused off-screen.
   **Name your crew** (step 2): crew name letters land on a live card as you type; Create my save flips it to the back.
   **Logged in:** "Hey, <Crew>!" (names title-cased); room passport (7 marbles = rooms played, current room ringed; all 7 =
-  the card unlocks as the BLACK EDITION (matte black, gold name + chip, engraved gold laurel crest "VII"; flips over with a gold burst)) → FUNCTION: needs rooms-played per crew. **Renew** opens a sheet (1 month
+  the card unlocks as the BLACK EDITION (matte black, gold name + chip, engraved gold laurel crest "VII"; flips over with a gold burst)) → FUNCTION: needs rooms-played per crew. **Kaeden always counts as played** while it is under renovation (Karen, 26 Nov) – tapping it says "Kaeden is closed for a makeover, so it's stamped for you." **Renew** opens a sheet (1 month
   $10 / 3 months $30 – drafts) → real payment. **Players:** tap a row (✏️) to edit name + picture; "Add a player" (max 4
   players + the room profile = 5); "Remove from crew" asks first. **Sheets** (edit player, renew) close by pulling them down (handle/title, or anywhere when scrolled to the top). Pictures = your avatar library (7 Lapy + 5 pack, Shuffle,
   Browse all 1200; prototype loads them from round2-book.donttelldadyet.workers.dev/m/av/NNNN.png); no room characters for
