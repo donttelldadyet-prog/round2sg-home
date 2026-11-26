@@ -9,8 +9,34 @@ These files decide how Round2 **looks** to guests. The booking engine reads them
 | `tile.json` | The PS4 tile's words and timings (tile 0.16+, Karen's save screen v2, 27 Nov): Scan, Loading ("Hey, {crew}!"), Ready ("{crew} is all set."), What happens next, and how long the all-set / closing screens last. Groups in the file say which screen each word is on (some keys keep 0.15 names) | The Round2 tile on the room PS4s (Kaeden first) |
 | `member-v2.css` | The look of the **new** member page (book.round2.sg/m?v=2 – the membership design, preview until the owners switch it on) | book.round2.sg/m?v=2 |
 | `member-v3.css` | The look of the member page **live since 27 Nov** (book.round2.sg/m – Karen's welcome flow v3: save orb, crew card, passport, players, Saves loaded TV). Same rules as member.css; keep the ids/classes the page uses (`#s-wel`, `.orb`, `.cd`, `.pl`, `.bd` …). The page's words and screens are in the engine; ask function for changes there (HANDOFF concerns) | book.round2.sg/m (?v=2 = the 24 Nov page, ?v=1 = the first one) |
+| `member-v3.html` | The **screens and words** of the live member page (27 Nov): every heading, sentence, button label, list item and the order of things on each screen (`s-wel` Welcome, `s-ben` Membership, `s-join` phone, `s-log` log in, `s-next` name your crew, `s-in` logged in, `s-done` Saves loaded, plus the edit sheet) | book.round2.sg/m |
 
 **tile.json rules:** plain letters only (no – ’ “ … · – the TV can't draw them; the engine turns – into -, ’ into ' and drops the rest). `{crew}` = the crew's name (in a title the name is bright, the words around it dim on their own line), `{room}` = the room's name, `[PS]` = the round PS button, steps are `main line|small line`. Each text has a length limit (longer is cut). `c3n` and `s_foot` may be empty. Times: `t_burst` (the all-set screen) 0.5–5 s, `t_next` 3–20 s (outside = clamped). A broken file = the tile keeps its own words. Preview the words without a PS4: `https://round2-book.donttelldadyet.workers.dev/ps4/tilecfg?design=<branch>`. The tile asks again every 10 minutes. The LAYOUT is in the tile's code (round2-tv-launcher `ps4/tile/tile/draw.h`) – a new layout needs a tile build (put it in HANDOFF concerns).
+
+## member-v3.html + member-v3.css – changing the live member page yourself (27 Nov)
+
+The page has three layers. **You own two of them and they go live by themselves:**
+- **Look** – `member-v3.css` (colours, sizes, spacing, animations in CSS).
+- **Screens and words** – `member-v3.html` (the markup of every screen: text, buttons, order, extra decorative elements).
+- **Functions** – the engine's script (logging in, saving players, loading saves, the orb game, card flip, sheets). Not in design/.
+  Want a new behaviour? Put it in HANDOFF "DESIGN → FUNCTION CONCERNS".
+
+**member-v3.html rules** (the engine checks the file; if any rule is broken it quietly keeps the built-in screens – nothing breaks
+for guests, you'll just see the old version in the preview):
+1. **Keep every `id="…"`** that is there today – the script finds things by them (e.g. `id="ldb"` is the Load button,
+   `id="pls"` the player list, `id="e1"`…`id="e8"` the error lines). You can move them, restyle them, change their words.
+   Remove or rename one and the whole file is refused.
+2. **Keep the outer `<div class="ph">`** and the seven `<section class="scr" id="s-…">` screens.
+3. **No** `<script>`, `<style>`, `<link>`, `<form>`, `<iframe>`, no `onclick=` / `onload=` (any `on…=`), no `javascript:`.
+   Styles go in member-v3.css.
+4. Placeholders the engine fills in: `%%LOGO%%` (Round2 logo URL), `%%RN%%` (room name, e.g. Kaeden), `%%RNU%%` (KAEDEN).
+5. Text that the script writes itself (e.g. "Welcome back", "Hey, <crew>!", badge words, error messages) changes in the
+   engine – ask function.
+6. Max 90 KB.
+
+**Make it live:** push to `main` → live for guests within ~5 minutes. **Preview first** (recommended): push to a branch and open
+`https://book.round2.sg/m?room=kaeden&design=<branch>` (updates ~15 s after a push). If the preview shows the OLD screens, a rule
+above was broken.
 
 ## How to change something safely
 

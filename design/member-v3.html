@@ -1,0 +1,122 @@
+<!-- Round2 member page v3 – the screens and words (Karen). See design/README.md "member-v3.html rules". -->
+<div class="ph"><div class="bg"></div>
+
+<section class="scr show" id="s-wel">
+ <div class="hd a"><img class="logo" src="%%LOGO%%" alt="Round2"><span class="chip" data-rn>%%RNU%%</span></div>
+ <div class="art a" style="animation-delay:.1s"><div class="ow" id="ow"><div class="ring" id="ring"></div><div class="fx" id="fx"></div><div class="pulse"></div><div class="pg1"></div><div class="pg1 p2"></div><div class="orb" id="orb" role="button" tabindex="-1" aria-label="Start your save"><div class="oin" id="oin"><div class="liq"><div class="fill" id="fill"></div><div id="liq"></div></div><div class="wv" id="wv"><svg viewBox="0 0 200 20" preserveAspectRatio="none"><path d="M0 10 Q25 0 50 10 T100 10 T150 10 T200 10 V20 H0Z" fill="currentColor"/></svg></div><div class="scan" id="scan"></div><div class="shine"></div></div><div class="sr" id="cnt" aria-live="polite">0 of 7 collected</div></div><div class="pop" id="pop"></div></div><svg class="arc" viewBox="0 0 300 300" aria-label="Save point"><path id="arcp" d="M 16 150 A 134 134 0 0 1 284 150" fill="none"/><text><textPath href="#arcp" startOffset="50%" text-anchor="middle">SAVE POINT</textPath></text></svg></div>
+ <div class="a" style="animation-delay:.2s"><h1 class="ttl c" id="wt" style="font-size:40px;font-weight:600">Welcome</h1><p class="lead c" id="wl">7 rooms. One save. Pick up in any of them.</p></div>
+ <div class="a wb" id="wb" style="margin-top:28px;animation-delay:.3s"><button class="b1" id="wjoin" data-go="s-ben" aria-label="Create my save (sign up)"><span class="sw" aria-hidden="true"><span>Create my save</span><span>Sign up</span></span></button><button class="b2" id="wload" aria-label="Load my save (log in)"><span class="sw" aria-hidden="true"><span>Load my save</span><span>Log in</span></span></button></div>
+ <p class="fine a" id="wnot" hidden style="animation-delay:.33s;margin-top:10px">Not <span data-crewn>your crew</span>? <a id="wforget" href="#">Use another number</a></p>
+ <p class="fine a" style="animation-delay:.35s">Don't want to save today? Press PS on the controller.</p>
+</section>
+
+<section class="scr" id="s-ben">
+ <div class="hd"><button class="bk" data-back="s-wel" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button><span class="stepx">Membership</span><span style="width:38px"></span></div>
+ <div class="bhero"><div class="cd bcd tilt" role="button" tabindex="0" aria-label="Flip your crew card"><div class="bkf" aria-hidden="true"><div class="mg"></div><div class="sgw"><div class="sig"><span class="sg"></span></div><i>SIGNATURE</i></div><div class="cf"></div><div class="fp"><span>If found, return to 20 Haji Lane #02-00</span><img src="%%LOGO%%" alt=""></div></div><div class="dt"></div><div class="sh"></div><div class="rw"><span class="tn">ROUND2 CREW</span><img class="cl" src="%%LOGO%%" alt=""></div><div class="cp"></div><div><div class="cn">YOUR CREW</div><div class="cs ds"><span><i>CREW SINCE</i><em data-since style="font-style:normal">--/--</em></span></div></div></div></div>
+ <h1 class="ttl" style="font-size:30px;font-weight:600">Your games, saved<br>in every room.</h1>
+ <ol class="nl">
+  <li><span class="n2">01</span><div><b>Carry on any game</b>Start and continue in any room.</div></li>
+  <li><span class="n2">02</span><div><b>1 membership, up to 4 players</b>Each with their own name and saves.</div></li>
+  <li><span class="n2">03</span><div><b>Your crew card</b>Shows on the TV every time you play.</div></li>
+  <li><span class="n2">04</span><div><b>Scan and load</b>Scan the QR, pick your profile and play.</div></li>
+ </ol>
+ <div class="grow"></div>
+ <button class="b1" data-go="s-join">Create my save</button>
+</section>
+
+<section class="scr" id="s-join">
+ <div class="hd"><button class="bk" data-back="s-ben" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button><span style="font-size:13px;color:#8f88a3">Step 1 of 2</span></div>
+ <div class="stp"><i class="on"></i><i></i></div>
+ <h1 class="ttl" style="margin-top:26px">Create your save</h1><p class="lead">We'll use your number to find your crew next time.</p>
+ <label class="lb" for="jp">Phone number</label>
+ <div class="fd"><span class="ccw"><span class="ccv">+65</span></span><input id="jp" inputmode="tel" placeholder="9123 4567" autocomplete="tel"></div>
+ <div class="err" id="e1" aria-live="polite"></div>
+ <p class="sm">Removed from a crew? <a class="lk" id="jxl" href="#">Use a claim code</a></p>
+ <div id="jxw" hidden><label class="lb" for="jx">Claim code – your saves come with you</label><div class="fd"><input id="jx" maxlength="9" autocapitalize="characters" autocomplete="off" placeholder="ABCD-2345"></div></div>
+ <div class="grow"></div>
+ <button class="b1" id="jgo">Continue</button>
+ <p class="fine">Already a member? <a data-go="s-log" href="#">Log in</a></p>
+</section>
+
+<section class="scr" id="s-log">
+ <div class="hd"><button class="bk" data-back="s-wel" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button><span class="chip" data-rn>%%RNU%%</span></div>
+ <h1 class="ttl" style="margin-top:30px">Load your save</h1><p class="lead">Log in with your phone number and PIN.</p>
+ <label class="lb" for="lp">Phone number</label>
+ <div class="fd"><span class="ccw"><span class="ccv">+65</span></span><input id="lp" inputmode="tel" placeholder="9123 4567" autocomplete="tel"></div>
+ <label class="lb" for="lk">PIN</label>
+ <div class="fd" id="lkf"><input id="lk" type="password" inputmode="numeric" maxlength="8" placeholder="4 to 8 numbers" autocomplete="current-password"></div><div class="err" id="e2" aria-live="polite"></div>
+ <p class="sm" style="text-align:right">Forgot your PIN? <a class="lk" id="wa" href="https://wa.me/6591625767?text=Hi%20Round2%2C%20I%20forgot%20my%20member%20PIN.%20My%20phone%20number%20is%20" target="_blank" rel="noopener">WhatsApp us</a></p>
+ <div class="grow"></div>
+ <button class="b1" id="lgo">Load my save</button>
+ <p class="fine">New here? <a data-go="s-ben" href="#">Create my save</a></p>
+</section>
+
+<section class="scr" id="s-next" style="overflow-y:auto">
+ <div class="hd"><button class="bk" data-back="s-join" aria-label="Back"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button><span style="font-size:13px;color:#8f88a3">Step 2 of 2</span></div>
+ <div class="stp"><i class="on"></i><i class="on"></i></div>
+ <h1 class="ttl" style="margin-top:22px">Name your crew</h1><p class="lead">This goes on your card and the TV.</p>
+ <div class="mk"><div class="cd bcd tilt" role="button" tabindex="0" aria-label="Flip your crew card" id="mkcard"><div class="bkf" aria-hidden="true"><div class="mg"></div><div class="sgw"><div class="sig"><span class="sg"></span></div><i>SIGNATURE</i></div><div class="cf"></div><div class="fp"><span>If found, return to 20 Haji Lane #02-00</span><img src="%%LOGO%%" alt=""></div></div><div class="dt"></div><div class="sh"></div><div class="rw"><span class="tn">ROUND2 CREW</span><img class="cl" src="%%LOGO%%" alt=""></div><div class="cp"></div><div><div class="cn" id="mkname">YOUR CREW</div><div class="cs ds"><span><i>CREW SINCE</i><em data-since style="font-style:normal">--/--</em></span></div></div></div></div>
+ <label class="lb" for="cnm">Crew name</label>
+ <div class="fd"><input id="cnm" maxlength="16" autocomplete="off" placeholder="e.g. Night Owls"></div>
+ <div class="j2x">
+  <label class="lb" for="jn">You, the first player – your name on the PS4</label>
+  <div class="fd jnf"><button type="button" class="av g jav" id="jav" aria-label="Change your picture">?</button><input id="jn" maxlength="16" autocomplete="nickname" placeholder="2 to 16 letters or numbers"></div>
+  <label class="lb" for="jk">Pick a PIN</label>
+  <div class="fd"><input id="jk" type="password" inputmode="numeric" maxlength="8" placeholder="4 to 8 numbers" autocomplete="new-password"></div>
+  <label class="lb" for="jk2">PIN again</label>
+  <div class="fd"><input id="jk2" type="password" inputmode="numeric" maxlength="8" autocomplete="new-password"></div>
+ </div>
+ <div class="err" id="e3" aria-live="polite"></div>
+ <p class="sm" id="mkhint">Tap your picture to change it.</p>
+ <div class="grow"></div><button class="b1" id="mkgo">Create my save</button>
+</section>
+
+<section class="scr" id="s-in" style="overflow-y:auto"><div class="ptr" aria-hidden="true"><div class="po" id="po"><i></i></div></div>
+ <div class="hd"><img class="logo" src="%%LOGO%%" alt="Round2"><span class="chip" data-rn>%%RNU%%</span></div>
+ <div style="margin-top:22px;display:flex;justify-content:space-between;align-items:center;gap:10px"><div style="min-width:0"><div class="kk" style="margin-bottom:6px" id="tierlab">ROUND2 CREW</div><div style="font-size:24px;font-weight:600;letter-spacing:-.01em;word-break:break-word"><span style="font-weight:400;opacity:.7">Hey,</span> <span data-crewn>your crew</span>!</div></div><span class="bd" data-st="active" id="mst">Member</span></div>
+ <div class="cd cdi tilt" role="button" tabindex="0" aria-label="Flip your crew card" id="incard"><div class="bkf" aria-hidden="true"><div class="mg"></div><div class="sgw"><div class="sig"><span class="sg"></span></div><i>SIGNATURE</i></div><div class="cf"></div><div class="fp"><span>If found, return to 20 Haji Lane #02-00</span><img src="%%LOGO%%" alt=""></div></div><div class="dt"></div><div class="sh"></div><div class="rw"><span class="tn">ROUND2 CREW</span><img class="cl" src="%%LOGO%%" alt=""></div><div class="cp"></div><div class="stamp" id="stamp" aria-hidden="true"><svg viewBox="0 0 60 60" fill="none" stroke="#f3dfa0" stroke-width="1.2" stroke-linecap="round"><circle cx="30" cy="30" r="27" opacity=".55"/><circle cx="30" cy="30" r="23.5" stroke-dasharray="1 2.6" opacity=".7"/><path d="M17 41c-6-8-4-20 4-25M43 41c6-8 4-20-4-25" opacity=".85"/><path d="M15 34l-3 1M14 28l-3-1M16 22l-3-2M45 34l3 1M46 28l3-1M44 22l3-2" opacity=".85"/><text x="30" y="35.5" text-anchor="middle" font-family="Chakra Petch" font-weight="600" font-size="15" fill="#f3dfa0" stroke="none">VII</text></svg><span class="sdots"></span></div><span class="esweep" aria-hidden="true"></span><div><div class="cn" data-crewu>YOUR CREW</div><div class="cs ds"><span><i>CREW SINCE</i><em data-since style="font-style:normal">--/--</em></span></div></div></div>
+ <div class="pp"><div class="pph"><b id="ppt">Room passport</b><span id="ppn">0 of 7 rooms</span></div><div class="ppr" id="ppr"></div><p class="pps" id="pps" aria-live="polite">Play in all 7 rooms to stamp your card.</p></div>
+ <div style="font-size:15px;font-weight:600;margin-top:22px" id="plh">Who's playing in <span data-rnn>%%RN%%</span>?</div>
+ <p class="sm" id="plt" style="margin:4px 0 0" hidden>Tap a badge to skip a profile this time.</p>
+ <p class="sm" id="rshare" hidden></p>
+ <div class="pls" id="pls"></div>
+ <p class="sm" id="nokey" hidden>To load your saves, open the Round2 tile on this room's PS4 and scan its code.</p>
+ <div class="grow"></div>
+ <div class="err" id="e4" aria-live="polite"></div><button class="b1" id="ldb">Load saves on the TV</button>
+ <details class="more"><summary>More</summary>
+  <div class="mi"><a class="lk" id="ren" href="#">Rename crew</a></div>
+  <div class="mi" id="goneb" hidden><b>Removed players</b><p class="sm">Give each one their code. When they join Round2 with their own phone and type it, their saves move to their own account. Codes work once, for 30 days.</p><div id="gonel"></div></div>
+  <div class="mi" id="clmb"><b>Got a claim code?</b><p class="sm">Someone was removed from another crew and is joining yours – type their code and they come with their saves.</p><div class="fd"><input id="cx" maxlength="9" autocapitalize="characters" autocomplete="off" placeholder="ABCD-2345"></div><button class="b2 sb" id="cb">Add with their saves</button><div class="err" id="e7" aria-live="polite"></div></div>
+  <div class="mi"><b>Change PIN</b><div class="fd"><input id="pio" type="password" inputmode="numeric" maxlength="8" placeholder="Current PIN" autocomplete="current-password"></div><div class="fd"><input id="pin2" type="password" inputmode="numeric" maxlength="8" placeholder="New PIN (4 to 8 numbers)" autocomplete="new-password"></div><button class="b2 sb" id="pb">Change PIN</button><div class="err" id="e6" aria-live="polite"></div></div>
+  <div class="mi" id="routw" hidden><a class="lk" id="rout" href="#">Log out of this room</a><div class="err" id="e8" aria-live="polite"></div></div>
+  <p class="sm" id="ph"></p>
+ </details>
+ <p class="fine"><a id="lo" href="#">Log out</a></p>
+</section>
+
+<section class="scr" id="s-done">
+ <div class="dn">
+  <div class="tvw" id="tvw"><svg class="tv" viewBox="0 0 220 150" aria-hidden="true"><rect x="6" y="6" width="208" height="124" rx="16" fill="none" stroke="currentColor" stroke-width="3"/><path d="M80 144h60" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg><div class="tva" id="tva"></div><div class="tvb" id="tvb"></div></div>
+  <h1 class="ttl c dnh" style="font-size:34px;font-weight:600;margin-top:26px">Saves loaded</h1>
+  <p class="lead c dnp">Go play, <span data-crewn>your crew</span>.<br>Press PS on your controller and pick your profile on the TV in <span data-rnn>%%RN%%</span>.</p>
+  <p class="sm c" id="dfail" hidden>Some games didn't load – staff will check.</p>
+ </div>
+ <div class="grow"></div><button class="b1" data-go="s-in">Done</button>
+</section>
+<div class="shb" id="shb"></div>
+<div class="sheet" id="psh" role="dialog" aria-modal="true" aria-labelledby="psht">
+ <i class="grab"></i>
+ <h2 id="psht">Edit player</h2>
+ <div class="pprev" id="pprw"><div class="av g" id="pav">?</div></div>
+ <div id="pnw"><label class="lb" for="pnm" id="pnl">Name on the TV</label>
+ <div class="fd"><input id="pnm" maxlength="16" autocomplete="off" placeholder="e.g. Jay"></div></div><div class="err" id="e5" aria-live="polite"></div>
+ <div id="ppw"><div class="lb">Picture on the PS4</div>
+ <div class="pgrid" id="pgrid"></div>
+ <div class="pbar"><button type="button" id="pshuf">Shuffle</button><button type="button" id="pbrw">Browse all</button></div>
+ <div class="pnav" id="pnav" hidden><button type="button" id="pprv" aria-label="Previous page">‹</button><span id="ppg">Page 1</span><button type="button" id="pnxt" aria-label="Next page">›</button></div></div>
+ <div class="pfoot"><button class="b1" id="psave">Save</button>
+ <p class="fine" style="margin:8px 0 0" id="pdelw"><a id="pdel" href="#">Remove from crew</a></p>
+ <div id="prm" hidden><p class="sm" id="prmt"></p><div class="fd"><input id="rpin" type="password" inputmode="numeric" maxlength="8" placeholder="Your PIN" autocomplete="current-password"></div><button class="b2 sb" id="prmgo">Remove</button></div></div>
+</div>
+</div>
+

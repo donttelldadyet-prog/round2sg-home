@@ -21,6 +21,10 @@ standing rules. Keep it short; add a rule here only when the owner asks for one.
    and the PS4 tile's colours/room names, later its wording too) and `index.html` (the homepage). A push to `main` is live
    within ~5 minutes. Good habit, not a gate: try a `design/` change first on a branch with the phone preview
    (`book.round2.sg/m?room=kaeden&design=<branch>`, see `design/README.md`), and pull before pushing.
+   **Live member page (owner 27 Nov 2:18am "allow my gf to change design and make it live"):** its look is `design/member-v3.css`
+   and its screens + words are `design/member-v3.html` – both yours, both go live from `main` by themselves. Keep every
+   `id="…"` and add no scripts (rules in `design/README.md`); a file that breaks a rule is ignored and the built-in page shows.
+   PS4 tile: words + timings in `design/tile.json` (live by themselves); its layout is code – send a mockup via the concerns list.
 2. **Never edit** `worker/` (the live booking engine – bookings, payments, PS4s), `slots/`, `email/`, `menu/`, `move/`,
    `CLAUDE.md`, or the long dated notes below.
    The homepage `index.html` is the design team's (rule 1): look, wording, layout, sections, pictures – just keep the booking
