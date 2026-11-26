@@ -5,7 +5,7 @@
 > marble game with a blop-blop finish, SAVE POINT, Create / Load my save, card that flips (+ a Black edition card after all 7 rooms),
 > room passport, renew sheet, crew name that types onto the card, player edit with YOUR avatar library (Shuffle + Browse
 > all 1200), and a "Saves loaded" TV that switches on and drops the profiles in. Play it on your phone:
-> https://raw.githack.com/donttelldadyet-prog/round2sg-home/fda41850a12dcf36c18f2f43d96be4fd7a284a9a/design/membership/welcome-flow.html
+> https://raw.githack.com/donttelldadyet-prog/round2sg-home/73b439ddec89cf645598d940c9f755613696bb54/design/membership/welcome-flow.html
 > What changed + what to build: "Welcome flow v3" and "v2" at the top of DESIGN → FUNCTION CONCERNS below.
 > (Owner: delete this box once you've seen it.)
 
@@ -48,6 +48,15 @@ phones) in this file or in design files.
 
 ## DESIGN → FUNCTION CONCERNS (design writes, function fixes and ticks – newest first)
 Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [ ] sev · screen · what's wrong – why – (date, who)`.
+
+**Welcome flow v3 extras (Karen, 26 Nov 2026 5:40pm) – all design-only unless marked**
+- [ ] 3 · member page /m · Same file. **Tilt light:** a glare on every card + the orb shine follow the phone's tilt
+  (deviceorientation; iPhone asks for motion access on the first tap) or the mouse. **Long-press the orb** (0.5 s) = all
+  marbles dive in at once. **Pull down to refresh** on the logged-in screen: a mini orb fills, badges re-check → FUNCTION:
+  re-fetch status. **Shake to shuffle** pictures while the player picker is open (devicemotion). **Easter eggs:** crew name
+  with "owl" = blinking owl on the card; "birthday/bday/hbd" = confetti + toast on arrival. **Card back** shows the crew's
+  player faces ("3 PLAYERS"). **Passport:** the room played last time pops in with "NEW" + sparkle on login → FUNCTION:
+  needs "new since last visit". (26 Nov, design)
 
 **Welcome flow v3 (Karen, 26 Nov 2026 1:15am: "send this latest design to my bf") – adds to v2 below**
 - [ ] 3 · member page /m · Same file `design/membership/welcome-flow.html`. New since v2:
