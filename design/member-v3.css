@@ -438,3 +438,16 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 /* panel fix: the page's entrance animation moved .more on its own layer, so the panel and its dark cover sat inside the
    settings area instead of the whole screen. Fade it in instead (no movement) so the panel covers the full screen. */
 .scr.show .more.ent{animation:itin .45s ease both;transform:none}
+
+/* The big letter in the rename / edit sheet pulses like a power-up (27 Nov, Karen). Picture avatars only get the glow ring. */
+.pprev{position:relative}
+.pprev .av{position:relative;overflow:visible;animation:avglow 2.2s ease-in-out infinite}
+.pprev .av::before,.pprev .av::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid var(--ac);opacity:0;animation:avring 2.2s cubic-bezier(.2,.6,.3,1) infinite;pointer-events:none}
+.pprev .av::after{animation-delay:1.1s}
+.pprev .av img{border-radius:50%}
+.pprev .av:not(:has(img)){color:#fff;animation:avglow 2.2s ease-in-out infinite,avletter 2.2s ease-in-out infinite}
+@keyframes avglow{0%,100%{box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 60%,transparent),0 0 18px color-mix(in srgb,var(--ac) 35%,transparent);scale:1}
+ 50%{box-shadow:0 0 0 3px var(--ac),0 0 42px color-mix(in srgb,var(--ac) 75%,transparent);scale:1.06}}
+@keyframes avring{0%{opacity:.8;transform:scale(1)}100%{opacity:0;transform:scale(1.7)}}
+@keyframes avletter{0%,100%{text-shadow:0 0 0 transparent}50%{text-shadow:0 0 14px var(--ac),0 0 4px #fff}}
+@media (prefers-reduced-motion:reduce){.pprev .av,.pprev .av::before,.pprev .av::after{animation:none}}
