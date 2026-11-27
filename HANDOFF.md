@@ -73,7 +73,7 @@ Active / Expires in 5 days / Expired and passport 3/7 / 7/7): https://raw.githac
   2 months – $20 / 2 mo." → phone (country code list, non-SG numbers allowed) → crew name + first player + 6-number PIN twice →
   **HitPay** (PayNow / card) → only then create the account → "Your save card is ready" (CREW SINCE / VALID TO) → crew page.
 - [ ] 3 · member page + engine · **Membership status:** Spectrum UI Status Badge (`design/components/status-badge.css`, `<span class="bd" data-st="active|expiring|expired">`) "Active member" / "Expires in N days" (≤7 days) / "Expired"; player badges use the same component (data-st waiting / loading / ready);
-  row under the card, kept simple (Karen 27 Nov 11:27pm): status badge on the left ("n months left" green / "Expires in N days" amber / "Expired mm/yy" red, `.bd data-st`) and a plain "Renew" text link in the room colour on the right.
+  row under the card, kept simple (Karen 27 Nov 11:27pm): status badge on the left ("n months left" green / "Expires in N days" amber / "Expired mm/yy" red, `.bd data-st`) and a plain "Renew" text link in the room colour on the right. **Already on the live page, hidden (27 Nov 11:30pm):** design/member-v3.html has `<div class="msr" id="msr" hidden>` with `#mexp` (the badge) and `#mren` (Renew link) under the crew card – the engine only has to fill #mexp (data-st + text), remove `hidden`, and open the renew sheet from #mren once expiry dates and renew prices exist. (Could be added to MEM3_IDS.)
   Needs each crew's expiry date stored + sent to the page (and to the tile).
 - [ ] 3 · member page + engine · **Renew sheet:** 1 month $10 / 3 months $30 (shows the new Valid to) → HitPay → "Renewed! Valid to …".
   Extends from the current end date (from today if already expired).
