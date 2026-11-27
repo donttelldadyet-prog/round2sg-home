@@ -54,6 +54,37 @@ phones) in this file or in design files.
 ## DESIGN → FUNCTION CONCERNS (design writes, function fixes and ticks – newest first)
 Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [ ] sev · screen · what's wrong – why – (date, who)`.
 
+**MEMBER JOURNEY v5 – memory card + payment + renew (Karen, 27 Nov 2026 11:20pm: "send to my bf to work on it and make it live")**
+Clickable prototype (phone = member page with every function on pretend data, TV above reacts; buttons beside it switch
+Active / Expires in 5 days / Expired and passport 3/7 / 7/7): https://raw.githack.com/donttelldadyet-prog/round2sg-home/234e975c36b5206a01758c9d718396c325986b43/design/membership/member-journey-v5.html
+- [ ] 3 · member page · **Crew card = the memory card** (upright; label in room colour with eyes + crew name, 7 passport blocks lit
+  for rooms played, gold pins; no circuit). Tap flips it (back mirrored like a real card): random quote, crew name, CREW SINCE, VALID TO,
+  "If found, return to 20 Haji Lane #02-00". Eyes blink / wink / look around at random (prototype "eye brain").
+- [ ] 3 · member page + engine · **One button:** "Load saves on the TV" → card lifts and flies up off the phone, a dashed card-shaped
+  "SAVE SENT – your card is in the TV" spot stays → TV deck takes the card (act insert) → players load. Replaces the separate swipe card.
+- [ ] 3 · PS4 tile · **Loading screen:** the old bank-style crew card is replaced by the memory card standing in its reader (centred
+  in the right half, level with "Hey, <crew>!"): one bar per player with face + colour filling Waiting→Loading→Ready with a tick, faces
+  pop onto the label as each is ready, glowing "charging" line on the edge, sparks, reader LCD "LOADING n/N" → "ALL SET!", happy eyes.
+  The player list on the right is dropped (the card shows it). Card does NOT spin. Ready screen: card does NOT wiggle.
+- [ ] 2 · PS4 tile · **Reader reacts:** slot glow breathes while waiting, hop when a phone connects, slot lights up as the card comes,
+  squash on insert, light sweeping along the reader + fast LED while reading, bump/flash per player ready, soft room-colour glow when done.
+- [ ] 2 · PS4 tile · What's next: steps start level with the left heading; "Closing in n" bigger, centred, glowing, thick blocks.
+- [ ] 3 · member page + engine (PRICING – owners to confirm) · **Paid sign-up:** Why-join row "Round2 Membership – Then $10/mo. after
+  2 months – $20 / 2 mo." → phone (country code list, non-SG numbers allowed) → crew name + first player + 6-number PIN twice →
+  **HitPay** (PayNow / card) → only then create the account → "Your save card is ready" (CREW SINCE / VALID TO) → crew page.
+- [ ] 3 · member page + engine · **Membership status:** badge "Member" / amber "Expires in N days" (≤7 days) / red "Expired";
+  row under the card "Membership · Valid to mm/yy · n months left · Renew" (button glows when ≤7 days or expired).
+  Needs each crew's expiry date stored + sent to the page (and to the tile).
+- [ ] 3 · member page + engine · **Renew sheet:** 1 month $10 / 3 months $30 (shows the new Valid to) → HitPay → "Renewed! Valid to …".
+  Extends from the current end date (from today if already expired).
+- [ ] 3 · member page + engine · **Expired:** card greyed with "LOCKED", Load button becomes "Renew to load your saves" (opens Renew),
+  note "Your saves are kept safe for 3 months – renew to load them" (owners: confirm the 3 months). Tile could show "RENEW ON PHONE".
+- [ ] 2 · member page · **Receipts** in Crew settings (date, what, amount) from HitPay payments.
+- [ ] 2 · member page · **Black edition:** all 7 rooms → card label turns black with gold name/eyes + "BLACK EDITION · ALL 7 ROOMS".
+- [ ] 2 · member page · Crew settings tiles: Rename, PIN (current + new + again, 6 numbers), Claim code, Receipts, Need help (WhatsApp),
+  Log out; every sheet closes by pulling it down. Players: tap name = edit (name + picture, Remove), tap badge = skip, Add a player (max 4).
+- [ ] 1 · engine/ops (suggested) · WhatsApp/SMS reminder ~7 days before expiry; Gold/Platinum tiers still unpriced (left out of v5).
+
 **Booking confirmation alignment (Karen, 26 Nov 2026 6:40pm, phone screenshot of a Maximillion booking)**
 - [ ] 1 · "You're booked!" page (book.round2.sg, `worker/round2-book.js` ~line 3250 and the same card in `move/index.html` line 8) ·
   The Name / Date / Time / Length / Guests / Paid / Ref rows look crooked: the small grey labels (13px) sit at the top of each
