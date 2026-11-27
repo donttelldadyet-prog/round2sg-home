@@ -72,7 +72,7 @@ Active / Expires in 5 days / Expired and passport 3/7 / 7/7): https://raw.githac
 - [ ] 3 · member page + engine (PRICING – owners to confirm) · **Paid sign-up:** Why-join row "Round2 Membership – Then $10/mo. after
   2 months – $20 / 2 mo." → phone (country code list, non-SG numbers allowed) → crew name + first player + 6-number PIN twice →
   **HitPay** (PayNow / card) → only then create the account → "Your save card is ready" (CREW SINCE / VALID TO) → crew page.
-- [ ] 3 · member page + engine · **Membership status:** badge "Member" / amber "Expires in N days" (≤7 days) / red "Expired";
+- [ ] 3 · member page + engine · **Membership status:** Spectrum UI Status Badge (`design/components/status-badge.css`, `<span class="bd" data-st="active|expiring|expired">`) "Active member" / "Expires in N days" (≤7 days) / "Expired"; player badges use the same component (data-st waiting / loading / ready);
   row under the card "Membership · Valid to mm/yy · n months left · Renew" (button glows when ≤7 days or expired).
   Needs each crew's expiry date stored + sent to the page (and to the tile).
 - [ ] 3 · member page + engine · **Renew sheet:** 1 month $10 / 3 months $30 (shows the new Valid to) → HitPay → "Renewed! Valid to …".
