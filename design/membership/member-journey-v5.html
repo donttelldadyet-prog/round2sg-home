@@ -693,7 +693,7 @@ body{padding:0!important;display:block!important;background:#0b0a0f}.ph{width:10
  &lt;/div&gt;
  
  &lt;p class=&quot;tap&quot; id=&quot;tap&quot;&gt;Tap the card to flip it&lt;/p&gt;&lt;div class=&quot;ed7&quot;&gt;BLACK EDITION &amp;middot; ALL 7 ROOMS&lt;/div&gt;
- &lt;div class=&quot;msr&quot; id=&quot;msr&quot;&gt;&lt;div&gt;&lt;b&gt;Membership&lt;/b&gt;&lt;span id=&quot;vt&quot;&gt;Valid to 01/27 &amp;middot; 2 months left&lt;/span&gt;&lt;/div&gt;&lt;button id=&quot;renb&quot;&gt;Renew&lt;/button&gt;&lt;/div&gt;
+ &lt;div class=&quot;msr&quot; id=&quot;msr&quot;&gt;&lt;span class=&quot;bd&quot; id=&quot;vt&quot; data-st=&quot;active&quot;&gt;2 months left&lt;/span&gt;&lt;button id=&quot;renb&quot;&gt;Renew&lt;/button&gt;&lt;/div&gt;
  &lt;div class=&quot;pp&quot;&gt;&lt;div class=&quot;pph&quot;&gt;Room passport&lt;span id=&quot;ppn&quot;&gt;3 of 7 rooms&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;ppr&quot; id=&quot;ppr&quot;&gt;&lt;/div&gt;&lt;/div&gt;
  &lt;h3&gt;Who&#x27;s playing in Vale?&lt;/h3&gt;&lt;p class=&quot;sm&quot;&gt;Tap a badge to skip a player. Tap a name to edit.&lt;/p&gt;
  &lt;div id=&quot;pls&quot;&gt;&lt;/div&gt;
@@ -780,12 +780,8 @@ body{padding:0!important;display:block!important;background:#0b0a0f}.ph{width:10
 .sb[data-st=active]{color:#7fe0a0;border:1px solid rgba(77,200,120,.45)}
 .sb[data-st=expiring]{color:#ffd27a;border:1px solid rgba(255,196,90,.5);background:rgba(255,196,90,.08)}
 .sb[data-st=expired]{color:#ff9aa8;border:1px solid rgba(255,120,140,.5);background:rgba(255,120,140,.08)}
-.msr{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07)}
-.msr b{display:block;font-size:14px}.msr span{font-size:12px;color:#a79fbd}
-.msr button{height:34px;padding:0 16px;border-radius:17px;border:0;font:600 13px CP;cursor:pointer;background:rgba(255,255,255,.08);color:#f4f1fb;flex:none}
-.msr.hot{border-color:color-mix(in srgb,var(--ac) 50%,transparent);background:color-mix(in srgb,var(--ac) 10%,transparent)}
-.msr.hot button{background:var(--ac);color:#fff;animation:rpulse 1.6s ease-in-out infinite}
-@keyframes rpulse{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--ac) 25%,transparent)}}
+.msr{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px}
+.msr button{border:0;background:none;padding:8px 2px;font:600 14px CP;color:var(--ac);cursor:pointer}
 .lockn{display:none;margin-top:10px;font-size:12.5px;color:#ffb3bf;text-align:center}
 .app.expired .lockn{display:block}
 .app.expired .stage .card{filter:grayscale(.85) brightness(.75)}
@@ -846,8 +842,8 @@ function paint(){document.querySelectorAll(&#x27;[data-crew]&#x27;).forEach(func
  document.querySelectorAll(&#x27;[data-valid]&#x27;).forEach(function(e){e.textContent=mmyy(VALID)});
  var st=DAYS&lt;0?&#x27;expired&#x27;:DAYS&lt;=7?&#x27;expiring&#x27;:&#x27;active&#x27;,sb=$(&#x27;sb&#x27;);sb.dataset.st=st;sb.textContent=st===&#x27;active&#x27;?&#x27;Active member&#x27;:st===&#x27;expiring&#x27;?&#x27;Expires in &#x27;+DAYS+&#x27; day&#x27;+(DAYS==1?&#x27;&#x27;:&#x27;s&#x27;):&#x27;Expired&#x27;;
  app.classList.toggle(&#x27;expired&#x27;,st===&#x27;expired&#x27;);$(&#x27;msr&#x27;).classList.toggle(&#x27;hot&#x27;,st!==&#x27;active&#x27;);
- $(&#x27;vt&#x27;).textContent=st===&#x27;expired&#x27;?&#x27;Ended &#x27;+mmyy(VALID)+&#x27; · saves kept for 3 months&#x27;:&#x27;Valid to &#x27;+mmyy(VALID)+&#x27; · &#x27;+(DAYS&gt;31?Math.round(DAYS/30)+&#x27; months left&#x27;:DAYS+&#x27; day&#x27;+(DAYS==1?&#x27;&#x27;:&#x27;s&#x27;)+&#x27; left&#x27;);
- $(&#x27;renb&#x27;).textContent=st===&#x27;expired&#x27;?&#x27;Renew now&#x27;:&#x27;Renew&#x27;;
+ $(&#x27;vt&#x27;).dataset.st=st;$(&#x27;vt&#x27;).textContent=st===&#x27;expired&#x27;?&#x27;Expired &#x27;+mmyy(VALID):st===&#x27;expiring&#x27;?&#x27;Expires in &#x27;+DAYS+&#x27; day&#x27;+(DAYS==1?&#x27;&#x27;:&#x27;s&#x27;):(DAYS&gt;31?Math.round(DAYS/30)+&#x27; months left&#x27;:DAYS+&#x27; days left&#x27;);
+ $(&#x27;renb&#x27;).textContent=&#x27;Renew&#x27;;
  var R={vale:&#x27;#E8436A&#x27;,atlas:&#x27;#E9E7EF&#x27;,kai:&#x27;#24B49A&#x27;,bella:&#x27;#7A5BE0&#x27;,scarlett:&#x27;#E0402F&#x27;,kaeden:&#x27;#4DB848&#x27;,max:&#x27;#F2C21B&#x27;};
  $(&#x27;ppr&#x27;).innerHTML=Object.keys(R).map(function(k){return &#x27;&lt;span class=&quot;ppi&#x27;+(PASS.indexOf(k)&gt;-1?&#x27; on&#x27;:&#x27;&#x27;)+&#x27;&quot; style=&quot;--c:&#x27;+R[k]+&#x27;&quot;&gt;&lt;i&gt;&lt;/i&gt;&#x27;+(k[0].toUpperCase()+k.slice(1))+&#x27;&lt;/span&gt;&#x27;}).join(&#x27;&#x27;);
  $(&#x27;ppn&#x27;).textContent=PASS.length+&#x27; of 7 rooms&#x27;;app.classList.toggle(&#x27;all7&#x27;,PASS.length===7);
