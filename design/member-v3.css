@@ -556,3 +556,4 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 @media (prefers-reduced-motion:reduce){.fcs,.fan::before,.fdust i,.ftf,.fbk i{animation:none!important}.fc{animation:none!important}}
 .fsc{display:none}
 .fl::after,.fc .fcin::after{display:none!important}
+.fpcb{display:none!important}
