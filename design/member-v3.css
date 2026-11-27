@@ -586,3 +586,14 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .fs{display:none}
 .fsc::before{content:"ALL YOUR ROOMS. ONE SAVE.";animation:none}
 .fan:has(.fx7:checked) .fsc::before,.fan:not(:has(.fx7:not(:checked))) .fsc::before{content:"ALL YOUR ROOMS. ONE SAVE."}
+
+/* Karen 8:41pm: only your room's card has eyes (too many eyes = ick); no pixel line under the cards (it repeated the text below Welcome) */
+.fc .fe{display:none}
+.fan[data-room="vale"] .fc-vale .fe{display:flex}
+.fan[data-room="atlas"] .fc-atlas .fe{display:flex}
+.fan[data-room="kai"] .fc-kai .fe{display:flex}
+.fan[data-room="bella"] .fc-bella .fe{display:flex}
+.fan[data-room="scarlett"] .fc-scarlett .fe{display:flex}
+.fan[data-room="kaeden"] .fc-kaeden .fe{display:flex}
+.fan[data-room="maximillion"] .fc-maximillion .fe{display:flex}
+.fsc{display:none}
