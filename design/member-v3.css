@@ -564,3 +564,4 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .fsc{display:none}
 .fl::after,.fc .fcin::after{display:none!important}
 .fpcb{display:none!important}
+#v5c .stage .slot{top:50%}
