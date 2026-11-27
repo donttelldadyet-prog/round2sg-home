@@ -579,3 +579,10 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 #fc-scarlett:checked~.fcs .fc-scarlett{--got:1}
 #fc-kaeden:checked~.fcs .fc-kaeden{--got:1}
 #fc-maximillion:checked~.fcs .fc-maximillion{--got:1}
+
+/* Karen 8:25pm: no room names, no star stamp, no counter – one line instead */
+.fl b{display:none}
+.fe{top:15px}
+.fs{display:none}
+.fsc::before{content:"ALL YOUR ROOMS. ONE SAVE.";animation:none}
+.fan:has(.fx7:checked) .fsc::before,.fan:not(:has(.fx7:not(:checked))) .fsc::before{content:"ALL YOUR ROOMS. ONE SAVE."}
