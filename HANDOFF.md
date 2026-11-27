@@ -53,6 +53,7 @@ phones) in this file or in design files.
 
 ## DESIGN → FUNCTION CONCERNS (design writes, function fixes and ticks – newest first)
 Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Format: `- [ ] sev · screen · what's wrong – why – (date, who)`.
+- [ ] 3 · member page · 28 Nov 3:50am (Karen: "push it live"): the Welcome hand of 7 room memory cards is now live (merged wel-fan → main f1c9acb, checked on book.round2.sg/m?room=vale). **member-v3.css is 59,404 of the engine's 60,000 limit** – the next design change will tip it over and the page silently falls back. Please raise the limit (e.g. 90,000, like the HTML) or move the temporary #v5c card look out of the CSS budget.
 
 **MEMBER JOURNEY v5 – memory card + payment + renew (Karen, 27 Nov 2026 11:20pm: "send to my bf to work on it and make it live")**
 Clickable prototype (phone = member page with every function on pretend data, TV above reacts; buttons beside it switch
