@@ -4366,7 +4366,8 @@ async function ps4AutoUpdate(env, hb, id, room) {   /* quiet time? hand out an u
   if ((await hb.kvGet('ps4auto')) === false) return null;
   const rep = await hb.kvGet('ps4:' + id), now = Date.now();
   if (!rep || !rep.boot || rep.running || now - rep.t > 20 * 60e3 || ps4Newer(PS4_SELFUP, rep.v)) return null;
-  const rel = await ps4Latest(env, false, hb); if (!rel || !ps4Newer(rel.v, rep.v)) return null;
+  const TB = room === 'kaeden';   /* 28 Nov 4am (Karen: "fix bugs and make it live"; the staff browser was out of reach): Kaeden, the test bench, takes the TEST channel by itself in quiet time */
+  const rel = await ps4Latest(env, false, hb, TB ? 'test' : undefined); if (!rel || !ps4Newer(rel.v, rep.v)) return null;
   if (PS4_AUTO_HOLD_ABOVE && ps4Newer(rel.v, PS4_AUTO_HOLD_ABOVE)) return null;   /* owner 18 Nov 6:05pm: Max only (staff Update now) until the detector test passes */
   if (rep.rolled && rep.rolled.includes(' ' + rel.v + ':')) return null;   /* that version was rolled back here – needs a newer one or Update now */
   const tried = await hb.kvGet('ps4autoTry:' + id); if (tried && tried.v === rel.v && now - tried.t < 6 * 3600e3) return null;
@@ -4374,6 +4375,7 @@ async function ps4AutoUpdate(env, hb, id, room) {   /* quiet time? hand out an u
   await hb.kvSet('ps4autoChk:' + id, now);
   if (await ps4Busy(env, room, 60)) return null;
   const c = { cid: 'a' + now.toString(36), do: 'update', v: rel.v, sha: rel.sha, size: rel.size, from: rep.v, at: now, takenAt: now, by: 'auto (quiet time)', state: 'taken' };
+  if (TB) { c.ch = 'test'; c.by = 'auto (quiet time, test bench)'; }
   await hb.kvSet('ps4autoTry:' + id, { v: rel.v, t: now }); await hb.kvSet('ps4cmd:' + id, c);
   return c;
 }
@@ -5454,7 +5456,7 @@ const MEM3_HTML = "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\
 /* 27 Nov 11:50pm: the member page's memory-card script lives in worker/web/member-card.js (function-owned, NOT design/) and is
    fetched from GitHub; the engine only uses it when its SHA-256 matches MEM3_MC_SHA (so only a deploy can change what runs). If it
    can't be fetched, the page gets the do-nothing fallback (the old crew card stays). To update: push the file, deploy the new hash. */
-const MEM3_MC_SHA = '5f9fc8a450787f141670f2f5298f6df9df70674250ee7fc3e09e3254b3dba90b', MEM3_MC_FALLBACK = '\nfunction v5card(){}function mcPhone(){}\n';
+const MEM3_MC_SHA = 'f4b8ccdad37c9e37a888d20a28fe86a2ee436f2a1c8883ba380dc5b471cbf572', MEM3_MC_FALLBACK = '\nfunction v5card(){}function mcPhone(){}\n';
 let MEM3_MC_C = null;
 async function memCardJs() {
   const now = Date.now(); if (MEM3_MC_C && (MEM3_MC_C.v || now - MEM3_MC_C.t < 60e3)) return MEM3_MC_C.v;
@@ -5474,7 +5476,7 @@ function mem3Body(h) {
 }
 async function memDesign3(u) {
   const br = u.searchParams.get('design') || 'main'; const [c0, b0, rooms, mc] = await Promise.all([designGet('member-v3.css', br), designGet('member-v3.html', br), designRooms(br), memCardJs()]); let css = c0;
-  if (css && (/<\/|<script|@import|javascript:/i.test(css) || css.length > 60000)) css = null;
+  if (css && (/<\/|<script|@import|javascript:/i.test(css) || css.length > 120000)) css = null;   /* 28 Nov (Karen): 60k → 120k */
   return { css, body: mem3Body(b0), rooms, mc };
 }
 function memPage3(u, D) {
