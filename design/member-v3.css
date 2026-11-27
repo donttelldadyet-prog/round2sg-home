@@ -1,5 +1,4 @@
-
-
+/* Round2 member page look (design-owned). Notes on each change: git log of this file + HANDOFF. Engine limit: 60,000 characters. */
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 body{margin:0;background:#0b0a0f;min-height:100dvh;justify-content:center;color:#f4f1fb;font-family:'Chakra Petch',system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;padding:14px 0 30px}
 .top{display:flex;gap:8px;align-items:center;margin-bottom:12px;font-size:12px;color:#8f88a3}
@@ -19,7 +18,6 @@ body{margin:0;background:#0b0a0f;min-height:100dvh;justify-content:center;color:
 #s-wel{background:radial-gradient(90% 55% at 50% 32%,color-mix(in srgb,var(--ac) 56%,#08070c) 0%,color-mix(in srgb,var(--ac) 26%,#08070c) 40%,#0a080e 74%,#050407 100%);transition:opacity .35s,transform .45s cubic-bezier(.2,0,0,1),background .5s}
 #s-wel .chip{display:none}
 .art{position:relative;flex:1;display:flex;align-items:center;justify-content:center;margin:0!important}
-
 .sw{display:inline-grid;height:1.25em;line-height:1.25em;overflow:hidden;vertical-align:middle}
 .sw>span{grid-area:1/1;transition:transform .5s cubic-bezier(.6,0,.2,1),opacity .4s;white-space:nowrap}
 .sw>span+span{transform:translateY(100%);opacity:0}
@@ -76,7 +74,6 @@ body{margin:0;background:#0b0a0f;min-height:100dvh;justify-content:center;color:
 .stamp small{display:block;margin-top:7px;font-size:6.5px;letter-spacing:.32em;color:#d9c48a}
 .cd.ed .stamp{display:block}
 .cd .esweep{display:none}
-/* black edition: earned after playing all 7 rooms */
 .cd.ed{background:radial-gradient(120% 90% at 85% 0%,rgba(243,223,160,.12),transparent 55%),repeating-linear-gradient(90deg,rgba(255,255,255,.018) 0 1px,transparent 1px 3px),linear-gradient(160deg,#1b1a1f,#0b0b0d 60%,#050506)!important;border-color:rgba(243,223,160,.35)!important;box-shadow:0 22px 50px -16px rgba(243,223,160,.35),inset 0 0 0 1px rgba(243,223,160,.25)!important}
 .cd.ed::after{background:linear-gradient(90deg,transparent,#f3dfa0,transparent)!important}
 .cd.ed .tn,.cd.ed .ds i{color:#d9c48a!important}
@@ -161,7 +158,6 @@ body{margin:0;background:#0b0a0f;min-height:100dvh;justify-content:center;color:
 .pfoot{position:sticky;bottom:0;margin:10px -22px 0;padding:12px 22px 16px;background:linear-gradient(180deg,rgba(20,18,25,0),#141219 22%)}
 .orb.chg{animation:chg .48s ease-in forwards}
 @keyframes chg{to{scale:1.1;box-shadow:inset 0 1.5px 0 rgba(255,255,255,.8),0 0 70px color-mix(in srgb,var(--ac) 80%,transparent)}}
-
 .cd .cf{position:absolute;right:7%;bottom:8%;display:flex;align-items:center;flex-direction:row-reverse}
 .cd .cf:not(:empty)~.fp img{display:none}
 .cd .cf b{width:20px;height:20px;border-radius:50%;margin-left:-5px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P';font-size:8px;font-weight:400;color:#fff;background:#2b2933;box-shadow:0 0 0 2px #17161b}
@@ -202,7 +198,6 @@ body{margin:0;background:#0b0a0f;min-height:100dvh;justify-content:center;color:
 .arc{position:absolute;left:50%;top:50%;width:300px;height:300px;margin:-150px 0 0 -150px;pointer-events:none;overflow:visible}
 .arc text{font-family:'Press Start 2P';font-size:10px;letter-spacing:.32em;fill:#f4f1fb;opacity:.9}
 .art{display:flex;justify-content:center;margin-top:18px}.art canvas{width:300px;height:300px;touch-action:none;cursor:grab}
-/* card */
 .cdw{display:flex;justify-content:center;margin-top:40px}
 .cd{position:relative;width:258px;aspect-ratio:1.586;border-radius:16px;padding:15px 17px;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;color:#dcdbe1;border:1px solid rgba(255,255,255,.1);
  background:radial-gradient(120% 90% at 100% 0%,color-mix(in srgb,var(--ac) 22%,transparent),transparent 55%),repeating-linear-gradient(115deg,rgba(255,255,255,.014) 0 2px,transparent 2px 4px),linear-gradient(155deg,#36353d,#1e1d23 55%,#141318);
@@ -218,20 +213,17 @@ body{margin:0;background:#0b0a0f;min-height:100dvh;justify-content:center;color:
 .cs{position:relative;font-size:10px;letter-spacing:.2em;opacity:.7;margin-top:5px}
 @keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 @keyframes sw{0%{background-position:120% 0}40%,100%{background-position:-20% 0}}
-/* text */
 .ttl{font-size:32px;line-height:1.08;margin:0;font-weight:400;letter-spacing:-.02em}
 .ttl.c{text-align:center}
 .kk{font-family:'Press Start 2P';font-size:8px;letter-spacing:.2em;color:var(--ac);margin-bottom:12px}
 .lead{font-size:15px;color:#bdb5d3;line-height:1.45;margin-top:10px}
 .lead.c{text-align:center}
-/* buttons */
 .b1,.b2{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:56px;border-radius:28px;border:0;font:600 16px 'Chakra Petch',sans-serif;cursor:pointer;transition:transform .12s,background .2s}
 .b1{background:#f4f1fb;color:#09080d}
 .b2{background:#1f1d26;color:#f4f1fb;margin-top:10px;border:1px solid rgba(255,255,255,.06)}
 .b1:active,.b2:active{transform:scale(.97)}
 .fine{font-size:12px;color:#6f6880;text-align:center;margin-top:14px}
 .fine a,.lk{color:var(--ac);text-decoration:none;font-weight:600;cursor:pointer}
-/* benefits */
 .bens{margin-top:26px;display:flex;flex-direction:column;gap:10px}
 .ben{display:flex;gap:14px;align-items:center;background:#15131b;border:1px solid rgba(255,255,255,.06);border-radius:18px;padding:14px}
 .ic{width:42px;height:42px;border-radius:13px;flex:none;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--ac) 14%,#15131b);color:var(--ac)}
@@ -241,8 +233,6 @@ body{margin:0;background:#0b0a0f;min-height:100dvh;justify-content:center;color:
 .price{margin-top:18px;display:flex;justify-content:space-between;align-items:baseline;padding:16px 4px 0;border-top:1px solid rgba(255,255,255,.07)}
 .price b{font-size:26px;font-weight:600}
 .price small{font-size:13px;color:#8f88a3}
-/* form */
-
 #s-ben{background:radial-gradient(90% 38% at 50% 16%,color-mix(in srgb,var(--ac) 46%,#08070c) 0%,color-mix(in srgb,var(--ac) 18%,#08070c) 45%,#0a080e 78%,#050407 100%)}
 .stepx{font-size:13px;color:#bdb5d3;letter-spacing:.04em;position:absolute;left:0;right:0;text-align:center;pointer-events:none}
 #s-ben .hd{position:relative}
@@ -253,7 +243,6 @@ body{margin:0;background:#0b0a0f;min-height:100dvh;justify-content:center;color:
 .nl li:last-child{border-bottom:1px solid rgba(255,255,255,.08)}
 .nl span{font-family:'Press Start 2P';font-size:9px;color:var(--ac);letter-spacing:.1em;flex:none;width:22px}
 .nl b{display:block;font-size:16px;font-weight:600;color:#f4f1fb;margin-bottom:2px}
-/* Apple-style subscription row (like the App Store subscribe sheet): name left, price right, grey details under each */
 .pr{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:22px 0 14px;padding:14px 16px;border-radius:14px;background:#17151d}
 .pr b{display:block;font-size:17px;font-weight:600;letter-spacing:-.01em;color:#f4f1fb}
 .pr span{display:block;font-size:13px;color:#8f88a3;margin-top:2px}
@@ -278,14 +267,6 @@ body{margin:0;background:#0b0a0f;min-height:100dvh;justify-content:center;color:
 .a{animation:up .55s cubic-bezier(0,0,.2,1) both}
 @keyframes up{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
 .note{font-size:11px;color:#6f6880;margin-top:12px;text-align:center;max-width:360px;padding:0 12px}
-
-/* ---- Status badge (25 Nov 2026) ------------------------------------------------------------------------------------------
-   Look from Spectrum UI's "Status Badge", dark variant (ui.spectrumhq.in, github.com/arihantcodes/spectrum-ui, Apache-2.0),
-   rebuilt in plain CSS for Round2 (the member page isn't React); icons are Lucide (lucide.dev, ISC), drawn by the CSS.
-   Use: a span with class "bd" and data-st="active", holding the words (e.g. Active member). No SVG needed in the page.
-   States: active (green tick) / ready (green tick) / expiring (amber warning) / expired (red cross) /
-   loading (blue, spinning) / waiting (grey clock). Demo of every state: design/components/status-badge.html.
-   The same rules are in member-v2.css (the member page's look). */
 .bd{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 12px;font:600 13px/1 CP,system-ui,sans-serif;white-space:nowrap;
   color:var(--bd-c,#d4d4d4);background:var(--bd-b,rgba(163,163,163,.1));box-shadow:inset 0 0 0 1px var(--bd-r,rgba(212,212,212,.2));transition:color .3s,background .3s,box-shadow .3s}
 .bd::before{content:"";width:14px;height:14px;flex:none;background:currentColor;-webkit-mask:var(--bd-i) center/contain no-repeat;mask:var(--bd-i) center/contain no-repeat}
@@ -297,7 +278,6 @@ body{margin:0;background:#0b0a0f;min-height:100dvh;justify-content:center;color:
 .bd[data-st=waiting],.bd:not([data-st]){--bd-i:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 6v6l2 4'/%3E%3C/svg%3E")}
 @keyframes bd-spin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.bd[data-st=loading]::before{animation:none}.bd{transition:none}}
-
 @keyframes pl{0%{box-shadow:0 0 0 0 currentColor}70%,100%{box-shadow:0 0 0 6px transparent}}
 @keyframes spn{to{transform:rotate(360deg)}}
 .pls{margin-top:16px;display:flex;flex-direction:column;gap:8px}
@@ -308,8 +288,6 @@ body{margin:0;background:#0b0a0f;min-height:100dvh;justify-content:center;color:
 .pl .av.g{background:#2b2933;color:#f4f1fb}
 .pl b{flex:1;font-size:15px;font-weight:600}
 .cdi{width:100%;max-width:300px;margin:18px auto 0;animation:none}
-
-/* ---- 25 Nov motion pass (interaction-design: ease-out, 60ms stagger, one "moment" per page, Reduce Motion respected) ---- */
 .scr.show .ent{animation:up .55s cubic-bezier(0,0,.2,1) both;animation-delay:calc(var(--i,0)*60ms)}
 .b1,.b2{position:relative;overflow:hidden;isolation:isolate}
 .rp{position:absolute;border-radius:50%;pointer-events:none;transform:scale(0);opacity:.35;background:currentColor;animation:rp .6s ease-out forwards;z-index:-1}
@@ -338,8 +316,6 @@ body{margin:0;background:#0b0a0f;min-height:100dvh;justify-content:center;color:
 .cdi.flip{animation:flip .9s cubic-bezier(.2,.8,.2,1) both}
 @keyframes flip{0%{transform:perspective(800px) rotateY(-90deg) translateY(20px);opacity:0}60%{opacity:1}100%{transform:perspective(800px) rotateY(0)}}
 .cnt{font-variant-numeric:tabular-nums}
-
-/* 25 Nov 1:25pm – grown-up card (owner: "looks like for toddler"): no pixel font on the card, fine metal type, slim chip, no dot grid */
 .cd{background:radial-gradient(120% 80% at 100% 0%,color-mix(in srgb,var(--ac) 16%,transparent),transparent 55%),linear-gradient(135deg,rgba(255,255,255,.07) 0%,transparent 40%),linear-gradient(160deg,#2b2a31 0%,#18171c 55%,#0f0e12 100%);border:1px solid rgba(255,255,255,.09);padding:16px 18px}
 .cd .dt{display:none}
 .cd .tn{font-family:'Chakra Petch';font-weight:600;font-size:9px;letter-spacing:.42em;color:rgba(255,255,255,.55)}
@@ -347,16 +323,12 @@ body{margin:0;background:#0b0a0f;min-height:100dvh;justify-content:center;color:
 .cd .cp{width:30px;height:22px;border-radius:4px;opacity:.75}
 .cd .cn{font-family:'Chakra Petch';font-weight:600;font-size:17px;letter-spacing:.14em;text-transform:uppercase;color:#ece9f3;text-shadow:0 1px 0 rgba(0,0,0,.5);background:linear-gradient(180deg,#fff,#b9b5c4);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
 .cd .cs{font-size:8.5px;letter-spacing:.28em;opacity:.55;margin-top:6px}
-
-/* smaller card on Why join: scale the type with the card */
 .bcd{padding:18px 20px}
 .bcd .tn{font-size:7.5px;letter-spacing:.36em}
 .bcd .cl{height:8px}
 .bcd .cp{width:24px;height:18px}
 .bcd .cn{font-size:13px;letter-spacing:.12em}
 .bcd .cs{font-size:7px;letter-spacing:.24em;margin-top:4px}
-
-/* small card on Why join: scale the type down with the card */
 .bcd{padding:18px 20px}
 .bcd .tn{font-size:8px;letter-spacing:.38em}
 .bcd .cl{height:8px}
@@ -378,8 +350,6 @@ body{margin:0;background:#0b0a0f;min-height:100dvh;justify-content:center;color:
 .cd .ds span{display:flex;flex-direction:column;gap:3px;font-size:10px;letter-spacing:.18em;color:#cfcdd6}
 .cd .ds i{font-style:normal;font-size:6.5px;letter-spacing:.26em;opacity:.55}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
-
-/* live page additions (27 Nov, function): badges are buttons (tap = skip a profile), skipped rows dim, the More drawer, the picture button on join */
 button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;background:none}
 .bd.sk{opacity:.6}.pl.off{opacity:.45}.pl.off .bd{opacity:1}
 .pl.pe{cursor:pointer}
@@ -393,8 +363,6 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .code{font-family:'Press Start 2P';font-size:10px;letter-spacing:.08em;color:var(--ac)}
 .pl.rm .av img,.pl .av img{width:100%;height:100%;object-fit:cover}
 #s-next>*,#s-in>*{flex-shrink:0}#s-next>.grow,#s-in>.grow{flex-shrink:1}
-
-/* Crew settings = inventory grid (27 Nov, Karen): 4 square tiles; claim code + PIN open a bottom panel (tap outside closes) */
 .more{margin-top:22px;border-top:0;padding-top:0}
 .more>summary{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 auto;width:max-content;padding:11px 18px;border-radius:999px;
  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);color:#cfc9de;font-size:14px;font-weight:600;transition:background .2s,border-color .2s,color .2s}
@@ -414,7 +382,6 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .more .it b{font-size:14px;font-weight:600}.more .it small{font-size:11px;color:#8f88a3}
 .more .it[open]{border-color:var(--ac);box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 25%,transparent)}
 .more .odanger .bx{color:#ff7a8a;background:rgba(255,122,138,.12);box-shadow:inset 0 0 0 1px rgba(255,122,138,.3)}
-/* the bottom panel */
 .more .osh{display:none}
 .more .it[open] .osh{display:block;position:fixed;left:50%;bottom:0;transform:translateX(-50%);width:min(430px,100vw);z-index:61;padding:12px 22px calc(22px + env(safe-area-inset-bottom));border-radius:26px 26px 0 0;background:#141219;border-top:1px solid rgba(255,255,255,.08);box-shadow:0 -20px 60px rgba(0,0,0,.5);animation:oshup .4s cubic-bezier(.22,1,.36,1);text-align:left}
 .more .it[open]>summary::before{content:"";position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.55);animation:oshfade .3s ease}
@@ -434,12 +401,7 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .more .it{position:relative;z-index:0}
 .more .it[open]{z-index:62}
 .more[open] .it{animation-fill-mode:backwards}
-
-/* panel fix: the page's entrance animation moved .more on its own layer, so the panel and its dark cover sat inside the
-   settings area instead of the whole screen. Fade it in instead (no movement) so the panel covers the full screen. */
 .scr.show .more.ent{animation:itin .45s ease both;transform:none}
-
-/* The big letter in the rename / edit sheet pulses like a power-up (27 Nov, Karen). Picture avatars only get the glow ring. */
 .pprev{position:relative}
 .pprev .av{position:relative;overflow:visible;animation:avglow 2.2s ease-in-out infinite}
 .pprev .av::before,.pprev .av::after{content:"";position:absolute;inset:-3px;border-radius:50%;border:2px solid var(--ac);opacity:0;animation:avring 2.2s cubic-bezier(.2,.6,.3,1) infinite;pointer-events:none}
@@ -451,7 +413,6 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 @keyframes avring{0%{opacity:.8;transform:scale(1)}100%{opacity:0;transform:scale(1.7)}}
 @keyframes avletter{0%,100%{text-shadow:0 0 0 transparent}50%{text-shadow:0 0 14px var(--ac),0 0 4px #fff}}
 @media (prefers-reduced-motion:reduce){.pprev .av,.pprev .av::before,.pprev .av::after{animation:none}}
-/* avatar preview: a light that races round the ring like a flash (27 Nov, Karen) */
 .pprev::before{content:"";position:absolute;left:50%;top:50%;width:72px;height:72px;margin:-36px 0 0 -36px;border-radius:50%;pointer-events:none;z-index:2;
  background:conic-gradient(from 0deg,transparent 0 62%,color-mix(in srgb,var(--ac) 40%,transparent) 76%,#fff 88%,var(--ac) 90%,transparent 92%);
  -webkit-mask:radial-gradient(circle,transparent 31px,#000 32px,#000 35px,transparent 36px);mask:radial-gradient(circle,transparent 31px,#000 32px,#000 35px,transparent 36px);
@@ -462,7 +423,6 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
  animation:avflash 2.4s linear infinite reverse;opacity:.6}
 @keyframes avflash{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.pprev::before,.pprev::after{animation:none}}
-/* tiles side by side in one row (3, or 4 when "Log out of this room" shows) – Karen 27 Nov */
 .more .inv{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}
 .more .it>a,.more .it>summary{aspect-ratio:auto;padding:16px 6px 14px;gap:3px}
 .more .it .bx{width:44px;height:44px;border-radius:14px;margin-bottom:6px}
@@ -470,8 +430,6 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .more .it b{font-size:13px}.more .it small{font-size:10.5px;line-height:1.25}
 .more .it b,.more .it small{white-space:nowrap}
 .more .inv{grid-auto-columns:minmax(0,1fr)}.more .it b{overflow:hidden;text-overflow:ellipsis;max-width:100%}
-
-/* always the 3-tile look (Karen 27 Nov "first one"); "Log out of this room" becomes a slim full-width row under the tiles */
 .more .inv{grid-auto-flow:row;grid-template-columns:repeat(3,minmax(0,1fr))}
 .more #routw{grid-column:1/-1}
 .more #routw>a{aspect-ratio:auto;flex-direction:row;justify-content:center;gap:10px;padding:12px}
@@ -479,7 +437,6 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .more #routw .bx svg{width:16px;height:16px}
 .more #routw small{font-size:12px}
 .more #routw b{color:#ff9aa6}
-/* calmer, premium avatar (Karen 27 Nov: "slightly too much") – thin ring, soft slow glow, one faint ripple, gentle flash */
 .pprev .av{animation:avglow2 3.6s ease-in-out infinite}
 .pprev .av:not(:has(img)){animation:avglow2 3.6s ease-in-out infinite}
 @keyframes avglow2{0%,100%{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--ac) 55%,transparent),0 0 12px color-mix(in srgb,var(--ac) 18%,transparent)}
@@ -492,16 +449,12 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
  -webkit-mask:radial-gradient(circle,transparent 32.5px,#000 33px,#000 34.5px,transparent 35px);mask:radial-gradient(circle,transparent 32.5px,#000 33px,#000 34.5px,transparent 35px)}
 .pprev::after{display:none}
 .pgrid button.on{outline-width:1.5px;transform:none}
-
-/* the open settings stay above the page's Log out link (it was showing through the PIN panel) */
 .more[open]{position:relative;z-index:15}
-/* Help row – same slim full-width style as the room log-out */
 .more .ohelp{grid-column:1/-1}
 .more .ohelp>a{aspect-ratio:auto;flex-direction:row;justify-content:center;gap:10px;padding:12px}
 .more .ohelp .bx{width:32px;height:32px;border-radius:10px;margin:0;color:#3fe0a0;background:rgba(63,224,160,.12);box-shadow:inset 0 0 0 1px rgba(63,224,160,.3)}
 .more .ohelp .bx svg{width:16px;height:16px}
 .more .ohelp small{font-size:12px}
-/* Karen 27 Nov: one Log out only (the page's) – hide "Log out of this room"; Need help? as a plain link, no box */
 .more #routw{display:none!important}
 .more .ohelp{border:0!important;background:none!important;box-shadow:none!important;margin-top:4px}
 .more .ohelp::before{display:none}
@@ -509,9 +462,6 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .more .ohelp .bx{width:auto;height:auto;background:none;box-shadow:none;border-radius:0}
 .more .ohelp b{font-size:14px;font-weight:600;color:#cfc9de}
 .more .ohelp small{font-size:14px;color:#3fe0a0;font-weight:600}
-
-
-/* Player badges (Karen 27 Nov): smaller, softer – thin tinted outline, light fill, no bright white ring */
 .pl .bd,.pl button.bd{display:inline-flex;align-items:center;gap:6px;flex:none;height:28px;padding:0 11px 0 9px;border:0;border-radius:999px;font-size:12.5px;font-weight:600;letter-spacing:.01em;line-height:1;color:var(--bd-c,#c9c3d6);background:var(--bd-b,rgba(255,255,255,.05));box-shadow:inset 0 0 0 1px var(--bd-r,rgba(255,255,255,.12))}
 .pl .bd::before{width:13px;height:13px}
 .pl .bd.sk{opacity:.55}
@@ -522,3 +472,95 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 #s-in .pe b::after{margin-left:6px;vertical-align:0}
 #s-in .cdi{max-width:270px;margin-top:12px}#s-in .pp{margin-top:14px;padding:10px 12px}#s-in .pls{margin-top:10px;gap:6px}
 #s-in .pl{padding:7px 10px;border-radius:16px}#s-in .pl .av{width:32px;height:32px}#s-in .pl b{font-size:14.5px}
+#s-wel .ow{position:absolute!important;width:1px!important;height:1px!important;visibility:hidden!important;pointer-events:none!important;overflow:hidden}
+#s-wel .arc{display:none}
+.fan{position:relative;width:330px;height:300px;counter-reset:got}
+.fan .fx7{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.fan .fx7:checked{counter-increment:got}
+.fcs{position:absolute;inset:0}
+.fc{--me:0;--got:0;position:absolute;left:50%;bottom:74px;width:86px;height:113px;margin-left:-43px;transform-origin:50% 230%;rotate:calc((var(--i) - 3) * 12deg);z-index:calc(10 - (var(--i) - 3) * (var(--i) - 3) + var(--me) * 10);cursor:pointer;-webkit-tap-highlight-color:transparent;animation:fdeal .7s cubic-bezier(.2,.9,.3,1.2) both;animation-delay:calc(.25s + var(--i) * .07s)}
+@keyframes fdeal{from{translate:0 160px;rotate:0deg;opacity:0;scale:.6}}
+.fcin{position:absolute;inset:0;display:block;clip-path:url(#fcc);transition:translate .35s cubic-bezier(.3,1.5,.5,1),scale .35s,filter .3s;translate:0 calc(var(--me) * -22px + var(--got) * -16px);scale:calc(1 + var(--me) * .16);filter:drop-shadow(0 8px 10px rgba(0,0,0,.55)) brightness(calc(.72 + var(--me) * .28 + var(--got) * .28))}
+.fc .fb{position:absolute;inset:0;width:100%;height:100%}
+.fl{position:absolute;left:8px;right:12px;top:8px;height:40px;border-radius:5px;background:linear-gradient(135deg,color-mix(in srgb,var(--c) 80%,#fff),var(--c) 55%,color-mix(in srgb,var(--c) 65%,#000));box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
+.fe{position:absolute;left:0;right:0;top:8px;display:flex;justify-content:center;gap:13px}
+.fe i{width:5px;height:9px;border-radius:3px;background:#1b0d14}
+.fl b{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-family:'Press Start 2P';font-weight:400;font-size:5.5px;letter-spacing:.12em;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.25)}
+.fp{position:absolute;left:9px;right:9px;bottom:6px;height:15px;display:flex;gap:2.5px;padding:2px 3px 0;box-sizing:border-box;border-radius:3px 3px 1px 1px;background:#0b090e}
+.fp i{flex:1;background:linear-gradient(#e2c06a,#9c7c34);border-radius:1px 1px 0 0}
+.fc .fe i{animation:feb 4.2s infinite;animation-play-state:paused}
+.fan[data-room] .fc .fe i{animation-play-state:running}
+@keyframes feb{0%,47%,51%,100%{height:9px}49%{height:1.5px}}
+.fc .fcin::after{content:"";position:absolute;inset:0;background:linear-gradient(118deg,rgba(255,255,255,.14),rgba(255,255,255,.04) 30%,transparent 31%)}
+.fan:not(:has(.fx7:not(:checked))) .fcin{animation:frain 2s linear infinite}
+@keyframes frain{0%,100%{filter:drop-shadow(0 0 10px var(--c)) brightness(1.05)}50%{filter:drop-shadow(0 0 22px var(--c)) brightness(1.15)}}
+#s-wel:not(:has(.fan .fx7:not(:checked))) #wjoin{animation:fpulse 1.2s ease-in-out infinite}
+@keyframes fpulse{50%{box-shadow:0 0 0 8px color-mix(in srgb,var(--ac) 35%,transparent),0 0 30px var(--ac)}}
+.fc:active .fcin{scale:calc(.94 + var(--me) * .16)}
+@media (prefers-reduced-motion:reduce){.fc,.fc .fe i,.fsc::before,.fcin{animation:none!important}}
+.fan[data-room="vale"] .fc-vale{--i:3!important;--me:1!important}.fan[data-room="vale"] .fc-bella{--i:0!important}
+.fan[data-room="atlas"] .fc-atlas{--i:3!important;--me:1!important}.fan[data-room="atlas"] .fc-bella{--i:1!important}
+.fan[data-room="kai"] .fc-kai{--i:3!important;--me:1!important}.fan[data-room="kai"] .fc-bella{--i:2!important}
+.fan[data-room="bella"] .fc-bella{--i:3!important;--me:1!important}
+.fan[data-room="scarlett"] .fc-scarlett{--i:3!important;--me:1!important}.fan[data-room="scarlett"] .fc-bella{--i:4!important}
+.fan[data-room="kaeden"] .fc-kaeden{--i:3!important;--me:1!important}.fan[data-room="kaeden"] .fc-bella{--i:5!important}
+.fan[data-room="maximillion"] .fc-maximillion{--i:3!important;--me:1!important}.fan[data-room="maximillion"] .fc-bella{--i:6!important}
+#fc-vale:checked~.fcs .fc-vale{--got:1}
+#fc-atlas:checked~.fcs .fc-atlas{--got:1}
+#fc-kai:checked~.fcs .fc-kai{--got:1}
+#fc-bella:checked~.fcs .fc-bella{--got:1}
+#fc-scarlett:checked~.fcs .fc-scarlett{--got:1}
+#fc-kaeden:checked~.fcs .fc-kaeden{--got:1}
+#fc-maximillion:checked~.fcs .fc-maximillion{--got:1}
+.fl b{display:none}
+.fe{top:15px}
+.fc .fe{display:none}
+.fan[data-room="vale"] .fc-vale .fe{display:flex}
+.fan[data-room="atlas"] .fc-atlas .fe{display:flex}
+.fan[data-room="kai"] .fc-kai .fe{display:flex}
+.fan[data-room="bella"] .fc-bella .fe{display:flex}
+.fan[data-room="scarlett"] .fc-scarlett .fe{display:flex}
+.fan[data-room="kaeden"] .fc-kaeden .fe{display:flex}
+.fan[data-room="maximillion"] .fc-maximillion .fe{display:flex}
+.fc{animation:fspread 1.15s cubic-bezier(.2,.9,.25,1.12) both;animation-delay:calc(.35s + (var(--i) - 3) * (var(--i) - 3) * .03s)}
+@keyframes fspread{0%{rotate:0deg;translate:0 46px;scale:.82;opacity:0}28%{rotate:0deg;translate:0 0;scale:1;opacity:1}}
+.fcin{animation:flift .6s cubic-bezier(.3,1.6,.5,1) 1.25s backwards}
+@keyframes flift{from{translate:0 0;scale:1}}
+@media (prefers-reduced-motion:reduce){.fc,.fcin{animation:none!important}}
+#s-wel .art{align-items:center;padding-top:10px}
+.fan{scale:1;transform-origin:50% 60%}
+.wkick{margin:0 0 8px;text-align:center;font-family:'Press Start 2P';font-size:9px;letter-spacing:.32em;color:color-mix(in srgb,var(--ac) 65%,#fff);text-shadow:0 0 10px var(--ac)}
+.fl{height:31px;top:7px}
+.fe{top:11px!important}
+.fp{height:14px;bottom:6px}
+.fbk{position:absolute;left:8px;right:8px;top:44px;display:none;grid-template-columns:repeat(7,1fr);gap:2.5px}
+.fbk i{height:21px;border-radius:2px;background:rgba(255,255,255,.07);animation:fbfill 5.6s ease-in-out infinite;animation-delay:calc(1.6s + var(--k) * .3s)}
+@keyframes fbfill{0%,4%{background:rgba(255,255,255,.07);box-shadow:none}10%,64%{background:var(--b);box-shadow:0 0 7px var(--b)}74%,100%{background:rgba(255,255,255,.07);box-shadow:none}}
+.fpcb{display:none}
+.ftr{fill:none;stroke:color-mix(in srgb,var(--c) 40%,#5a5363);stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;opacity:.8}
+.ftf{fill:none;stroke:color-mix(in srgb,var(--c) 75%,#fff);stroke-width:3;stroke-linecap:round;stroke-dasharray:6 60;animation:fflow 1.3s linear infinite}
+@keyframes fflow{to{stroke-dashoffset:-66}}
+.fchip{fill:color-mix(in srgb,var(--c) 20%,#0d0b10);stroke:color-mix(in srgb,var(--c) 55%,#fff);stroke-width:1.5}
+.fan[data-room="vale"] .fc-vale .fbk,.fan[data-room="atlas"] .fc-atlas .fbk,.fan[data-room="kai"] .fc-kai .fbk,.fan[data-room="bella"] .fc-bella .fbk,.fan[data-room="scarlett"] .fc-scarlett .fbk,.fan[data-room="kaeden"] .fc-kaeden .fbk,.fan[data-room="maximillion"] .fc-maximillion .fbk{display:grid}
+.fan[data-room="vale"] .fc-vale .fpcb,.fan[data-room="atlas"] .fc-atlas .fpcb,.fan[data-room="kai"] .fc-kai .fpcb,.fan[data-room="bella"] .fc-bella .fpcb,.fan[data-room="scarlett"] .fc-scarlett .fpcb,.fan[data-room="kaeden"] .fc-kaeden .fpcb,.fan[data-room="maximillion"] .fc-maximillion .fpcb{display:inline}
+.fl{overflow:hidden}
+.fan[data-room="vale"] .fc-vale .fl::after,.fan[data-room="atlas"] .fc-atlas .fl::after,.fan[data-room="kai"] .fc-kai .fl::after,.fan[data-room="bella"] .fc-bella .fl::after,.fan[data-room="scarlett"] .fc-scarlett .fl::after,.fan[data-room="kaeden"] .fc-kaeden .fl::after,.fan[data-room="maximillion"] .fc-maximillion .fl::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 25%,rgba(255,255,255,.35) 45%,transparent 60%);background-size:260% 100%;animation:ffoil 3.8s ease-in-out 2s infinite}
+@keyframes ffoil{0%{background-position:120% 0}55%,100%{background-position:-60% 0}}
+.fc .fb path:first-child{fill-opacity:.88;stroke:color-mix(in srgb,var(--c) 55%,rgba(255,255,255,.25));stroke-width:2.6}
+.fc .fcin{filter:drop-shadow(0 8px 10px rgba(0,0,0,.55)) drop-shadow(0 0 6px color-mix(in srgb,var(--c) 30%,transparent)) brightness(calc(.78 + var(--me) * .22 + var(--got) * .22))}
+.fan::before{content:"";position:absolute;left:50%;top:38%;width:250px;height:250px;margin:-125px 0 0 -125px;border-radius:50%;background:radial-gradient(circle,color-mix(in srgb,var(--ac) 55%,transparent) 0%,transparent 65%);filter:blur(8px);animation:fspot 4s ease-in-out infinite}
+@keyframes fspot{50%{opacity:.7;scale:1.06}}
+.fcs{-webkit-box-reflect:below -66px linear-gradient(transparent 70%,rgba(255,255,255,.1))}
+.fdust{position:absolute;inset:0;pointer-events:none}
+.fdust i{position:absolute;left:calc(var(--x) * 1%);bottom:60px;width:3px;height:3px;background:color-mix(in srgb,var(--ac) 50%,#fff);box-shadow:0 0 6px var(--ac);opacity:0;animation:fdrift var(--t) linear infinite;animation-delay:var(--d)}
+@keyframes fdrift{0%{opacity:0;translate:0 0}15%{opacity:.9}100%{opacity:0;translate:10px -220px}}
+.fcs{animation:fbreath 5s ease-in-out 1.8s infinite}
+@keyframes fbreath{50%{scale:1.012}}
+.fc{animation:fspread 1.15s cubic-bezier(.2,.9,.25,1.12) both,fpeek 9s ease-in-out infinite;animation-delay:calc(.35s + (var(--i) - 3) * (var(--i) - 3) * .03s),calc(2.5s + var(--i) * 1.3s)}
+@keyframes fpeek{0%,88%,100%{translate:0 0}92%{translate:0 -12px}96%{translate:0 2px}}
+.fan[data-room="vale"] .fc-vale,.fan[data-room="atlas"] .fc-atlas,.fan[data-room="kai"] .fc-kai,.fan[data-room="bella"] .fc-bella,.fan[data-room="scarlett"] .fc-scarlett,.fan[data-room="kaeden"] .fc-kaeden,.fan[data-room="maximillion"] .fc-maximillion{animation:fspread 1.15s cubic-bezier(.2,.9,.25,1.12) both,ffloat 3.2s ease-in-out infinite;animation-delay:.35s,2s}
+@keyframes ffloat{50%{translate:0 -6px}}
+@media (prefers-reduced-motion:reduce){.fcs,.fan::before,.fdust i,.ftf,.fbk i{animation:none!important}.fc{animation:none!important}}
+.fsc{display:none}
+.fl::after,.fc .fcin::after{display:none!important}
+.fpcb{display:none!important}
