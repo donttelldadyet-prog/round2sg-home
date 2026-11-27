@@ -63,6 +63,32 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   wrap unevenly – `display:flex;flex-wrap:wrap;gap:8px` with equal heights would tidy them. – looks unpolished on the page
   every guest sees right after paying – (26 Nov, design)
 
+**PS4 save screen v4 – MEMORY CARD + SAVE DECK replaces the orb (Karen, 27 Nov 2026 12:10pm: "ok push it live")**
+- [ ] 3 · PS4 tile scan + ready screens (+ member page for the swipe) · Mockup (tabs 1-4, room colours, "Try it" phone under the TV):
+  https://raw.githack.com/donttelldadyet-prog/round2sg-home/691d5eb44f22bd184771bf7211e806a245089185/design/tile/save-screen-v4.html  · stills: `design/tile/save-screen-v4.png`
+  Screens 2 (crew card loading) and 4 (what's next) are unchanged from v3 – only the **orb on Scan (1) and Ready (3) is gone**.
+  **Scan (1), centre (x~790-1130, card + deck ~ y300-860 at 1920x1080):** a dark memory card (room-colour label on top, 7 block
+  slots in passport order Vale, Atlas, Kai, Bella, Scarlett, Kaeden, Max, gold pins at the bottom) floats above a **save deck**
+  (dark box with a slot, a small pixel-font screen and an LED).
+  - Waiting: card bobs gently; label has two pixel **eyes** that blink every ~2.6 s and glance right toward the QR; every ~5 s a
+    small hop; after ~5 s of no scan the eyes close to a line and "z z z" float up (sleepy). Deck screen blinks "INSERT SAVE".
+  - Phone scanned: eyes go wide, label text changes MEMBER SAVE -> crew name (e.g. NIGHT OWLS), deck screen "HI, <CREW>!",
+    line under the QR "Phone connected".
+  - Insert (after the phone swipe, or by itself ~2.6 s after the scan): card lifts ~26 px, then glides down into the slot over
+    ~1.5 s with a tiny settle; the slot hides the bottom of the card (pins) – it does NOT vanish at once; flash of room colour at
+    the slot, LED on, eyes turn happy ^ ^, deck screen "READING..." (dots cycle), line under QR "Loading your save".
+  - Blocks: only the rooms in the crew's **room passport** light up, one by one (~260 ms apart) in their room colours with a few
+    pixel sparkles; unplayed rooms stay dark. Kaeden always counts (renovation rule). Then a rainbow shine sweeps across the
+    card and the deck screen says "SAVE FOUND n/7"; with all 7: "ALL 7 ROOMS!" + the card glow cycles through the 7 colours.
+    Then go to screen 2 as today.
+  **Ready (3), centre:** the same card sitting in the deck (inserted, happy eyes, passport blocks lit), a small cheer-jump +
+  sparkles + shine when the screen opens, LED pulses, deck screen alternates "GAME SAVED" / "PRESS (PS)".
+  **Phone (member page, after scanning a TV) – needs engine + member page script:** show the same memory card (crew name, passport
+  blocks lit, blinking eyes, shine) with "Swipe up to insert"; swiping it up (or tapping) tells the TV to start the insert; if
+  the guest does nothing, the TV inserts by itself after a few seconds. Optional – the TV part works without it.
+  PS4 drawing: pre-render the card body, deck and label per room colour as PNGs; eyes, blocks, LCD text, sparkles drawn on top.
+  Plain ASCII words on the TV. (27 Nov, design)
+
 **PS4 save screen v3 – more premium card + more alive (Karen, 27 Nov 2026 2:52am: "the one on the tv looks plain")**
 - [x] (DONE 27 Nov 3:15am – tile 0.18, round2-tv-launcher ps4-helper 4022221, released to ps4-tile, on Kaeden. Room profile's face = room letter in the room colour (the tile has no room pictures); a ready row tints green but doesn't nudge sideways. "Waiting for your phone" is fixed in the tile for now – to make it editable it needs a key in the engine's TILE_CFG. s_sub: a '|' now breaks the line; without one the tile breaks after the sentence nearest the middle.) 3 · PS4 tile (draw.h) · Mockup: `design/tile/save-screen-v3.html` (+ .png), open
   https://raw.githack.com/donttelldadyet-prog/round2sg-home/34f8b7fe782341b40a1af35f77563305f92c85ad/design/tile/save-screen-v3.html (tabs 1-4, room colours).
