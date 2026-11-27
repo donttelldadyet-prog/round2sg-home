@@ -515,3 +515,67 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .pl .bd,.pl button.bd{display:inline-flex;align-items:center;gap:6px;flex:none;height:28px;padding:0 11px 0 9px;border:0;border-radius:999px;font-size:12.5px;font-weight:600;letter-spacing:.01em;line-height:1;color:var(--bd-c,#c9c3d6);background:var(--bd-b,rgba(255,255,255,.05));box-shadow:inset 0 0 0 1px var(--bd-r,rgba(255,255,255,.12))}
 .pl .bd::before{width:13px;height:13px}
 .pl .bd.sk{opacity:.55}
+
+/* WELCOME = A HAND OF 7 ROOM CARDS (Karen 27 Nov 7:54pm, option 3 "nicer + gamify"). Orb + marbles retired (kept hidden, the engine
+   still needs their ids). Cards deal in, fan out; your room's card sits in the middle, raised and glowing. Tap cards to collect
+   them – a counter shows n/7, collect all 7 for a rainbow + the Create button pulses. CSS only (checkbox + counter), no script. */
+#s-wel .ow{position:absolute!important;width:1px!important;height:1px!important;visibility:hidden!important;pointer-events:none!important;overflow:hidden}
+#s-wel .arc{display:none}
+.fan{position:relative;width:330px;height:300px;counter-reset:got}
+.fan .fx7{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.fan .fx7:checked{counter-increment:got}
+.fcs{position:absolute;inset:0}
+.fc{--me:0;--got:0;position:absolute;left:50%;bottom:74px;width:86px;height:113px;margin-left:-43px;transform-origin:50% 230%;rotate:calc((var(--i) - 3) * 12deg);z-index:calc(10 - (var(--i) - 3) * (var(--i) - 3) + var(--me) * 10);cursor:pointer;-webkit-tap-highlight-color:transparent;animation:fdeal .7s cubic-bezier(.2,.9,.3,1.2) both;animation-delay:calc(.25s + var(--i) * .07s)}
+@keyframes fdeal{from{translate:0 160px;rotate:0deg;opacity:0;scale:.6}}
+.fcin{position:absolute;inset:0;display:block;clip-path:url(#fcc);transition:translate .35s cubic-bezier(.3,1.5,.5,1),scale .35s,filter .3s;translate:0 calc(var(--me) * -22px + var(--got) * -16px);scale:calc(1 + var(--me) * .16);filter:drop-shadow(0 8px 10px rgba(0,0,0,.55)) brightness(calc(.72 + var(--me) * .28 + var(--got) * .28))}
+.fc .fb{position:absolute;inset:0;width:100%;height:100%}
+.fl{position:absolute;left:8px;right:12px;top:8px;height:40px;border-radius:5px;background:linear-gradient(135deg,color-mix(in srgb,var(--c) 80%,#fff),var(--c) 55%,color-mix(in srgb,var(--c) 65%,#000));box-shadow:inset 0 1px 0 rgba(255,255,255,.45)}
+.fe{position:absolute;left:0;right:0;top:8px;display:flex;justify-content:center;gap:13px}
+.fe i{width:5px;height:9px;border-radius:3px;background:#1b0d14}
+.fl b{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-family:'Press Start 2P';font-weight:400;font-size:5.5px;letter-spacing:.12em;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.25)}
+.fp{position:absolute;left:9px;right:9px;bottom:6px;height:15px;display:flex;gap:2.5px;padding:2px 3px 0;box-sizing:border-box;border-radius:3px 3px 1px 1px;background:#0b090e}
+.fp i{flex:1;background:linear-gradient(#e2c06a,#9c7c34);border-radius:1px 1px 0 0}
+.fs{position:absolute;left:50%;top:58px;width:30px;height:30px;margin-left:-15px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;color:#1b0d14;background:var(--c);box-shadow:0 0 14px var(--c);scale:calc(var(--got) * 1);transition:scale .4s cubic-bezier(.3,1.8,.5,1)}
+/* your room: blinking eyes, soft glow */
+.fc .fe i{animation:feb 4.2s infinite;animation-play-state:paused}
+.fan[data-room] .fc .fe i{animation-play-state:running}
+@keyframes feb{0%,47%,51%,100%{height:9px}49%{height:1.5px}}
+.fc .fcin::after{content:"";position:absolute;inset:0;background:linear-gradient(118deg,rgba(255,255,255,.14),rgba(255,255,255,.04) 30%,transparent 31%)}
+/* collected: happy eyes */
+.fan .fcs .fc .fe i{transition:all .2s}
+#fc-vale:checked~.fcs .fc-vale .fe i{width:7px;height:4px;background:none;border:2px solid #1b0d14;border-bottom:0;border-radius:5px 5px 0 0;animation:none}
+#fc-atlas:checked~.fcs .fc-atlas .fe i{width:7px;height:4px;background:none;border:2px solid #1b0d14;border-bottom:0;border-radius:5px 5px 0 0;animation:none}
+#fc-kai:checked~.fcs .fc-kai .fe i{width:7px;height:4px;background:none;border:2px solid #1b0d14;border-bottom:0;border-radius:5px 5px 0 0;animation:none}
+#fc-bella:checked~.fcs .fc-bella .fe i{width:7px;height:4px;background:none;border:2px solid #1b0d14;border-bottom:0;border-radius:5px 5px 0 0;animation:none}
+#fc-scarlett:checked~.fcs .fc-scarlett .fe i{width:7px;height:4px;background:none;border:2px solid #1b0d14;border-bottom:0;border-radius:5px 5px 0 0;animation:none}
+#fc-kaeden:checked~.fcs .fc-kaeden .fe i{width:7px;height:4px;background:none;border:2px solid #1b0d14;border-bottom:0;border-radius:5px 5px 0 0;animation:none}
+#fc-maximillion:checked~.fcs .fc-maximillion .fe i{width:7px;height:4px;background:none;border:2px solid #1b0d14;border-bottom:0;border-radius:5px 5px 0 0;animation:none}
+
+/* caption under the fan: room name for your room, then the counter */
+.ft{display:none}
+.fsc{position:absolute;left:0;right:0;bottom:6px;margin:0;text-align:center;font-family:'Press Start 2P';font-size:8px;letter-spacing:.16em;color:color-mix(in srgb,var(--ac) 70%,#fff);text-shadow:0 0 8px var(--ac)}
+.fsc::before{content:"TAP A CARD TO COLLECT";animation:fblink 1.4s steps(1) infinite}
+@keyframes fblink{50%{opacity:.35}}
+.fan:has(.fx7:checked) .fsc::before{content:counter(got) " / 7 ROOMS COLLECTED";animation:none}
+.fan:not(:has(.fx7:not(:checked))) .fsc::before{content:"ALL 7! YOU'RE READY TO SAVE"}
+.fan:not(:has(.fx7:not(:checked))) .fcin{animation:frain 2s linear infinite}
+@keyframes frain{0%,100%{filter:drop-shadow(0 0 10px var(--c)) brightness(1.05)}50%{filter:drop-shadow(0 0 22px var(--c)) brightness(1.15)}}
+#s-wel:not(:has(.fan .fx7:not(:checked))) #wjoin{animation:fpulse 1.2s ease-in-out infinite}
+@keyframes fpulse{50%{box-shadow:0 0 0 8px color-mix(in srgb,var(--ac) 35%,transparent),0 0 30px var(--ac)}}
+.fc:active .fcin{scale:calc(.94 + var(--me) * .16)}
+.fan .fx7:focus-visible~.fcs{outline:none}
+@media (prefers-reduced-motion:reduce){.fc,.fc .fe i,.fsc::before,.fcin{animation:none!important}}
+.fan[data-room="vale"] .fc-vale{--i:3!important;--me:1!important}.fan[data-room="vale"] .fc-bella{--i:0!important}
+.fan[data-room="atlas"] .fc-atlas{--i:3!important;--me:1!important}.fan[data-room="atlas"] .fc-bella{--i:1!important}
+.fan[data-room="kai"] .fc-kai{--i:3!important;--me:1!important}.fan[data-room="kai"] .fc-bella{--i:2!important}
+.fan[data-room="bella"] .fc-bella{--i:3!important;--me:1!important}
+.fan[data-room="scarlett"] .fc-scarlett{--i:3!important;--me:1!important}.fan[data-room="scarlett"] .fc-bella{--i:4!important}
+.fan[data-room="kaeden"] .fc-kaeden{--i:3!important;--me:1!important}.fan[data-room="kaeden"] .fc-bella{--i:5!important}
+.fan[data-room="maximillion"] .fc-maximillion{--i:3!important;--me:1!important}.fan[data-room="maximillion"] .fc-bella{--i:6!important}
+#fc-vale:checked~.fcs .fc-vale{--got:1}
+#fc-atlas:checked~.fcs .fc-atlas{--got:1}
+#fc-kai:checked~.fcs .fc-kai{--got:1}
+#fc-bella:checked~.fcs .fc-bella{--got:1}
+#fc-scarlett:checked~.fcs .fc-scarlett{--got:1}
+#fc-kaeden:checked~.fcs .fc-kaeden{--got:1}
+#fc-maximillion:checked~.fcs .fc-maximillion{--got:1}
