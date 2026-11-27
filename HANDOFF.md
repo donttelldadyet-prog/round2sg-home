@@ -57,31 +57,31 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 **MEMBER JOURNEY v5 – memory card + payment + renew (Karen, 27 Nov 2026 11:20pm: "send to my bf to work on it and make it live")**
 Clickable prototype (phone = member page with every function on pretend data, TV above reacts; buttons beside it switch
 Active / Expires in 5 days / Expired and passport 3/7 / 7/7): https://raw.githack.com/donttelldadyet-prog/round2sg-home/2c6636fd7ebc19a1bff514ff58ef26d017f9dd2b/design/membership/member-journey-v5.html
-- [ ] 3 · member page · **Crew card = the memory card** (upright; label in room colour with eyes + crew name, 7 passport blocks lit
+- [x] (BUILT 28 Nov 12:20am, engine fa45aad + worker/web/member-card.js: her v5 card (shape, label with eyes, passport blocks, gold pins) replaces #incard; tap flips it to the back (random line, crew, CREW SINCE, return address – no VALID TO, pricing on hold); eyes blink/wink/look around (her eye brain). Look copied from her prototype into the script, scoped #v5c – TEMPORARY until design moves it into member-v3.html/.css.) 3 · member page · **Crew card = the memory card** (upright; label in room colour with eyes + crew name, 7 passport blocks lit
   for rooms played, gold pins; no circuit). Tap flips it (back mirrored like a real card): random quote, crew name, CREW SINCE, VALID TO,
   "If found, return to 20 Haji Lane #02-00". Eyes blink / wink / look around at random (prototype "eye brain").
-- [ ] 3 · member page + engine · **One button:** "Load saves on the TV" → card lifts and flies up off the phone, a dashed card-shaped
+- [x] (BUILT 28 Nov: Load lifts the card and flies it off the top, the dashed "SAVE SENT – your card is in the TV" spot stays; the engine marks the insert inside play. The old swipe card is gone. If Load fails, the card comes back.) 3 · member page + engine · **One button:** "Load saves on the TV" → card lifts and flies up off the phone, a dashed card-shaped
   "SAVE SENT – your card is in the TV" spot stays → TV deck takes the card (act insert) → players load. Replaces the separate swipe card.
-- [ ] 3 · PS4 tile · **Loading screen:** the old bank-style crew card is replaced by the memory card standing in its reader (centred
+- [x] (BUILT 28 Nov, tile 0.21 – not on a TV yet: card drops into a reader in the right half, a bar per profile (face + Waiting/Loading/Ready fill + tick), faces pop onto the label, charging line, sparks, LCD LOADING n/N → ALL SET!, list dropped, no spin, Ready without wiggle.) 3 · PS4 tile · **Loading screen:** the old bank-style crew card is replaced by the memory card standing in its reader (centred
   in the right half, level with "Hey, <crew>!"): one bar per player with face + colour filling Waiting→Loading→Ready with a tick, faces
   pop onto the label as each is ready, glowing "charging" line on the edge, sparks, reader LCD "LOADING n/N" → "ALL SET!", happy eyes.
   The player list on the right is dropped (the card shows it). Card does NOT spin. Ready screen: card does NOT wiggle.
-- [ ] 2 · PS4 tile · **Reader reacts:** slot glow breathes while waiting, hop when a phone connects, slot lights up as the card comes,
+- [x] (PARTLY 28 Nov, tile 0.21: slot glow breathes, flash when a phone connects / the card lands / each profile is ready, light sweep + fast LED while reading, room glow when done. The deck itself doesn't hop or squash – it sits still in the picture.) 2 · PS4 tile · **Reader reacts:** slot glow breathes while waiting, hop when a phone connects, slot lights up as the card comes,
   squash on insert, light sweeping along the reader + fast LED while reading, bump/flash per player ready, soft room-colour glow when done.
-- [ ] 2 · PS4 tile · What's next: steps start level with the left heading; "Closing in n" bigger, centred, glowing, thick blocks.
-- [ ] 3 · member page + engine (PRICING – owners to confirm) · **Paid sign-up:** Why-join row "Round2 Membership – Then $10/mo. after
+- [x] (BUILT 28 Nov, tile 0.21: steps start at y 318 level with the heading; "CLOSING n" in a glowing deck-screen box at the bottom centre with 6 thick blocks running out.) 2 · PS4 tile · What's next: steps start level with the left heading; "Closing in n" bigger, centred, glowing, thick blocks.
+- [ ] (HELD – pricing on hold since 24 Nov; owner asked 27 Nov 11:40pm to confirm $20 / 2 months then $10/mo before HitPay sign-up is built.) 3 · member page + engine (PRICING – owners to confirm) · **Paid sign-up:** Why-join row "Round2 Membership – Then $10/mo. after
   2 months – $20 / 2 mo." → phone (country code list, non-SG numbers allowed) → crew name + first player + 6-number PIN twice →
   **HitPay** (PayNow / card) → only then create the account → "Your save card is ready" (CREW SINCE / VALID TO) → crew page.
-- [ ] 3 · member page + engine · **Membership status:** Spectrum UI Status Badge (`design/components/status-badge.css`, `<span class="bd" data-st="active|expiring|expired">`) "Active member" / "Expires in N days" (≤7 days) / "Expired"; player badges use the same component (data-st waiting / loading / ready);
+- [ ] (HELD for pricing – the hidden renew row stays hidden.) 3 · member page + engine · **Membership status:** Spectrum UI Status Badge (`design/components/status-badge.css`, `<span class="bd" data-st="active|expiring|expired">`) "Active member" / "Expires in N days" (≤7 days) / "Expired"; player badges use the same component (data-st waiting / loading / ready);
   row under the card, kept simple (Karen 27 Nov 11:27pm): status badge on the left ("n months left" green / "Expires in N days" amber / "Expired mm/yy" red, `.bd data-st`) and a plain "Renew" text link in the room colour on the right. **Already on the live page, hidden (27 Nov 11:30pm):** design/member-v3.html has `<div class="msr" id="msr" hidden>` with `#mexp` (the badge) and `#mren` (Renew link) under the crew card – the engine only has to fill #mexp (data-st + text), remove `hidden`, and open the renew sheet from #mren once expiry dates and renew prices exist. (Could be added to MEM3_IDS.)
   Needs each crew's expiry date stored + sent to the page (and to the tile).
-- [ ] 3 · member page + engine · **Renew sheet:** 1 month $10 / 3 months $30 (shows the new Valid to) → HitPay → "Renewed! Valid to …".
+- [ ] (HELD for pricing.) 3 · member page + engine · **Renew sheet:** 1 month $10 / 3 months $30 (shows the new Valid to) → HitPay → "Renewed! Valid to …".
   Extends from the current end date (from today if already expired).
-- [ ] 3 · member page + engine · **Expired:** card greyed with "LOCKED", Load button becomes "Renew to load your saves" (opens Renew),
+- [ ] (HELD for pricing.) 3 · member page + engine · **Expired:** card greyed with "LOCKED", Load button becomes "Renew to load your saves" (opens Renew),
   note "Your saves are kept safe for 3 months – renew to load them" (owners: confirm the 3 months). Tile could show "RENEW ON PHONE".
-- [ ] 2 · member page · **Receipts** in Crew settings (date, what, amount) from HitPay payments.
-- [ ] 2 · member page · **Black edition:** all 7 rooms → card label turns black with gold name/eyes + "BLACK EDITION · ALL 7 ROOMS".
-- [ ] 2 · member page · Crew settings tiles: Rename, PIN (current + new + again, 6 numbers), Claim code, Receipts, Need help (WhatsApp),
+- [ ] (HELD for pricing.) 2 · member page · **Receipts** in Crew settings (date, what, amount) from HitPay payments.
+- [x] (BUILT 28 Nov: all 7 rooms → black label with gold name/eyes + "BLACK EDITION · ALL 7 ROOMS".) 2 · member page · **Black edition:** all 7 rooms → card label turns black with gold name/eyes + "BLACK EDITION · ALL 7 ROOMS".
+- [ ] (NEXT – 28 Nov: only the player sheet closes by pulling down so far; the settings tiles + their sheets need markup in member-v3.html first – design please add them, function wires them.) 2 · member page · Crew settings tiles: Rename, PIN (current + new + again, 6 numbers), Claim code, Receipts, Need help (WhatsApp),
   Log out; every sheet closes by pulling it down. Players: tap name = edit (name + picture, Remove), tap badge = skip, Add a player (max 4).
 - [ ] 1 · engine/ops (suggested) · WhatsApp/SMS reminder ~7 days before expiry; Gold/Platinum tiers still unpriced (left out of v5).
 
@@ -425,6 +425,20 @@ Active / Expires in 5 days / Expired and passport 3/7 / 7/7): https://raw.githac
 - **Simulator:** `ps4/tile/sim` (`ROOM=vale ./sim`) draws every screen; the design preview kit's tile tab is still the 0.13 copy.
 - **Not done:** System check (needs the staff code – Light check is enough, the tile can't touch bookings). Not yet seen on a real
   TV: watch Kaeden's first scan screen + a member load (speed of the orbit/rows on the PS4's CPU is the unknown).
+
+## ⭐ 28 Nov 2026, 12:25am – member journey v5, phase 1 (no pricing): phone live, tile 0.21 built
+Owner 27 Nov 11:37pm: "a new design for both tv and member website has been publish from my gf side. can you make it live".
+- **Phone (live):** engine fa45aad deployed (4ce6361d…, 27 bindings, 3 crons, light check 19/4/0). The member page's card script
+  now lives in **worker/web/member-card.js** (function-owned) and is fetched from GitHub **only if its SHA-256 = MEM3_MC_SHA** in
+  the engine (else a do-nothing fallback) – so a bigger page script no longer has to be pasted into a deploy: push the file, deploy
+  the new hash. Her v5 card replaces #incard (look scoped #v5c, temporary until design moves it into member-v3), flip + quotes,
+  eye brain, black edition, Load → fly-up + SAVE SENT, player sheet pull-down-to-close. `play` sets tiletok.scan.ins; loadst keeps
+  another crew's scan from the last minute. Checked on the live page with a pretend sign-in (show()).
+- **Tile 0.21** (ps4-helper 4117ea5, CI → staging → ps4-tile, see below): v5 card shape (mc5_cov), Scan = empty deck + dashed
+  outline + chevrons (named/sleepy), deck-screen eyes; Loading = load_v5 (reader at x 1330, mouth y 552, bars per profile); Ready =
+  ready_v5 (no wiggle); next_live closing box. 0.20's scan-screen insert is gone (Load is the insert now).
+- **Held for pricing:** paid sign-up, renew, expiry badges/LOCKED, receipts, VALID TO. **Next:** settings tiles/sheets (needs markup).
+- Kaeden still offline (since 26 Nov 3:34am): helper 1.1.157 + tile wait for it.
 
 ## ⭐ 27 Nov 2026, 1:30pm – Karen's save screen v4 built: engine live, tile 0.20 released (Kaeden offline – not on the TV yet)
 Owner 12:29pm: "a new design for both tv and member website has been publish from my gf side. can you make it live".
