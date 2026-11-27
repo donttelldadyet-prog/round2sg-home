@@ -515,3 +515,29 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .pl .bd,.pl button.bd{display:inline-flex;align-items:center;gap:6px;flex:none;height:28px;padding:0 11px 0 9px;border:0;border-radius:999px;font-size:12.5px;font-weight:600;letter-spacing:.01em;line-height:1;color:var(--bd-c,#c9c3d6);background:var(--bd-b,rgba(255,255,255,.05));box-shadow:inset 0 0 0 1px var(--bd-r,rgba(255,255,255,.12))}
 .pl .bd::before{width:13px;height:13px}
 .pl .bd.sk{opacity:.55}
+
+/* WELCOME = MEMORY CARD (Karen 27 Nov 6:17pm): the orb + marbles are retired (kept in the page but hidden – the engine still needs
+   their ids); the Welcome art is now the same see-through memory card as the TV + "Load your save" card: blinking eyes, the 7 room
+   blocks lighting up in a loop, circuit pulses, gentle float. CSS only. */
+#s-wel .ow{position:absolute!important;width:1px!important;height:1px!important;visibility:hidden!important;pointer-events:none!important;overflow:hidden}
+#s-wel .arc{top:46%}
+.wcard{position:relative;width:170px;height:224px;clip-path:url(#wcc);animation:wcbob 3s ease-in-out infinite;filter:drop-shadow(0 0 30px color-mix(in srgb,var(--ac) 30%,transparent))}
+@keyframes wcbob{0%,100%{translate:0 0}50%{translate:0 -9px}}
+.wcard .wcb{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.wcard .wp{fill:rgba(255,255,255,.28)}
+.wcard .tr{fill:none;stroke:color-mix(in srgb,var(--ac) 35%,#5a5363);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;opacity:.75}
+.wcard .tf{fill:none;stroke:color-mix(in srgb,var(--ac) 70%,#fff);stroke-width:2;stroke-linecap:round;stroke-dasharray:5 60;animation:wcflow 1.3s linear infinite}
+@keyframes wcflow{to{stroke-dashoffset:-65}}
+.wcard .chip{fill:color-mix(in srgb,var(--ac) 18%,#0d0b10);stroke:color-mix(in srgb,var(--ac) 50%,#fff);stroke-width:1}
+.wcard .wl{position:absolute;left:15px;right:23px;top:15px;height:65px;border-radius:8px;background:linear-gradient(135deg,color-mix(in srgb,var(--ac) 85%,#fff),var(--ac) 50%,color-mix(in srgb,var(--ac) 60%,#000));box-shadow:inset 0 1px 0 rgba(255,255,255,.45),0 0 0 2px rgba(0,0,0,.25)}
+.wcard .we{position:absolute;left:0;right:0;top:11px;display:flex;justify-content:center;gap:22px}
+.wcard .we i{width:9px;height:15px;border-radius:5px;background:#1b0d14;animation:wcblink 4s infinite}
+@keyframes wcblink{0%,46%,50%,100%{height:15px;transform:none}48%{height:2px;transform:translateY(6px)}70%,85%{transform:translateX(5px)}}
+.wcard .wl b{position:absolute;left:0;right:0;bottom:10px;text-align:center;font-family:'Press Start 2P';font-weight:400;font-size:7px;letter-spacing:.16em;color:#fff}
+.wcard .wbl{position:absolute;left:15px;right:15px;top:94px;display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.wcard .wbl i{height:43px;border-radius:3px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);animation:wcfill 5.6s ease-in-out infinite;animation-delay:calc(var(--k) * .35s)}
+@keyframes wcfill{0%,4%{background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}10%,62%{background:var(--c);box-shadow:0 0 12px var(--c)}72%,100%{background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}}
+.wcard .wpin{position:absolute;left:17px;right:17px;bottom:7px;height:34px;display:flex;gap:4px;padding:4px 5px 0;box-sizing:border-box;border-radius:5px 5px 2px 2px;background:#0b090e;box-shadow:inset 0 1px 3px rgba(0,0,0,.9)}
+.wcard .wpin i{flex:1;border-radius:1.5px 1.5px 0 0;background:linear-gradient(#e2c06a,#9c7c34)}
+.wcard .wsh{position:absolute;inset:0;pointer-events:none;background:linear-gradient(118deg,rgba(255,255,255,.14) 0%,rgba(255,255,255,.05) 28%,transparent 29%,transparent 62%,rgba(255,255,255,.04) 63%,transparent 75%)}
+@media (prefers-reduced-motion:reduce){.wcard,.wcard .tf,.wcard .we i,.wcard .wbl i{animation:none}}
