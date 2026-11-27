@@ -4321,7 +4321,7 @@ const PS4_REL = 'https://raw.githubusercontent.com/donttelldadyet-prog/round2-tv
 const ps4Ver = (v) => String(v || '0').split('.').map((x) => +x || 0);
 const PS4_SELFUP = '1.0.7';   /* helpers older than this exit to hand over, which got stuck on Max (13 Nov) – they get 1.0.7+ by FTP once */
 const ps4Newer = (a, b) => { const x = ps4Ver(a), y = ps4Ver(b); for (let i = 0; i < 3; i++) if ((x[i] || 0) !== (y[i] || 0)) return (x[i] || 0) > (y[i] || 0); return false; };
-async function ps4Latest(env, fresh, hbIn, ch) {   /* ch 'test' (19 Nov): branch ps4-test – only ever sent by staff to one PS4 (Kaeden test bench), never by quiet time */
+async function ps4Latest(env, fresh, hbIn, ch) {   /* ch 'test' (19 Nov): branch ps4-test – sent by staff to one PS4 (Kaeden test bench); quiet time only for the one pinned PS4_TB_PIN build on Kaeden (28 Nov) */
   const T = ch === 'test', KK = T ? 'ps4relTest' : 'ps4rel', BR = T ? 'ps4-test' : 'ps4-release';
   const hb = hbIn || book(env), c = await hb.kvGet(KK), now = Date.now();
   if (c && !fresh && now - c.at < 10 * 60e3) return c.v ? c : null;
@@ -4361,13 +4361,18 @@ async function ps4Plugin(env, req) {   /* helper 1.1.62 "/_inplug.get": the roun
   if (sha !== info.sha256 || b.byteLength !== +info.size) return J({ error: 'file check failed' }, 502);
   return new Response(b, { headers: { 'content-type': 'application/octet-stream', 'x-r2-sha': sha } });
 }
+const PS4_TB_PIN = { v: '1.1.157', sha: '3fb4babefb0c20b63dbf3d5fa0b604217dd5e87a7194be83d742ae37d4068250' };   /* 28 Nov: see ps4AutoUpdate */
 const PS4_AUTO_HOLD_ABOVE = '';   /* owner 19 Nov 12:42pm: roll out 1.1.68 (keep-awake) to all – hold off (was '1.1.61' for the detector test) */ //   /* versions NEWER than this are NOT handed out in quiet time (detector test on Max, owner 18 Nov) – staff "Update now" still works */
 async function ps4AutoUpdate(env, hb, id, room) {   /* quiet time? hand out an update */
   if ((await hb.kvGet('ps4auto')) === false) return null;
   const rep = await hb.kvGet('ps4:' + id), now = Date.now();
   if (!rep || !rep.boot || rep.running || now - rep.t > 20 * 60e3 || ps4Newer(PS4_SELFUP, rep.v)) return null;
-  const TB = room === 'kaeden';   /* 28 Nov 4am (Karen: "fix bugs and make it live"; the staff browser was out of reach): Kaeden, the test bench, takes the TEST channel by itself in quiet time */
-  const rel = await ps4Latest(env, false, hb, TB ? 'test' : undefined); if (!rel || !ps4Newer(rel.v, rep.v)) return null;
+  /* 28 Nov 4am (Karen: "fix bugs and make it live"; no staff browser to press Update): ONE exception – Kaeden, the test bench,
+     takes helper 1.1.157 (the lost-picture fix) from the TEST channel by itself in quiet time. Pinned to that version + sha:
+     any other test build still needs staff, and once stable passes it Kaeden follows stable as before. */
+  const tr = room === 'kaeden' ? await ps4Latest(env, false, hb, 'test').catch(() => null) : null;
+  const TB = !!(tr && tr.v === PS4_TB_PIN.v && tr.sha === PS4_TB_PIN.sha && ps4Newer(tr.v, rep.v));
+  const rel = TB ? tr : await ps4Latest(env, false, hb); if (!rel || !ps4Newer(rel.v, rep.v)) return null;
   if (PS4_AUTO_HOLD_ABOVE && ps4Newer(rel.v, PS4_AUTO_HOLD_ABOVE)) return null;   /* owner 18 Nov 6:05pm: Max only (staff Update now) until the detector test passes */
   if (rep.rolled && rep.rolled.includes(' ' + rel.v + ':')) return null;   /* that version was rolled back here – needs a newer one or Update now */
   const tried = await hb.kvGet('ps4autoTry:' + id); if (tried && tried.v === rel.v && now - tried.t < 6 * 3600e3) return null;
