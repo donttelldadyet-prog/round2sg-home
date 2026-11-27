@@ -64,7 +64,7 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   every guest sees right after paying – (26 Nov, design)
 
 **PS4 save screen v4 – MEMORY CARD + SAVE DECK replaces the orb (Karen, 27 Nov 2026 12:10pm: "ok push it live")**
-- [ ] 3 · PS4 tile scan + ready screens (+ member page for the swipe) · Mockup (tabs 1-4, room colours, "Try it" phone under the TV):
+- [x] (BUILT 27 Nov 1:30pm – engine 1fa7d46/c5a1a65 live (5d093538), tile 0.20 = round2-tv-launcher ps4-helper b7d6724 → ps4-tile; NOT on the TV yet – Kaeden offline since 3:34am. Differences: the card doesn't tilt on the hop; the TV's room profile shows its letter, not the room picture; the phone card's look sits in the engine (MCP_CSS, class names mcph/mcpc/…) until design moves it into member-v3.css. New tile.json words (optional, defaults built in): v_lab, v_wait, v_conn, v_load, v_insert, v_hi ({crew}), v_read, v_found ({n}), v_all, v_saved, v_press.) 3 · PS4 tile scan + ready screens (+ member page for the swipe) · Mockup (tabs 1-4, room colours, "Try it" phone under the TV):
   https://raw.githack.com/donttelldadyet-prog/round2sg-home/691d5eb44f22bd184771bf7211e806a245089185/design/tile/save-screen-v4.html  · stills: `design/tile/save-screen-v4.png`
   Screens 2 (crew card loading) and 4 (what's next) are unchanged from v3 – only the **orb on Scan (1) and Ready (3) is gone**.
   **Scan (1), centre (x~790-1130, card + deck ~ y300-860 at 1920x1080):** a dark memory card (room-colour label on top, 7 block
@@ -101,13 +101,13 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
   avatars just fade in. Plain ASCII words. (27 Nov, design)
 
 **Crew settings panels: pull down to close (Karen, 27 Nov 2026 2:42am)**
-- [ ] 3 · member page v3 script · The Claim code and PIN tiles (`.more .it` = `<details>`) open a bottom panel (`.osh`); today
+- [ ] (NOT YET – 27 Nov 1:30pm: left for the next member-page release; this one was the v4 card + 6-number PINs) 3 · member page v3 script · The Claim code and PIN tiles (`.more .it` = `<details>`) open a bottom panel (`.osh`); today
   it closes by tapping outside (the summary's ::before cover). Karen wants it to also close by **pulling the panel down**,
   like the edit-player sheet: drag .osh down → follows the finger, fade the cover, past ~110 px or a quick flick → set the
   parent details `open=false`; short pull springs back. Don't start the drag from inside an input. (27 Nov, design)
 
 **PIN = 6 numbers (Karen, 27 Nov 2026 2:24am: "for pin just make it 6 digit number")**
-- [ ] 2 · member page v3 + engine · Design done (design/member-v3.html): new-PIN boxes (join jk/jk2, change pin2/pin3) take 6 numbers
+- [x] (27 Nov 1:30pm, engine 1fa7d46: join, change PIN and staff reset take exactly 6 numbers – "Your PIN is 6 numbers." / "Pick 6 numbers, not 123456 or all the same number."; old PINs still log in. Server check only – the boxes' maxlength 6 does the rest.) 2 · member page v3 + engine · Design done (design/member-v3.html): new-PIN boxes (join jk/jk2, change pin2/pin3) take 6 numbers
   max with "6 numbers" hints; the log-in box stays 8 long with "Your PIN". Engine still to do: **new PINs must be exactly 6
   numbers** (join, change PIN, staff reset) – script check + server check, messages "Your PIN is 6 numbers." / "Pick 6 numbers,
   not 123456 or all the same number." **Existing members keep their old 4-8 number PIN** for logging in (no forced change);
@@ -394,6 +394,24 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 - **Simulator:** `ps4/tile/sim` (`ROOM=vale ./sim`) draws every screen; the design preview kit's tile tab is still the 0.13 copy.
 - **Not done:** System check (needs the staff code – Light check is enough, the tile can't touch bookings). Not yet seen on a real
   TV: watch Kaeden's first scan screen + a member load (speed of the orbit/rows on the PS4's CPU is the unknown).
+
+## ⭐ 27 Nov 2026, 1:30pm – Karen's save screen v4 built: engine live, tile 0.20 released (Kaeden offline – not on the TV yet)
+Owner 12:29pm: "a new design for both tv and member website has been publish from my gf side. can you make it live".
+- **Engine (live 5d093538, 27 bindings, 3 crons):** loadst (phone signed in with the room's code) puts `scan {mid, crew, pass, at}` on
+  the tiletok record (no new storage key; only the first loadst per crew writes); `act insert` (phone swipe) adds `scan.ins`;
+  /ps4/tile sends `scrw, spass, sago, siago` (only for a scan newer than the last Load) and `pass` (memplay.pass, set at play);
+  roomout + a room reset clear the scan; a reset no longer marks a crew out whose Load is < 2 min old; TILE_MEMO 10 → 3 s;
+  /ps4/tilecfg adds the v_* words; member page v3 gets MEM3_MC_JS (the swipe card above "Who's playing", hidden once this crew
+  has loaded); new PINs = 6 numbers. Passport = PASS_ORDER (vale, atlas, kai, bella, scarlett, kaeden, max), Kaeden always on.
+- **Tile 0.20** (draw.h scan_v4 / ready_v4 / mc_*, main.cpp poller): the card body is drawn once into a sprite (MCS) and copied each
+  frame, cut at the deck's mouth (y 598); the deck is in the still picture. Waiting = bob/blink/glance/hop, sleepy + "z z z" after
+  5 s; phone connected = wide eyes, crew name, "HI, <CREW>!"; insert on the swipe or 6 s after the scan (1.5 s glide, flash, LED,
+  READING..., blocks 260 ms apart, SAVE FOUND n/7 or ALL 7 ROOMS! + colour cycle, shine); Ready = card in the deck, cheer, LED pulse,
+  GAME SAVED / PRESS (PS). Poll: 4 s on the scan screen for its first 3 min and while a phone is connected, else 15 s (3 s loading).
+  Sim checked: Vale, Atlas (dark letters on the near-white label), 4/7 and 7/7, long crew name cut to fit.
+- System check: new step "PS4 save screen v4", the claim-code step now uses a 6-number PIN (it failed after the PIN change).
+- **Still to do on the PS4:** Kaeden has been silent since 3:34am. When it's back: install helper 1.1.157 (ps4update ch=test),
+  then /_tile.now for tile 0.20 (not within 10 min of a load), then a real scan → swipe → Load test, read save.log + the tile.
 
 ## ⭐ 27 Nov 2026, 3:42am – engine: a room reset ends the crew's room session; Kaeden silent since 3:34
 - Owner 3:34am: "now both profile pictures are not in. also is it normal that ready aliff bozz + karen bozz shows up at the first
