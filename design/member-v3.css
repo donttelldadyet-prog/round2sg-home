@@ -597,3 +597,11 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .fan[data-room="kaeden"] .fc-kaeden .fe{display:flex}
 .fan[data-room="maximillion"] .fc-maximillion .fe{display:flex}
 .fsc{display:none}
+
+/* Karen 8:54pm: opening animation – the 7 cards arrive as one neat stack in the middle, then spread out into the fan (centre first,
+   outer cards last, small overshoot), then your room's card lifts up and blinks */
+.fc{animation:fspread 1.15s cubic-bezier(.2,.9,.25,1.12) both;animation-delay:calc(.35s + (var(--i) - 3) * (var(--i) - 3) * .03s)}
+@keyframes fspread{0%{rotate:0deg;translate:0 46px;scale:.82;opacity:0}28%{rotate:0deg;translate:0 0;scale:1;opacity:1}}
+.fcin{animation:flift .6s cubic-bezier(.3,1.6,.5,1) 1.25s backwards}
+@keyframes flift{from{translate:0 0;scale:1}}
+@media (prefers-reduced-motion:reduce){.fc,.fcin{animation:none!important}}
