@@ -517,3 +517,8 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .pl .bd.sk{opacity:.55}
 
 .msr{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px}.msr[hidden]{display:none}.msr .lk{font-size:14px;padding:8px 2px}
+/* 27 Nov 11:35pm Karen: smaller badges + tighter crew page so Load saves needs less scrolling */
+#s-in .bd,#s-in .pl button.bd{height:24px;padding:0 9px 0 7px;gap:5px;font-size:11.5px}#s-in .bd::before{width:12px;height:12px}
+#s-in .pe b::after{margin-left:6px;vertical-align:0}
+#s-in .cdi{max-width:270px;margin-top:12px}#s-in .pp{margin-top:14px;padding:10px 12px}#s-in .pls{margin-top:10px;gap:6px}
+#s-in .pl{padding:7px 10px;border-radius:16px}#s-in .pl .av{width:32px;height:32px}#s-in .pl b{font-size:14.5px}
