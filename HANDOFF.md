@@ -56,7 +56,7 @@ Severity: 4 blocks guests · 3 major · 2 noticeable friction · 1 polish. Forma
 
 **MEMBER JOURNEY v5 – memory card + payment + renew (Karen, 27 Nov 2026 11:20pm: "send to my bf to work on it and make it live")**
 Clickable prototype (phone = member page with every function on pretend data, TV above reacts; buttons beside it switch
-Active / Expires in 5 days / Expired and passport 3/7 / 7/7): https://raw.githack.com/donttelldadyet-prog/round2sg-home/54bd0f6f14882adc21c458e70c46c97412b9be0f/design/membership/member-journey-v5.html
+Active / Expires in 5 days / Expired and passport 3/7 / 7/7): https://raw.githack.com/donttelldadyet-prog/round2sg-home/1ddce03fcd56805734c1428b3ef15cb944ea5966/design/membership/member-journey-v5.html
 - [ ] 3 · member page · **Crew card = the memory card** (upright; label in room colour with eyes + crew name, 7 passport blocks lit
   for rooms played, gold pins; no circuit). Tap flips it (back mirrored like a real card): random quote, crew name, CREW SINCE, VALID TO,
   "If found, return to 20 Haji Lane #02-00". Eyes blink / wink / look around at random (prototype "eye brain").
