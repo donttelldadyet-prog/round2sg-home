@@ -555,3 +555,4 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 @keyframes ffloat{50%{translate:0 -6px}}
 @media (prefers-reduced-motion:reduce){.fcs,.fan::before,.fdust i,.ftf,.fbk i{animation:none!important}.fc{animation:none!important}}
 .fsc{display:none}
+.fl::after,.fc .fcin::after{display:none!important}
