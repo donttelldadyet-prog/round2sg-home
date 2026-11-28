@@ -565,3 +565,7 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .fl::after,.fc .fcin::after{display:none!important}
 .fpcb{display:none!important}
 #v5c .stage .slot{top:50%}
+/* 28 Nov 12:24pm Karen: boxy buttons like round2.sg (square corners, small caps text, outline secondary) */
+.b1,.b2,.more .osh .b2.sb{border-radius:2px;height:52px;font:600 14px 'Chakra Petch',sans-serif;letter-spacing:.12em;text-transform:uppercase}
+.b2{background:rgba(9,8,13,.35);border:1px solid rgba(244,241,251,.32)}.b2.sb{height:44px;font-size:12.5px}.more .osh .b2.sb{height:48px;border:0}
+.bk{border-radius:2px}
