@@ -584,3 +584,7 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .cd.mc .bkf{background:none;align-items:center;justify-content:center;padding:0 16px}
 .cd.mc .sgw{position:relative;margin:0;padding:0;width:100%}.cd.mc .sig{background:none;height:auto;padding:0;justify-content:center}
 .cd.mc .sg{font:600 15px 'Chakra Petch',sans-serif;color:#f4f1fb;white-space:normal;text-align:center;transform:none;line-height:1.3}
+/* 28 Nov 12:29pm Karen: form fields like round2.sg's booking details (square boxes, near-black fill, small spaced capital labels) */
+.lb{font-size:12px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:#a39cb6;margin:22px 0 9px}
+.fd,.more .osh .fd{border-radius:2px;background:#08070c;border:1px solid rgba(244,241,251,.2);padding:0 8px 0 16px}
+.fd .ccw:focus-within{border-radius:2px}
