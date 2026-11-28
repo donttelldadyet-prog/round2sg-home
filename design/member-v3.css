@@ -593,3 +593,8 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .sheet,.shb{border-radius:4px}.more .it[open] .osh{border-radius:4px 4px 0 0}
 .bd,.pl .bd,.pl button.bd{border-radius:3px}
 .pl.padd{border-style:dashed}
+/* 28 Nov 1:42pm Karen "wheres the face": no room in the link (e.g. from the website) – the front card is "yours", with eyes */
+.fan:not([data-room="vale"]):not([data-room="atlas"]):not([data-room="kai"]):not([data-room="bella"]):not([data-room="scarlett"]):not([data-room="kaeden"]):not([data-room="maximillion"]) .fc-bella{--me:1!important}
+.fan:not([data-room="vale"]):not([data-room="atlas"]):not([data-room="kai"]):not([data-room="bella"]):not([data-room="scarlett"]):not([data-room="kaeden"]):not([data-room="maximillion"]) .fc-bella .fe{display:flex}
+.fan:not([data-room="vale"]):not([data-room="atlas"]):not([data-room="kai"]):not([data-room="bella"]):not([data-room="scarlett"]):not([data-room="kaeden"]):not([data-room="maximillion"]) .fc-bella .fbk{display:grid}
+.fan:not([data-room="vale"]):not([data-room="atlas"]):not([data-room="kai"]):not([data-room="bella"]):not([data-room="scarlett"]):not([data-room="kaeden"]):not([data-room="maximillion"]) .fc-bella{animation:fspread 1.15s cubic-bezier(.2,.9,.25,1.12) both,ffloat 3.2s ease-in-out infinite;animation-delay:.35s,2s}
