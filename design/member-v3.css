@@ -588,3 +588,8 @@ button.bd{font:inherit;font-family:'Chakra Petch',sans-serif;cursor:pointer;back
 .lb{font-size:12px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:#a39cb6;margin:22px 0 9px}
 .fd,.more .osh .fd{border-radius:2px;background:#08070c;border:1px solid rgba(244,241,251,.2);padding:0 8px 0 16px}
 .fd .ccw:focus-within{border-radius:2px}
+/* 28 Nov 12:32pm Karen: the rest of the page boxy too, like round2.sg */
+.chip,.pp,.pl,#s-in .pl,.ben,.opt,.tva,.tva::after,.ic,.pr,.more .it,.more .it .bx,.more .ocard,.more #routw .bx,.more .ohelp .bx,.more>summary,.toast{border-radius:2px}
+.sheet,.shb{border-radius:4px}.more .it[open] .osh{border-radius:4px 4px 0 0}
+.bd,.pl .bd,.pl button.bd{border-radius:3px}
+.pl.padd{border-style:dashed}
